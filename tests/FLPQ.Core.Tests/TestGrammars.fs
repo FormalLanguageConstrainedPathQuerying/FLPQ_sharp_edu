@@ -27,6 +27,14 @@ type AbStringGenerators =
             |> MyGen.map (fun bits -> bits |> List.map (fun b -> if b = 0 then 'a' else 'b') |> System.String.Concat))
         |> MyArb.fromGen
 
+let grammar1Accept = [ "abab"; "ab"; ""; "aabb"; "aababb" ]
+
+let grammar1Reject = [ "aa"; "bb"; "abb"; "abba"; "b"; "a"; "ababa" ]
+
+let grammar3Accept = [ "a"; "aa"; "aaaa"; "aaaaa" ]
+
+let grammar3Reject = [ ""; "b" ]
+
 type AStringGenerators =
 
     static member AString() : Arbitrary<string> =

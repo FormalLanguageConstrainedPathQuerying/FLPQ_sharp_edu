@@ -5,41 +5,25 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Core
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
 open TestGrammars
 
 
 module ValiantParseTests =
 
     [<Fact>]
-    let ``Valiant and CYK agree on acceptance`` () =
-        let testCases =
-            [ (grammar1, "abab", true)
-              (grammar1, "ab", true)
-              (grammar1, "", true)
-              (grammar1, "aabb", true)
-              (grammar1, "aababb", true)
-              (grammar1, "aa", false)
-              (grammar1, "bb", false)
-              (grammar1, "abb", false)
-              (grammar3, "a", true)
-              (grammar3, "aa", true)
-              (grammar3, "aaaa", true)
-              (grammar3, "aaaaa", true)
-              (grammar3, "", false)
-              (grammar4, "a", true)
-              (grammar4, "aaa", true)
-              (grammar5, "a", true)
-              (grammar5, "aaaa", true)
-              (grammar5, "b", false)
-              (grammar5, "", false) ]
+    let ``Valiant and CYK agree on all test strings`` () =
+        let cases =
+            [ (grammar1, grammar1Accept, grammar1Reject)
+              (grammar3, grammar3Accept, grammar3Reject)
+              (grammar4, grammar3Accept, grammar3Reject)
+              (grammar5, grammar3Accept, grammar3Reject) ]
 
-        for (g, input, expected) in testCases do
-            let cykResult = Cyk.parse g input
-            let valiantResult = Valiant.parse g input
-            Assert.Equal(cykResult, valiantResult)
+        for (g, accept, reject) in cases do
+            for s in accept do
+                Assert.Equal(Cyk.parse g s, Valiant.parse g s)
+
+            for s in reject do
+                Assert.Equal(Cyk.parse g s, Valiant.parse g s)
 
     [<Fact>]
     let ``Valiant parseWithTable returns n by n matrix`` () =

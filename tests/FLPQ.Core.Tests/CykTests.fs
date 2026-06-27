@@ -11,42 +11,14 @@ open TestGrammars
 module Grammar1Tests =
 
     [<Fact>]
-    let ``accepts abab`` () = Assert.True(Cyk.parse grammar1 "abab")
+    let ``CYK accepts expected strings`` () =
+        for s in grammar1Accept do
+            Assert.True(Cyk.parse grammar1 s, s)
 
     [<Fact>]
-    let ``accepts ab`` () = Assert.True(Cyk.parse grammar1 "ab")
-
-    [<Fact>]
-    let ``accepts empty string`` () = Assert.True(Cyk.parse grammar1 "")
-
-    [<Fact>]
-    let ``accepts aabb`` () = Assert.True(Cyk.parse grammar1 "aabb")
-
-    [<Fact>]
-    let ``accepts aababb`` () =
-        Assert.True(Cyk.parse grammar1 "aababb")
-
-    [<Fact>]
-    let ``rejects aa`` () = Assert.False(Cyk.parse grammar1 "aa")
-
-    [<Fact>]
-    let ``rejects bb`` () = Assert.False(Cyk.parse grammar1 "bb")
-
-    [<Fact>]
-    let ``rejects abb`` () = Assert.False(Cyk.parse grammar1 "abb")
-
-    [<Fact>]
-    let ``rejects abba`` () = Assert.False(Cyk.parse grammar1 "abba")
-
-    [<Fact>]
-    let ``rejects b`` () = Assert.False(Cyk.parse grammar1 "b")
-
-    [<Fact>]
-    let ``rejects a`` () = Assert.False(Cyk.parse grammar1 "a")
-
-    [<Fact>]
-    let ``rejects ababa`` () =
-        Assert.False(Cyk.parse grammar1 "ababa")
+    let ``CYK rejects expected strings`` () =
+        for s in grammar1Reject do
+            Assert.False(Cyk.parse grammar1 s, s)
 
 
 module Grammar2Tests =
@@ -62,22 +34,14 @@ module Grammar2Tests =
 module Grammar3Tests =
 
     [<Fact>]
-    let ``accepts a`` () = Assert.True(Cyk.parse grammar3 "a")
+    let ``CYK accepts expected strings`` () =
+        for s in grammar3Accept do
+            Assert.True(Cyk.parse grammar3 s, s)
 
     [<Fact>]
-    let ``accepts aa`` () = Assert.True(Cyk.parse grammar3 "aa")
-
-    [<Fact>]
-    let ``accepts aaaa`` () = Assert.True(Cyk.parse grammar3 "aaaa")
-
-    [<Fact>]
-    let ``accepts aaaaa`` () = Assert.True(Cyk.parse grammar3 "aaaaa")
-
-    [<Fact>]
-    let ``rejects empty string`` () = Assert.False(Cyk.parse grammar3 "")
-
-    [<Fact>]
-    let ``rejects b`` () = Assert.False(Cyk.parse grammar3 "b")
+    let ``CYK rejects expected strings`` () =
+        for s in grammar3Reject do
+            Assert.False(Cyk.parse grammar3 s, s)
 
 
 module Grammar4Tests =

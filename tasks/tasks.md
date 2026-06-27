@@ -70,3 +70,4 @@
   3. Final table for both CYK and Valiant is a matrix over set, not its boolean decomposition.
   4. Add more property-based tests: for fixed grammar and random string tables for Valiant and CYK must be the same.
   5. Update all documentation.
+10. [done] Extract ground truth (accept/reject string lists) into shared TestGrammars.fs.
