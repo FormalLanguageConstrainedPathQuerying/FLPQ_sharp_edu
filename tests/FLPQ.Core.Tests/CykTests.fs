@@ -1,7 +1,12 @@
 module CykTests
 
 open Xunit
+open FsCheck
+open FsCheck.Xunit
 open FLPQ.Core
+
+module MyGen = FsCheck.FSharp.Gen
+module MyArb = FsCheck.FSharp.Arb
 
 module Grammar1Tests =
 
@@ -59,28 +64,26 @@ module Grammar2Tests =
         S -> S S
         "
 
-    let g = Grammar.parseGrammar grammarText
+    let g2 = Grammar.parseGrammar grammarText
 
-    let testStrings =
-        [ ""
-          "ab"
-          "abab"
-          "aabb"
-          "aababb"
-          "aa"
-          "bb"
-          "abb"
-          "abba"
-          "b"
-          "a"
-          "ababa" ]
+    let private g1 = Grammar1Tests.g
 
-    [<Fact>]
-    let ``accepts same strings as grammar 1`` () =
-        let g1 = Grammar1Tests.g
+    type AbStringGenerators =
 
-        for s in testStrings do
-            Assert.Equal(Cyk.parse g1 s, Cyk.parse g s)
+        static member AbString() : Arbitrary<string> =
+            MyGen.choose (0, 12)
+            |> MyGen.bind (fun len ->
+                MyGen.choose (0, 1)
+                |> MyGen.listOfLength len
+                |> MyGen.map (fun bits ->
+                    bits |> List.map (fun b -> if b = 0 then 'a' else 'b') |> System.String.Concat))
+            |> MyArb.fromGen
+
+    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``accepts same strings as grammar 1`` (s: string) = Cyk.parse g1 s = Cyk.parse g2 s
 
 
 module Grammar3Tests =
@@ -120,16 +123,22 @@ module Grammar4Tests =
         S -> a
         "
 
-    let g = Grammar.parseGrammar grammarText
+    let g4 = Grammar.parseGrammar grammarText
 
-    let testStrings = [ ""; "a"; "aa"; "aaa"; "aaaa"; "aaaaa"; "b"; "ab" ]
+    let private g3 = Grammar3Tests.g
 
-    [<Fact>]
-    let ``accepts same strings as grammar 3`` () =
-        let g3 = Grammar3Tests.g
+    type AStringGenerators =
 
-        for s in testStrings do
-            Assert.Equal(Cyk.parse g3 s, Cyk.parse g s)
+        static member AString() : Arbitrary<string> =
+            MyGen.choose (0, 15)
+            |> MyGen.map (fun len -> System.String('a', len))
+            |> MyArb.fromGen
+
+    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``accepts same strings as grammar 3`` (s: string) = Cyk.parse g3 s = Cyk.parse g4 s
 
 
 module Grammar5Tests =
@@ -141,16 +150,22 @@ module Grammar5Tests =
         S -> a
         "
 
-    let g = Grammar.parseGrammar grammarText
+    let g5 = Grammar.parseGrammar grammarText
 
-    let testStrings = [ ""; "a"; "aa"; "aaa"; "aaaa"; "aaaaa"; "b"; "ab" ]
+    let private g3 = Grammar3Tests.g
 
-    [<Fact>]
-    let ``accepts same strings as grammar 3`` () =
-        let g3 = Grammar3Tests.g
+    type AStringGenerators =
 
-        for s in testStrings do
-            Assert.Equal(Cyk.parse g3 s, Cyk.parse g s)
+        static member AString() : Arbitrary<string> =
+            MyGen.choose (0, 15)
+            |> MyGen.map (fun len -> System.String('a', len))
+            |> MyArb.fromGen
+
+    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``accepts same strings as grammar 3`` (s: string) = Cyk.parse g3 s = Cyk.parse g5 s
 
 
 module FactTests =

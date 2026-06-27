@@ -31,6 +31,7 @@ This project is supplementary materials for the book on formal language constrai
 * Run specific test: `dotnet test --filter <test identifier>`
 * Use `[<Trait("Category", <category_name>)>]` and respective filters to create and run groups of tests.
 * For visualization: create tests that check that generated output is correct. E.g. generated dot-file can by compiled using graphviz dot, generated TeX output wrapped to appropriate file can be compiled by pdflatex or lualatex. 
+* When a task specification states that certain constructs "can be used for property-based tests", implement `[<Property>]` tests with FsCheck-generated random inputs. Do not substitute `[<Fact>]` tests enumerating hardcoded examples in place of property-based testing.
 
 ## Format
 * To format all F# sources: `dotnet fantomas .`

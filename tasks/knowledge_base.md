@@ -138,3 +138,7 @@ dotnet add package FsCheck.Xunit
 ```
 
 This brings in `FsCheck` transitively.
+
+### Property-Based Tests from Task Spec
+
+When a task specification states that certain constructs "can be used for property-based tests", the intended implementation is FsCheck `[<Property>]` tests with generated random inputs. Do NOT replace them with `[<Fact>]` tests iterating over hardcoded strings or values. The generators must cover the input space relevant to the property (bounded randomization is acceptable when exhaustive generation is impractical, e.g., bounding string length or matrix dimensions).
