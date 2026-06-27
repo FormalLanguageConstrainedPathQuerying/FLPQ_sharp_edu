@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="Matrix.fs" />
+    <Compile Include="LinearAlgebra.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
