@@ -323,9 +323,11 @@ module Grammar =
     /// Transform a grammar into Chomsky Normal Form.
     /// Resulting grammar has only rules of the form:
     /// A -> BC (two nonterminals), A -> a (one terminal), or S -> eps (only start).
+    /// Binarization is applied first to reduce the number of combinations
+    /// generated during epsilon elimination for long rules with nullable nonterminals.
     let toCnf (g: Grammar<string, string>) : Grammar<string, string> =
-        let s1 = eliminateEpsilon g
-        let s2 = eliminateUnit s1
-        let s3 = replaceTerminals s2
-        let s4 = binarize s3
+        let s1 = binarize g
+        let s2 = eliminateEpsilon s1
+        let s3 = eliminateUnit s2
+        let s4 = replaceTerminals s3
         s4

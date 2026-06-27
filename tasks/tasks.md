@@ -101,7 +101,7 @@
     F -> x
     ```
     Accepts and rejects the same as for previous grammar
-12. Refactor to CNF transformation. Binarization must be before epsilon rules removing. So, it must be a firs step. In reduces size of resulting grammar.
+12. [done] Refactor to CNF transformation. Binarization must be before epsilon rules removing.
 13. Implemnt `first_k` and `follow_k` computations. Both parametrized by k and sentence.
 14. Implement deterministic and nondeterministic finite automaton. Represent transitions as a Matrix over set of symbols. States may be parametrizaed with type (equipped with data).
 15. Implement construction of LL(k) parsing table
