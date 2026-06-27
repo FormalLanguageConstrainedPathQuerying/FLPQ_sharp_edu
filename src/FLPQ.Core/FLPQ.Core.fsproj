@@ -10,6 +10,8 @@
     <Compile Include="LinearAlgebra.fs" />
     <Compile Include="Grammar.fs" />
     <Compile Include="Cyk.fs" />
+    <Compile Include="BooleanDecomposition.fs" />
+    <Compile Include="Valiant.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
