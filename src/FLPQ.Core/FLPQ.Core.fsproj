@@ -12,6 +12,7 @@
     <Compile Include="Cyk.fs" />
     <Compile Include="BooleanDecomposition.fs" />
     <Compile Include="Valiant.fs" />
+    <Compile Include="FirstFollow.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

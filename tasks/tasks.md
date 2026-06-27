@@ -102,7 +102,7 @@
     ```
     Accepts and rejects the same as for previous grammar
 12. [done] Refactor to CNF transformation. Binarization must be before epsilon rules removing.
-13. Implemnt `first_k` and `follow_k` computations. Both parametrized by k and sentence.
+13. [done] Implemnt `first_k` and `follow_k` computations.
 14. Implement deterministic and nondeterministic finite automaton. Represent transitions as a Matrix over set of symbols. States may be parametrizaed with type (equipped with data).
 15. Implement construction of LL(k) parsing table
 16. Implement LL(k) parsing table interpreter with derivation tree building (aka LL(k) parser). Use grammar1, grammar3 and last from task 11 for tests (simple and property-based). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves). It is a base for property-based testing.
