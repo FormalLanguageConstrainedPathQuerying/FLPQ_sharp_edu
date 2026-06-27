@@ -54,6 +54,11 @@ dotnet fsi Script.fsx
 
 # Project structure
 * Documentation in `docs/`. Root is [`main.md`](/docs/main.md)
+  * Each implemented module must have a dedicated documentation file in `docs/` (e.g., `docs/matrix.md`). The file must describe:
+    - Type definitions with design rationale
+    - All function signatures with behavior, preconditions, and postconditions
+    - Key design decisions and their justification
+    - Relationship to the book (section/figure references) where applicable
 * Sources in `src/`
 * Tests and tests-related stuff in `tests/`
   * Mirror the `src/` folder structure inside `tests/` so that each project has a corresponding tests.
@@ -63,6 +68,7 @@ dotnet fsi Script.fsx
   * [`detailed_plan.md`](tasks/detailed_plan.md) for detailed planing of the current task and progress tracking.
   * [`global_plan.md`](tasks/global_plan.md) for global planning. Track your global plans here.
   * [`fixes_for_book.md`](tasks/fixes_for_book.md) for book-related problems that you detected and user should fix in the book.
+  * [`knowledge_base.md`](tasks/knowledge_base.md) — accumulated knowledge about libraries, frameworks, and tooling (API quirks, workarounds, best practices discovered during implementation).
 
 # Workflow
 
@@ -82,6 +88,8 @@ dotnet fsi Script.fsx
 * Write tests.
 * Development loop
   * Update documentation. All relevant documentation must be updated: all task-related docs (including `fixes_for_book.md`), all project-related documentation (including `README.md`).
+  * After implementing a module, create or update `docs/<module>.md` describing its design and logic (type definitions, function signatures, design decisions).
+  * Update `tasks/knowledge_base.md` with any non-obvious knowledge gained about libraries, frameworks, or tooling (API quirks, workarounds, best practices discovered during implementation).
   * Write code
   * Check formatting and compilation
   * Check tests  
