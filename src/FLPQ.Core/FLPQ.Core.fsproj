@@ -13,6 +13,7 @@
     <Compile Include="BooleanDecomposition.fs" />
     <Compile Include="Valiant.fs" />
     <Compile Include="FirstFollow.fs" />
+    <Compile Include="Automaton.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

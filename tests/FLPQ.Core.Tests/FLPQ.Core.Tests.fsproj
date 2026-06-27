@@ -13,6 +13,7 @@
     <Compile Include="CykTests.fs" />
     <Compile Include="BooleanDecompositionTests.fs" />
     <Compile Include="FirstFollowTests.fs" />
+    <Compile Include="AutomatonTests.fs" />
     <Compile Include="ValiantTests.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
