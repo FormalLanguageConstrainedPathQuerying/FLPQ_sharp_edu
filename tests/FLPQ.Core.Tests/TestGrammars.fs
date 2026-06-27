@@ -41,3 +41,38 @@ type AStringGenerators =
         MyGen.choose (0, 15)
         |> MyGen.map (fun len -> System.String('a', len))
         |> MyArb.fromGen
+
+let grammar6 =
+    Grammar.parseGrammar
+        "
+S -> x
+S -> S + S
+S -> S * S
+S -> ( S )
+"
+
+let grammar7 =
+    Grammar.parseGrammar
+        "
+E -> E + T
+E -> T
+T -> T * F
+T -> F
+F -> ( E )
+F -> x
+"
+
+let grammar8 =
+    Grammar.parseGrammar
+        "
+E -> T + E
+E -> T
+T -> F * T
+T -> F
+F -> ( E )
+F -> x
+"
+
+let exprAccept = [ "x"; "(x)"; "(x)*x"; "x+x"; "x+x*x"; "x*(x+x)"; "(x*(x+x))" ]
+
+let exprReject = [ ""; "()"; "+x"; "x+"; "x+()" ]

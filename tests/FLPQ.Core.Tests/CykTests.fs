@@ -111,3 +111,20 @@ module FactTests =
         Assert.True(Cyk.parse g "aaaa")
         Assert.True(Cyk.parse g "a")
         Assert.True(Cyk.parse g "aa")
+
+
+module Grammar6Tests =
+
+    let grammars = [ grammar6; grammar7; grammar8 ]
+
+    [<Fact>]
+    let ``CYK accepts expected expression strings`` () =
+        for g in grammars do
+            for s in exprAccept do
+                Assert.True(Cyk.parse g s, s)
+
+    [<Fact>]
+    let ``CYK rejects expected expression strings`` () =
+        for g in grammars do
+            for s in exprReject do
+                Assert.False(Cyk.parse g s, s)

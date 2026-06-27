@@ -71,3 +71,41 @@
   4. Add more property-based tests: for fixed grammar and random string tables for Valiant and CYK must be the same.
   5. Update all documentation.
 10. [done] Extract ground truth (accept/reject string lists) into shared TestGrammars.fs.
+11. [done] Add more grammars and strings for tests for all parsing algorithms. All three new  grammars specify the same language, so they must be used for both typical unit tests and for property-based tests.
+    1.  Grammar:
+    ```
+    S -> x
+    S -> S + S
+    S -> S * S
+    S -> ( S )
+    ```
+    Accept: x, (x), (x)*x, x+x, x+x*x, x*(x+x), (x*(x+x))
+    Reject: <empty string>, (), +x, x+, x+()
+    2. Grammar:
+    ```
+    E -> E + T
+    E -> T
+    T -> T * F
+    T -> F
+    F -> ( E )
+    F -> x
+    ```
+    Accepts and rejects the same as for previous grammar
+    3. Grammar:
+    ```
+    E -> T + E
+    E -> T
+    T -> F * T
+    T -> F
+    F -> ( E )
+    F -> x
+    ```
+    Accepts and rejects the same as for previous grammar
+12. Refactor to CNF transformation. Binarization must be before epsilon rules removing. So, it must be a firs step. In reduces size of resulting grammar.
+13. Implemnt `first_k` and `follow_k` computations. Both parametrized by k and sentence.
+14. Implement deterministic and nondeterministic finite automaton. Represent transitions as a Matrix over set of symbols. States may be parametrizaed with type (equipped with data).
+15. Implement construction of LL(k) parsing table
+16. Implement LL(k) parsing table interpreter with derivation tree building (aka LL(k) parser). Use grammar1, grammar3 and last from task 11 for tests (simple and property-based). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves). It is a base for property-based testing.
+17. Implement LR(0) and LR(1) automata as a cases of deterministic finite automata where states parametrizes with respective types (sets of respective items).
+18. Implement CLR(1), SLR(1), and LR(0) parsing tables creation.
+19. Implement interpreter of LR tables with tree creation (aka LR parser). Use grammars grammar1, grammar2, grammar3, and lsat two from tak 11 for tests. Be careful: not all of them LR(0). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves)  
