@@ -72,7 +72,7 @@ dotnet fsi Script.fsx
 
 # Workflow
 
-* Do tasks sequentially one by one. Many of them are highly interconnected, so parallel processing is impossible or not efficient.
+* Do tasks strictly one at a time. Each task gets its own feature branch, its own detailed plan, and its own merge to dev. Never combine multiple tasks in a single feature branch, even if they appear interdependent or the user asks for several at once.
 * Each decision point and decision must be documented before implementation.
   * Documentation must be detailed enough to reproduce identical project from scratch without intermediate steps. E.g. anyone must be able to reimplement the project in another language using the documentation only.
   * Documentation must be detailed enough to realize why a particular decision was made in the project.
@@ -81,8 +81,8 @@ dotnet fsi Script.fsx
 ## Working loop
 
 * Ensure that user-defined tasks, the global plan, and the overall project architecture are aligned with each other. If not, align global plan and architecture with respect to user-defined tasks.
-* When all are aligned, choose first user-defined task that not done yet.
-* Create feature-branch from `dev`.
+* When all are aligned, choose exactly ONE user-defined task that is not done yet.
+* Create a feature-branch from `dev` for this single task. One task — one branch.
 * Generate detailed plan for this task to `detailed_plan.md`. Track your progress in detailed plan.
 * Update all respective documentation. Commit updates.
 * Write tests.
@@ -105,6 +105,7 @@ dotnet fsi Script.fsx
 * Branch for stable development results is `dev`.
 * Use feature-branch for each task. 
   * Branch naming convention: `feature/XXX-short-description` where `XXX` is the task `ID` from `tasks.md`.
+  * Never combine multiple task IDs in a single branch. Each task gets its own branch.
 * Commit message format: conventional Commits: feat:, fix:, docs:, test:
 * Before each commit: 
   * Format code.
