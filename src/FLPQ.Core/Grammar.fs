@@ -94,20 +94,19 @@ module Grammar =
         |> Set.ofList
 
     let private freshGen (existing: Set<Nonterminal<string>>) : unit -> Nonterminal<string> =
-        let mutable counter = 0
+        let mutable used = existing
 
         fun () ->
-            counter <- counter + 1
-
             let rec loop n =
                 let candidate = Nonterminal($"N_CNF_{n}")
 
-                if Set.contains candidate existing then
+                if Set.contains candidate used then
                     loop (n + 1)
                 else
+                    used <- Set.add candidate used
                     candidate
 
-            loop counter
+            loop 1
 
     let private computeNullable (rules: Rule<string, string> list) : Set<Nonterminal<string>> =
         let rec loop (current: Set<Nonterminal<string>>) =

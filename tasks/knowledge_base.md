@@ -63,6 +63,27 @@ MyGen.choose(-100, 100)
 - `[<Properties(Arbitrary = [| typeof<MyGen> |])>]` to register custom generators for a module
 - Generator class must have static methods returning `Arbitrary<'T>`:
 
+## F# Closure Capture Patterns
+
+### Mutable Set in Closure for Fresh Name Generation
+
+When generating unique names, a closure that captures a mutable `used` set of already-taken names ensures each generated name is unique:
+
+```fsharp
+let mutable used = existing
+fun () ->
+    let rec loop n =
+        let candidate = Nonterminal($"N_CNF_{n}")
+        if Set.contains candidate used then loop (n+1)
+        else
+            used <- Set.add candidate used
+            candidate
+    loop 1
+```
+
+**Contrast with buggy version**: Capturing only an immutable `existing` set and using a mutable counter leads to collisions when `fresh()` is called multiple times, because the counter alone doesn't guarantee uniqueness against previously-generated names (e.g., counter starts at 1, generates N_CNF_1 which skips existing but doesn't track it; next call with counter=2 may generate N_CNF_2 which was also generated in the first call if N_CNF_1 was in existing and N_CNF_2 wasn't).
+
+
 ```fsharp
 type MatrixGenerators =
     static member Matrix(): Arbitrary<Matrix<int>> =

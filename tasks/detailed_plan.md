@@ -1,40 +1,78 @@
-# Detailed Plan: Task 005 — CNF Transformation
+# Detailed Plan: Task 006 — CYK Algorithm
 
 ## Overview
-Transform a BNF grammar into Chomsky Normal Form. CNF rules:
-- A -> BC (two nonterminals)
-- A -> a (one terminal)
-- S0 -> eps (only start symbol, only if language contains epsilon)
+Implement the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in CNF. Use `Matrix<Option<HashSet<Symbol<string, string>>>>` as the working table.
 
-## 1. Implementation in `Grammar.fs`
+## 1. Implementation in `Cyk.fs`
 
-Add functions to the `Grammar` module:
+### Types
 
-### `toCnf: Grammar<string, string> -> Grammar<string, string>`
+The working table cell type:
+```fsharp
+type CykCell = Option<HashSet<Symbol<string, string>>>
+```
 
-Steps:
-1. **START**: Add new start nonterminal S0 -> S_old if needed
-2. **TERM**: Replace terminals in rules with length > 1: for each terminal `t`, create Nt -> t, replace t with Nt in all rules where rhs length > 1
-3. **BIN**: Eliminate long rules: replace A -> X1 X2 ... Xk (k > 2) with binary productions
-4. **DEL**: Eliminate epsilon-productions (except for start)
-5. **UNIT**: Eliminate unit productions
-6. **Remove unreachable and unproductive nonterminals**
+### Functions
 
-Order (standard Hopcroft-Ullman): START → DEL → UNIT → TERM → BIN → cleanup
+```fsharp
+val parse: Grammar<string, string> -> string (*terminals*) -> bool
+```
+- Converts grammar to CNF via `Grammar.toCnf`
+- Tokenizes input string into terminals (character by character, or space-separated words)
+- Runs CYK algorithm
+- Returns true if start symbol ∈ table[0, n-1]
 
-### Helper functions
+```fsharp
+val parseWithTrace: Grammar<string, string> -> string (*terminals*) -> Matrix<CykCell> list
+```
+- Returns the sequence of table states for visualization
+- Each step corresponds to filling a diagonal (length l)
 
-- `eliminateEpsilon`: Remove eps rules. Compute nullable nonterminals, then for each rule with nullable symbols on RHS, add all combinations.
-- `eliminateUnit`: Remove unit productions. For each A → B, add all rules B → α.
-- `replaceTerminals`: For each terminal in rules with |rhs| > 1, create new nonterminal.
-- `binarize`: Break rules with |rhs| > 2 into binary rules.
-- `freshNonterminal`: Generate unique nonterminal names.
+```fsharp
+val tableToTeX: (Symbol<string, string> -> string) -> Matrix<CykCell> -> string
+```
+- Converts a CYK table to TeX
+- None cells printed as `\cdot`
+- Uses Matrix.toTeX internally
 
-## 2. Files
+### CYK Algorithm
+
+Input: CNF grammar G, string w of length n
+Output: true if w ∈ L(G)
+
+1. Initialize n×n table with None in all cells
+2. Fill diagonal (len=1): table[i,i] = {A | A → w[i] ∈ rules}
+3. For len = 2 to n:
+   For i = 0 to n-len:
+      j = i + len - 1
+      table[i,j] = ∅
+      For k = i to j-1:
+         For each rule A → B C:
+            if N B ∈ table[i,k] and N C ∈ table[k+1,j]:
+               add N A to table[i,j]
+4. Return start ∈ table[0, n-1]
+
+## 2. Tokenization
+
+For matching the test examples, the input string should be tokenized into characters (since terminals are single characters like 'a', 'b').
+
+## 3. Tests
+
+Each test from task 6:
+1. Grammar: S -> a S b S | eps — test acceptable and unacceptable strings
+2. Grammar: S -> a S b | eps | S S — property test: same language as grammar 1
+3. Grammar: S -> a S | a — test acceptable and unacceptable strings
+4. Grammar: S -> S a | a — property test: same language as grammar 3
+5. Grammar: S -> S S | S S S | a — property test: same language as grammar 3
+
+## 4. Files
 
 | File | Action |
 |------|--------|
-| `src/FLPQ.Core/Grammar.fs` | Modify — add CNF transformation functions |
-| `tests/FLPQ.Core.Tests/GrammarTests.fs` | Modify — add CNF tests |
-| `docs/grammar.md` | Modify — document CNF transformation |
-| `tasks/tasks.md` | Mark task 5 done |
+| `src/FLPQ.Core/Cyk.fs` | Create — CYK algorithm and table printing |
+| `src/FLPQ.Core/FLPQ.Core.fsproj` | Modify |
+| `tests/FLPQ.Core.Tests/CykTests.fs` | Create |
+| `tests/FLPQ.Core.Tests/FLPQ.Core.Tests.fsproj` | Modify |
+| `docs/cyk.md` | Create |
+| `docs/main.md`, `docs/architecture.md` | Modify |
+| `tasks/tasks.md` | Mark task 6 done |
