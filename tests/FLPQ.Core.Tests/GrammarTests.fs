@@ -139,3 +139,224 @@ module FactTests =
         let g = Grammar.parseGrammar text
 
         Assert.Equal(3, List.length g.rules.Head.rhs)
+
+
+module CnfTests =
+
+    let private isCnf (g: Grammar<string, string>) : bool =
+        g.rules
+        |> List.forall (fun r ->
+            match r.rhs with
+            | [] -> r.lhs = g.start
+            | [ T _ ] -> true
+            | [ N _; N _ ] -> true
+            | _ -> false)
+
+    let private nonterminalsOfCnf (g: Grammar<string, string>) : Set<Nonterminal<string>> =
+        g.rules |> List.map (fun r -> r.lhs) |> Set.ofList
+
+    let private allRhsSymbolsAreNonterminals (g: Grammar<string, string>) : bool =
+        g.rules
+        |> List.forall (fun r ->
+            match r.rhs with
+            | [] -> true
+            | [ T _ ] -> true
+            | [ N _; N _ ] -> true
+            | _ -> false)
+
+    [<Fact>]
+    let ``toCnf preserves grammar that is already in CNF`` () =
+        let text =
+            "
+        S -> A B
+        S -> a
+        A -> B C
+        B -> b
+        C -> c
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf handles epsilon production`` () =
+        let text =
+            "
+        S -> a S
+        S -> eps
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf handles unit productions`` () =
+        let text =
+            "
+        S -> A
+        A -> B
+        B -> a
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf handles long right-hand sides`` () =
+        let text = "S -> a b c d"
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf handles terminals in mixed rules`` () =
+        let text =
+            "
+        S -> A a B b
+        A -> a
+        B -> b
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf converts task 6 example 1 grammar to CNF`` () =
+        let text =
+            "
+        S -> a S b S
+        S -> eps
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf converts task 6 example 2 grammar to CNF`` () =
+        let text =
+            "
+        S -> a S b
+        S -> eps
+        S -> S S
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf converts task 6 example 3 grammar to CNF`` () =
+        let text =
+            "
+        S -> a S
+        S -> a
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf converts task 6 example 4 grammar to CNF`` () =
+        let text =
+            "
+        S -> S a
+        S -> a
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf converts task 6 example 5 grammar to CNF`` () =
+        let text =
+            "
+        S -> S S
+        S -> S S S
+        S -> a
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf result contains only CNF rules`` () =
+        let text =
+            "
+        S -> A B C D
+        S -> eps
+        A -> a
+        B -> b
+        C -> c
+        D -> d
+        E -> A B
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+        Assert.True(allRhsSymbolsAreNonterminals cnf)
+
+    [<Fact>]
+    let ``toCnf handles grammar with only epsilon`` () =
+        let text = "S -> eps"
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf handles grammar with unit chain`` () =
+        let text =
+            "
+        S -> A
+        A -> B
+        B -> C
+        C -> D
+        D -> a
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        Assert.True(isCnf cnf)
+
+    [<Fact>]
+    let ``toCnf result has no unit productions`` () =
+        let text =
+            "
+        S -> A
+        A -> a
+        A -> B
+        B -> b
+        "
+
+        let g = Grammar.parseGrammar text
+        let cnf = Grammar.toCnf g
+
+        let hasUnit =
+            cnf.rules
+            |> List.exists (fun r ->
+                match r.rhs with
+                | [ N _ ] -> true
+                | _ -> false)
+
+        Assert.False(hasUnit)

@@ -1,69 +1,40 @@
-# Detailed Plan: Task 004 — BNF Grammar Reading
+# Detailed Plan: Task 005 — CNF Transformation
 
 ## Overview
-Add generic types for terminals/nonterminals/symbols and a parser for `.bnf` grammar files.
+Transform a BNF grammar into Chomsky Normal Form. CNF rules:
+- A -> BC (two nonterminals)
+- A -> a (one terminal)
+- S0 -> eps (only start symbol, only if language contains epsilon)
 
-## 1. Types
+## 1. Implementation in `Grammar.fs`
 
-```fsharp
-type Terminal<'t> = Terminal of 't
-type Nonterminal<'nt> = Nonterminal of 'nt
+Add functions to the `Grammar` module:
 
-type Symbol<'t, 'nt> =
-    | Terminal of Terminal<'t>
-    | Nonterminal of Nonterminal<'nt>
+### `toCnf: Grammar<string, string> -> Grammar<string, string>`
 
-type Rule<'t, 'nt> = {
-    lhs: Nonterminal<'nt>
-    rhs: Symbol<'t, 'nt> list
-}
+Steps:
+1. **START**: Add new start nonterminal S0 -> S_old if needed
+2. **TERM**: Replace terminals in rules with length > 1: for each terminal `t`, create Nt -> t, replace t with Nt in all rules where rhs length > 1
+3. **BIN**: Eliminate long rules: replace A -> X1 X2 ... Xk (k > 2) with binary productions
+4. **DEL**: Eliminate epsilon-productions (except for start)
+5. **UNIT**: Eliminate unit productions
+6. **Remove unreachable and unproductive nonterminals**
 
-type Grammar<'t, 'nt> = {
-    rules: Rule<'t, 'nt> list
-    start: Nonterminal<'nt>
-}
-```
+Order (standard Hopcroft-Ullman): START → DEL → UNIT → TERM → BIN → cleanup
 
-## 2. BNF File Format
+### Helper functions
 
-- One rule per line
-- Empty lines allowed
-- Format: `<nonterm> -> <symbols>` or `<nonterm> -> eps`
-- Start nonterminal = left side of the first rule
-- Nonterminal: PascalCase (starts with uppercase)
-- Terminal: camelCase (starts with lowercase)
-- `eps` = epsilon (empty right-hand side)
-- Symbols separated by spaces on right-hand side
+- `eliminateEpsilon`: Remove eps rules. Compute nullable nonterminals, then for each rule with nullable symbols on RHS, add all combinations.
+- `eliminateUnit`: Remove unit productions. For each A → B, add all rules B → α.
+- `replaceTerminals`: For each terminal in rules with |rhs| > 1, create new nonterminal.
+- `binarize`: Break rules with |rhs| > 2 into binary rules.
+- `freshNonterminal`: Generate unique nonterminal names.
 
-## 3. Parser
-
-```fsharp
-val parseGrammar: string -> Grammar<string, string>
-val parseGrammarFromFile: string -> Grammar<string, string>
-```
-
-- `parseGrammar`: takes BNF text, returns Grammar
-- `parseGrammarFromFile`: reads file, delegates to parseGrammar
-- Both work with `string` identifiers (most common case)
-- Token classification: `eps` → empty list; starts with uppercase → Nonterminal; otherwise → Terminal
-
-## 4. Tests
-
-- Parse simple grammar (3-4 rules)
-- Parse grammar with eps
-- Parse grammar with empty lines
-- Verify start nonterminal
-- Verify rule counts
-- Roundtrip test: parse + check structure
-
-## 5. Files
+## 2. Files
 
 | File | Action |
 |------|--------|
-| `src/FLPQ.Core/Grammar.fs` | Create — types, parser |
-| `src/FLPQ.Core/FLPQ.Core.fsproj` | Modify |
-| `tests/FLPQ.Core.Tests/GrammarTests.fs` | Create |
-| `tests/FLPQ.Core.Tests/FLPQ.Core.Tests.fsproj` | Modify |
-| `docs/grammar.md` | Create |
-| `docs/main.md`, `docs/architecture.md` | Modify |
-| `tasks/tasks.md` | Mark task 4 done |
+| `src/FLPQ.Core/Grammar.fs` | Modify — add CNF transformation functions |
+| `tests/FLPQ.Core.Tests/GrammarTests.fs` | Modify — add CNF tests |
+| `docs/grammar.md` | Modify — document CNF transformation |
+| `tasks/tasks.md` | Mark task 5 done |

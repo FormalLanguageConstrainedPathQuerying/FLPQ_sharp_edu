@@ -79,6 +79,27 @@ B -> eps
 - Empty lines are allowed and ignored
 - `eps` is the reserved keyword for epsilon
 
+### `toCnf`
+```fsharp
+val toCnf: g:Grammar<string, string> -> Grammar<string, string>
+```
+Transforms a context-free grammar into Chomsky Normal Form (CNF). In CNF all production rules have one of three forms:
+- `A -> BC` (two nonterminals)
+- `A -> a` (single terminal)
+- `S -> ε` (start symbol only, only if the language contains ε)
+
+**Transformation steps**:
+
+1. **Epsilon elimination**: Computes nullable nonterminals (transitive closure), generates all combinations of RHS with nullable symbols optionally removed, adds a fresh start symbol if the language contains ε.
+
+2. **Unit production elimination**: Computes unit pairs (transitive closure of A → B relations), adds new rules bypassing unit chains, removes all single-nonterminal RHS rules.
+
+3. **Terminal replacement**: For each terminal appearing in a RHS with length > 1, creates a fresh nonterminal `T_a → a` and replaces the terminal occurrence with the fresh nonterminal.
+
+4. **Binarization**: For each rule with |RHS| > 2, introduces fresh nonterminals to chain binary productions. `A → X₁ X₂ … Xₙ` becomes `A → X₁ N₁, N₁ → X₂ N₂, …, N_{n-2} → X_{n-1} Xₙ`.
+
+**Postcondition**: All rules in the result satisfy CNF constraints.
+
 ## Design Decisions
 
 | Decision | Rationale |
@@ -88,6 +109,9 @@ B -> eps
 | Tokens classified by PascalCase/camelCase convention | Simple, unambiguous parsing without explicit type annotations in the grammar file |
 | `parseGrammar` returns `Grammar<string, string>` | Most common use case; generic types available for programmatic construction |
 | `start` inferred from first rule | Standard BNF convention; no explicit start symbol marker needed |
+| Fresh nonterminal names prefixed `N_CNF_` | Prevents name collisions with user-defined nonterminals |
+| Fixed-point computation for nullable/unit pairs | Standard Hopcroft-Ullman approach; guaranteed termination on finite grammars |
+| New start symbol always introduced in CNF | Simplifies epsilon handling; ensures start doesn't appear on any RHS |
 
 ## Relationship to the Book
 
