@@ -1,0 +1,65 @@
+module BooleanDecompositionTests
+
+open Xunit
+open FLPQ.Core
+
+[<Fact>]
+let ``decompose produces correct number of matrices`` () =
+    let m =
+        Matrix.create 2 2 (fun i j ->
+            if i = 0 && j = 0 then set [ "a"; "b" ]
+            elif i = 1 && j = 1 then set [ "a" ]
+            else Set.empty)
+
+    let decomp = BooleanDecomposition.decompose m
+    Assert.Equal(2, Map.count decomp)
+
+[<Fact>]
+let ``decompose cells match original sets`` () =
+    let m = Matrix.create 2 2 (fun i j -> if i = j then set [ i ] else Set.empty)
+
+    let decomp = BooleanDecomposition.decompose m
+
+    Assert.True(Map.containsKey 0 decomp)
+    Assert.True(Map.containsKey 1 decomp)
+
+    let mat0 = Map.find 0 decomp
+    Assert.True(mat0.data.[0, 0])
+    Assert.False(mat0.data.[1, 1])
+
+    let mat1 = Map.find 1 decomp
+    Assert.False(mat1.data.[0, 0])
+    Assert.True(mat1.data.[1, 1])
+
+[<Fact>]
+let ``recompose restores original after decompose`` () =
+    let m = Matrix.create 3 3 (fun i j -> set [ i + j ])
+
+    let decomp = BooleanDecomposition.decompose m
+    let restored = BooleanDecomposition.recompose decomp
+
+    for i in 0..2 do
+        for j in 0..2 do
+            Assert.Equal<Set<int>>(m.data.[i, j], restored.data.[i, j])
+
+[<Fact>]
+let ``decompose handles empty matrix`` () =
+    let m = Matrix.create 2 2 (fun _ _ -> Set.empty: Set<int>)
+
+    let decomp = BooleanDecomposition.decompose m
+    Assert.Equal(0, Map.count decomp)
+
+[<Fact>]
+let ``recompose of empty decomposition throws`` () =
+    let empty: Map<int, Matrix<bool>> = Map.empty
+    Assert.Throws<System.ArgumentException>(fun () -> BooleanDecomposition.recompose empty |> ignore)
+
+[<Fact>]
+let ``decompose preserves matrix dimensions`` () =
+    let m = Matrix.create 3 4 (fun i j -> if i < j then set [ i ] else Set.empty)
+
+    let decomp = BooleanDecomposition.decompose m
+
+    for kv in decomp do
+        Assert.Equal(3, kv.Value.rows)
+        Assert.Equal(4, kv.Value.cols)

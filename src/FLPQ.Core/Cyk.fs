@@ -153,39 +153,32 @@ module Cyk =
             let table = cykTable cnf tokens
             isAccepted cnf table
 
-    /// Run CYK and return the final table as a Boolean decomposition (one Boolean matrix per nonterminal)
-    /// plus acceptance status.
-    let parseWithTable (g: Grammar<string, string>) (input: string) : Map<Nonterminal<string>, Matrix<bool>> * bool =
+    /// Run CYK and return the final table as a matrix over sets of nonterminals plus acceptance status.
+    let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
         let cnf = Grammar.toCnf g
 
         if input = "" then
             let epsAccepted =
                 cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
 
-            let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
-
-            let emptyResult =
-                allNt |> List.map (fun nt -> (nt, Matrix.init 0 0 false)) |> Map.ofList
-
+            let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
             let tokens = tokenize input
             let n = tokens.Length
             let table = cykTable cnf tokens
 
-            let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
-
             let result =
-                allNt
-                |> List.map (fun nt ->
-                    let boolMat =
-                        Matrix.create n n (fun i j ->
-                            match table.data.[i, j] with
-                            | Some symbols -> symbols.Contains(N nt)
-                            | None -> false)
-
-                    (nt, boolMat))
-                |> Map.ofList
+                Matrix.create n n (fun i j ->
+                    match table.data.[i, j] with
+                    | Some symbols ->
+                        symbols
+                        |> Seq.choose (fun s ->
+                            match s with
+                            | N nt -> Some nt
+                            | _ -> None)
+                        |> Set.ofSeq
+                    | None -> Set.empty)
 
             let accepted = isAccepted cnf table
             (result, accepted)

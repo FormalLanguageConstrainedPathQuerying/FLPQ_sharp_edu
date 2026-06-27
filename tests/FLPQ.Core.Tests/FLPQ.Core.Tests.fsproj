@@ -6,10 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="TestGrammars.fs" />
     <Compile Include="MatrixTests.fs" />
     <Compile Include="LinearAlgebraTests.fs" />
     <Compile Include="GrammarTests.fs" />
     <Compile Include="CykTests.fs" />
+    <Compile Include="BooleanDecompositionTests.fs" />
     <Compile Include="ValiantTests.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>

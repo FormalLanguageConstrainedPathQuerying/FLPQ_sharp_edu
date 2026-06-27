@@ -15,12 +15,14 @@ FLPQ.slnx
 │       └── Valiant.fs              # Valiant parsing algorithm
 └── tests/
     └── FLPQ.Core.Tests/      # Tests for core library
-        ├── Tests.fs               # Default test placeholder
-        ├── MatrixTests.fs         # Property-based and unit tests for Matrix
-        ├── LinearAlgebraTests.fs  # Property-based and unit tests for LinearAlgebra
-        ├── GrammarTests.fs        # Unit tests for Grammar and CNF
-        ├── CykTests.fs            # Unit tests for CYK algorithm
-        └── ValiantTests.fs        # Unit and property tests for Valiant and BooleanDecomposition
+        ├── TestGrammars.fs               # Shared pre-parsed grammars and generators
+        ├── Tests.fs                      # Default test placeholder
+        ├── MatrixTests.fs                # Property-based and unit tests for Matrix
+        ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
+        ├── GrammarTests.fs               # Unit tests for Grammar and CNF
+        ├── CykTests.fs                   # Unit tests for CYK algorithm
+        ├── BooleanDecompositionTests.fs  # Unit tests for BooleanDecomposition
+        └── ValiantTests.fs               # Unit and property tests for Valiant
 ```
 
 ## Projects
@@ -44,8 +46,9 @@ Design and logic of each implemented module is documented in a dedicated file in
 | [`docs/matrix.md`](matrix.md) | Matrix type, operations, and TeX printing |
 | [`docs/linear-algebra.md`](linear-algebra.md) | Matrix multiplication and Kronecker product |
 | [`docs/grammar.md`](grammar.md) | Grammar types, BNF parser, and CNF transformation |
-| [`docs/cyk.md`](cyk.md) | CYK parsing algorithm |
 | [`docs/boolean-decomposition.md`](boolean-decomposition.md) | Boolean decomposition of set-valued matrices |
+| [`docs/valiant.md`](valiant.md) | Valiant parsing algorithm |
+| [`docs/cyk.md`](cyk.md) | CYK parsing algorithm |
 | [`docs/valiant.md`](valiant.md) | Valiant parsing algorithm |
 
 When adding a new module, create a corresponding `docs/<module>.md` file following the same structure.

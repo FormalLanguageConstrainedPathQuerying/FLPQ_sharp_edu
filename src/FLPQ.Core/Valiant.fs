@@ -162,9 +162,9 @@ module Valiant =
         complete tByNt pByPair m terminalRules binaryRules pairs input
 
     /// Parse a string using Valiant's algorithm.
-    /// Returns the final T table (Boolean decomposition: map from nonterminal to Boolean matrix)
+    /// Returns the final T table as a matrix over sets of nonterminals (n × n, CYK-style)
     /// and a flag indicating whether the start symbol is in T[0,n].
-    let parseWithTable (g: Grammar<string, string>) (input: string) : Map<Nonterminal<string>, Matrix<bool>> * bool =
+    let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
         let cnf = Grammar.toCnf g
         let n = input.Length
         let originalN = n
@@ -208,12 +208,19 @@ module Valiant =
             let epsAccepted =
                 cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
 
-            let result = tByNt |> Seq.map (fun kv -> (kv.Key, kv.Value)) |> Map.ofSeq
-            (result, epsAccepted)
+            let emptyResult = Matrix.init 0 0 Set.empty
+            (emptyResult, epsAccepted)
         else
             compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs input
 
-            let result = tByNt |> Seq.map (fun kv -> (kv.Key, kv.Value)) |> Map.ofSeq
+            let result =
+                Matrix.create n n (fun i j ->
+                    allNt
+                    |> List.filter (fun nt ->
+                        match tByNt.TryGetValue nt with
+                        | true, mat -> mat.data.[i, j + 1]
+                        | _ -> false)
+                    |> Set.ofList)
 
             let accepted =
                 match tByNt.TryGetValue cnf.start with

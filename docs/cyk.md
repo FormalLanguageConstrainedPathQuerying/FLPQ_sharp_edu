@@ -32,6 +32,12 @@ Determines whether `input` belongs to the language of grammar `g`.
 
 **Time complexity**: `O(n³ · |P|)` where n is the input length and |P| is the number of productions.
 
+### `parseWithTable`
+```fsharp
+val parseWithTable: g:Grammar<string, string> -> input:string -> Matrix<Set<Nonterminal<string>>> * bool
+```
+Runs CYK and returns both the final parsing table (n × n matrix where cell `[i,j]` contains the set of nonterminals deriving substring `input[i..j]`) and the acceptance status.
+
 ### `parseWithTrace`
 ```fsharp
 val parseWithTrace: g:Grammar<string, string> -> input:string -> Matrix<CykCell> list

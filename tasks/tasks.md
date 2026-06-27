@@ -64,3 +64,9 @@
    can be used for property-based tests. This grammar specifies exactly the same language as previous one.
 7. [done] Implement Boolean decomposition of matrices over sets (read the book to investigate it). Boolean matrix is a case of generic Matrix. Add functions to convert matrix over set to boolean decomposition and back.
 8. [done] Implement standard Valiant algorithm. Use boolean decomposition to represent set of boolean matrix. Use implemented generic functions to operate with matrices. Add more functions and tests if necessary (eg slices may be needed) to Use property-based testing: CYK and Valiant must return identical results (both acceptance status and final tables).
+9. [done] Refactoring:
+  1. Create common base of strings and grammars for all algorithms.
+  2. Move boolean decomposition tests out of Valiant tests.
+  3. Final table for both CYK and Valiant is a matrix over set, not its boolean decomposition.
+  4. Add more property-based tests: for fixed grammar and random string tables for Valiant and CYK must be the same.
+  5. Update all documentation.

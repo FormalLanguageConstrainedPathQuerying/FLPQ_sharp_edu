@@ -5,207 +5,118 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Core
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
+open TestGrammars
+
 
 module Grammar1Tests =
 
-    let grammarText =
-        "
-        S -> a S b S
-        S -> eps
-        "
-
-    let g = Grammar.parseGrammar grammarText
+    [<Fact>]
+    let ``accepts abab`` () = Assert.True(Cyk.parse grammar1 "abab")
 
     [<Fact>]
-    let ``accepts abab`` () = Assert.True(Cyk.parse g "abab")
+    let ``accepts ab`` () = Assert.True(Cyk.parse grammar1 "ab")
 
     [<Fact>]
-    let ``accepts ab`` () = Assert.True(Cyk.parse g "ab")
+    let ``accepts empty string`` () = Assert.True(Cyk.parse grammar1 "")
 
     [<Fact>]
-    let ``accepts empty string`` () = Assert.True(Cyk.parse g "")
+    let ``accepts aabb`` () = Assert.True(Cyk.parse grammar1 "aabb")
 
     [<Fact>]
-    let ``accepts aabb`` () = Assert.True(Cyk.parse g "aabb")
+    let ``accepts aababb`` () =
+        Assert.True(Cyk.parse grammar1 "aababb")
 
     [<Fact>]
-    let ``accepts aababb`` () = Assert.True(Cyk.parse g "aababb")
+    let ``rejects aa`` () = Assert.False(Cyk.parse grammar1 "aa")
 
     [<Fact>]
-    let ``rejects aa`` () = Assert.False(Cyk.parse g "aa")
+    let ``rejects bb`` () = Assert.False(Cyk.parse grammar1 "bb")
 
     [<Fact>]
-    let ``rejects bb`` () = Assert.False(Cyk.parse g "bb")
+    let ``rejects abb`` () = Assert.False(Cyk.parse grammar1 "abb")
 
     [<Fact>]
-    let ``rejects abb`` () = Assert.False(Cyk.parse g "abb")
+    let ``rejects abba`` () = Assert.False(Cyk.parse grammar1 "abba")
 
     [<Fact>]
-    let ``rejects abba`` () = Assert.False(Cyk.parse g "abba")
+    let ``rejects b`` () = Assert.False(Cyk.parse grammar1 "b")
 
     [<Fact>]
-    let ``rejects b`` () = Assert.False(Cyk.parse g "b")
+    let ``rejects a`` () = Assert.False(Cyk.parse grammar1 "a")
 
     [<Fact>]
-    let ``rejects a`` () = Assert.False(Cyk.parse g "a")
-
-    [<Fact>]
-    let ``rejects ababa`` () = Assert.False(Cyk.parse g "ababa")
+    let ``rejects ababa`` () =
+        Assert.False(Cyk.parse grammar1 "ababa")
 
 
 module Grammar2Tests =
-
-    let grammarText =
-        "
-        S -> a S b
-        S -> eps
-        S -> S S
-        "
-
-    let g2 = Grammar.parseGrammar grammarText
-
-    let private g1 = Grammar1Tests.g
-
-    type AbStringGenerators =
-
-        static member AbString() : Arbitrary<string> =
-            MyGen.choose (0, 12)
-            |> MyGen.bind (fun len ->
-                MyGen.choose (0, 1)
-                |> MyGen.listOfLength len
-                |> MyGen.map (fun bits ->
-                    bits |> List.map (fun b -> if b = 0 then 'a' else 'b') |> System.String.Concat))
-            |> MyArb.fromGen
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Properties =
 
         [<Property>]
-        let ``accepts same strings as grammar 1`` (s: string) = Cyk.parse g1 s = Cyk.parse g2 s
+        let ``accepts same strings as grammar 1`` (s: string) =
+            Cyk.parse grammar1 s = Cyk.parse grammar2 s
 
 
 module Grammar3Tests =
 
-    let grammarText =
-        "
-        S -> a S
-        S -> a
-        "
-
-    let g = Grammar.parseGrammar grammarText
+    [<Fact>]
+    let ``accepts a`` () = Assert.True(Cyk.parse grammar3 "a")
 
     [<Fact>]
-    let ``accepts a`` () = Assert.True(Cyk.parse g "a")
+    let ``accepts aa`` () = Assert.True(Cyk.parse grammar3 "aa")
 
     [<Fact>]
-    let ``accepts aa`` () = Assert.True(Cyk.parse g "aa")
+    let ``accepts aaaa`` () = Assert.True(Cyk.parse grammar3 "aaaa")
 
     [<Fact>]
-    let ``accepts aaaa`` () = Assert.True(Cyk.parse g "aaaa")
+    let ``accepts aaaaa`` () = Assert.True(Cyk.parse grammar3 "aaaaa")
 
     [<Fact>]
-    let ``accepts aaaaa`` () = Assert.True(Cyk.parse g "aaaaa")
+    let ``rejects empty string`` () = Assert.False(Cyk.parse grammar3 "")
 
     [<Fact>]
-    let ``rejects empty string`` () = Assert.False(Cyk.parse g "")
-
-    [<Fact>]
-    let ``rejects b`` () = Assert.False(Cyk.parse g "b")
+    let ``rejects b`` () = Assert.False(Cyk.parse grammar3 "b")
 
 
 module Grammar4Tests =
 
-    let grammarText =
-        "
-        S -> S a
-        S -> a
-        "
-
-    let g4 = Grammar.parseGrammar grammarText
-
-    let private g3 = Grammar3Tests.g
-
-    type AStringGenerators =
-
-        static member AString() : Arbitrary<string> =
-            MyGen.choose (0, 15)
-            |> MyGen.map (fun len -> System.String('a', len))
-            |> MyArb.fromGen
-
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module Properties =
 
         [<Property>]
-        let ``accepts same strings as grammar 3`` (s: string) = Cyk.parse g3 s = Cyk.parse g4 s
+        let ``accepts same strings as grammar 3`` (s: string) =
+            Cyk.parse grammar3 s = Cyk.parse grammar4 s
 
 
 module Grammar5Tests =
 
-    let grammarText =
-        "
-        S -> S S
-        S -> S S S
-        S -> a
-        "
-
-    let g5 = Grammar.parseGrammar grammarText
-
-    let private g3 = Grammar3Tests.g
-
-    type AStringGenerators =
-
-        static member AString() : Arbitrary<string> =
-            MyGen.choose (0, 15)
-            |> MyGen.map (fun len -> System.String('a', len))
-            |> MyArb.fromGen
-
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module Properties =
 
         [<Property>]
-        let ``accepts same strings as grammar 3`` (s: string) = Cyk.parse g3 s = Cyk.parse g5 s
+        let ``accepts same strings as grammar 3`` (s: string) =
+            Cyk.parse grammar3 s = Cyk.parse grammar5 s
 
 
 module FactTests =
 
     [<Fact>]
     let ``parseWithTrace returns non-empty list for non-empty input`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> a
-        "
-
-        let trace = Cyk.parseWithTrace g "aaa"
+        let trace = Cyk.parseWithTrace grammar3 "aaa"
         Assert.NotEmpty(trace)
 
     [<Fact>]
     let ``tableToTeX contains pNiceMatrix`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S b S
-        S -> eps
-        "
-
-        let trace = Cyk.parseWithTrace g "ab"
+        let trace = Cyk.parseWithTrace grammar1 "ab"
         let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.Contains(@"\end{pNiceMatrix}", tex)
 
     [<Fact>]
     let ``tableToTeX prints empty cells as cdot`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> a
-        "
-
-        let trace = Cyk.parseWithTrace g "aa"
+        let trace = Cyk.parseWithTrace grammar3 "aa"
 
         let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
         Assert.Contains(@"\cdot", tex)
