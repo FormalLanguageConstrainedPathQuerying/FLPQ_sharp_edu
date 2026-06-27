@@ -2,3 +2,4 @@
 * [Overall architecture description](architecture.md)
 * [Matrix module design and logic](matrix.md)
 * [LinearAlgebra module design and logic](linear-algebra.md)
+* [Grammar module design and logic](grammar.md)
