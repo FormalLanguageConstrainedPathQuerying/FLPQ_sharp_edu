@@ -2,8 +2,8 @@
 * The book is in TeX. Root of the book in `../../`.  
 * In some tasks Russian may be used to simplify references to the book that is in Russian.
 
-1. Init infrastructure. Create solution and initial projects. Set CI config up. CI must build the solution on Ubuntu, Windows, MacOS. In Release and Debug. Check formatting, run tests.
-2. Add generic matrix type (as wrapper around standard 2d array) and module with genetic operations:
+1. [done] Init infrastructure. Create solution and initial projects. Set CI config up. CI must build the solution on Ubuntu, Windows, MacOS. In Release and Debug. Check formatting, run tests.
+2. [done] Add generic matrix type (as wrapper around standard 2d array) and module with genetic operations:
     * map2: ('a -> 'b -'>c) -> Matrix<'a> -> Matrix<'b> -> Matrix<'c> 
     * transpose
     * map
