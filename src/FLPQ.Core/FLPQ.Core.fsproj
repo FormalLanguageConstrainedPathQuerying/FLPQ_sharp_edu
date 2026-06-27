@@ -14,6 +14,7 @@
     <Compile Include="Valiant.fs" />
     <Compile Include="FirstFollow.fs" />
     <Compile Include="Automaton.fs" />
+    <Compile Include="LLParser.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 
