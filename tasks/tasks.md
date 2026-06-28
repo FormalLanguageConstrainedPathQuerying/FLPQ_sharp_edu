@@ -106,6 +106,6 @@
 14. [done] Implement deterministic and nondeterministic finite automaton.
 15. [done] Implement construction of LL(k) parsing table
 16. [done] Implement LL(k) parsing table interpreter with derivation tree building (aka LL(k) parser).
-17. Implement LR(0) and LR(1) automata as a cases of deterministic finite automata where states parametrizes with respective types (sets of respective items).
-18. Implement CLR(1), SLR(1), and LR(0) parsing tables creation.
-19. Implement interpreter of LR tables with tree creation (aka LR parser). Use grammars grammar1, grammar2, grammar3, and lsat two from tak 11 for tests. Be careful: not all of them LR(0). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves)  
+17. [done] Implement LR(0) and LR(1) automata as a cases of deterministic finite automata where states parametrizes with respective types (sets of respective items). 
+18. [done] Implement CLR(1), SLR(1), and LR(0) parsing tables creation. More information in the book.
+19. [done] Implement interpreter of LR tables with tree creation (aka LR parser). Use grammars grammar1, grammar2, grammar3, and lsat two from tak 11 for tests. Be careful: not all of them LR(0). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves)  

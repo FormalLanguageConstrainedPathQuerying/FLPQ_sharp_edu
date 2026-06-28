@@ -15,6 +15,7 @@
     <Compile Include="FirstFollowTests.fs" />
     <Compile Include="AutomatonTests.fs" />
     <Compile Include="LLParserTests.fs" />
+    <Compile Include="LRParserTests.fs" />
     <Compile Include="ValiantTests.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
