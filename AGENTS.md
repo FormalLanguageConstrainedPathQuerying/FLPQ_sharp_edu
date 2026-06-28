@@ -79,6 +79,17 @@ dotnet fsi Script.fsx
   * Documentation must be detailed enough to realize why a particular decision was made in the project.
   * Commit messages must be detailed enough to realize reasons of changes. Anyone must be able to explain why particular changes were required using only commit message.
 
+## Multi-task planning
+
+* When the user asks to work on a **set of tasks** (several task IDs), do NOT jump directly into implementation. First create a high-level global plan in `tasks/global_plan.md`.
+* The global plan must:
+  - List all tasks to be done with their IDs and brief descriptions.
+  - Identify dependencies between tasks (which must be done before which).
+  - Identify potential conflicts or overlapping changes (e.g., two tasks modifying the same file).
+  - Propose an execution order that minimizes rework and avoids conflicts.
+  - Align tasks with the project architecture.
+* After the global plan is created, proceed with the normal working loop: one task at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md` for each.
+
 ## Working loop
 
 * Ensure that user-defined tasks, the global plan, and the overall project architecture are aligned with each other. If not, align global plan and architecture with respect to user-defined tasks.
