@@ -59,8 +59,12 @@ Design and logic of each implemented module is documented in a dedicated file in
 |------|--------|
 | [`docs/matrix.md`](matrix.md) | Matrix type, operations, and TeX printing |
 | [`docs/linear-algebra.md`](linear-algebra.md) | Matrix multiplication and Kronecker product |
-| [`docs/grammar.md`](grammar.md) | Grammar types, BNF parser, and CNF transformation |
 | [`docs/boolean-decomposition.md`](boolean-decomposition.md) | Boolean decomposition of set-valued matrices |
+| [`docs/grammar.md`](grammar.md) | Grammar types, BNF parser, and CNF transformation |
+| [`docs/tokenizer.md`](tokenizer.md) | Common tokenizer for all parsing algorithms |
+| [`docs/first-follow.md`](first-follow.md) | First_k and follow_k computations |
+| [`docs/automaton.md`](automaton.md) | Generic finite automaton type and operations |
+| [`docs/derivation-tree.md`](derivation-tree.md) | Derivation tree type and leaf collection |
 | [`docs/cyk.md`](cyk.md) | CYK parsing algorithm |
 | [`docs/valiant.md`](valiant.md) | Valiant parsing algorithm |
 | [`docs/ll-parser.md`](ll-parser.md) | LL(k) parsing table construction and parser |

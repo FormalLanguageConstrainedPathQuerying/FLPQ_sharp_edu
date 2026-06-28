@@ -4,22 +4,7 @@ Implementation of LL(k) parsing: table construction and table-driven recursive d
 
 ## Type Definitions
 
-### DerivationTree
-
-```fsharp
-type DerivationTree<'t, 'nt> =
-    | Leaf of Terminal<'t>
-    | Epsilon
-    | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
-```
-
-Represents a parse tree produced by top-down parsing.
-
-- `Leaf(Terminal t)`: a leaf node containing a terminal symbol `t`.
-- `Epsilon`: an epsilon leaf, representing an empty production.
-- `Node(nt, children)`: an internal node labeled with nonterminal `nt` and a list of child subtrees.
-
-Defined in `DerivationTree.fs` (shared by both LL and LR parsers).
+The derivation tree type is defined in the [DerivationTree module](derivation-tree.md) and shared by LL and LR parsers.
 
 ## Function Signatures
 
@@ -73,14 +58,6 @@ Table-driven LL(k) recursive descent parser that builds a derivation tree.
 - `Some(tree)` if the input is accepted, `None` otherwise.
 - On acceptance, `DerivationTree.leaves tree` joined by spaces equals the input string (modulo epsilon leaves).
 - The root of the tree is `Node(g.start, children)`.
-
-### `DerivationTree.leaves`
-
-```fsharp
-val leaves: DerivationTree<'t, 'nt> -> 't list
-```
-
-Collects all leaf terminal values from a derivation tree in left-to-right order. Epsilon nodes contribute nothing.
 
 ## Design Decisions
 
