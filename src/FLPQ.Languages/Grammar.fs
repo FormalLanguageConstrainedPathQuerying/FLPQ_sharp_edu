@@ -9,10 +9,11 @@ type Terminal<'t> = Terminal of 't
 /// A nonterminal symbol, wrapping a user-defined type 'nt.
 type Nonterminal<'nt> = Nonterminal of 'nt
 
-/// A grammar symbol: either a terminal or a nonterminal.
+/// A grammar symbol: a terminal, a nonterminal, or epsilon.
 type Symbol<'t, 'nt> =
     | T of Terminal<'t>
     | N of Nonterminal<'nt>
+    | Epsilon
 
 /// A production rule: left-hand side nonterminal produces a sequence of symbols.
 type Rule<'t, 'nt> =
@@ -43,7 +44,7 @@ module Grammar =
 
         let rhs =
             if rhsStr = "eps" then
-                []
+                [ Epsilon ]
             else
                 rhsStr.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 |> Array.toList
@@ -116,6 +117,7 @@ module Grammar =
                     r.rhs
                     |> List.forall (function
                         | N nt -> Set.contains nt current
+                        | Epsilon -> true
                         | T _ -> false))
                 |> List.map (fun r -> r.lhs)
                 |> Set.ofList
@@ -128,7 +130,7 @@ module Grammar =
                 updated
 
         rules
-        |> List.filter (fun r -> r.rhs.IsEmpty)
+        |> List.filter (fun r -> r.rhs = [ Epsilon ])
         |> List.map (fun r -> r.lhs)
         |> Set.ofList
         |> loop
@@ -179,7 +181,9 @@ module Grammar =
 
     let private eliminateEpsilon (g: Grammar<string, string>) : Grammar<string, string> =
         let nullable = computeNullable g.rules
-        let hasEps = g.rules |> List.exists (fun r -> r.lhs = g.start && r.rhs.IsEmpty)
+
+        let hasEps =
+            g.rules |> List.exists (fun r -> r.lhs = g.start && r.rhs = [ Epsilon ])
 
         let newStart =
             if hasEps then
@@ -190,12 +194,16 @@ module Grammar =
 
         let startRule = { lhs = newStart; rhs = [ N g.start ] }
 
-        let startEpsRule = if hasEps then [ { lhs = newStart; rhs = [] } ] else []
+        let startEpsRule =
+            if hasEps then
+                [ { lhs = newStart; rhs = [ Epsilon ] } ]
+            else
+                []
 
         let newRules =
             g.rules
             |> List.collect (fun r ->
-                if r.rhs.IsEmpty then
+                if r.rhs = [ Epsilon ] then
                     []
                 else
                     let nullableIndices =
@@ -218,7 +226,8 @@ module Grammar =
                                 | T _ -> true
                                 | N nt ->
                                     let isNullable = Set.contains nt nullable
-                                    (not isNullable) || List.contains idx keepIndices)
+                                    (not isNullable) || List.contains idx keepIndices
+                                | Epsilon -> true)
                             |> List.map snd
 
                         if newRhs.IsEmpty then

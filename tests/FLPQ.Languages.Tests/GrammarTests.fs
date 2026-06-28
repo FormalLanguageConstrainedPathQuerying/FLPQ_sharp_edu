@@ -31,12 +31,12 @@ module FactTests =
         Assert.Equal(Nonterminal "S", g.start)
 
     [<Fact>]
-    let ``parseGrammar parses eps as empty right-hand side`` () =
+    let ``parseGrammar parses eps as Epsilon right-hand side`` () =
         let text = "S -> eps"
         let g = Grammar.parseGrammar text
 
         Assert.Equal(1, List.length g.rules)
-        Assert.Empty(g.rules.Head.rhs)
+        Assert.Equal<Symbol<string, string> list>([ Epsilon ], g.rules.Head.rhs)
 
     [<Fact>]
     let ``parseGrammar ignores empty lines`` () =
@@ -125,7 +125,7 @@ module FactTests =
         | _ -> Assert.Fail("Expected 'S'")
 
         let r2 = g.rules.[1]
-        Assert.Empty(r2.rhs)
+        Assert.Equal<Symbol<string, string> list>([ Epsilon ], r2.rhs)
 
     [<Fact>]
     let ``parseGrammar handles rule with single symbol`` () =
@@ -148,7 +148,7 @@ module CnfTests =
         g.rules
         |> List.forall (fun r ->
             match r.rhs with
-            | [] -> r.lhs = g.start
+            | [ Epsilon ] -> r.lhs = g.start
             | [ T _ ] -> true
             | [ N _; N _ ] -> true
             | _ -> false)
@@ -160,7 +160,7 @@ module CnfTests =
         g.rules
         |> List.forall (fun r ->
             match r.rhs with
-            | [] -> true
+            | [ Epsilon ] -> true
             | [ T _ ] -> true
             | [ N _; N _ ] -> true
             | _ -> false)

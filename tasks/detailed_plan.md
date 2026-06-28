@@ -1,185 +1,167 @@
-# Detailed Plan: Task 20 — Refactoring
+# Detailed Plan: Epsilon in Symbol — Remove strings from first/follow
 
-## Overview
+## Goal
 
-Seven sub-tasks covering documentation, code organization, test coverage, and project structure.
+Add `Epsilon` to `Symbol<'t,'nt>` so that epsilon is an explicit symbol, not an empty string `""`. This removes the `terminalToString` hack from FirstFollow, eliminates string-based representation of epsilon throughout the codebase, and follows classical language-theoretic conventions.
 
-## Task 20.3: Remove `states.Length > 500` check
+## Task breakdown
 
-**File:** `src/FLPQ.Core/LRParser.fs`
-- Remove lines 164-165 in `buildLR0` (the `if states.Length > 500 then failwithf ...`)
-- Remove lines 234-235 in `buildLR1` (same check)
+### 1. `Symbol<'t,'nt>` — add Epsilon case
+**File:** `src/FLPQ.Languages/Grammar.fs`
 
-## Task 20.2: Derivation Tree Module
-
-**New file:** `src/FLPQ.Core/DerivationTree.fs`
-
-Move from `LLParser.fs`:
-- `DerivationTree<'t, 'nt>` type (DU: Leaf, Epsilon, Node)
-- `leaves` function (generalize from `DerivationTree<string,string>` to `DerivationTree<'t,'nt>` returning `'t list`)
-- Add module `DerivationTree` with these items
-
-**Update:** `LLParser.fs` — remove type and leaves, add `open FLPQ.Core`
-**Update:** `LRParser.fs` — change `LLParser.leaves` reference to `DerivationTree.leaves`
-**Update:** `FLPQ.Core.fsproj` — add `DerivationTree.fs` before `LLParser.fs`
-
-## Task 20.5: Common Tokenizer
-
-**New file:** `src/FLPQ.Core/Tokenizer.fs`
-
-Module `Tokenizer`:
+Change from:
 ```fsharp
-/// Tokenize an input string into a list of grammar symbols.
-/// Multi-character terminals are space-separated in the input.
-let tokenize (terminalToSymbol: string -> Symbol<'t, 'nt>) (input: string) : Symbol<'t, 'nt> list
-
-/// Tokenize into raw strings (for lookahead in LL/LR parsers).
-let tokenizeStrings (input: string) : string list
-
-/// Tokenize into Terminal values (for LR parser).
-let tokenizeTerminals (input: string) : Terminal<string> list
+type Symbol<'t, 'nt> =
+    | T of Terminal<'t>
+    | N of Nonterminal<'nt>
+```
+To:
+```fsharp
+type Symbol<'t, 'nt> =
+    | T of Terminal<'t>
+    | N of Nonterminal<'nt>
+    | Epsilon
 ```
 
-**Update:** All parsers (Cyk, LL, LR) use `Tokenizer.tokenize` functions instead of their private versions.
+### 2. Grammar BNF parsing
+**File:** `src/FLPQ.Languages/Grammar.fs`
 
-## Task 20.4.5: Generic firstK/followK
+In `parseLine`: `"eps"` maps to `[Epsilon]`, not `[]`.
 
-**File:** `src/FLPQ.Core/FirstFollow.fs`
+### 3. CNF pipeline — all four steps
+**File:** `src/FLPQ.Languages/Grammar.fs`
 
-Current signatures work only on `Grammar<string, string>`. Make generic:
+- `computeNullable`: check `[Epsilon]` for explicit epsilon; `Epsilon` is trivially nullable in `List.forall`
+- `eliminateEpsilon`: remove rules with `rhs = [Epsilon]`; when producing nullable variants, filter out nullable positions; empty-result variants are dropped (they'd be `[Epsilon]` after elimination, which we're removing)
+- `eliminateUnit`: `match r.rhs with [N _] -> ...` unchanged (unit rules have one nonterminal; epsilon productions are `[Epsilon]`, not a unit)
+- `binarize`: `match r.rhs with [ _ ] -> [r]` — but `[Epsilon]` has length 1, so this would be incorrectly treated as a valid production. Need to special-case: if rhs is `[Epsilon]`, keep as is (epsilon production). Only binarize RHS with 3+ symbols.
+- `replaceTerminals`: when checking `r.rhs.Length > 1`, `[Epsilon]` has length 1 so it won't be affected. Fine.
+
+### 4. DerivationTree — remove Epsilon DU case
+**File:** `src/FLPQ.Languages/DerivationTree.fs`
+
+Remove the `Epsilon` case. Use `Leaf(Epsilon)` instead.
 
 ```fsharp
-val firstK: Grammar<'t, 'nt> -> ('t -> string) -> int -> Map<Nonterminal<'nt>, Set<string>>
-val followK: Grammar<'t, 'nt> -> ('t -> string) -> int -> Map<Nonterminal<'nt>, Set<string>>
-val firstKOfString: Map<Nonterminal<'nt>, Set<string>> -> int -> Symbol<'t, 'nt> list -> Set<string>
+type DerivationTree<'t, 'nt> =
+    | Leaf of Terminal<'t>
+    | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
 ```
 
-The `terminalToString: 't -> string` function converts terminal values to their string representation for lookahead computation.
+`leaves` function: `Leaf(Epsilon)` contributes nothing, same as before.
 
-Internal helpers become generic:
-- `computeFirstK: Rule<'t,'nt> list -> Nonterminal<'nt> list -> int -> Map<Nonterminal<'nt>, Set<string>>`
-- `firstOfSymbols` parameterized by `terminalToString`
+### 5. FirstFollow — full rewrite with Symbol list
+**File:** `src/FLPQ.Languages/FirstFollow.fs`
 
-**Update callers:**
-- `LLParser.fs`: `FirstFollow.firstK g id k`, `FirstFollow.followK g id k`
-- `LRParser.fs`: `FirstFollow.firstK aug id 1`, etc.
-- `FirstFollowTests.fs`: update all test calls
+Epsilon is `[Epsilon]` (a single-element list). Epsilon lookahead is `[Epsilon]`.
 
-## Task 20.6: Remove Stubs
-
-- Delete `src/FLPQ.Core/Library.fs`
-- Delete `tests/FLPQ.Core.Tests/Tests.fs`
-- Update both `.fsproj` files to remove compile entries
-
-## Task 20.4.6: Boolean Decomposition Property Tests
-
-**File:** `tests/FLPQ.Core.Tests/BooleanDecompositionTests.fs`
-
-Add `[<Property>]` test:
+New signatures:
 ```fsharp
-[<Property>]
-let ``compose of decompose and recompose is identity`` (m: Matrix<Set<int>>) =
-    let decomp = BooleanDecomposition.decompose m
-    let restored = BooleanDecomposition.recompose decomp
-    // cells match
+val firstK: Grammar<'t, 'nt> -> int -> Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>
+val followK: Grammar<'t, 'nt> -> int -> Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>
+val firstKOfString: Map<Nonterminal<'nt>, Set<Symbol<'t,'nt> list>> -> int -> Symbol<'t,'nt> list -> Set<Symbol<'t,'nt> list>
 ```
 
-Need to add a generator for `Matrix<Set<int>>`.
+Remove `terminalToString` parameter entirely.
 
-## Task 20.4.1-4, 20.4.7: Cross-Parser Property Tests
+Internal operations:
+- `truncate(lst, k)`: take first k symbols from list
+- `productTrunc(k, set1, set2)`: concatenation + truncation of two sets
+- Concatenation: `lst1 @ lst2`
 
-### 20.4.1: LL and LR agree (for compatible grammars)
-- Grammar1 (both LL(1) and SLR(1)/CLR(1) work): property test that LL and LR results agree
+In `computeFirstK`: when initializing with direct productions:
+- `T(Terminal t) :: _` → `truncate [T(Terminal t)] k`
+- `[]` → `set [ [Epsilon] ]` — no, wait. Epsilon productions are `[Epsilon]`, not `[]`.
 
-### 20.4.2: LL and Valiant agree (for compatible grammars)
-- Grammar1: LL(1) parser and Valiant agree
+Hmm wait. In `computeFirstK`, the original code does:
+```fsharp
+match r.rhs with
+| [] -> Some ""
+| T(Terminal t) :: _ -> Some(prefix t k)
+```
 
-### 20.4.3: LR and CYK agree (for compatible grammars)
-- Grammar1/3: LR and CYK agree
+With the change:
+```fsharp
+match r.rhs with
+| [Epsilon] -> Some [Epsilon]
+| T(Terminal t) :: _ -> Some(truncate [T(Terminal t)] k)
+```
 
-### 20.4.4: CYK and Valiant reject tables identical
-- When both reject, tables must match (already partially tested, strengthen)
+In `firstOfSymbols`:
+```fsharp
+| [] -> set [ [Epsilon] ]  // empty list of symbols = epsilon
+| T(Terminal t) :: rest -> ...
+| Epsilon :: _ -> set [ [Epsilon] ]  // can't happen in practice but is trivially epsilon
+| N nt :: rest -> ...
+```
 
-### 20.4.7: Use grammar6/7/8 for all parsers
-- Add property tests using grammar6/7/8 where appropriate (they define the same language as grammar6)
-- For grammar6/7/8 cross-parser agreement tests
+The `productTrunc` function replaces `concatTrunc`. When s1 is epsilon (empty list? No, `[Epsilon]`):
+- In the original: `if s1 = "" then set2 |> Set.toSeq`  
+- In the new: `if s1 = [Epsilon] then set2 |> Set.toSeq`
 
-## Task 20.1: LL Parser Documentation
+When s1 reaches length k, output s1 directly (truncated to k).
 
-**New file:** `docs/ll-parser.md`
+### 6. LLParser — lookahead as Symbol list
+**File:** `src/FLPQ.Languages/LLParser.fs`
 
-Cover:
-- `DerivationTree` type definition
-- `LLParser.buildTable` signature and behavior (LL(k) table construction)
-- `LLParser.parse` signature and behavior (table-driven recursive descent)
-- Lookahead computation from first_k and follow_k
-- Conflict detection
-- Tokenization assumptions
-- Book relationship
+- Lookahead: `string` → `Symbol<string, string> list`
+- Table key: `Nonterminal * string` → `Nonterminal * Symbol<string, string> list`
+- `buildTable`: return `Map<Nonterminal<string> * Symbol<string, string> list, int>`
+- `parse`: use Symbol-list lookahead instead of string
+- `lookaheadStr` function → renamed, returns next k symbols
+- Table entry selection uses symbol lists, not strings
 
-## Task 20.7: Split Projects
+The LL parser's `parse` function currently uses `lookaheadStr tokens pos k` where tokens is `string list`. This should become passing the actual token symbols.
 
-### New projects
+Actually, the LL parser receives the tokenized input as `string list`. These need to become `Symbol<string, string> list`. The lookahead is the next k symbols from the input, concatenated.
 
-1. **`src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj`**
-   - Matrix.fs, LinearAlgebra.fs, BooleanDecomposition.fs
-   
-2. **`src/FLPQ.Languages/FLPQ.Languages.fsproj`**
-   - DerivationTree.fs, Tokenizer.fs, Grammar.fs, Cyk.fs, Valiant.fs,
-   - FirstFollow.fs, Automaton.fs, LLParser.fs, LRParser.fs
-   - Depends on FLPQ.LinearAlgebra
+Wait, the tokenizer returns `Symbol<string, string> list` via `tokenize`. The LL parser's `tokenize` currently returns `string list` (for lookahead computation). With the change, it should return `Symbol<string, string> list` and lookahead picks the next k symbols.
 
-3. **`tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj`**
-   - MatrixTests.fs, LinearAlgebraTests.fs, BooleanDecompositionTests.fs
+### 7. LRParser — lookahead as Symbol
+**File:** `src/FLPQ.Languages/LRParser.fs`
 
-4. **`tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj`**
-   - TestGrammars.fs, GrammarTests.fs, CykTests.fs, ValiantTests.fs,
-   - FirstFollowTests.fs, AutomatonTests.fs, LLParserTests.fs, LRParserTests.fs
+- `LR1Item.Lookahead`: `Terminal<string>` → `Symbol<string, string>`
+- LR table action keys: `(int * string)` → `(int * Symbol<string, string>)`
+  - For end-of-input `$`, the action uses `""`; this becomes `Epsilon`
+- `allTerminals` in table construction: collect all `T(Terminal t)` symbols from rules
+- Reduce actions: for LR(0), reduce on all terminals + epsilon (end-of-input)
+  - For SLR(1), reduce on follow set symbols
+  - For CLR(1), reduce on the item's lookahead
 
-### Namespaces
-- `FLPQ.LinearAlgebra` for linear algebra modules
-- `FLPQ.Languages` for languages modules
+The LR parser's `parse` function uses terminal tokens. `Epsilon` (end of input) is used as lookahead when we've consumed all input.
 
-### Updates
-- All source files get correct namespace
-- All test files get correct opens
-- Solution file updated with 4 projects
-- CI config updated (no changes needed, dotnet build/test work with solution)
+### 8. Cyk.fs and Valiant.fs
+**Files:** `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Languages/Valiant.fs`
+
+These work with CNF internally. Need to update:
+- Empty RHS checks: `r.rhs.IsEmpty` → `r.rhs = [Epsilon]` (for epsilon acceptance)
+- Terminal production matching: unchanged (matches `[T(Terminal t)]`)
+- Binary production matching: unchanged (matches `[N left; N right]`)
+
+Wait, there may also be checks for `Rule<'t,'nt>` with `r.rhs = []`. In Cyk:
+```fsharp
+cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
+```
+This checks if the start symbol has an epsilon production. With the change:
+```fsharp
+cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [Epsilon])
+```
+
+### 9. Tokenizer
+No changes. Epsilon never appears as input token.
+
+### 10. Tests — massive updates
+All test files need updating for the new Symbol.Epsilon, changed lookahead types, and changed first/follow return types.
+
+### 11. Documentation
+Update: grammar.md, first-follow.md, derivation-tree.md, ll-parser.md
 
 ## Implementation Order
 
-1. Create detailed_plan.md (this file) — DONE
-2. 20.3: Remove states check
-3. 20.2: Create DerivationTree.fs
-4. 20.5: Create Tokenizer.fs
-5. 20.4.5: Make firstK/followK generic
-6. 20.6: Remove stubs
-7. 20.4.6: Boolean decomposition property tests
-8. 20.4.1-4, 20.4.7: Cross-parser property tests
-9. 20.1: LL documentation
-10. 20.7: Split projects
-11. Update docs (architecture.md, main.md, knowledge_base.md)
-12. Format, build, test, merge
-
-## Files
-
-| File | Action |
-|------|--------|
-| `src/FLPQ.Core/LRParser.fs` | Remove states.Length check |
-| `src/FLPQ.Core/DerivationTree.fs` | NEW — DerivationTree type + leaves |
-| `src/FLPQ.Core/Tokenizer.fs` | NEW — Common tokenizer |
-| `src/FLPQ.Core/FirstFollow.fs` | Make generic |
-| `src/FLPQ.Core/LLParser.fs` | Remove DerivationTree type/leaves, use DerivationTree/Tokenizer modules |
-| `src/FLPQ.Core/Cyk.fs` | Use Tokenizer |
-| `src/FLPQ.Core/FLPQ.Core.fsproj` | Update compile order (add new files, remove stubs) |
-| `src/FLPQ.Core/Library.fs` | DELETE |
-| `tests/FLPQ.Core.Tests/Tests.fs` | DELETE |
-| `tests/FLPQ.Core.Tests/BooleanDecompositionTests.fs` | Add property tests |
-| `tests/FLPQ.Core.Tests/LLParserTests.fs` | Add cross-parser property tests |
-| `tests/FLPQ.Core.Tests/LRParserTests.fs` | Add cross-parser property tests |
-| `tests/FLPQ.Core.Tests/ValiantTests.fs` | Add cross-parser property tests |
-| `tests/FLPQ.Core.Tests/CykTests.fs` | Add cross-parser property tests |
-| `tests/FLPQ.Core.Tests/FirstFollowTests.fs` | Update for generic API |
-| `docs/ll-parser.md` | NEW — LL parser documentation |
-| `docs/architecture.md` | Update with new modules and project structure |
-| `docs/main.md` | Add ll-parser.md link |
+1. Grammar.fs: Add Epsilon to Symbol, update CNF
+2. DerivationTree.fs: Remove Epsilon case
+3. FirstFollow.fs: Rewrite
+4. LLParser.fs + LRParser.fs: Update lookahead
+5. Cyk.fs + Valiant.fs: Minor fixes
+6. Tests: Update all
+7. Docs: Update all

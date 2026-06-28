@@ -209,7 +209,7 @@ module Valiant =
 
         if input = "" then
             let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
+                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)

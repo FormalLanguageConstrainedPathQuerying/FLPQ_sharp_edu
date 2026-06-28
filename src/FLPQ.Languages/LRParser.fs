@@ -10,12 +10,12 @@ type LR0Item =
       Dot: int }
 
 /// LR(1) item: A -> α·β, l
-/// Adds a lookahead terminal to each item for more precise reduce decisions.
+/// Adds a lookahead symbol to each item for more precise reduce decisions.
 type LR1Item =
     { Lhs: Nonterminal<string>
       Rhs: Symbol<string, string> list
       Dot: int
-      Lookahead: Terminal<string> }
+      Lookahead: Symbol<string, string> }
 
 /// Action in an LR parsing table.
 type LRAction =
@@ -25,12 +25,12 @@ type LRAction =
 
 /// Conflict detected during LR table construction.
 type LRConflict =
-    | ShiftReduce of state: int * symbol: string * shiftTo: int * reduceRule: int
-    | ReduceReduce of state: int * symbol: string * rule1: int * rule2: int
+    | ShiftReduce of state: int * symbol: Symbol<string, string> * shiftTo: int * reduceRule: int
+    | ReduceReduce of state: int * symbol: Symbol<string, string> * rule1: int * rule2: int
 
 /// LR parsing table with action and goto maps, plus detected conflicts.
 type LRTable =
-    { action: Map<int * string, LRAction>
+    { action: Map<int * Symbol<string, string>, LRAction>
       goto: Map<int * Nonterminal<string>, int>
       conflicts: LRConflict list }
 
@@ -84,7 +84,7 @@ module LRAutomaton =
     let private closureLR1
         (rules: Rule<string, string> list)
         (items: Set<LR1Item>)
-        (firstMap: Map<Nonterminal<string>, Set<string>>)
+        (firstMap: Map<Nonterminal<string>, Set<Symbol<string, string> list>>)
         : Set<LR1Item> =
         let mutable closure = items
         let mutable changed = true
@@ -104,9 +104,10 @@ module LRAutomaton =
 
                         let lookaheads =
                             if beta.IsEmpty then
-                                set [ item.Lookahead |> fun (Terminal t) -> t ]
+                                set [ [ item.Lookahead ] ]
                             else
-                                FirstFollow.firstKOfString id firstMap 1 beta |> Set.filter (fun s -> s <> "")
+                                FirstFollow.firstKOfString firstMap 1 beta
+                                |> Set.filter (fun s -> s <> [ Epsilon ])
 
                         let newItems =
                             rules
@@ -118,7 +119,7 @@ module LRAutomaton =
                                     { Lhs = r.lhs
                                       Rhs = r.rhs
                                       Dot = 0
-                                      Lookahead = Terminal la }))
+                                      Lookahead = List.head la }))
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -132,7 +133,7 @@ module LRAutomaton =
         (rules: Rule<string, string> list)
         (items: Set<LR1Item>)
         (sym: Symbol<string, string>)
-        (firstMap: Map<Nonterminal<string>, Set<string>>)
+        (firstMap: Map<Nonterminal<string>, Set<Symbol<string, string> list>>)
         : Set<LR1Item> =
         items
         |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
@@ -203,13 +204,13 @@ module LRAutomaton =
         Automaton.fromTransitions states (List.rev transitions) (set [ 0 ]) finalStates
 
     /// Build the LR(1) automaton for a grammar.
-    /// States are sets of LR(1) items (with lookahead terminals).
+    /// States are sets of LR(1) items (with lookahead symbols).
     /// Transitions are labeled with grammar symbols.
     /// Returns a deterministic finite automaton.
     let buildLR1 (g: Grammar<string, string>) : Automaton<Symbol<string, string>, Set<LR1Item>> =
         let aug = augmentGrammar g
         let augmentedRule = aug.rules.[0]
-        let firstMap = FirstFollow.firstK id aug 1
+        let firstMap = FirstFollow.firstK aug 1
 
         let startItems =
             closureLR1
@@ -218,7 +219,7 @@ module LRAutomaton =
                     [ { Lhs = augmentedRule.lhs
                         Rhs = augmentedRule.rhs
                         Dot = 0
-                        Lookahead = Terminal "" } ])
+                        Lookahead = Epsilon } ])
                 firstMap
 
         let mutable states = [ startItems ]
@@ -261,7 +262,7 @@ module LRAutomaton =
                 { Lhs = augmentedRule.lhs
                   Rhs = augmentedRule.rhs
                   Dot = augmentedRule.rhs.Length
-                  Lookahead = Terminal "" }
+                  Lookahead = Epsilon }
 
             states
             |> List.indexed
@@ -275,8 +276,14 @@ module LRParser =
 
     let private augmentGrammar g = LRAutomaton.augmentGrammar g
 
+    let private isCompleted (item: LR0Item) : bool =
+        item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
+
+    let private isCompleted1 (item: LR1Item) : bool =
+        item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
+
     /// Build the LR(0) parsing table.
-    /// Completed items cause reduce actions on all grammar terminals (*including* end-of-input "").
+    /// Completed items cause reduce actions on all grammar terminals (*including* end-of-input Epsilon).
     /// No lookahead information is used — conflicts are expected for most non-trivial grammars.
     let buildLR0Table (g: Grammar<string, string>) : LRTable =
         let aug = augmentGrammar g
@@ -292,7 +299,7 @@ module LRParser =
             [ for rule in aug.rules do
                   for sym in rule.rhs do
                       match sym with
-                      | T(Terminal t) -> yield t
+                      | T _ as tSym -> yield tSym
                       | _ -> () ]
             |> List.distinct
 
@@ -300,34 +307,35 @@ module LRParser =
             for j in 0 .. lr0.transitions.cols - 1 do
                 for sym in lr0.transitions.data.[i, j] do
                     match sym with
-                    | T(Terminal t) ->
-                        let key = (i, t)
+                    | T _ as tSym ->
+                        let key = (i, tSym)
 
                         match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, t, j, r) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
                         | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, t, j, -1) :: conflicts
+                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
                         | None -> action <- Map.add key (Shift j) action
                     | N nt -> goto <- Map.add (i, nt) j goto
+                    | _ -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
-                if item.Dot = item.Rhs.Length then
+                if isCompleted item then
                     if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
-                        let key = (stateIdx, "")
+                        let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, "", s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, "", r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
                             aug.rules |> List.findIndex (fun r -> r.lhs = item.Lhs && r.rhs = item.Rhs)
 
-                        for t in "" :: allTerminals do
+                        for t in Epsilon :: allTerminals do
                             let key = (stateIdx, t)
 
                             match Map.tryFind key action with
@@ -348,7 +356,7 @@ module LRParser =
         let augmentedRule = aug.rules.[0]
         let lr0 = LRAutomaton.buildLR0 g
         let states = lr0.states
-        let followMap = FirstFollow.followK id aug 1
+        let followMap = FirstFollow.followK aug 1
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
@@ -358,27 +366,28 @@ module LRParser =
             for j in 0 .. lr0.transitions.cols - 1 do
                 for sym in lr0.transitions.data.[i, j] do
                     match sym with
-                    | T(Terminal t) ->
-                        let key = (i, t)
+                    | T _ as tSym ->
+                        let key = (i, tSym)
 
                         match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, t, j, r) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
                         | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, t, j, -1) :: conflicts
+                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
                         | None -> action <- Map.add key (Shift j) action
                     | N nt -> goto <- Map.add (i, nt) j goto
+                    | _ -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
-                if item.Dot = item.Rhs.Length then
+                if isCompleted item then
                     if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
-                        let key = (stateIdx, "")
+                        let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, "", s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, "", r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
@@ -388,12 +397,13 @@ module LRParser =
                         let followSet = followMap |> Map.find item.Lhs
 
                         for t in followSet do
-                            let key = (stateIdx, t)
+                            let la = List.head t
+                            let key = (stateIdx, la)
 
                             match Map.tryFind key action with
-                            | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, t, s, ruleIdx) :: conflicts
-                            | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, t, r, ruleIdx) :: conflicts
-                            | Some Accept -> conflicts <- ShiftReduce(stateIdx, t, -1, ruleIdx) :: conflicts
+                            | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, la, s, ruleIdx) :: conflicts
+                            | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, la, r, ruleIdx) :: conflicts
+                            | Some Accept -> conflicts <- ShiftReduce(stateIdx, la, -1, ruleIdx) :: conflicts
                             | None -> action <- Map.add key (Reduce ruleIdx) action
 
         { action = action
@@ -417,34 +427,35 @@ module LRParser =
             for j in 0 .. lr1.transitions.cols - 1 do
                 for sym in lr1.transitions.data.[i, j] do
                     match sym with
-                    | T(Terminal t) ->
-                        let key = (i, t)
+                    | T _ as tSym ->
+                        let key = (i, tSym)
 
                         match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, t, j, r) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
                         | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, t, j, -1) :: conflicts
+                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
                         | None -> action <- Map.add key (Shift j) action
                     | N nt -> goto <- Map.add (i, nt) j goto
+                    | _ -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
-                if item.Dot = item.Rhs.Length then
+                if isCompleted1 item then
                     if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
-                        let key = (stateIdx, "")
+                        let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, "", s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, "", r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
                             aug.rules |> List.findIndex (fun r -> r.lhs = item.Lhs && r.rhs = item.Rhs)
 
-                        let (Terminal t) = item.Lookahead
+                        let t = item.Lookahead
 
                         let key = (stateIdx, t)
 
@@ -469,7 +480,7 @@ module LRParser =
     let parse (g: Grammar<string, string>) (table: LRTable) (input: string) : Option<DerivationTree<string, string>> =
         let aug = augmentGrammar g
 
-        let tokens = Tokenizer.tokenizeTerminals input
+        let tokens = Tokenizer.tokenize input
 
         let mutable stateStack: int list = [ 0 ]
         let mutable treeStack: DerivationTree<string, string> list = []
@@ -482,11 +493,7 @@ module LRParser =
             steps <- steps + 1
             let currentState = stateStack.Head
 
-            let lookahead =
-                if pos < tokens.Length then
-                    (let (Terminal t) = tokens.[pos] in t)
-                else
-                    ""
+            let lookahead = if pos < tokens.Length then tokens.[pos] else Epsilon
 
             match Map.tryFind (currentState, lookahead) table.action with
             | Some(Shift nextState) ->
@@ -495,7 +502,7 @@ module LRParser =
                 pos <- pos + 1
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
-                let popCount = rule.rhs.Length
+                let popCount = rule.rhs |> List.filter (fun s -> s <> Epsilon) |> List.length
 
                 let children = treeStack |> List.take popCount |> List.rev
                 stateStack <- stateStack |> List.skip popCount
@@ -514,8 +521,8 @@ module LRParser =
                 finished <- true
                 accepted <- true
             | None ->
-                if pos = tokens.Length && lookahead = "" then
-                    match Map.tryFind (currentState, "") table.action with
+                if pos = tokens.Length && lookahead = Epsilon then
+                    match Map.tryFind (currentState, Epsilon) table.action with
                     | Some Accept ->
                         finished <- true
                         accepted <- true

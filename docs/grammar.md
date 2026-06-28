@@ -23,14 +23,15 @@ A nonterminal symbol wrapping a user-defined type `'nt`.
 type Symbol<'t, 'nt> =
     | T of Terminal<'t>
     | N of Nonterminal<'nt>
+    | Epsilon
 ```
-Sum type representing either a terminal or a nonterminal symbol. Case labels `T` and `N` avoid naming conflicts with the wrapper types.
+Sum type representing a terminal, a nonterminal, or epsilon (the empty string ε). The explicit `Epsilon` case allows epsilon to be represented as a symbol itself, following classical language theory conventions. This eliminates the need for ad-hoc empty-list or empty-string representations in first/follow computations and lookahead handling.
 
 ### `Rule<'t, 'nt>`
 ```fsharp
 type Rule<'t, 'nt> = { lhs: Nonterminal<'nt>; rhs: Symbol<'t, 'nt> list }
 ```
-A production rule with a left-hand side nonterminal and a right-hand side sequence of symbols. An empty `rhs` list represents an epsilon-production.
+A production rule with a left-hand side nonterminal and a right-hand side sequence of symbols. An epsilon-production is represented as `rhs = [Epsilon]` (a single-element list containing the Epsilon symbol).
 
 ### `Grammar<'t, 'nt>`
 ```fsharp
@@ -51,7 +52,7 @@ Parses a context-free grammar from BNF text.
 - Empty lines are ignored
 - Each line has the form `<nonterm> -> <symbols>` or `<nonterm> -> eps`
 - The left-hand side must be a single PascalCase identifier (starts with uppercase)
-- The right-hand side `eps` denotes the empty production
+- The right-hand side `eps` denotes an epsilon production, represented as `[Epsilon]`
 - Otherwise, symbols on the right-hand side are separated by spaces
 - Each symbol is classified by naming convention: PascalCase → `Nonterminal`, camelCase → `Terminal`
 

@@ -38,11 +38,12 @@ type LR1Item =
     { Lhs: Nonterminal<string>
       Rhs: Symbol<string, string> list
       Dot: int
-      Lookahead: Terminal<string> }
+      Lookahead: Symbol<string, string> }
 ```
 
-Extends LR(0) items with a lookahead terminal for more precise reduce decisions.
+Extends LR(0) items with a lookahead symbol for more precise reduce decisions.
 E.g., `A → α·β, a` means reduce `A → αβ` only when the next input token is `a`.
+End-of-input lookahead is represented as `Epsilon` (matching the Symbol type).
 
 ### LR Action
 
@@ -68,7 +69,7 @@ so callers can inspect them.
 
 ```fsharp
 type LRTable =
-    { action: Map<int * string, LRAction>
+    { action: Map<int * Symbol<string, string>, LRAction>
       goto: Map<int * Nonterminal<string>, int>
       conflicts: LRConflict list }
 ```
@@ -131,7 +132,7 @@ function, then BFS explores all reachable states through `gotoLR0` transitions.
 val buildLR1: Grammar<string, string> -> Automaton<Symbol<string, string>, Set<LR1Item>>
 ```
 Builds the canonical LR(1) automaton. Same BFS structure as LR(0), but `closureLR1`
-propagates lookahead terminals using `firstK` computations.
+propagates lookahead symbols using `firstK` computations.
 
 #### `closureLR0` (private)
 ```fsharp
@@ -164,7 +165,8 @@ Like `gotoLR0` but preserves lookahead terminals from the source items.
 val buildLR0Table: Grammar<string, string> -> LRTable
 ```
 No lookahead information: completed items reduce on ALL grammar terminals plus
-end-of-input marker `""`. Most non-trivial grammars will have conflicts.
+end-of-input marker `Epsilon`. Most non-trivial grammars will have conflicts.
+Epsilon items (`rhs = [Epsilon]`) are treated as immediately completed (dot at 0 counts as completed).
 
 #### `buildSLR1Table`
 ```fsharp

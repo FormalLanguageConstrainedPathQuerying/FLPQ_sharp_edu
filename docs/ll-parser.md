@@ -11,17 +11,18 @@ The derivation tree type is defined in the [DerivationTree module](derivation-tr
 ### `LLParser.buildTable`
 
 ```fsharp
-val buildTable: Grammar<string, string> -> k: int -> Map<Nonterminal<string> * string, int>
+val buildTable: Grammar<string, string> -> k: int -> Map<Nonterminal<string> * Symbol<string, string> list, int>
 ```
 
 Constructs an LL(k) parsing table for a given grammar and lookahead length `k`.
+Lookahead is a list of grammar symbols; end-of-input is `[Epsilon]`.
 
 **Algorithm:**
 1. Compute `first_k` and `follow_k` for the grammar using `FirstFollow.firstK` and `FirstFollow.followK`.
 2. For each rule `A → α`:
    - Compute the lookahead set LA(A → α):
-     - If `α = ε`, LA = `follow(A)`.
-     - Otherwise, LA = `first_k(α)`. If `ε ∈ first_k(α)`, add `follow(A)` as well.
+     - If `α = [Epsilon]`, LA = `follow(A)`.
+     - Otherwise, LA = `first_k(α)`. If ε ∈ `first_k(α)`, add `follow(A)` as well.
    - For each `w ∈ LA`, add entry `(A, w) → ruleIdx` to the table.
 3. If a table entry already exists with a different rule index, throw an exception indicating an LL(k) conflict.
 
@@ -37,19 +38,20 @@ Constructs an LL(k) parsing table for a given grammar and lookahead length `k`.
 ### `LLParser.parse`
 
 ```fsharp
-val parse: Grammar<string, string> -> table: Map<Nonterminal<string> * string, int> -> k: int -> input: string -> Option<DerivationTree<string, string>>
+val parse: Grammar<string, string> -> table: Map<Nonterminal<string> * Symbol<string, string> list, int> -> k: int -> input: string -> Option<DerivationTree<string, string>>
 ```
 
 Table-driven LL(k) recursive descent parser that builds a derivation tree.
 
 **Algorithm:**
-1. Tokenize the input using `Tokenizer.tokenizeStrings` (space-separated terminals).
+1. Tokenize the input using `Tokenizer.tokenize` (space-separated terminals).
 2. Maintain a stack of grammar symbols (initially `[N(start)]`).
 3. While the stack is non-empty:
    - Pop the top symbol.
-   - If it's a terminal, match against the current input token (advance if matched, fail otherwise).
-   - If it's a nonterminal, compute the lookahead string (next `k` tokens without spaces), look up the table entry `(nt, la)`, and expand using the indicated rule.
-   - Build a derivation tree: push `Leaf` nodes for matched terminals, `Epsilon` for epsilon productions, and `Node` for nonterminal expansions (children populated after complete expansion).
+   - If it's a terminal, match against the current input symbol (advance if matched, fail otherwise).
+   - If it's `Epsilon`, push `Leaf(Epsilon)` and continue without consuming input.
+   - If it's a nonterminal, compute the lookahead (next `k` input symbols, or `[Epsilon]` for end-of-input), look up the table entry `(nt, la)`, and expand using the indicated rule.
+   - Build a derivation tree: push `Leaf` nodes for matched terminals and epsilon, and `Node` for nonterminal expansions (children populated after complete expansion).
 
 **Preconditions:**
 - The table must be constructed by `buildTable` for the same grammar and `k`.
@@ -63,11 +65,12 @@ Table-driven LL(k) recursive descent parser that builds a derivation tree.
 
 | Decision | Rationale |
 |----------|-----------|
-| Table is `Map<(Nonterminal * string), int>` | Simple lookup; nonterminal + lookahead uniquely identifies a rule. |
+| Table is `Map<(Nonterminal * Symbol list), int>` | Simple lookup; nonterminal + lookahead uniquely identifies a rule. Lookahead is a Symbol list, naturally matching first/follow results. |
 | Conflict detection throws exception | Immediate feedback during table construction. LL(k) conflict means the grammar is not LL(k) for the given k. |
 | Tokenizer uses space-separated terminals | Supports multi-character terminals; consistent with all other parsers. |
 | Derivation tree in separate module | Shared by LL and LR parsers; avoids circular dependencies. |
 | Lookahead from first_k and follow_k | Standard LL(k) construction from the book. |
+| End-of-input lookahead is `[Epsilon]` | Consistent with explicit Epsilon symbol in first/follow sets. No string/symbol conversion needed. |
 
 ## Book Relationship
 

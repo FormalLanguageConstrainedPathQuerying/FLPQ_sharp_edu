@@ -144,7 +144,7 @@ module Cyk =
     let parse (g: Grammar<string, string>) (input: string) : bool =
         if input = "" then
             let cnf = Grammar.toCnf g
-            cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
+            cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
         else
             let cnf = Grammar.toCnf g
             let tokens = tokenize input
@@ -157,7 +157,7 @@ module Cyk =
 
         if input = "" then
             let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [])
+                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)

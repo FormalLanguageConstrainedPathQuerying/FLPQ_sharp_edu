@@ -3,10 +3,11 @@ namespace FLPQ.Languages
 module LLParser =
 
     /// Build an LL(k) parsing table.
-    /// Returns Map from (nonterminal, lookahead string) to rule index.
-    let buildTable (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string> * string, int> =
-        let firstMap = FirstFollow.firstK id g k
-        let followMap = FirstFollow.followK id g k
+    /// Returns Map from (nonterminal, lookahead) to rule index.
+    /// Lookahead is a list of grammar symbols (terminals or epsilon for end-of-input).
+    let buildTable (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string> * Symbol<string, string> list, int> =
+        let firstMap = FirstFollow.firstK g k
+        let followMap = FirstFollow.followK g k
 
         let mutable table = Map.empty
 
@@ -14,15 +15,15 @@ module LLParser =
             let rule = g.rules.[ruleIdx]
 
             let lookahead =
-                if rule.rhs.IsEmpty then
+                if rule.rhs = [ Epsilon ] then
                     followMap |> Map.find rule.lhs
                 else
-                    let firstOfRhs = FirstFollow.firstKOfString id firstMap k rule.rhs
+                    let firstOfRhs = FirstFollow.firstKOfString firstMap k rule.rhs
 
-                    let withoutEps = Set.remove "" firstOfRhs
+                    let withoutEps = Set.remove [ Epsilon ] firstOfRhs
                     let followOfA = followMap |> Map.find rule.lhs
 
-                    if Set.contains "" firstOfRhs then
+                    if Set.contains [ Epsilon ] firstOfRhs then
                         Set.union withoutEps followOfA
                     else
                         withoutEps
@@ -35,7 +36,7 @@ module LLParser =
                     | Some existing ->
                         if existing <> ruleIdx then
                             failwithf
-                                "LL(%d) conflict: %A with lookahead %s has rules %d and %d"
+                                "LL(%d) conflict: %A with lookahead %A has rules %d and %d"
                                 k
                                 rule.lhs
                                 w
@@ -45,21 +46,20 @@ module LLParser =
 
         table
 
-    let private tokenize (s: string) : string list = Tokenizer.tokenizeStrings s
+    let private tokenize (s: string) : Symbol<string, string> list = Tokenizer.tokenize s
 
-    let private lookaheadStr (input: string list) (pos: int) (k: int) : string =
-        let mutable result = ""
-
-        for i in pos .. min (pos + k - 1) (input.Length - 1) do
-            result <- result + input.[i]
-
-        result
+    let private lookahead (input: Symbol<string, string> list) (pos: int) (k: int) : Symbol<string, string> list =
+        if pos >= input.Length then
+            [ Epsilon ]
+        else
+            let endIdx = min (pos + k) input.Length
+            input.[pos .. endIdx - 1]
 
     /// Parse a string using an LL(k) parsing table, building a derivation tree.
     /// Returns Some(tree) on success, None on failure.
     let parse
         (g: Grammar<string, string>)
-        (table: Map<Nonterminal<string> * string, int>)
+        (table: Map<Nonterminal<string> * Symbol<string, string> list, int>)
         (k: int)
         (input: string)
         : Option<DerivationTree<string, string>> =
@@ -73,23 +73,21 @@ module LLParser =
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, treeStack) else None
             | T(Terminal t) :: restStack ->
-                if pos < tokens.Length && tokens.[pos] = t then
-                    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(Terminal t) ])
+                if pos < tokens.Length && tokens.[pos] = T(Terminal t) then
+                    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(T(Terminal t)) ])
                 else
                     None
+            | Epsilon :: restStack -> parseLoop restStack pos (treeStack @ [ Leaf(Epsilon) ])
             | N nt :: restStack ->
-                let la = lookaheadStr tokens pos k
+                let la = lookahead tokens pos k
                 let key = (nt, la)
 
                 match Map.tryFind key table with
                 | Some ruleIdx ->
                     let rule = g.rules.[ruleIdx]
 
-                    if rule.rhs.IsEmpty then
-                        parseLoop restStack pos (treeStack @ [ Epsilon ])
-                    else
-                        let newStack = rule.rhs @ restStack
-                        parseLoop newStack pos treeStack
+                    let newStack = rule.rhs @ restStack
+                    parseLoop newStack pos treeStack
                 | None -> None
 
         match parseLoop ([ N g.start ]) 0 [] with

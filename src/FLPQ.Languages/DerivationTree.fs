@@ -1,17 +1,18 @@
 namespace FLPQ.Languages
 
 /// Derivation tree produced by a parsing algorithm.
-/// Leaves carry terminal symbols; internal nodes carry nonterminals and children.
+/// Leaves carry grammar symbols; internal nodes carry nonterminals and children.
 type DerivationTree<'t, 'nt> =
-    | Leaf of Terminal<'t>
-    | Epsilon
+    | Leaf of Symbol<'t, 'nt>
     | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
 
 module DerivationTree =
 
-    /// Collect all leaf terminals from a derivation tree (left-to-right).
+    /// Collect all leaf terminal values from a derivation tree (left-to-right).
+    /// Epsilon leaves contribute nothing.
     let rec leaves (tree: DerivationTree<'t, 'nt>) : 't list =
         match tree with
-        | Leaf(Terminal t) -> [ t ]
-        | Epsilon -> []
+        | Leaf(T(Terminal t)) -> [ t ]
+        | Leaf(Epsilon) -> []
+        | Leaf(N _) -> []
         | Node(_, children) -> children |> List.collect leaves
