@@ -15,6 +15,7 @@
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
+    <Compile Include="DerivationTreeVisualizationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,6 +16,7 @@
     <Compile Include="LLParser.fs" />
     <Compile Include="LRParser.fs" />
     <Compile Include="AutomatonVisualizer.fs" />
+    <Compile Include="DerivationTreeVisualizer.fs" />
   </ItemGroup>
 
   <ItemGroup>
