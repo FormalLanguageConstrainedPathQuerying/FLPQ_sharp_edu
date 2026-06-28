@@ -1,12 +1,5 @@
 namespace FLPQ.Languages
 
-/// Step of LR parser execution for visualization.
-[<Struct>]
-type LRStep =
-    { tree: string
-      stack: string
-      input: string }
-
 /// LR parser step-by-step visualization.
 module LRVisualizer =
 
@@ -46,7 +39,7 @@ module LRVisualizer =
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
-        : LRStep list =
+        : VisualizationStep list =
         let mutable steps = []
         let mutable stateStack: int list = [ 0 ]
         let mutable treeStack: DerivationTree<'t, 'nt> list = []

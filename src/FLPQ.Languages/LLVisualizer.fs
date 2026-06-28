@@ -1,12 +1,5 @@
 namespace FLPQ.Languages
 
-/// Step of LL parser execution for visualization.
-[<Struct>]
-type LLStep =
-    { tree: string
-      stack: string
-      input: string }
-
 /// LL parser step-by-step visualization.
 module LLVisualizer =
 
@@ -54,7 +47,7 @@ module LLVisualizer =
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
         (tokens: Symbol<'t, 'nt> list)
-        : LLStep list =
+        : VisualizationStep list =
         let mutable steps = []
         let mutable accepted = false
 

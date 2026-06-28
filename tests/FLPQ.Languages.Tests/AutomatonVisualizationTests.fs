@@ -1,27 +1,9 @@
 module AutomatonVisualizationTests
 
-open System
-open System.IO
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-let private checkDotCompiles (dot: string) : bool =
-    let tempFile = Path.GetTempFileName()
-    File.WriteAllText(tempFile, dot)
-
-    try
-        let processInfo = new Diagnostics.Process()
-        processInfo.StartInfo.FileName <- "dot"
-        processInfo.StartInfo.Arguments <- "-Tplain " + tempFile
-        processInfo.StartInfo.RedirectStandardOutput <- true
-        processInfo.StartInfo.RedirectStandardError <- true
-        processInfo.StartInfo.UseShellExecute <- false
-        processInfo.Start() |> ignore
-        processInfo.WaitForExit(5000) |> ignore
-        processInfo.ExitCode = 0
-    finally
-        File.Delete(tempFile)
 
 [<Fact>]
 let ``simple automaton dot compiles`` () =
@@ -33,7 +15,7 @@ let ``simple automaton dot compiles`` () =
     Assert.Contains("rankdir=LR", dot)
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
-    Assert.True(checkDotCompiles dot)
+    Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
 let ``DFA from LR(0) automaton dot compiles`` () =
@@ -73,14 +55,14 @@ let ``DFA from LR(0) automaton dot compiles`` () =
             aut
 
     Assert.Contains("digraph Automaton", dot)
-    Assert.True(checkDotCompiles dot)
+    Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
 let ``automaton with no transitions compiles`` () =
     let aut = Automaton.fromTransitions [ "s0" ] [] (set [ 0 ]) (set [ 0 ])
 
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
-    Assert.True(checkDotCompiles dot)
+    Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
 let ``multiple start and final states`` () =
@@ -90,4 +72,4 @@ let ``multiple start and final states`` () =
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
-    Assert.True(checkDotCompiles dot)
+    Assert.True(TestUtils.checkDotCompiles dot)

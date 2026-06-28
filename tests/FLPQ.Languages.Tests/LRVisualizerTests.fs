@@ -1,27 +1,9 @@
 module LRVisualizerTests
 
-open System
-open System.IO
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-let private checkDotCompiles (dot: string) : bool =
-    let tempFile = Path.GetTempFileName()
-    File.WriteAllText(tempFile, dot)
-
-    try
-        let processInfo = new Diagnostics.Process()
-        processInfo.StartInfo.FileName <- "dot"
-        processInfo.StartInfo.Arguments <- "-Tplain " + tempFile
-        processInfo.StartInfo.RedirectStandardOutput <- true
-        processInfo.StartInfo.RedirectStandardError <- true
-        processInfo.StartInfo.UseShellExecute <- false
-        processInfo.Start() |> ignore
-        processInfo.WaitForExit(5000) |> ignore
-        processInfo.ExitCode = 0
-    finally
-        File.Delete(tempFile)
 
 [<Fact>]
 let ``LR step visualization for SLR(1) grammar3 produces valid dot and TeX`` () =
@@ -43,7 +25,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid dot and TeX`` () 
     for step in steps do
         Assert.Contains(@"\begin{pNiceMatrix}", step.stack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
-        Assert.True(checkDotCompiles step.tree)
+        Assert.True(TestUtils.checkDotCompiles step.tree)
 
 [<Fact>]
 let ``LR step visualization includes input position marker`` () =

@@ -86,6 +86,7 @@ dotnet fsi Script.fsx
   - List all tasks to be done with their IDs and brief descriptions.
   - Identify dependencies between tasks (which must be done before which).
   - Identify potential conflicts or overlapping changes (e.g., two tasks modifying the same file).
+  - Identify shared infrastructure (types, helpers, utilities) that multiple tasks need. Create shared modules to avoid duplication across tasks.
   - Propose an execution order that minimizes rework and avoids conflicts.
   - Align tasks with the project architecture.
 * After the global plan is created, proceed with the normal working loop: one task at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md` for each.
