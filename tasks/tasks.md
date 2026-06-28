@@ -124,3 +124,8 @@
     5. Create common tokenizer for all parsing algorithms. Grammars may contains multy-symbol terminals, so, let suppose that terminals separated by spaces in the input string.
     6. Remove stubs like Tests.fs and Library.fs.
     7. Split both sources a tests into two projects. One for linear algebra, one for languages. 
+ 21. Refactoring. In LL and LR you suppose that grammar is over string. Make code generic. We can handle grammars over arbitrary symbols.
+ 22. Implement automata visualization. Use dot for visualization. Visualizer must be parametrized by states visualization function. Use double circle for final states. Fill start states with green. Add tests that check that generated dot string can be saved to file and compiled with graphviz dot without errors. You can use -TPlain output format to briefly check compilation result. Graphvis is installed.
+ 23. Implement derivation tree visualization using dot. As far as nonterms and terms are generic type, visualizer must be parametized with symbols visulaization. Add tests that check result compilation. 
+ 24. Add LL parser steps visualization. Each step visualize three parts: derivation tree, current stack (tex, one-row nicematrix, bottom is left), input (tex, full input with marked current position).  Add tests. Introduce struct type to represent visualization result of step. 
+ 25. Add LR parser steps visualization. Each step visualize three parts: derivation tree, current stack (tex, one-row nicematrix, bottom is left), input (tex, full input with marked current position). Add tests.

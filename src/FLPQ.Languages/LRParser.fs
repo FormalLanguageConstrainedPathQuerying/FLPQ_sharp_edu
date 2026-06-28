@@ -4,18 +4,18 @@ open FLPQ.LinearAlgebra
 
 /// LR(0) item: A -> α·β
 /// Dot position tracks how much of the RHS has been consumed.
-type LR0Item =
-    { Lhs: Nonterminal<string>
-      Rhs: Symbol<string, string> list
+type LR0Item<'t, 'nt> =
+    { Lhs: Nonterminal<'nt>
+      Rhs: Symbol<'t, 'nt> list
       Dot: int }
 
 /// LR(1) item: A -> α·β, l
 /// Adds a lookahead symbol to each item for more precise reduce decisions.
-type LR1Item =
-    { Lhs: Nonterminal<string>
-      Rhs: Symbol<string, string> list
+type LR1Item<'t, 'nt> =
+    { Lhs: Nonterminal<'nt>
+      Rhs: Symbol<'t, 'nt> list
       Dot: int
-      Lookahead: Symbol<string, string> }
+      Lookahead: Symbol<'t, 'nt> }
 
 /// Action in an LR parsing table.
 type LRAction =
@@ -24,30 +24,30 @@ type LRAction =
     | Accept
 
 /// Conflict detected during LR table construction.
-type LRConflict =
-    | ShiftReduce of state: int * symbol: Symbol<string, string> * shiftTo: int * reduceRule: int
-    | ReduceReduce of state: int * symbol: Symbol<string, string> * rule1: int * rule2: int
+type LRConflict<'t, 'nt> =
+    | ShiftReduce of state: int * symbol: Symbol<'t, 'nt> * shiftTo: int * reduceRule: int
+    | ReduceReduce of state: int * symbol: Symbol<'t, 'nt> * rule1: int * rule2: int
 
 /// LR parsing table with action and goto maps, plus detected conflicts.
-type LRTable =
-    { action: Map<int * Symbol<string, string>, LRAction>
-      goto: Map<int * Nonterminal<string>, int>
-      conflicts: LRConflict list }
+type LRTable<'t, 'nt when 't: comparison and 'nt: comparison> =
+    { action: Map<int * Symbol<'t, 'nt>, LRAction>
+      goto: Map<int * Nonterminal<'nt>, int>
+      conflicts: LRConflict<'t, 'nt> list }
 
 /// Construction of LR(0) and LR(1) automata as deterministic finite automata.
-/// Each automaton state is a set of items; transitions are labeled with grammar symbols.
+/// Functions take an already-augmented grammar (with fresh start nonterminal).
 module LRAutomaton =
 
-    let internal augmentGrammar (g: Grammar<string, string>) : Grammar<string, string> =
-        let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
-
+    /// Augment a grammar with a fresh start nonterminal.
+    /// The augmented grammar has S' -> S as the first rule.
+    let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         { rules =
             { lhs = freshStart
               rhs = [ N g.start ] }
             :: g.rules
           start = freshStart }
 
-    let private closureLR0 (rules: Rule<string, string> list) (items: Set<LR0Item>) : Set<LR0Item> =
+    let private closureLR0 (rules: Rule<'t, 'nt> list) (items: Set<LR0Item<'t, 'nt>>) : Set<LR0Item<'t, 'nt>> =
         let mutable closure = items
         let mutable changed = true
 
@@ -72,20 +72,20 @@ module LRAutomaton =
         closure
 
     let private gotoLR0
-        (rules: Rule<string, string> list)
-        (items: Set<LR0Item>)
-        (sym: Symbol<string, string>)
-        : Set<LR0Item> =
+        (rules: Rule<'t, 'nt> list)
+        (items: Set<LR0Item<'t, 'nt>>)
+        (sym: Symbol<'t, 'nt>)
+        : Set<LR0Item<'t, 'nt>> =
         items
         |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
         |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
         |> closureLR0 rules
 
     let private closureLR1
-        (rules: Rule<string, string> list)
-        (items: Set<LR1Item>)
-        (firstMap: Map<Nonterminal<string>, Set<Symbol<string, string> list>>)
-        : Set<LR1Item> =
+        (rules: Rule<'t, 'nt> list)
+        (items: Set<LR1Item<'t, 'nt>>)
+        (firstMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
+        : Set<LR1Item<'t, 'nt>> =
         let mutable closure = items
         let mutable changed = true
 
@@ -130,21 +130,19 @@ module LRAutomaton =
         closure
 
     let private gotoLR1
-        (rules: Rule<string, string> list)
-        (items: Set<LR1Item>)
-        (sym: Symbol<string, string>)
-        (firstMap: Map<Nonterminal<string>, Set<Symbol<string, string> list>>)
-        : Set<LR1Item> =
+        (rules: Rule<'t, 'nt> list)
+        (items: Set<LR1Item<'t, 'nt>>)
+        (sym: Symbol<'t, 'nt>)
+        (firstMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
+        : Set<LR1Item<'t, 'nt>> =
         items
         |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
         |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
         |> (fun filtered -> closureLR1 rules filtered firstMap)
 
-    /// Build the LR(0) automaton for a grammar.
+    /// Build the LR(0) automaton for an augmented grammar.
     /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
-    /// Returns a deterministic finite automaton.
-    let buildLR0 (g: Grammar<string, string>) : Automaton<Symbol<string, string>, Set<LR0Item>> =
-        let aug = augmentGrammar g
+    let buildLR0 (aug: Grammar<'t, 'nt>) : Automaton<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
         let augmentedRule = aug.rules.[0]
 
         let startItems =
@@ -156,7 +154,7 @@ module LRAutomaton =
                         Dot = 0 } ])
 
         let mutable states = [ startItems ]
-        let mutable transitions: (int * Symbol<string, string> * int) list = []
+        let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
         let mutable queue = [ startItems ]
 
         while not (List.isEmpty queue) do
@@ -203,12 +201,9 @@ module LRAutomaton =
 
         Automaton.fromTransitions states (List.rev transitions) (set [ 0 ]) finalStates
 
-    /// Build the LR(1) automaton for a grammar.
-    /// States are sets of LR(1) items (with lookahead symbols).
-    /// Transitions are labeled with grammar symbols.
-    /// Returns a deterministic finite automaton.
-    let buildLR1 (g: Grammar<string, string>) : Automaton<Symbol<string, string>, Set<LR1Item>> =
-        let aug = augmentGrammar g
+    /// Build the LR(1) automaton for an augmented grammar.
+    /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
+    let buildLR1 (aug: Grammar<'t, 'nt>) : Automaton<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>> =
         let augmentedRule = aug.rules.[0]
         let firstMap = FirstFollow.firstK aug 1
 
@@ -223,7 +218,7 @@ module LRAutomaton =
                 firstMap
 
         let mutable states = [ startItems ]
-        let mutable transitions: (int * Symbol<string, string> * int) list = []
+        let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
         let mutable queue = [ startItems ]
 
         while not (List.isEmpty queue) do
@@ -272,28 +267,24 @@ module LRAutomaton =
         Automaton.fromTransitions states (List.rev transitions) (set [ 0 ]) finalStates
 
 /// LR parsing table construction and parser.
+/// All table builders and parse take an already-augmented grammar.
 module LRParser =
 
-    let private augmentGrammar g = LRAutomaton.augmentGrammar g
-
-    let private isCompleted (item: LR0Item) : bool =
+    let private isCompleted (item: LR0Item<'t, 'nt>) : bool =
         item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
 
-    let private isCompleted1 (item: LR1Item) : bool =
+    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool =
         item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
 
-    /// Build the LR(0) parsing table.
-    /// Completed items cause reduce actions on all grammar terminals (*including* end-of-input Epsilon).
-    /// No lookahead information is used — conflicts are expected for most non-trivial grammars.
-    let buildLR0Table (g: Grammar<string, string>) : LRTable =
-        let aug = augmentGrammar g
+    /// Build the LR(0) parsing table from an augmented grammar.
+    let buildLR0Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
         let augmentedRule = aug.rules.[0]
-        let lr0 = LRAutomaton.buildLR0 g
+        let lr0 = LRAutomaton.buildLR0 aug
         let states = lr0.states
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
-        let mutable conflicts: LRConflict list = []
+        let mutable conflicts: LRConflict<'t, 'nt> list = []
 
         let allTerminals =
             [ for rule in aug.rules do
@@ -348,19 +339,16 @@ module LRParser =
           goto = goto
           conflicts = List.rev conflicts }
 
-    /// Build the SLR(1) parsing table.
-    /// Reduce actions are restricted to follow sets of the LHS nonterminal.
-    /// Resolves many LR(0) conflicts.
-    let buildSLR1Table (g: Grammar<string, string>) : LRTable =
-        let aug = augmentGrammar g
+    /// Build the SLR(1) parsing table from an augmented grammar.
+    let buildSLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
         let augmentedRule = aug.rules.[0]
-        let lr0 = LRAutomaton.buildLR0 g
+        let lr0 = LRAutomaton.buildLR0 aug
         let states = lr0.states
         let followMap = FirstFollow.followK aug 1
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
-        let mutable conflicts: LRConflict list = []
+        let mutable conflicts: LRConflict<'t, 'nt> list = []
 
         for i in 0 .. lr0.transitions.rows - 1 do
             for j in 0 .. lr0.transitions.cols - 1 do
@@ -410,18 +398,15 @@ module LRParser =
           goto = goto
           conflicts = List.rev conflicts }
 
-    /// Build the CLR(1) (canonical LR(1)) parsing table.
-    /// Uses lookahead from LR(1) items for precise reduce decisions.
-    /// The most powerful LR construction — resolves conflicts that SLR(1) cannot.
-    let buildCLR1Table (g: Grammar<string, string>) : LRTable =
-        let aug = augmentGrammar g
+    /// Build the CLR(1) (canonical LR(1)) parsing table from an augmented grammar.
+    let buildCLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
         let augmentedRule = aug.rules.[0]
-        let lr1 = LRAutomaton.buildLR1 g
+        let lr1 = LRAutomaton.buildLR1 aug
         let states = lr1.states
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
-        let mutable conflicts: LRConflict list = []
+        let mutable conflicts: LRConflict<'t, 'nt> list = []
 
         for i in 0 .. lr1.transitions.rows - 1 do
             for j in 0 .. lr1.transitions.cols - 1 do
@@ -474,16 +459,16 @@ module LRParser =
           goto = goto
           conflicts = List.rev conflicts }
 
-    /// Parse an input string using an LR parsing table, building a derivation tree.
-    /// Uses an augmented grammar internally for correct rule reference.
+    /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
+    /// Takes an augmented grammar for correct rule reference.
     /// Returns Some(tree) on successful parse, None on failure.
-    let parse (g: Grammar<string, string>) (table: LRTable) (input: string) : Option<DerivationTree<string, string>> =
-        let aug = augmentGrammar g
-
-        let tokens = Tokenizer.tokenize input
-
+    let parse
+        (aug: Grammar<'t, 'nt>)
+        (table: LRTable<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : Option<DerivationTree<'t, 'nt>> =
         let mutable stateStack: int list = [ 0 ]
-        let mutable treeStack: DerivationTree<string, string> list = []
+        let mutable treeStack: DerivationTree<'t, 'nt> list = []
         let mutable pos = 0
         let mutable finished = false
         let mutable accepted = false
@@ -534,6 +519,3 @@ module LRParser =
             Some treeStack.Head
         else
             None
-
-    /// Collect all leaf terminals from a derivation tree (left-to-right).
-    let leaves: DerivationTree<string, string> -> string list = DerivationTree.leaves

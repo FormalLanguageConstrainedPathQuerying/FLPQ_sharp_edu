@@ -25,7 +25,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Accept do
-            let result = LLParser.parse grammar1 table 1 s
+            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenize s)
             Assert.True(result.IsSome, s)
 
     [<Fact>]
@@ -33,7 +33,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Reject do
-            let result = LLParser.parse grammar1 table 1 s
+            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenize s)
             Assert.True(result.IsNone, s)
 
     [<Fact>]
@@ -41,7 +41,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Accept do
-            match LLParser.parse grammar1 table 1 s with
+            match LLParser.parse grammar1 table 1 (Tokenizer.tokenize s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 Assert.Equal(s, leafTokens)
@@ -51,7 +51,7 @@ module FactTests =
     let ``LL(1) tree structure for simple parse`` () =
         let table = LLParser.buildTable grammar1 1
 
-        match LLParser.parse grammar1 table 1 "a b" with
+        match LLParser.parse grammar1 table 1 (Tokenizer.tokenize "a b") with
         | Some tree ->
             match tree with
             | Node(Nonterminal "S", _) -> ()
@@ -72,7 +72,7 @@ module PropertyTests =
 
         [<Property>]
         let ``LL parser leaves match input for grammar1`` (s: string) =
-            match LLParser.parse grammar1 table 1 s with
+            match LLParser.parse grammar1 table 1 (Tokenizer.tokenize s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
@@ -82,19 +82,25 @@ module PropertyTests =
 module CrossParserPropertyTests =
 
     let private llTable = LLParser.buildTable grammar1 1
-    let private slrTable = LRParser.buildSLR1Table grammar1
+    let private slrTable = LRParser.buildSLR1Table augGrammar1
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Grammar1Agreement =
 
         [<Property>]
         let ``LL(1) and SLR(1) agree on grammar1 acceptance`` (s: string) =
-            let llResult = LLParser.parse grammar1 llTable 1 s |> Option.isSome
-            let slrResult = LRParser.parse grammar1 slrTable s |> Option.isSome
+            let llResult =
+                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenize s) |> Option.isSome
+
+            let slrResult =
+                LRParser.parse augGrammar1 slrTable (Tokenizer.tokenize s) |> Option.isSome
+
             llResult = slrResult
 
         [<Property>]
         let ``LL(1) and Valiant agree on grammar1 acceptance`` (s: string) =
-            let llResult = LLParser.parse grammar1 llTable 1 s |> Option.isSome
+            let llResult =
+                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenize s) |> Option.isSome
+
             let valResult = Valiant.parse grammar1 s
             llResult = valResult

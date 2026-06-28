@@ -4,8 +4,8 @@ module LLParser =
 
     /// Build an LL(k) parsing table.
     /// Returns Map from (nonterminal, lookahead) to rule index.
-    /// Lookahead is a list of grammar symbols (terminals or epsilon for end-of-input).
-    let buildTable (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string> * Symbol<string, string> list, int> =
+    /// Lookahead is a list of grammar symbols (terminals or Epsilon for end-of-input).
+    let buildTable (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> =
         let firstMap = FirstFollow.firstK g k
         let followMap = FirstFollow.followK g k
 
@@ -46,35 +46,31 @@ module LLParser =
 
         table
 
-    let private tokenize (s: string) : Symbol<string, string> list = Tokenizer.tokenize s
-
-    let private lookahead (input: Symbol<string, string> list) (pos: int) (k: int) : Symbol<string, string> list =
-        if pos >= input.Length then
+    let private lookahead (tokens: Symbol<'t, 'nt> list) (pos: int) (k: int) : Symbol<'t, 'nt> list =
+        if pos >= tokens.Length then
             [ Epsilon ]
         else
-            let endIdx = min (pos + k) input.Length
-            input.[pos .. endIdx - 1]
+            let endIdx = min (pos + k) tokens.Length
+            tokens.[pos .. endIdx - 1]
 
-    /// Parse a string using an LL(k) parsing table, building a derivation tree.
+    /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
     /// Returns Some(tree) on success, None on failure.
     let parse
-        (g: Grammar<string, string>)
-        (table: Map<Nonterminal<string> * Symbol<string, string> list, int>)
+        (g: Grammar<'t, 'nt>)
+        (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
-        (input: string)
-        : Option<DerivationTree<string, string>> =
-        let tokens = tokenize input
-
+        (tokens: Symbol<'t, 'nt> list)
+        : Option<DerivationTree<'t, 'nt>> =
         let rec parseLoop
-            (stack: Symbol<string, string> list)
+            (stack: Symbol<'t, 'nt> list)
             (pos: int)
-            (treeStack: DerivationTree<string, string> list)
-            : Option<int * DerivationTree<string, string> list> =
+            (treeStack: DerivationTree<'t, 'nt> list)
+            : Option<int * DerivationTree<'t, 'nt> list> =
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, treeStack) else None
-            | T(Terminal t) :: restStack ->
-                if pos < tokens.Length && tokens.[pos] = T(Terminal t) then
-                    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(T(Terminal t)) ])
+            | (T _ as sym) :: restStack ->
+                if pos < tokens.Length && tokens.[pos] = sym then
+                    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(sym) ])
                 else
                     None
             | Epsilon :: restStack -> parseLoop restStack pos (treeStack @ [ Leaf(Epsilon) ])

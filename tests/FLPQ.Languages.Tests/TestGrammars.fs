@@ -112,3 +112,23 @@ type ExprStringGenerators =
                                 MyGen.elements operators |> MyGen.map (fun op -> left + " " + op + " " + right))))
 
         MyGen.choose (0, 4) |> MyGen.bind (fun d -> genExpr d) |> MyArb.fromGen
+
+let private augmentStringGrammar (g: Grammar<string, string>) =
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    LRAutomaton.augmentGrammar freshStart g
+
+let augGrammar1 = augmentStringGrammar grammar1
+
+let augGrammar2 = augmentStringGrammar grammar2
+
+let augGrammar3 = augmentStringGrammar grammar3
+
+let augGrammar4 = augmentStringGrammar grammar4
+
+let augGrammar5 = augmentStringGrammar grammar5
+
+let augGrammar6 = augmentStringGrammar grammar6
+
+let augGrammar7 = augmentStringGrammar grammar7
+
+let augGrammar8 = augmentStringGrammar grammar8
