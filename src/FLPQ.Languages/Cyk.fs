@@ -1,6 +1,7 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
 
 open System.Collections.Generic
+open FLPQ.LinearAlgebra
 
 module Cyk =
 
@@ -16,10 +17,7 @@ module Cyk =
         | N nt -> nt
         | _ -> failwith "Expected nonterminal"
 
-    let private tokenize (input: string) : Symbol<string, string> list =
-        input.ToCharArray()
-        |> Array.map (fun c -> T(Terminal(c.ToString())))
-        |> Array.toList
+    let private tokenize (input: string) : Symbol<string, string> list = Tokenizer.tokenize input
 
     let private findProducingRules
         (rules: Rule<string, string> list)

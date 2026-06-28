@@ -7,3 +7,4 @@
 * [BooleanDecomposition module design and logic](boolean-decomposition.md)
 * [Valiant algorithm module design and logic](valiant.md)
 * [LR parser module design and logic](lr-parser.md)
+* [LL parser module design and logic](ll-parser.md)

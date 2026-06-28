@@ -1,4 +1,6 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
+
+open FLPQ.LinearAlgebra
 
 /// LR(0) item: A -> α·β
 /// Dot position tracks how much of the RHS has been consumed.
@@ -104,7 +106,7 @@ module LRAutomaton =
                             if beta.IsEmpty then
                                 set [ item.Lookahead |> fun (Terminal t) -> t ]
                             else
-                                FirstFollow.firstKOfString firstMap 1 beta |> Set.filter (fun s -> s <> "")
+                                FirstFollow.firstKOfString id firstMap 1 beta |> Set.filter (fun s -> s <> "")
 
                         let newItems =
                             rules
@@ -161,9 +163,6 @@ module LRAutomaton =
             let stateIdx = states |> List.findIndex (fun s -> s = state)
             queue <- queue.Tail
 
-            if states.Length > 500 then
-                failwithf "LR states exceeded 500 — likely infinite loop"
-
             let symbols =
                 state
                 |> Set.toSeq
@@ -210,7 +209,7 @@ module LRAutomaton =
     let buildLR1 (g: Grammar<string, string>) : Automaton<Symbol<string, string>, Set<LR1Item>> =
         let aug = augmentGrammar g
         let augmentedRule = aug.rules.[0]
-        let firstMap = FirstFollow.firstK aug 1
+        let firstMap = FirstFollow.firstK id aug 1
 
         let startItems =
             closureLR1
@@ -230,9 +229,6 @@ module LRAutomaton =
             let state = queue.Head
             let stateIdx = states |> List.findIndex (fun s -> s = state)
             queue <- queue.Tail
-
-            if states.Length > 500 then
-                failwithf "LR states exceeded 500 — likely infinite loop"
 
             let symbols =
                 state
@@ -352,7 +348,7 @@ module LRParser =
         let augmentedRule = aug.rules.[0]
         let lr0 = LRAutomaton.buildLR0 g
         let states = lr0.states
-        let followMap = FirstFollow.followK aug 1
+        let followMap = FirstFollow.followK id aug 1
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
@@ -473,10 +469,7 @@ module LRParser =
     let parse (g: Grammar<string, string>) (table: LRTable) (input: string) : Option<DerivationTree<string, string>> =
         let aug = augmentGrammar g
 
-        let tokens =
-            input.ToCharArray()
-            |> Array.map (fun c -> Terminal(c.ToString()))
-            |> Array.toList
+        let tokens = Tokenizer.tokenizeTerminals input
 
         let mutable stateStack: int list = [ 0 ]
         let mutable treeStack: DerivationTree<string, string> list = []
@@ -536,5 +529,4 @@ module LRParser =
             None
 
     /// Collect all leaf terminals from a derivation tree (left-to-right).
-    /// Delegate to LLParser.leaves.
-    let leaves: DerivationTree<string, string> -> string list = LLParser.leaves
+    let leaves: DerivationTree<string, string> -> string list = DerivationTree.leaves

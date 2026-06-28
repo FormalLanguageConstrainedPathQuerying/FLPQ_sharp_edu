@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TestGrammars.fs" />
+    <Compile Include="GrammarTests.fs" />
+    <Compile Include="CykTests.fs" />
+    <Compile Include="ValiantTests.fs" />
+    <Compile Include="FirstFollowTests.fs" />
+    <Compile Include="AutomatonTests.fs" />
+    <Compile Include="LLParserTests.fs" />
+    <Compile Include="LRParserTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.3.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+  </ItemGroup>
+
+</Project>

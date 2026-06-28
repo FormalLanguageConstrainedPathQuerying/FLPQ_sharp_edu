@@ -1,7 +1,8 @@
 module GrammarTests
 
 open Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 module FactTests =
 

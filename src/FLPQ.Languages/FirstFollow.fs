@@ -1,7 +1,7 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
 
 /// First_k and follow_k computations for context-free grammars.
-/// Parameterized by k (the lookahead length).
+/// Parameterized by k (the lookahead length) and a function to convert terminals to strings.
 module FirstFollow =
 
     let private prefix (s: string) (k: int) : string =
@@ -19,20 +19,22 @@ module FirstFollow =
         |> Set.ofSeq
 
     let private firstOfSymbols
-        (firstMap: Map<Nonterminal<string>, Set<string>>)
+        (terminalToString: 't -> string)
+        (firstMap: Map<Nonterminal<'nt>, Set<string>>)
         (k: int)
-        (symbols: Symbol<string, string> list)
+        (symbols: Symbol<'t, 'nt> list)
         : Set<string> =
-        let rec loop (remaining: Symbol<string, string> list) : Set<string> =
+        let rec loop (remaining: Symbol<'t, 'nt> list) : Set<string> =
             match remaining with
             | [] -> set [ "" ]
             | T(Terminal t) :: rest ->
                 let tailFirst = loop rest
+                let ts = terminalToString t
 
                 if tailFirst = set [ "" ] then
-                    set [ prefix t k ]
+                    set [ prefix ts k ]
                 else
-                    tailFirst |> Set.map (fun s -> prefix (t + s) k)
+                    tailFirst |> Set.map (fun s -> prefix (ts + s) k)
             | N nt :: rest ->
                 match Map.tryFind nt firstMap with
                 | Some ntFirst ->
@@ -43,10 +45,11 @@ module FirstFollow =
         loop symbols
 
     let private computeFirstK
-        (rules: Rule<string, string> list)
-        (allNt: Nonterminal<string> list)
+        (terminalToString: 't -> string)
+        (rules: Rule<'t, 'nt> list)
+        (allNt: Nonterminal<'nt> list)
         (k: int)
-        : Map<Nonterminal<string>, Set<string>> =
+        : Map<Nonterminal<'nt>, Set<string>> =
         let mutable firstMap =
             allNt
             |> List.map (fun nt ->
@@ -56,7 +59,7 @@ module FirstFollow =
                         if r.lhs = nt then
                             match r.rhs with
                             | [] -> Some ""
-                            | T(Terminal t) :: _ -> Some(prefix t k)
+                            | T(Terminal t) :: _ -> Some(prefix (terminalToString t) k)
                             | _ -> None
                         else
                             None)
@@ -80,7 +83,7 @@ module FirstFollow =
                             Some r.rhs
                         else
                             None)
-                    |> List.collect (fun rhs -> firstOfSymbols firstMap k rhs |> Set.toList)
+                    |> List.collect (fun rhs -> firstOfSymbols terminalToString firstMap k rhs |> Set.toList)
                     |> Set.ofList
                     |> Set.filter (fun s -> not (Set.contains s current))
 
@@ -93,18 +96,20 @@ module FirstFollow =
     /// Compute first_k sets for all nonterminals of a grammar.
     /// first_k(A) = set of terminal strings of length ≤ k that can begin strings derived from A.
     /// The empty string ε is represented as "".
-    let firstK (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string>, Set<string>> =
+    /// terminalToString converts terminal values to their string representation.
+    let firstK (terminalToString: 't -> string) (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt>, Set<string>> =
         let allNt = g.rules |> List.map (fun r -> r.lhs) |> List.distinct
 
-        computeFirstK g.rules allNt k
+        computeFirstK terminalToString g.rules allNt k
 
     /// Compute follow_k sets for all nonterminals of a grammar.
     /// follow_k(A) = set of terminal strings of length ≤ k that can appear immediately after A
     /// in some derivation starting from the start symbol.
-    let followK (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string>, Set<string>> =
+    /// terminalToString converts terminal values to their string representation.
+    let followK (terminalToString: 't -> string) (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt>, Set<string>> =
         let allNt = g.rules |> List.map (fun r -> r.lhs) |> List.distinct
 
-        let firstMap = computeFirstK g.rules allNt k
+        let firstMap = computeFirstK terminalToString g.rules allNt k
 
         let mutable followMap =
             allNt
@@ -123,7 +128,7 @@ module FirstFollow =
                     match rhs.[idx] with
                     | N bNt ->
                         let beta = rhs |> List.skip (idx + 1)
-                        let firstBeta = firstOfSymbols firstMap k beta
+                        let firstBeta = firstOfSymbols terminalToString firstMap k beta
 
                         let currentF = Map.find bNt followMap
 
@@ -147,8 +152,9 @@ module FirstFollow =
 
     /// Compute first_k for a string of symbols (concatenation of first sets).
     let firstKOfString
-        (firstMap: Map<Nonterminal<string>, Set<string>>)
+        (terminalToString: 't -> string)
+        (firstMap: Map<Nonterminal<'nt>, Set<string>>)
         (k: int)
-        (symbols: Symbol<string, string> list)
+        (symbols: Symbol<'t, 'nt> list)
         : Set<string> =
-        firstOfSymbols firstMap k symbols
+        firstOfSymbols terminalToString firstMap k symbols

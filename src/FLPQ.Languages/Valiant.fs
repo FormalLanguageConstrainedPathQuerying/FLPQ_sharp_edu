@@ -1,4 +1,6 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
+
+open FLPQ.LinearAlgebra
 
 module Valiant =
 
@@ -95,14 +97,14 @@ module Valiant =
         (terminalRules: Map<string, Nonterminal<string> list>)
         (binaryRules: (Nonterminal<string> * (Nonterminal<string> * Nonterminal<string>)) list)
         (pairs: (Nonterminal<string> * Nonterminal<string>) list)
-        (input: string)
+        (tokens: string[])
         : unit =
         if m.Size = 1 then
             let i = m.A - m.Size + 1
             let j = m.B
 
-            if i + 1 = j && i < input.Length then
-                let ch = input.[i].ToString()
+            if i + 1 = j && i < tokens.Length then
+                let ch = tokens.[i]
 
                 match Map.tryFind ch terminalRules with
                 | Some nts ->
@@ -130,14 +132,14 @@ module Valiant =
             let r = rightSubmatrix m
             let t = topSubmatrix m
 
-            complete tByNt pByPair b terminalRules binaryRules pairs input
+            complete tByNt pByPair b terminalRules binaryRules pairs tokens
             performMultiplications tByNt pByPair [ (l, leftGrounded l, b) ] pairs
-            complete tByNt pByPair l terminalRules binaryRules pairs input
+            complete tByNt pByPair l terminalRules binaryRules pairs tokens
             performMultiplications tByNt pByPair [ (r, b, rightGrounded r) ] pairs
-            complete tByNt pByPair r terminalRules binaryRules pairs input
+            complete tByNt pByPair r terminalRules binaryRules pairs tokens
             performMultiplications tByNt pByPair [ (t, leftGrounded t, r) ] pairs
             performMultiplications tByNt pByPair [ (t, l, rightGrounded t) ] pairs
-            complete tByNt pByPair t terminalRules binaryRules pairs input
+            complete tByNt pByPair t terminalRules binaryRules pairs tokens
 
     and private compute
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>)
@@ -147,26 +149,27 @@ module Valiant =
         (terminalRules: Map<string, Nonterminal<string> list>)
         (binaryRules: (Nonterminal<string> * (Nonterminal<string> * Nonterminal<string>)) list)
         (pairs: (Nonterminal<string> * Nonterminal<string>) list)
-        (input: string)
+        (tokens: string[])
         : unit =
         if j - i >= 4 then
             let mid = (i + j) / 2
-            compute tByNt pByPair i mid terminalRules binaryRules pairs input
-            compute tByNt pByPair mid j terminalRules binaryRules pairs input
+            compute tByNt pByPair i mid terminalRules binaryRules pairs tokens
+            compute tByNt pByPair mid j terminalRules binaryRules pairs tokens
 
         let a = (i + j) / 2 - 1
         let b = (i + j) / 2
         let size = (j - i) / 2
 
         let m = { A = a; B = b; Size = size }
-        complete tByNt pByPair m terminalRules binaryRules pairs input
+        complete tByNt pByPair m terminalRules binaryRules pairs tokens
 
     /// Parse a string using Valiant's algorithm.
     /// Returns the final T table as a matrix over sets of nonterminals (n × n, CYK-style)
     /// and a flag indicating whether the start symbol is in T[0,n].
     let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
         let cnf = Grammar.toCnf g
-        let n = input.Length
+        let tokens = Tokenizer.tokenizeStrings input |> Array.ofList
+        let n = tokens.Length
         let originalN = n
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1
@@ -211,7 +214,7 @@ module Valiant =
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
-            compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs input
+            compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs tokens
 
             let result =
                 Matrix.create n n (fun i j ->

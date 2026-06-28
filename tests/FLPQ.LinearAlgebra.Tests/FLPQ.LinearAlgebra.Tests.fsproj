@@ -6,18 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TestGrammars.fs" />
     <Compile Include="MatrixTests.fs" />
     <Compile Include="LinearAlgebraTests.fs" />
-    <Compile Include="GrammarTests.fs" />
-    <Compile Include="CykTests.fs" />
     <Compile Include="BooleanDecompositionTests.fs" />
-    <Compile Include="FirstFollowTests.fs" />
-    <Compile Include="AutomatonTests.fs" />
-    <Compile Include="LLParserTests.fs" />
-    <Compile Include="LRParserTests.fs" />
-    <Compile Include="ValiantTests.fs" />
-    <Compile Include="Tests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FLPQ.Core\FLPQ.Core.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
   </ItemGroup>
 
 </Project>

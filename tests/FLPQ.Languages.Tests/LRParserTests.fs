@@ -3,7 +3,8 @@ module LRParserTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 open TestGrammars
 
@@ -28,7 +29,7 @@ module FactTests =
             for s in grammar1Accept do
                 match LRParser.parse grammar1 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -49,7 +50,7 @@ module FactTests =
             for s in grammar1Accept do
                 match LRParser.parse grammar1 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -96,7 +97,7 @@ module FactTests =
             for s in grammar3Accept do
                 match LRParser.parse grammar3 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -117,7 +118,7 @@ module FactTests =
             for s in grammar3Accept do
                 match LRParser.parse grammar3 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -155,7 +156,7 @@ module FactTests =
             for s in exprAccept do
                 match LRParser.parse grammar7 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -176,7 +177,7 @@ module FactTests =
             for s in exprAccept do
                 match LRParser.parse grammar7 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -209,7 +210,7 @@ module FactTests =
             for s in exprAccept do
                 match LRParser.parse grammar8 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -230,7 +231,7 @@ module FactTests =
             for s in exprAccept do
                 match LRParser.parse grammar8 table s with
                 | Some tree ->
-                    let leafTokens = LRParser.leaves tree |> String.concat ""
+                    let leafTokens = LRParser.leaves tree |> String.concat " "
                     Assert.Equal(s, leafTokens)
                 | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -344,7 +345,7 @@ module PropertyTests =
         let ``SLR(1) parser leaves match input for grammar3`` (s: string) =
             match LRParser.parse grammar3 slrTable s with
             | Some tree ->
-                let leafTokens = LRParser.leaves tree |> String.concat ""
+                let leafTokens = LRParser.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
@@ -352,7 +353,7 @@ module PropertyTests =
         let ``CLR(1) parser leaves match input for grammar3`` (s: string) =
             match LRParser.parse grammar3 clrTable s with
             | Some tree ->
-                let leafTokens = LRParser.leaves tree |> String.concat ""
+                let leafTokens = LRParser.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
@@ -372,7 +373,7 @@ module PropertyTests =
         let ``SLR(1) parser leaves match input for grammar1`` (s: string) =
             match LRParser.parse grammar1 slrTable s with
             | Some tree ->
-                let leafTokens = LRParser.leaves tree |> String.concat ""
+                let leafTokens = LRParser.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
@@ -380,7 +381,7 @@ module PropertyTests =
         let ``CLR(1) parser leaves match input for grammar1`` (s: string) =
             match LRParser.parse grammar1 clrTable s with
             | Some tree ->
-                let leafTokens = LRParser.leaves tree |> String.concat ""
+                let leafTokens = LRParser.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
@@ -389,3 +390,39 @@ module PropertyTests =
             let slrResult = LRParser.parse grammar1 slrTable s |> Option.isSome
             let clrResult = LRParser.parse grammar1 clrTable s |> Option.isSome
             slrResult = clrResult
+
+
+module CrossParserPropertyTests =
+
+    let private slrGrammar1 = LRParser.buildSLR1Table grammar1
+    let private clrGrammar3 = LRParser.buildCLR1Table grammar3
+
+    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    module Grammar1CrossTests =
+
+        [<Property>]
+        let ``SLR(1) and CYK agree on grammar1 acceptance`` (s: string) =
+            let slrResult = LRParser.parse grammar1 slrGrammar1 s |> Option.isSome
+            let cykResult = Cyk.parse grammar1 s
+            slrResult = cykResult
+
+    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    module Grammar3CrossTests =
+
+        [<Property>]
+        let ``CLR(1) and CYK agree on grammar3 acceptance`` (s: string) =
+            let clrResult = LRParser.parse grammar3 clrGrammar3 s |> Option.isSome
+            let cykResult = Cyk.parse grammar3 s
+            clrResult = cykResult
+
+    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    module Grammar78CrossTests =
+
+        let private clr7 = LRParser.buildCLR1Table grammar7
+        let private clr8 = LRParser.buildCLR1Table grammar8
+
+        [<Property>]
+        let ``CLR(1) grammar7 and grammar8 agree on expression strings`` (s: string) =
+            let r7 = LRParser.parse grammar7 clr7 s |> Option.isSome
+            let r8 = LRParser.parse grammar8 clr8 s |> Option.isSome
+            r7 = r8

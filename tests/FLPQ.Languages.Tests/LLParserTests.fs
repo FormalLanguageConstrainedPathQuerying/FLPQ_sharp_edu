@@ -3,7 +3,8 @@ module LLParserTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 open TestGrammars
 
@@ -42,7 +43,7 @@ module FactTests =
         for s in grammar1Accept do
             match LLParser.parse grammar1 table 1 s with
             | Some tree ->
-                let leafTokens = LLParser.leaves tree |> String.concat ""
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 Assert.Equal(s, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -50,12 +51,12 @@ module FactTests =
     let ``LL(1) tree structure for simple parse`` () =
         let table = LLParser.buildTable grammar1 1
 
-        match LLParser.parse grammar1 table 1 "ab" with
+        match LLParser.parse grammar1 table 1 "a b" with
         | Some tree ->
             match tree with
             | Node(Nonterminal "S", _) -> ()
             | _ -> Assert.Fail("Expected root S")
-        | None -> Assert.Fail("Failed to parse ab")
+        | None -> Assert.Fail("Failed to parse a b")
 
     [<Fact>]
     let ``LL(1) table for grammar8 expression grammar detects conflict`` () =
@@ -73,6 +74,27 @@ module PropertyTests =
         let ``LL parser leaves match input for grammar1`` (s: string) =
             match LLParser.parse grammar1 table 1 s with
             | Some tree ->
-                let leafTokens = LLParser.leaves tree |> String.concat ""
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
+
+
+module CrossParserPropertyTests =
+
+    let private llTable = LLParser.buildTable grammar1 1
+    let private slrTable = LRParser.buildSLR1Table grammar1
+
+    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    module Grammar1Agreement =
+
+        [<Property>]
+        let ``LL(1) and SLR(1) agree on grammar1 acceptance`` (s: string) =
+            let llResult = LLParser.parse grammar1 llTable 1 s |> Option.isSome
+            let slrResult = LRParser.parse grammar1 slrTable s |> Option.isSome
+            llResult = slrResult
+
+        [<Property>]
+        let ``LL(1) and Valiant agree on grammar1 acceptance`` (s: string) =
+            let llResult = LLParser.parse grammar1 llTable 1 s |> Option.isSome
+            let valResult = Valiant.parse grammar1 s
+            llResult = valResult

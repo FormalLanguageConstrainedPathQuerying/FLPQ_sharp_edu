@@ -3,7 +3,7 @@ module LinearAlgebraTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Core
+open FLPQ.LinearAlgebra
 
 module MyGen = FsCheck.FSharp.Gen
 module MyArb = FsCheck.FSharp.Arb

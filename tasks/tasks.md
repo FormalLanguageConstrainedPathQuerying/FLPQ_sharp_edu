@@ -108,4 +108,19 @@
 16. [done] Implement LL(k) parsing table interpreter with derivation tree building (aka LL(k) parser).
 17. [done] Implement LR(0) and LR(1) automata as a cases of deterministic finite automata where states parametrizes with respective types (sets of respective items). 
 18. [done] Implement CLR(1), SLR(1), and LR(0) parsing tables creation. More information in the book.
-19. [done] Implement interpreter of LR tables with tree creation (aka LR parser). Use grammars grammar1, grammar2, grammar3, and lsat two from tak 11 for tests. Be careful: not all of them LR(0). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves)  
+19. [done] Implement interpreter of LR tables with tree creation (aka LR parser). Use grammars grammar1, grammar2, grammar3, and lsat two from tak 11 for tests. Be careful: not all of them LR(0). To check tree use the fact that concatenation of leaves is an input string (modulo epsilon leaves)
+20. [done] Refactoring
+    1.  Documentation on LL missed. Fix it
+    2.  Move derivation tree an operations over it (eg leaves collecting) to separated module
+    3.  Remove `states.Length > 500` check. It looks like hack. It the algorithm correct, it is not necessary to check number of states.
+    4.  Add more property based tests
+        1. Check that LL and LR accepts and rejects simultaneously (for appropriate grammars).
+        2. Check that LL and Valiant accepts and rejects simultaneously (for appropriate grammars). 
+        3. Check that LR and CYK accepts and rejects simultaneously (for appropriate grammars).
+        4. When CYK and Valiant both reject, tables still mst be identical.
+        5. Make firstK and followK more generic: they can be applied for grammars not only over strings
+        6. Add property-based tests for boolean decomposition: composition of compose and recompose is identity.
+        7. Use grammar6, grammar7 and grammar8 for property-based tests for all parsing algorithms. They all define the same language.
+    5. Create common tokenizer for all parsing algorithms. Grammars may contains multy-symbol terminals, so, let suppose that terminals separated by spaces in the input string.
+    6. Remove stubs like Tests.fs and Library.fs.
+    7. Split both sources a tests into two projects. One for linear algebra, one for languages. 

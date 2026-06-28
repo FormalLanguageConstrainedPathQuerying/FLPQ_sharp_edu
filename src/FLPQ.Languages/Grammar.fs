@@ -1,4 +1,4 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
 
 open System
 open System.IO

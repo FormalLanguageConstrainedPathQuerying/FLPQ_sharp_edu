@@ -1,7 +1,34 @@
 module BooleanDecompositionTests
 
 open Xunit
-open FLPQ.Core
+open FsCheck
+open FsCheck.Xunit
+open FLPQ.LinearAlgebra
+
+module MyGen = FsCheck.FSharp.Gen
+module MyArb = FsCheck.FSharp.Arb
+
+type SetMatrixGenerators =
+
+    static member SetMatrix() : Arbitrary<Matrix<Set<int>>> =
+        MyGen.choose (0, 5)
+        |> MyGen.bind (fun rows ->
+            MyGen.choose (0, 5)
+            |> MyGen.bind (fun cols ->
+                MyGen.choose (0, 4)
+                |> MyGen.listOfLength (rows * cols)
+                |> MyGen.map (fun values ->
+                    let array = Array2D.init rows cols (fun i j -> Set.empty)
+
+                    for k in 0 .. min (values.Length - 1) (rows * cols - 1) do
+                        let i = k / cols
+                        let j = k % cols
+                        array.[i, j] <- set [ values.[k] ]
+
+                    { rows = rows
+                      cols = cols
+                      data = array })))
+        |> MyArb.fromGen
 
 [<Fact>]
 let ``decompose produces correct number of matrices`` () =
@@ -63,3 +90,23 @@ let ``decompose preserves matrix dimensions`` () =
     for kv in decomp do
         Assert.Equal(3, kv.Value.rows)
         Assert.Equal(4, kv.Value.cols)
+
+[<Properties(Arbitrary = [| typeof<SetMatrixGenerators> |])>]
+module PropertyTests =
+
+    [<Property>]
+    let ``decompose then recompose is identity`` (m: Matrix<Set<int>>) =
+        let decomp = BooleanDecomposition.decompose m
+
+        if Map.isEmpty decomp then
+            true
+        else
+            let restored = BooleanDecomposition.recompose decomp
+
+            m.rows = restored.rows
+            && m.cols = restored.cols
+            && [ for i in 0 .. m.rows - 1 do
+                     for j in 0 .. m.cols - 1 do
+                         if m.data.[i, j] <> restored.data.[i, j] then
+                             yield false ]
+               |> List.forall id

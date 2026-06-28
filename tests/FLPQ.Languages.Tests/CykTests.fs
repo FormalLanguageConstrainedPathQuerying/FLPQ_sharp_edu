@@ -3,7 +3,8 @@ module CykTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 open TestGrammars
 
@@ -68,19 +69,19 @@ module FactTests =
 
     [<Fact>]
     let ``parseWithTrace returns non-empty list for non-empty input`` () =
-        let trace = Cyk.parseWithTrace grammar3 "aaa"
+        let trace = Cyk.parseWithTrace grammar3 "a a a"
         Assert.NotEmpty(trace)
 
     [<Fact>]
     let ``tableToTeX contains pNiceMatrix`` () =
-        let trace = Cyk.parseWithTrace grammar1 "ab"
+        let trace = Cyk.parseWithTrace grammar1 "a b"
         let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.Contains(@"\end{pNiceMatrix}", tex)
 
     [<Fact>]
     let ``tableToTeX prints empty cells as cdot`` () =
-        let trace = Cyk.parseWithTrace grammar3 "aa"
+        let trace = Cyk.parseWithTrace grammar3 "a a"
 
         let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
         Assert.Contains(@"\cdot", tex)
@@ -106,11 +107,11 @@ module FactTests =
         S -> eps
         "
 
-        Assert.True(Cyk.parse g "aaa")
-        Assert.True(Cyk.parse g "aaaaa")
-        Assert.True(Cyk.parse g "aaaa")
+        Assert.True(Cyk.parse g "a a a")
+        Assert.True(Cyk.parse g "a a a a a")
+        Assert.True(Cyk.parse g "a a a a")
         Assert.True(Cyk.parse g "a")
-        Assert.True(Cyk.parse g "aa")
+        Assert.True(Cyk.parse g "a a")
 
 
 module Grammar6Tests =
@@ -128,3 +129,21 @@ module Grammar6Tests =
         for g in grammars do
             for s in exprReject do
                 Assert.False(Cyk.parse g s, s)
+
+
+module Grammar6PropertyTests =
+
+    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    module AgreementTests =
+
+        [<Property>]
+        let ``grammar6 and grammar7 agree on expression strings`` (s: string) =
+            Cyk.parse grammar6 s = Cyk.parse grammar7 s
+
+        [<Property>]
+        let ``grammar6 and grammar8 agree on expression strings`` (s: string) =
+            Cyk.parse grammar6 s = Cyk.parse grammar8 s
+
+        [<Property>]
+        let ``grammar7 and grammar8 agree on expression strings`` (s: string) =
+            Cyk.parse grammar7 s = Cyk.parse grammar8 s

@@ -5,38 +5,44 @@
 ```
 FLPQ.slnx
 ├── src/
-│   └── FLPQ.Core/            # Core library with algorithms
-│       ├── Library.fs         # Namespace placeholder
-│       ├── Matrix.fs          # Generic matrix type and operations
-│       ├── LinearAlgebra.fs   # Matrix multiplication and Kronecker product
+│   ├── FLPQ.LinearAlgebra/     # Linear algebra library
+│   │   ├── Matrix.fs               # Generic matrix type and operations
+│   │   ├── LinearAlgebra.fs        # Matrix multiplication and Kronecker product
+│   │   └── BooleanDecomposition.fs # Boolean decomposition of set-valued matrices
+│   └── FLPQ.Languages/         # Languages library (depends on FLPQ.LinearAlgebra)
 │       ├── Grammar.fs              # Grammar types, BNF parser, and CNF transformation
-│       ├── Cyk.fs                  # CYK parsing algorithm
-│       ├── BooleanDecomposition.fs # Boolean decomposition of set-valued matrices
+│       ├── Tokenizer.fs            # Common tokenizer for all parsing algorithms
 │       ├── FirstFollow.fs          # First_k and follow_k computations
 │       ├── Automaton.fs            # Generic finite automaton type and operations
+│       ├── DerivationTree.fs       # Derivation tree type and operations
+│       ├── Cyk.fs                  # CYK parsing algorithm
+│       ├── Valiant.fs              # Valiant parsing algorithm
 │       ├── LLParser.fs             # LL(k) parsing table and parser
-│       ├── LRParser.fs             # LR(0)/SLR(1)/CLR(1) automata, tables, and parser
-│       └── Library.fs              # Namespace placeholder
+│       └── LRParser.fs             # LR(0)/SLR(1)/CLR(1) automata, tables, and parser
 └── tests/
-    └── FLPQ.Core.Tests/      # Tests for core library
+    ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
+    │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
+    │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
+    │   └── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
+    └── FLPQ.Languages.Tests/      # Tests for languages
         ├── TestGrammars.fs               # Shared pre-parsed grammars and generators
-        ├── Tests.fs                      # Default test placeholder
-        ├── MatrixTests.fs                # Property-based and unit tests for Matrix
-        ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
         ├── GrammarTests.fs               # Unit tests for Grammar and CNF
         ├── CykTests.fs                   # Unit tests for CYK algorithm
-        ├── BooleanDecompositionTests.fs  # Unit tests for BooleanDecomposition
+        ├── ValiantTests.fs               # Unit and property tests for Valiant
         ├── FirstFollowTests.fs           # Tests for FirstFollow
         ├── AutomatonTests.fs             # Tests for Automaton
         ├── LLParserTests.fs              # Tests for LL parser
-        ├── LRParserTests.fs              # Tests for LR parser
-        └── ValiantTests.fs               # Unit and property tests for Valiant
+        └── LRParserTests.fs              # Tests for LR parser
 ```
 
 ## Projects
 
-- **FLPQ.Core** — F# class library (net10.0). Implements algorithms from the book as reference implementations.
-- **FLPQ.Core.Tests** — xUnit test project using FsCheck for property-based testing.
+- **FLPQ.LinearAlgebra** — F# class library (net10.0). Generic matrix operations, linear algebra, and boolean decomposition.
+- **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR).
+  Depends on `FLPQ.LinearAlgebra`.
+- **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.
+- **FLPQ.Languages.Tests** — xUnit test project for languages. Uses FsCheck for property-based testing.
+  Depends on `FLPQ.Languages` (and transitively on `FLPQ.LinearAlgebra`).
 
 ## Dependencies
 
@@ -57,6 +63,7 @@ Design and logic of each implemented module is documented in a dedicated file in
 | [`docs/boolean-decomposition.md`](boolean-decomposition.md) | Boolean decomposition of set-valued matrices |
 | [`docs/cyk.md`](cyk.md) | CYK parsing algorithm |
 | [`docs/valiant.md`](valiant.md) | Valiant parsing algorithm |
+| [`docs/ll-parser.md`](ll-parser.md) | LL(k) parsing table construction and parser |
 | [`docs/lr-parser.md`](lr-parser.md) | LR automata, table construction, and parser |
 
 When adding a new module, create a corresponding `docs/<module>.md` file following the same structure.

@@ -1,4 +1,4 @@
-namespace FLPQ.Core
+namespace FLPQ.LinearAlgebra
 
 /// Boolean decomposition of a matrix over sets into a family of Boolean matrices,
 /// one per distinct element. Based on definition from the book.

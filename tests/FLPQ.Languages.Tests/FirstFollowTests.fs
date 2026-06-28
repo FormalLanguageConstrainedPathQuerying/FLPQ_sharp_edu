@@ -1,7 +1,8 @@
 module FirstFollowTests
 
 open Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 module FactTests =
 
@@ -14,7 +15,7 @@ module FactTests =
         S -> a
         "
 
-        let first = FirstFollow.firstK g 1
+        let first = FirstFollow.firstK id g 1
 
         Assert.Contains(Nonterminal "S", Map.keys first)
         Assert.Equal<string>(set [ "a" ], Map.find (Nonterminal "S") first)
@@ -28,7 +29,7 @@ module FactTests =
         S -> eps
         "
 
-        let first = FirstFollow.firstK g 1
+        let first = FirstFollow.firstK id g 1
 
         Assert.Equal<string>(set [ "a"; "" ], Map.find (Nonterminal "S") first)
 
@@ -41,7 +42,7 @@ module FactTests =
         S -> eps
         "
 
-        let follow = FirstFollow.followK g 1
+        let follow = FirstFollow.followK id g 1
 
         let sFollow = Map.find (Nonterminal "S") follow
         Assert.Contains("", sFollow)
@@ -56,7 +57,7 @@ module FactTests =
         S -> a
         "
 
-        let first = FirstFollow.firstK g 2
+        let first = FirstFollow.firstK id g 2
 
         Assert.Equal<string>(set [ "a"; "aa" ], Map.find (Nonterminal "S") first)
 
@@ -73,7 +74,7 @@ module FactTests =
         F -> x
         "
 
-        let first = FirstFollow.firstK g 1
+        let first = FirstFollow.firstK id g 1
         let eFirst = Map.find (Nonterminal "E") first
 
         Assert.Contains("x", eFirst)
@@ -88,10 +89,10 @@ module FactTests =
         B -> b
         "
 
-        let first = FirstFollow.firstK g 2
-        let firstAB = FirstFollow.firstKOfString first 2 [ N(Nonterminal "S") ]
+        let first = FirstFollow.firstK id g 2
+        let firstAB = FirstFollow.firstKOfString id first 2 [ N(Nonterminal "S") ]
 
-        let firstB = FirstFollow.firstKOfString first 2 [ N(Nonterminal "B") ]
+        let firstB = FirstFollow.firstKOfString id first 2 [ N(Nonterminal "B") ]
         Assert.Equal<string>(set [ "b" ], firstB)
 
     [<Fact>]
@@ -102,7 +103,7 @@ module FactTests =
         S -> a
         "
 
-        let first = FirstFollow.firstK g 0
+        let first = FirstFollow.firstK id g 0
         Assert.Equal<string>(set [ "" ], Map.find (Nonterminal "S") first)
 
     [<Fact>]
@@ -114,7 +115,7 @@ module FactTests =
         S -> a
         "
 
-        let follow = FirstFollow.followK g 1
+        let follow = FirstFollow.followK id g 1
 
         Assert.Equal<string>(set [ "" ], Map.find (Nonterminal "S") follow)
 
@@ -131,7 +132,7 @@ module FactTests =
         F -> x
         "
 
-        let follow = FirstFollow.followK g 1
+        let follow = FirstFollow.followK id g 1
         let eFollow = Map.find (Nonterminal "E") follow
 
         Assert.Contains("+", eFollow)

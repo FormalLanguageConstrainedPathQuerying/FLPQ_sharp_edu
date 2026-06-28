@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/FLPQ.Core/FLPQ.Core.fsproj" />
+    <Project Path="src/FLPQ.Languages/FLPQ.Languages.fsproj" />
+    <Project Path="src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/FLPQ.Core.Tests/FLPQ.Core.Tests.fsproj" />
+    <Project Path="tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj" />
+    <Project Path="tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj" />
   </Folder>
 </Solution>

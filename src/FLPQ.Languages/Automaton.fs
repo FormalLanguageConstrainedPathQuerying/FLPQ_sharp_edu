@@ -1,4 +1,6 @@
-namespace FLPQ.Core
+namespace FLPQ.Languages
+
+open FLPQ.LinearAlgebra
 
 /// Finite automaton with states parameterized by type 's.
 /// Transitions are represented as a Matrix over sets of terminal symbols.

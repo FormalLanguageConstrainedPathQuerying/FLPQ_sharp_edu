@@ -1,4 +1,4 @@
-namespace FLPQ.Core
+namespace FLPQ.LinearAlgebra
 
 open System
 

@@ -1,18 +1,12 @@
-namespace FLPQ.Core
-
-/// Derivation tree node for parsing.
-type DerivationTree<'t, 'nt> =
-    | Leaf of Terminal<'t>
-    | Epsilon
-    | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
+namespace FLPQ.Languages
 
 module LLParser =
 
     /// Build an LL(k) parsing table.
     /// Returns Map from (nonterminal, lookahead string) to rule index.
     let buildTable (g: Grammar<string, string>) (k: int) : Map<Nonterminal<string> * string, int> =
-        let firstMap = FirstFollow.firstK g k
-        let followMap = FirstFollow.followK g k
+        let firstMap = FirstFollow.firstK id g k
+        let followMap = FirstFollow.followK id g k
 
         let mutable table = Map.empty
 
@@ -23,7 +17,7 @@ module LLParser =
                 if rule.rhs.IsEmpty then
                     followMap |> Map.find rule.lhs
                 else
-                    let firstOfRhs = FirstFollow.firstKOfString firstMap k rule.rhs
+                    let firstOfRhs = FirstFollow.firstKOfString id firstMap k rule.rhs
 
                     let withoutEps = Set.remove "" firstOfRhs
                     let followOfA = followMap |> Map.find rule.lhs
@@ -51,8 +45,7 @@ module LLParser =
 
         table
 
-    let private tokenize (s: string) : string list =
-        s.ToCharArray() |> Array.map (fun c -> c.ToString()) |> Array.toList
+    let private tokenize (s: string) : string list = Tokenizer.tokenizeStrings s
 
     let private lookaheadStr (input: string list) (pos: int) (k: int) : string =
         let mutable result = ""
@@ -102,10 +95,3 @@ module LLParser =
         match parseLoop ([ N g.start ]) 0 [] with
         | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees))
         | _ -> None
-
-    /// Collect all leaf terminals from a derivation tree (left-to-right).
-    let rec leaves (tree: DerivationTree<string, string>) : string list =
-        match tree with
-        | Leaf(Terminal t) -> [ t ]
-        | Epsilon -> []
-        | Node(_, children) -> children |> List.collect leaves

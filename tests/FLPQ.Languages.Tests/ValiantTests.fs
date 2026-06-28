@@ -3,7 +3,8 @@ module ValiantTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Core
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 open TestGrammars
 
@@ -27,15 +28,15 @@ module ValiantParseTests =
 
     [<Fact>]
     let ``Valiant parseWithTable returns n by n matrix`` () =
-        let input = "ab"
+        let input = "a b"
         let table, accepted = Valiant.parseWithTable grammar1 input
         Assert.True(accepted)
-        Assert.Equal(input.Length, table.rows)
-        Assert.Equal(input.Length, table.cols)
+        Assert.Equal(Tokenizer.tokenizeStrings input |> List.length, table.rows)
+        Assert.Equal(Tokenizer.tokenizeStrings input |> List.length, table.cols)
 
     [<Fact>]
     let ``Valiant table matches CYK table for small example`` () =
-        let input = "aa"
+        let input = "a a"
         let cykTable, cykAcc = Cyk.parseWithTable grammar3 input
         let valTable, valAcc = Valiant.parseWithTable grammar3 input
 
@@ -43,20 +44,24 @@ module ValiantParseTests =
         Assert.Equal(cykTable.rows, valTable.rows)
         Assert.Equal(cykTable.cols, valTable.cols)
 
-        for i in 0 .. input.Length - 1 do
-            for j in i .. input.Length - 1 do
+        let n = cykTable.rows
+
+        for i in 0 .. n - 1 do
+            for j in i .. n - 1 do
                 Assert.Equal<Set<Nonterminal<string>>>(cykTable.data.[i, j], valTable.data.[i, j])
 
     [<Fact>]
     let ``Valiant table matches CYK table for grammar 1 small example`` () =
-        let input = "abab"
+        let input = "a b a b"
         let cykTable, cykAcc = Cyk.parseWithTable grammar1 input
         let valTable, valAcc = Valiant.parseWithTable grammar1 input
 
         Assert.Equal(cykAcc, valAcc)
 
-        for i in 0 .. input.Length - 1 do
-            for j in i .. input.Length - 1 do
+        let n = cykTable.rows
+
+        for i in 0 .. n - 1 do
+            for j in i .. n - 1 do
                 Assert.Equal<Set<Nonterminal<string>>>(cykTable.data.[i, j], valTable.data.[i, j])
 
 
@@ -76,10 +81,11 @@ module PropertyTests =
             else
                 let cykTable, cykAcc = Cyk.parseWithTable grammar1 s
                 let valTable, valAcc = Valiant.parseWithTable grammar1 s
+                let n = cykTable.rows
 
                 cykAcc = valAcc
-                && [ for i in 0 .. s.Length - 1 do
-                         for j in i .. s.Length - 1 do
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
                              if cykTable.data.[i, j] <> valTable.data.[i, j] then
                                  yield false ]
                    |> List.forall id
@@ -98,10 +104,11 @@ module PropertyTests =
             else
                 let cykTable, cykAcc = Cyk.parseWithTable grammar2 s
                 let valTable, valAcc = Valiant.parseWithTable grammar2 s
+                let n = cykTable.rows
 
                 cykAcc = valAcc
-                && [ for i in 0 .. s.Length - 1 do
-                         for j in i .. s.Length - 1 do
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
                              if cykTable.data.[i, j] <> valTable.data.[i, j] then
                                  yield false ]
                    |> List.forall id
@@ -120,10 +127,30 @@ module PropertyTests =
             else
                 let cykTable, cykAcc = Cyk.parseWithTable grammar3 s
                 let valTable, valAcc = Valiant.parseWithTable grammar3 s
+                let n = cykTable.rows
 
                 cykAcc = valAcc
-                && [ for i in 0 .. s.Length - 1 do
-                         for j in i .. s.Length - 1 do
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
                              if cykTable.data.[i, j] <> valTable.data.[i, j] then
                                  yield false ]
                    |> List.forall id
+
+    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    module RejectTableTests =
+
+        [<Property>]
+        let ``CYK and Valiant reject tables are identical for grammar 1`` (s: string) =
+            let cykTable, cykAcc = Cyk.parseWithTable grammar1 s
+            let valTable, valAcc = Valiant.parseWithTable grammar1 s
+
+            if cykAcc || valAcc then
+                true
+            else
+                let n = cykTable.rows
+
+                [ for i in 0 .. n - 1 do
+                      for j in i .. n - 1 do
+                          if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                              yield false ]
+                |> List.forall id
