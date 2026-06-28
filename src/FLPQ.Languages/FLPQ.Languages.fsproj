@@ -18,6 +18,7 @@
     <Compile Include="AutomatonVisualizer.fs" />
     <Compile Include="DerivationTreeVisualizer.fs" />
     <Compile Include="LLVisualizer.fs" />
+    <Compile Include="LRVisualizer.fs" />
   </ItemGroup>
 
   <ItemGroup>
