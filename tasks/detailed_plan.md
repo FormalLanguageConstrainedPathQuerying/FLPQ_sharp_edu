@@ -1,47 +1,39 @@
-# Detailed Plan: Task 49 — Unified LR stack
+# Detailed Plan: Task 50 — LL(k) table TeX visualization
 
-## Goal
+## Function
 
-Replace two separate stacks (stateStack + treeStack) in the LR parser with a single unified stack where each frame is either a state or a symbol+tree.
-
-## Design
-
-### New Type
+Add `LLParser.tableToTeX` to `LLParser.fs`:
 
 ```fsharp
-/// Frame on the unified LR parser stack.
-[<Struct>]
-type LRStackFrame<'t, 'nt> =
-    | LRState of int
-    | LRSymbol of Symbol<'t,'nt> * DerivationTree<'t,'nt>
+val tableToTeX:
+    (Symbol<'t,'nt> -> string) ->
+    Grammar<'t,'nt> ->
+    int ->
+    Map<Nonterminal<'nt>, Set<Symbol<'t,'nt> list>> ->
+    Map<Nonterminal<'nt>, Set<Symbol<'t,'nt> list>> ->
+    Map<Nonterminal<'nt> * Symbol<'t,'nt> list, int> ->
+    string
 ```
 
-### Stack layout (cons-based, head = top)
+## Algorithm
 
-Initially: `[LRState 0]`
+1. Extract nonterminals (ordered by first occurrence in grammar)
+2. Extract terminals (from all RHS, deduplicated)
+3. Build column spec: `r || c | c || c | c | ... | c`
+4. Build header row: N, FIRST, FOLLOW, terminals, $
+5. Build data rows: for each nonterminal, fill columns
 
-After shift of symbol X from state s to state s':
-`[LRState s', LRSymbol(X, Leaf(X)), LRState s, ...]`
+## Set rendering
 
-After reduce by A → β (|β| = k):
-- Pop 2k items (k LRState + k LRSymbol frames)
-- Exposed top is `LRState(s_prev)` — the state before β
-- Children extracted from LRSymbol frames, reversed to RHS order
-- Push `LRSymbol(N A, Node(A, children))`, then `LRState(goto(s_prev, A))`
+- `$\{a, \varepsilon\}$` or `$\varnothing$` for empty
+- Epsilon display: `$\varepsilon$`
 
-### Changes
+## Rule rendering
 
-1. **VisualizationTypes.fs**: Add `LRStackFrame<'t,'nt>` DU
-2. **VisualizationTypes.fs**: Change `LRParsingStep.stateStack: int list` to `stack: LRStackFrame<'t,'nt> list`
-3. **LRParser.fs**: Refactor `parseWithSteps` to use unified stack
-4. **LRVisualizer.fs**: Extract state numbers from unified stack for rendering
-5. **LRParserTests.fs**: Update any direct references to `stateStack`
+- `$S \rightarrow a S b S$` or `$S \rightarrow \varepsilon$`
+- Use `\rightarrow`, not `\to`
 
-## Files
+## Tests
 
-| File | Action |
-|------|--------|
-| `src/FLPQ.Languages/VisualizationTypes.fs` | Add LRStackFrame, update LRParsingStep |
-| `src/FLPQ.Languages/LRParser.fs` | Refactor parseWithSteps |
-| `src/FLPQ.Languages/LRVisualizer.fs` | Extract states from unified stack |
-| `docs/visualization-types.md` | Update |
+1. LL(1) table for S → aSbS | eps — check TeX compiles, check structure
+2. LL(1) table for grammar7 (E → E+T | T, T → T*F | F, F → (E) | x) — multiple nonterminals — check rows and entries

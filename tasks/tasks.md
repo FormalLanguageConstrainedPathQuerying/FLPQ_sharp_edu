@@ -155,8 +155,8 @@
    46. [done] Check that documentation is up to date.
    47. [done] Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.
    48. [done] Refactoring of all parsing algorithms visualization. Paring algorithms must collect and return data for visualization represented as F# data structures (add necessary types). After that, collected data may be converted to tex using appropriate shared standalone function. E.g. to TeX conversion for LL and LR are te same. Some parts can be reused also for CYK and Valiant.
-    49. [done] In LR parser use unified stack for states and symbols instead of two separated stacks: stack frame is state or symbol. Create respective type for frame. Improve visualizer respectively. 
-   50. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
+   49. [done] In LR parser use unified stack for states and symbols instead of two separated stacks: stack frame is state or symbol. Create respective type for frame. Improve visualizer respectively. 
+    50. [done] Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
         The book (Chapter 7, `04_TopDown.tex`) displays the LL parsing table for grammar $S \to aSbS \mid \varepsilon$ as:
         \begin{center}
         \begin{tabular}{ r || c | c || c | c | c }
@@ -177,6 +177,43 @@
         \follow column: set notation, same style.
         Terminal/lookahead columns: production rule in math mode using `\rightarrow`, e.g. `$S \rightarrow aSbS$`, `$S \rightarrow \varepsilon$`. If no rule exists for a (nonterminal, lookahead) pair — cell is empty.
         Use `\rightarrow` in math mode (not `\to`); for epsilon-productions display `$\varepsilon$`. Epsilon in other contexts: `\varepsilon`.
-        Inputs: Grammar, k, FIRST[k] and FOLLOW[k] sets (already computed), built LL table (Map<Nonterminal * Symbol list, int>).
         Tests: generate TeX for LL(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category accordingly). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, nonterminal names, production rules. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the table has correct number of rows and production entries.
+    51. Add LR(0), SLR(1), CLR(1) parsing table visualization to TeX using the exact same tabular format as in the book.
+        The book (Chapter 7, `05_BottomUp.tex`) displays the abstract LR table structure as:
+        \begin{center}
+          \begin{tabular}{c||c|c|c|c|c||c|c|c|c}
+             States & $t_0$   &$\dots$ & $t_a$   & $\dots$ & \$      & $N_0$   &$\dots$ & $N_b$   & $\dots$  \\ \hline \hline
+            $\dots$ & $\dots$ &$\dots$ & $\dots$ & $\dots$ & $\dots$ & $\dots$ &$\dots$ & $\dots$ & $\dots$  \\ \hline
+            $10$    & $\dots$ &$\dots$ & $s_i$   & $\dots$ & $r_k$   & $\dots$ &$\dots$ & $j$     & $\dots$ \\ \hline
+            $\dots$ & $\dots$ &$\dots$ & $\dots$ & $\dots$ & $acc$ & $\dots$ &$\dots$ & $\dots$ & $\dots$
+          \end{tabular}
+        \end{center}
+        And the concrete SLR(1) table for grammar $S \to aSbS \mid \varepsilon$ (states 0–6):
+        \begin{center}
+        \begin{tabular}{c||c|c|c||c}
+                     & a        & b     & \$    & S \\ \hline
+            \hline 0 & $s_3$    & $r_1$ & $r_1$ & 1 \\
+            \hline 1 &          &       & acc   &   \\
+            \hline 2 &          &       &       &   \\
+            \hline 3 & $s_3$    & $r_1$ & $r_1$ & 4 \\
+            \hline 4 &          & $s_5$ &       &   \\
+            \hline 5 & $s_3$    & $r_1$ & $r_1$ & 6 \\
+            \hline 6 &          & $r_0$ & $r_0$ &   \\ [1ex]
+        \end{tabular}
+        \end{center}
+        Specification of the generated TeX — exact column layout and content.
+        Wrapper: \begin{center}...\end{center}. Environment: \begin{tabular}{c||c|c|c|...|c||c|c|...|c}.
+        Column 1 `c` — state number column. Header is empty (unnamed) or `States`.
+        Double bar `||` separates state column from ACTION columns.
+        ACTION columns `c` — one per terminal + `\$` for end marker. Header is the terminal name (e.g. `a`, `b`) and `\$`. Single bars `|` between individual terminal columns.
+        Double bar `||` separates ACTION columns from GOTO columns.
+        GOTO columns `c` — one per nonterminal (excluding the augmented start nonterminal, e.g. `S'`). Header is the nonterminal name (e.g. `S`, `B`, `C`). Single bars `|` between GOTO columns.
+        Header: first row with column labels. The state column header is either empty (concrete examples) or `States` (abstract). Ends with `\\ \hline`.
+        Data rows: one row per automaton state. Each row starts with `\hline N` where `N` is the state number (bare number, not math mode).
+        ACTION cells: `$s_n$` — shift and go to state n (e.g. `$s_3$`); `$r_n$` — reduce by rule n (e.g. `$r_1$`); `acc` — accept (bare, not in math mode); multiple entries in conflict: comma-separated (e.g. `$s_3$, $r_1$` for shift-reduce conflict); empty cell — error (no action).
+        GOTO cells: bare integer n (not in math mode) — goto state n (e.g. `1`, `4`); empty cell — no goto for this nonterminal.
+        Final row: may include `\\ [1ex]` for extra vertical spacing (as in book's SLR(1) example).
+        Rule numbering: rules are numbered 0, 1, 2, ... corresponding to the order in the grammar (as in the book). The augmented rule is included in the numbering.
+        Must support three LR table variants: LR(0) — built from LR(0) automaton, may contain conflicts (multiple entries per cell, shown comma-separated as in the book); SLR(1) — same automaton as LR(0), but reduce entries restricted by FOLLOW sets, column layout identical to LR(0); CLR(1) — built from CLR(1) automaton, visually identical layout.
+        Tests: generate TeX for SLR(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category TexCompilation). Generate TeX for LR(0) table of the same grammar and verify it shows shift-reduce conflicts (comma-separated entries in cells). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, state numbers, shift/reduce/accept entries, goto entries. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the GOTO section has correct number of columns and entries. Test that all three table variants (LR(0), SLR(1), CLR(1)) produce compilable TeX for the same grammar.
 

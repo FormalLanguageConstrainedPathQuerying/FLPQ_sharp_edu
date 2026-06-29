@@ -70,3 +70,64 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
+
+let private tabularTemplatePath =
+    Path.Combine(System.AppContext.BaseDirectory, "tex_tabular_template.tex")
+
+let private symbolToStr (sym: Symbol<string, string>) =
+    match sym with
+    | T(Terminal t) -> t
+    | N(Nonterminal nt) -> nt
+    | Epsilon -> "\\varepsilon"
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LL table TeX compiles with pdflatex for grammar1`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let firstMap = FirstFollow.firstK g 1
+    let followMap = FirstFollow.followK g 1
+    let table = LLParser.buildTable g 1
+
+    let tex = LLParser.tableToTeX symbolToStr g 1 firstMap followMap table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+    Assert.Contains(@"r || c | c || c | c | c", tex)
+    Assert.Contains(@"\operatorname{First}", tex)
+    Assert.Contains(@"\operatorname{Follow}", tex)
+    Assert.Contains(@"a & b & $\$ $", tex)
+    Assert.Contains(@"$S$", tex)
+    Assert.Contains(@"$S \rightarrow a S b S$", tex)
+    Assert.Contains(@"$S \rightarrow \varepsilon$", tex)
+
+    let hlineCount =
+        tex.Split([| @"\hline" |], System.StringSplitOptions.None).Length - 1
+
+    Assert.True(hlineCount > 0)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LL table TeX for multi-nonterminal grammar has correct rows`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+E -> a T
+T -> b E
+T -> c
+"
+
+    let firstMap = FirstFollow.firstK g 1
+    let followMap = FirstFollow.followK g 1
+    let table = LLParser.buildTable g 1
+
+    let tex = LLParser.tableToTeX symbolToStr g 1 firstMap followMap table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+    Assert.Contains(@"$E$", tex)
+    Assert.Contains(@"$T$", tex)
+
+    let hlineCount =
+        tex.Split([| @"\hline" |], System.StringSplitOptions.None).Length - 1
+
+    Assert.Equal(3, hlineCount)
