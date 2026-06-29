@@ -10,49 +10,50 @@ open TestGrammars
 
 module FactTests =
 
+    let private testAcceptReject builder augGrammar accept reject =
+        let table = builder augGrammar
+
+        for s in accept do
+            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenize s) |> Option.isSome, s)
+
+        for s in reject do
+            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenize s) |> Option.isNone, s)
+
+    let private testLeaves builder augGrammar accept =
+        let table = builder augGrammar
+
+        for s in accept do
+            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
+            | Some tree ->
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
+                Assert.Equal(s, leafTokens)
+            | None -> Assert.Fail($"Failed to parse: {s}")
+
+    let private testNoConflicts builder augGrammar =
+        let table = builder augGrammar
+        Assert.Empty(table.conflicts)
+
+    let private testHasConflicts builder augGrammar =
+        let table = builder augGrammar
+        Assert.NotEmpty(table.conflicts)
+
     module Grammar1 =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar1 strings`` () =
-            let table = LRParser.buildSLR1Table augGrammar1
-
-            for s in grammar1Accept do
-                Assert.True(LRParser.parse augGrammar1 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in grammar1Reject do
-                Assert.True(LRParser.parse augGrammar1 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildSLR1Table augGrammar1 grammar1Accept grammar1Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar1`` () =
-            let table = LRParser.buildSLR1Table augGrammar1
-
-            for s in grammar1Accept do
-                match LRParser.parse augGrammar1 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildSLR1Table augGrammar1 grammar1Accept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar1 strings`` () =
-            let table = LRParser.buildCLR1Table augGrammar1
-
-            for s in grammar1Accept do
-                Assert.True(LRParser.parse augGrammar1 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in grammar1Reject do
-                Assert.True(LRParser.parse augGrammar1 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildCLR1Table augGrammar1 grammar1Accept grammar1Reject
 
         [<Fact>]
         let ``CLR(1) parser leaves match input for grammar1`` () =
-            let table = LRParser.buildCLR1Table augGrammar1
-
-            for s in grammar1Accept do
-                match LRParser.parse augGrammar1 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildCLR1Table augGrammar1 grammar1Accept
 
     module Grammar2 =
 
@@ -82,168 +83,83 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar3 strings`` () =
-            let table = LRParser.buildSLR1Table augGrammar3
-
-            for s in grammar3Accept do
-                Assert.True(LRParser.parse augGrammar3 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in grammar3Reject do
-                Assert.True(LRParser.parse augGrammar3 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildSLR1Table augGrammar3 grammar3Accept grammar3Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar3`` () =
-            let table = LRParser.buildSLR1Table augGrammar3
-
-            for s in grammar3Accept do
-                match LRParser.parse augGrammar3 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildSLR1Table augGrammar3 grammar3Accept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar3 strings`` () =
-            let table = LRParser.buildCLR1Table augGrammar3
-
-            for s in grammar3Accept do
-                Assert.True(LRParser.parse augGrammar3 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in grammar3Reject do
-                Assert.True(LRParser.parse augGrammar3 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildCLR1Table augGrammar3 grammar3Accept grammar3Reject
 
         [<Fact>]
         let ``CLR(1) parser leaves match input for grammar3`` () =
-            let table = LRParser.buildCLR1Table augGrammar3
-
-            for s in grammar3Accept do
-                match LRParser.parse augGrammar3 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildCLR1Table augGrammar3 grammar3Accept
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar3`` () =
-            let table = LRParser.buildSLR1Table augGrammar3
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildSLR1Table augGrammar3
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar3`` () =
-            let table = LRParser.buildCLR1Table augGrammar3
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildCLR1Table augGrammar3
 
         [<Fact>]
         let ``LR(0) table has conflicts for grammar3`` () =
-            let table = LRParser.buildLR0Table augGrammar3
-            Assert.NotEmpty(table.conflicts)
+            testHasConflicts LRParser.buildLR0Table augGrammar3
 
     module Grammar7 =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar7 strings`` () =
-            let table = LRParser.buildSLR1Table augGrammar7
-
-            for s in exprAccept do
-                Assert.True(LRParser.parse augGrammar7 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in exprReject do
-                Assert.True(LRParser.parse augGrammar7 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildSLR1Table augGrammar7 exprAccept exprReject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar7`` () =
-            let table = LRParser.buildSLR1Table augGrammar7
-
-            for s in exprAccept do
-                match LRParser.parse augGrammar7 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildSLR1Table augGrammar7 exprAccept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar7 strings`` () =
-            let table = LRParser.buildCLR1Table augGrammar7
-
-            for s in exprAccept do
-                Assert.True(LRParser.parse augGrammar7 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in exprReject do
-                Assert.True(LRParser.parse augGrammar7 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildCLR1Table augGrammar7 exprAccept exprReject
 
         [<Fact>]
         let ``CLR(1) parser leaves match input for grammar7`` () =
-            let table = LRParser.buildCLR1Table augGrammar7
-
-            for s in exprAccept do
-                match LRParser.parse augGrammar7 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildCLR1Table augGrammar7 exprAccept
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar7`` () =
-            let table = LRParser.buildSLR1Table augGrammar7
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildSLR1Table augGrammar7
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar7`` () =
-            let table = LRParser.buildCLR1Table augGrammar7
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildCLR1Table augGrammar7
 
     module Grammar8 =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar8 strings`` () =
-            let table = LRParser.buildSLR1Table augGrammar8
-
-            for s in exprAccept do
-                Assert.True(LRParser.parse augGrammar8 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in exprReject do
-                Assert.True(LRParser.parse augGrammar8 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildSLR1Table augGrammar8 exprAccept exprReject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar8`` () =
-            let table = LRParser.buildSLR1Table augGrammar8
-
-            for s in exprAccept do
-                match LRParser.parse augGrammar8 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildSLR1Table augGrammar8 exprAccept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar8 strings`` () =
-            let table = LRParser.buildCLR1Table augGrammar8
-
-            for s in exprAccept do
-                Assert.True(LRParser.parse augGrammar8 table (Tokenizer.tokenize s) |> Option.isSome, s)
-
-            for s in exprReject do
-                Assert.True(LRParser.parse augGrammar8 table (Tokenizer.tokenize s) |> Option.isNone, s)
+            testAcceptReject LRParser.buildCLR1Table augGrammar8 exprAccept exprReject
 
         [<Fact>]
         let ``CLR(1) parser leaves match input for grammar8`` () =
-            let table = LRParser.buildCLR1Table augGrammar8
-
-            for s in exprAccept do
-                match LRParser.parse augGrammar8 table (Tokenizer.tokenize s) with
-                | Some tree ->
-                    let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                    Assert.Equal(s, leafTokens)
-                | None -> Assert.Fail($"Failed to parse: {s}")
+            testLeaves LRParser.buildCLR1Table augGrammar8 exprAccept
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar8`` () =
-            let table = LRParser.buildSLR1Table augGrammar8
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildSLR1Table augGrammar8
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar8`` () =
-            let table = LRParser.buildCLR1Table augGrammar8
-            Assert.Empty(table.conflicts)
+            testNoConflicts LRParser.buildCLR1Table augGrammar8
 
     module Grammar6 =
 
@@ -289,47 +205,30 @@ module FactTests =
 
     module CrossParserTests =
 
-        [<Fact>]
-        let ``SLR(1) and CLR(1) agree on grammar3 acceptance`` () =
-            let slr = LRParser.buildSLR1Table augGrammar3
-            let clr = LRParser.buildCLR1Table augGrammar3
+        let private testAgree augGrammar slrBuilder clrBuilder accept reject =
+            let slr = slrBuilder augGrammar
+            let clr = clrBuilder augGrammar
 
-            for s in grammar3Accept @ grammar3Reject do
+            for s in accept @ reject do
                 let slrResult =
-                    LRParser.parse augGrammar3 slr (Tokenizer.tokenize s) |> Option.isSome
+                    LRParser.parse augGrammar slr (Tokenizer.tokenize s) |> Option.isSome
 
                 let clrResult =
-                    LRParser.parse augGrammar3 clr (Tokenizer.tokenize s) |> Option.isSome
+                    LRParser.parse augGrammar clr (Tokenizer.tokenize s) |> Option.isSome
 
                 Assert.Equal(slrResult, clrResult)
+
+        [<Fact>]
+        let ``SLR(1) and CLR(1) agree on grammar3 acceptance`` () =
+            testAgree augGrammar3 LRParser.buildSLR1Table LRParser.buildCLR1Table grammar3Accept grammar3Reject
 
         [<Fact>]
         let ``SLR(1) and CLR(1) agree on grammar7 acceptance`` () =
-            let slr = LRParser.buildSLR1Table augGrammar7
-            let clr = LRParser.buildCLR1Table augGrammar7
-
-            for s in exprAccept @ exprReject do
-                let slrResult =
-                    LRParser.parse augGrammar7 slr (Tokenizer.tokenize s) |> Option.isSome
-
-                let clrResult =
-                    LRParser.parse augGrammar7 clr (Tokenizer.tokenize s) |> Option.isSome
-
-                Assert.Equal(slrResult, clrResult)
+            testAgree augGrammar7 LRParser.buildSLR1Table LRParser.buildCLR1Table exprAccept exprReject
 
         [<Fact>]
         let ``SLR(1) and CLR(1) agree on grammar8 acceptance`` () =
-            let slr = LRParser.buildSLR1Table augGrammar8
-            let clr = LRParser.buildCLR1Table augGrammar8
-
-            for s in exprAccept @ exprReject do
-                let slrResult =
-                    LRParser.parse augGrammar8 slr (Tokenizer.tokenize s) |> Option.isSome
-
-                let clrResult =
-                    LRParser.parse augGrammar8 clr (Tokenizer.tokenize s) |> Option.isSome
-
-                Assert.Equal(slrResult, clrResult)
+            testAgree augGrammar8 LRParser.buildSLR1Table LRParser.buildCLR1Table exprAccept exprReject
 
         [<Fact>]
         let ``grammar7 and grammar8 CLR(1) agree on expr strings`` () =
@@ -343,37 +242,39 @@ module FactTests =
 
 module PropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module Grammar3PropertyTests =
 
         let private slrTable = LRParser.buildSLR1Table augGrammar3
         let private clrTable = LRParser.buildCLR1Table augGrammar3
 
-        [<Property>]
-        let ``SLR(1) parser leaves match input for grammar3`` (s: string) =
-            match LRParser.parse augGrammar3 slrTable (Tokenizer.tokenize s) with
+        let private leavesMatch augGrammar table (s: string) =
+            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
-        [<Property>]
-        let ``CLR(1) parser leaves match input for grammar3`` (s: string) =
-            match LRParser.parse augGrammar3 clrTable (Tokenizer.tokenize s) with
-            | Some tree ->
-                let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                leafTokens = s
-            | None -> true
-
-        [<Property>]
-        let ``SLR(1) and CLR(1) agree on grammar3`` (s: string) =
+        let private parsersAgree augGrammar slr clr (s: string) =
             let slrResult =
-                LRParser.parse augGrammar3 slrTable (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar slr (Tokenizer.tokenize s) |> Option.isSome
 
             let clrResult =
-                LRParser.parse augGrammar3 clrTable (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar clr (Tokenizer.tokenize s) |> Option.isSome
 
             slrResult = clrResult
+
+        [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+        module Grammar3Props =
+
+            [<Property>]
+            let ``SLR(1) parser leaves match input for grammar3`` (s: string) = leavesMatch augGrammar3 slrTable s
+
+            [<Property>]
+            let ``CLR(1) parser leaves match input for grammar3`` (s: string) = leavesMatch augGrammar3 clrTable s
+
+            [<Property>]
+            let ``SLR(1) and CLR(1) agree on grammar3`` (s: string) =
+                parsersAgree augGrammar3 slrTable clrTable s
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Grammar1PropertyTests =
@@ -381,21 +282,18 @@ module PropertyTests =
         let private slrTable = LRParser.buildSLR1Table augGrammar1
         let private clrTable = LRParser.buildCLR1Table augGrammar1
 
-        [<Property>]
-        let ``SLR(1) parser leaves match input for grammar1`` (s: string) =
-            match LRParser.parse augGrammar1 slrTable (Tokenizer.tokenize s) with
+        let private leavesMatch augGrammar table (s: string) =
+            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
             | None -> true
 
         [<Property>]
-        let ``CLR(1) parser leaves match input for grammar1`` (s: string) =
-            match LRParser.parse augGrammar1 clrTable (Tokenizer.tokenize s) with
-            | Some tree ->
-                let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                leafTokens = s
-            | None -> true
+        let ``SLR(1) parser leaves match input for grammar1`` (s: string) = leavesMatch augGrammar1 slrTable s
+
+        [<Property>]
+        let ``CLR(1) parser leaves match input for grammar1`` (s: string) = leavesMatch augGrammar1 clrTable s
 
         [<Property>]
         let ``SLR(1) and CLR(1) agree on grammar1`` (s: string) =
