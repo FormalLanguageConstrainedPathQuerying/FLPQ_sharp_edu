@@ -4,7 +4,6 @@ module LLParser =
 
     /// Build an LL(k) parsing table.
     /// Returns Map from (nonterminal, lookahead) to rule index.
-    /// Lookahead is a list of grammar symbols (terminals or Epsilon for end-of-input).
     let buildTable (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> =
         let firstMap = FirstFollow.firstK g k
         let followMap = FirstFollow.followK g k
@@ -54,18 +53,64 @@ module LLParser =
             tokens.[pos .. endIdx - 1]
 
     /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
-    /// Returns Some(tree) on success, None on failure.
-    let parse
+    /// Also collects visualization steps when withSteps is true.
+    let parseWithSteps
+        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (g: Grammar<'t, 'nt>)
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
         (tokens: Symbol<'t, 'nt> list)
-        : Option<DerivationTree<'t, 'nt>> =
+        : Option<DerivationTree<'t, 'nt>> * VisualizationStep list =
+
+        let mutable steps = []
+
+        let recordStep (stack: Symbol<'t, 'nt> list) (pos: int) (treeStack: DerivationTree<'t, 'nt> list) =
+            let currentTree =
+                match treeStack with
+                | [ t ] -> t
+                | [] -> Leaf(Epsilon)
+                | _ -> Node(g.start, treeStack)
+
+            let stackTeX =
+                let cells =
+                    stack
+                    |> List.map (fun sym ->
+                        match sym with
+                        | T(Terminal _) -> string sym
+                        | N(Nonterminal _) -> string sym
+                        | Epsilon -> "\\varepsilon")
+                    |> String.concat " & "
+
+                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
+
+            let inputTeX =
+                let cells =
+                    tokens
+                    |> List.mapi (fun i sym ->
+                        let s =
+                            match sym with
+                            | T(Terminal _) -> string sym
+                            | N _ -> string sym
+                            | Epsilon -> "\\varepsilon"
+
+                        if i = pos then @"\underbar{" + s + "}" else s)
+                    |> String.concat " & "
+
+                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
+
+            steps <-
+                { tree = DerivationTreeVisualizer.toDot symbolVisualizer currentTree
+                  stack = stackTeX
+                  input = inputTeX }
+                :: steps
+
         let rec parseLoop
             (stack: Symbol<'t, 'nt> list)
             (pos: int)
             (treeStack: DerivationTree<'t, 'nt> list)
             : Option<int * DerivationTree<'t, 'nt> list> =
+            recordStep stack pos treeStack
+
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, treeStack) else None
             | (T _ as sym) :: restStack ->
@@ -87,5 +132,14 @@ module LLParser =
                 | None -> None
 
         match parseLoop ([ N g.start ]) 0 [] with
-        | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees))
-        | _ -> None
+        | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees)), List.rev steps
+        | _ -> None, List.rev steps
+
+    /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
+    let parse
+        (g: Grammar<'t, 'nt>)
+        (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
+        (k: int)
+        (tokens: Symbol<'t, 'nt> list)
+        : Option<DerivationTree<'t, 'nt>> =
+        parseWithSteps string g table k tokens |> fst

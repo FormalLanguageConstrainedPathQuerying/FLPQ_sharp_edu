@@ -11,13 +11,13 @@
     <Compile Include="FirstFollow.fs" />
     <Compile Include="Automaton.fs" />
     <Compile Include="DerivationTree.fs" />
+    <Compile Include="VisualizationTypes.fs" />
+    <Compile Include="DerivationTreeVisualizer.fs" />
     <Compile Include="Cyk.fs" />
     <Compile Include="Valiant.fs" />
     <Compile Include="LLParser.fs" />
     <Compile Include="LRParser.fs" />
     <Compile Include="AutomatonVisualizer.fs" />
-    <Compile Include="DerivationTreeVisualizer.fs" />
-    <Compile Include="VisualizationTypes.fs" />
     <Compile Include="LLVisualizer.fs" />
     <Compile Include="LRVisualizer.fs" />
   </ItemGroup>

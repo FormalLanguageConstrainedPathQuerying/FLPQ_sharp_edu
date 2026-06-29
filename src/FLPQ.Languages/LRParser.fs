@@ -474,22 +474,57 @@ module LRParser =
           conflicts = List.rev conflicts }
 
     /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
-    /// Takes an augmented grammar for correct rule reference.
-    /// Returns Some(tree) on successful parse, None on failure.
-    let parse
+    /// Also collects visualization steps.
+    let parseWithSteps
+        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
-        : Option<DerivationTree<'t, 'nt>> =
+        : Option<DerivationTree<'t, 'nt>> * VisualizationStep list =
         let mutable stateStack: int list = [ 0 ]
         let mutable treeStack: DerivationTree<'t, 'nt> list = []
         let mutable pos = 0
         let mutable finished = false
         let mutable accepted = false
-        let mutable steps = 0
+        let mutable iteration = 0
+        let mutable steps = []
 
-        while not finished && steps < 10000 do
-            steps <- steps + 1
+        let recordStep () =
+            let currentTree =
+                match treeStack with
+                | [ t ] -> t
+                | [] -> Leaf(Epsilon)
+                | _ -> Node(aug.start, treeStack)
+
+            let stackTeX =
+                let cells = stateStack |> List.rev |> List.map string |> String.concat " & "
+                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
+
+            let inputTeX =
+                let cells =
+                    tokens
+                    |> List.mapi (fun i sym ->
+                        let s =
+                            match sym with
+                            | T(Terminal _) -> string sym
+                            | N _ -> string sym
+                            | Epsilon -> "\\varepsilon"
+
+                        if i = pos then @"\underbar{" + s + "}" else s)
+                    |> String.concat " & "
+
+                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
+
+            steps <-
+                { tree = DerivationTreeVisualizer.toDot symbolVisualizer currentTree
+                  stack = stackTeX
+                  input = inputTeX }
+                :: steps
+
+        recordStep ()
+
+        while not finished && iteration < 10000 do
+            iteration <- iteration + 1
             let currentState = stateStack.Head
 
             let lookahead = if pos < tokens.Length then tokens.[pos] else Epsilon
@@ -499,6 +534,7 @@ module LRParser =
                 stateStack <- nextState :: stateStack
                 treeStack <- Leaf(tokens.[pos]) :: treeStack
                 pos <- pos + 1
+                recordStep ()
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
                 let popCount = Rhs.toSymbols rule.rhs |> List.length
@@ -516,6 +552,7 @@ module LRParser =
 
                 stateStack <- gotoState :: stateStack
                 treeStack <- newNode :: treeStack
+                recordStep ()
             | Some Accept ->
                 finished <- true
                 accepted <- true
@@ -529,7 +566,18 @@ module LRParser =
                 else
                     finished <- true
 
-        if accepted && treeStack.Length = 1 then
-            Some treeStack.Head
-        else
-            None
+        let tree =
+            if accepted && treeStack.Length = 1 then
+                Some treeStack.Head
+            else
+                None
+
+        tree, List.rev steps
+
+    /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
+    let parse
+        (aug: Grammar<'t, 'nt>)
+        (table: LRTable<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : Option<DerivationTree<'t, 'nt>> =
+        parseWithSteps string aug table tokens |> fst
