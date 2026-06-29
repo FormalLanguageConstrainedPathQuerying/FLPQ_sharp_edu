@@ -6,6 +6,7 @@ open FLPQ.LinearAlgebra
 
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``leaf tree dot compiles`` () =
     let tree = Leaf(T(Terminal "x"))
     let dot = DerivationTreeVisualizer.toDot string tree
@@ -14,6 +15,7 @@ let ``leaf tree dot compiles`` () =
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``node with children dot compiles`` () =
     let tree =
         Node(Nonterminal "S", [ Leaf(T(Terminal "a")); Node(Nonterminal "B", [ Leaf(T(Terminal "b")) ]) ])
@@ -23,12 +25,14 @@ let ``node with children dot compiles`` () =
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``epsilon leaf dot compiles`` () =
     let tree = Node(Nonterminal "S", [ Leaf(Epsilon) ])
     let dot = DerivationTreeVisualizer.toDot string tree
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``LR parser tree dot compiles`` () =
     let grammar = Grammar.parseGrammar "S -> a S\nS -> a"
     let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")

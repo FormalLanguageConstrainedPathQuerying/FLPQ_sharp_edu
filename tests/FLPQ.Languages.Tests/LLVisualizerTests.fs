@@ -6,6 +6,7 @@ open FLPQ.LinearAlgebra
 
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
     let g =
         Grammar.parseGrammar

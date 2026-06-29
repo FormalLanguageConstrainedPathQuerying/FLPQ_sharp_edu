@@ -11,7 +11,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        config: [Debug, Release]
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,20 +26,45 @@ jobs:
       - name: Restore tools
         run: dotnet tool restore
 
-      - name: Restore dependencies
+      - name: Restore packages
         run: dotnet restore
-
-      - name: Build Debug
-        run: dotnet build -c Debug --no-restore
-
-      - name: Build Release
-        run: dotnet build -c Release --no-restore
 
       - name: Check formatting
         run: dotnet fantomas . --check
 
-      - name: Run tests (Debug)
-        run: dotnet test -c Debug --no-build
+      - name: Build
+        run: dotnet build -c ${{ matrix.config }} --no-restore
 
-      - name: Run tests (Release)
-        run: dotnet test -c Release --no-build
+      - name: Test (excluding Graphviz)
+        run: dotnet test -c ${{ matrix.config }} --no-build --filter "Category!=Graphviz"
+
+  graphviz-tests:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        config: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Restore packages
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c ${{ matrix.config }} --no-restore
+
+      - name: Test (Graphviz only)
+        run: dotnet test -c ${{ matrix.config }} --no-build --filter "Category=Graphviz"

@@ -6,6 +6,7 @@ open FLPQ.LinearAlgebra
 
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``simple automaton dot compiles`` () =
     let aut =
         Automaton.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] (set [ 0 ]) (set [ 1 ])
@@ -18,6 +19,7 @@ let ``simple automaton dot compiles`` () =
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``DFA from LR(0) automaton dot compiles`` () =
     let g =
         Grammar.parseGrammar
@@ -58,6 +60,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``automaton with no transitions compiles`` () =
     let aut = Automaton.fromTransitions [ "s0" ] [] (set [ 0 ]) (set [ 0 ])
 
@@ -65,6 +68,7 @@ let ``automaton with no transitions compiles`` () =
     Assert.True(TestUtils.checkDotCompiles dot)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``multiple start and final states`` () =
     let aut =
         Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] (set [ 0; 1 ]) (set [ 1; 2 ])
