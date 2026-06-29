@@ -110,7 +110,7 @@ dotnet fsi Script.fsx
 * If a book error is found, it must be recorded in `fixes_for_book.md` with a clear description and suggested correction, and the user should be notified.
 * If additional information, that not presented in the book was required for implementation, it must be recorded in `fixes_for_book.md` with a clear description and suggested improvements, and the user should be notified.
 * Move changes to `dev`
-* Mark the task as completed in `tasks.md`
+* Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description. The task text in `tasks.md` is user-authored and immutable.**
 * Go to first step
 
 ## Git
