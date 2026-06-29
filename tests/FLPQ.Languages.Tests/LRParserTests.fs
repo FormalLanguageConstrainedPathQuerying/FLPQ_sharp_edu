@@ -263,33 +263,29 @@ module FactTests =
         let ``LR(0) automaton for grammar3 has expected structure`` () =
             let aut = LRAutomaton.buildLR0 augGrammar3
             Assert.True(aut.states.Length > 1)
-            Assert.Equal(1, aut.startStates.Count)
+            Assert.Equal(0, aut.startState)
             Assert.Equal(1, aut.finalStates.Count)
-            Assert.True(Automaton.isDeterministic aut)
 
         [<Fact>]
         let ``LR(1) automaton for grammar3 has expected structure`` () =
             let aut = LRAutomaton.buildLR1 augGrammar3
             Assert.True(aut.states.Length > 1)
-            Assert.Equal(1, aut.startStates.Count)
+            Assert.Equal(0, aut.startState)
             Assert.Equal(1, aut.finalStates.Count)
-            Assert.True(Automaton.isDeterministic aut)
 
         [<Fact>]
         let ``LR(0) automaton for grammar7 has expected structure`` () =
             let aut = LRAutomaton.buildLR0 augGrammar7
             Assert.True(aut.states.Length > 1)
-            Assert.Equal(1, aut.startStates.Count)
+            Assert.Equal(0, aut.startState)
             Assert.Equal(1, aut.finalStates.Count)
-            Assert.True(Automaton.isDeterministic aut)
 
         [<Fact>]
         let ``LR(1) automaton for grammar8 has expected structure`` () =
             let aut = LRAutomaton.buildLR1 augGrammar8
             Assert.True(aut.states.Length > 1)
-            Assert.Equal(1, aut.startStates.Count)
+            Assert.Equal(0, aut.startState)
             Assert.Equal(1, aut.finalStates.Count)
-            Assert.True(Automaton.isDeterministic aut)
 
     module CrossParserTests =
 

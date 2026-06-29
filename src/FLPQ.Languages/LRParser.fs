@@ -146,7 +146,7 @@ module LRAutomaton =
 
     /// Build the LR(0) automaton for an augmented grammar.
     /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
-    let buildLR0 (aug: Grammar<'t, 'nt>) : Automaton<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
+    let buildLR0 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
         let augmentedRule = aug.rules.[0]
 
         let startItems =
@@ -203,11 +203,11 @@ module LRAutomaton =
             |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
             |> Set.ofList
 
-        Automaton.fromTransitions states (List.rev transitions) Set.empty (set [ 0 ]) finalStates
+        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
 
     /// Build the LR(1) automaton for an augmented grammar.
     /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
-    let buildLR1 (aug: Grammar<'t, 'nt>) : Automaton<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>> =
+    let buildLR1 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>> =
         let augmentedRule = aug.rules.[0]
         let firstMap = FirstFollow.firstK aug 1
 
@@ -268,7 +268,7 @@ module LRAutomaton =
             |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
             |> Set.ofList
 
-        Automaton.fromTransitions states (List.rev transitions) Set.empty (set [ 0 ]) finalStates
+        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
 
 /// LR parsing table construction and parser.
 /// All table builders and parse take an already-augmented grammar.

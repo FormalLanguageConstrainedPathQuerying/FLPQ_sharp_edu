@@ -3,21 +3,54 @@ namespace FLPQ.Languages
 open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
-/// Finite automaton with states parameterized by type 's.
-/// Transitions are represented as a Matrix over Option<NonEmptySet<'t>>.
-/// Epsilon transitions are explicit.
-type Automaton<'t, 's when 't: comparison> =
+/// Nondeterministic finite automaton with multiple start states and epsilon transitions.
+type NFA<'t, 's when 't: comparison> =
     { states: 's list
       transitions: Matrix<Option<NonEmptySet<'t>>>
       epsTransitions: Set<int * int>
       startStates: Set<int>
       finalStates: Set<int> }
 
-module Automaton =
+/// Deterministic finite automaton with exactly one start state and no epsilon transitions.
+type DFA<'t, 's when 't: comparison> =
+    { states: 's list
+      transitions: Matrix<Option<NonEmptySet<'t>>>
+      startState: int
+      finalStates: Set<int> }
 
-    let stateCount (a: Automaton<'t, 's>) = a.states.Length
+module Nfa =
 
-    let alphabet (a: Automaton<'t, 's>) : Set<'t> =
+    let buildMatrix (states: 's list) (transitionsList: (int * 't * int) list) : Matrix<Option<NonEmptySet<'t>>> =
+        let n = states.Length
+        let matrix = Matrix.init n n None
+
+        for (fromIdx, sym, toIdx) in transitionsList do
+            let current =
+                match matrix.data.[fromIdx, toIdx] with
+                | Some nes -> NonEmptySet.add sym nes
+                | None -> NonEmptySet.singleton sym
+
+            matrix.data.[fromIdx, toIdx] <- Some current
+
+        matrix
+
+    /// Build an NFA from a list of transitions.
+    let fromTransitions
+        (states: 's list)
+        (transitionsList: (int * 't * int) list)
+        (epsTransitions: Set<int * int>)
+        (startStates: Set<int>)
+        (finalStates: Set<int>)
+        : NFA<'t, 's> =
+        { states = states
+          transitions = buildMatrix states transitionsList
+          epsTransitions = epsTransitions
+          startStates = startStates
+          finalStates = finalStates }
+
+    let stateCount (a: NFA<'t, 's>) = a.states.Length
+
+    let alphabet (a: NFA<'t, 's>) : Set<'t> =
         let mutable result = Set.empty
 
         for i in 0 .. a.transitions.rows - 1 do
@@ -28,8 +61,7 @@ module Automaton =
 
         result
 
-    /// All states reachable from a given state by a specific symbol.
-    let move (a: Automaton<'t, 's>) (stateIdx: int) (symbol: 't) : Set<int> =
+    let move (a: NFA<'t, 's>) (stateIdx: int) (symbol: 't) : Set<int> =
         let mutable result = Set.empty
 
         for j in 0 .. a.transitions.cols - 1 do
@@ -39,8 +71,7 @@ module Automaton =
 
         result
 
-    /// All states reachable from a given state via epsilon transitions.
-    let epsilonClosure (a: Automaton<'t, 's>) (stateIdx: int) : Set<int> =
+    let epsilonClosure (a: NFA<'t, 's>) (stateIdx: int) : Set<int> =
         let mutable closure = set [ stateIdx ]
         let mutable changed = true
 
@@ -54,45 +85,22 @@ module Automaton =
 
         closure
 
-    /// All states reachable from a set of states by a specific symbol.
-    let moveSet (a: Automaton<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
+    let moveSet (a: NFA<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
         stateIndices |> Set.toSeq |> Seq.collect (fun i -> move a i symbol) |> Set.ofSeq
 
-    /// Build an automaton from a list of transitions.
-    /// Each transition is (fromStateIdx, symbol, toStateIdx).
-    let fromTransitions
+    let private buildDfaMatrix
         (states: 's list)
         (transitionsList: (int * 't * int) list)
-        (epsTransitions: Set<int * int>)
-        (startStates: Set<int>)
-        (finalStates: Set<int>)
-        : Automaton<'t, 's> =
-        let n = states.Length
-        let matrix = Matrix.init n n None
-
-        for (fromIdx, sym, toIdx) in transitionsList do
-            let current =
-                match matrix.data.[fromIdx, toIdx] with
-                | Some nes -> NonEmptySet.add sym nes
-                | None -> NonEmptySet.singleton sym
-
-            matrix.data.[fromIdx, toIdx] <- Some current
-
-        { states = states
-          transitions = matrix
-          epsTransitions = epsTransitions
-          startStates = startStates
-          finalStates = finalStates }
+        : Matrix<Option<NonEmptySet<'t>>> =
+        buildMatrix states transitionsList
 
     /// Subset construction: convert NFA to DFA.
-    /// Returns a new automaton where each state is a Set<int> (set of original state indices).
-    let toDfa (nfa: Automaton<'t, 's>) : Automaton<'t, Set<int>> =
+    let toDfa (nfa: NFA<'t, 's>) : DFA<'t, Set<int>> =
         let initialSubset = nfa.startStates
 
         let mutable dfaStates: Set<int> list = [ initialSubset ]
         let mutable dfaStateMap = Map.ofList [ (initialSubset, 0) ]
         let mutable transitions: (int * 't * int) list = []
-        let mutable epsTransitions: Set<int * int> = Set.empty
         let mutable queue = [ initialSubset ]
 
         while not (List.isEmpty queue) do
@@ -128,19 +136,52 @@ module Automaton =
                     None)
             |> Set.ofList
 
-        fromTransitions dfaStates (List.rev transitions) epsTransitions (set [ 0 ]) dfaFinalStates
+        let n = List.length dfaStates
+        let matrix = Matrix.init n n None
 
-    /// Check whether an automaton is deterministic.
-    let isDeterministic (a: Automaton<'t, 's>) : bool =
-        a.startStates.Count = 1
-        && a.epsTransitions.IsEmpty
-        && (let mutable ok = true
+        for (fromIdx, sym, toIdx) in transitions do
+            let current =
+                match matrix.data.[fromIdx, toIdx] with
+                | Some nes -> NonEmptySet.add sym nes
+                | None -> NonEmptySet.singleton sym
 
-            for i in 0 .. a.transitions.rows - 1 do
-                for sym in alphabet a do
-                    let targets = move a i sym
+            matrix.data.[fromIdx, toIdx] <- Some current
 
-                    if targets.Count > 1 then
-                        ok <- false
+        { states = dfaStates
+          transitions = matrix
+          startState = 0
+          finalStates = dfaFinalStates }
 
-            ok)
+module Dfa =
+
+    /// Build a DFA from a list of transitions.
+    let fromTransitions
+        (states: 's list)
+        (transitionsList: (int * 't * int) list)
+        (startState: int)
+        (finalStates: Set<int>)
+        : DFA<'t, 's> =
+        { states = states
+          transitions = Nfa.buildMatrix states transitionsList
+          startState = startState
+          finalStates = finalStates }
+
+    let stateCount (a: DFA<'t, 's>) = a.states.Length
+
+    let alphabet (a: DFA<'t, 's>) : Set<'t> =
+        Nfa.alphabet
+            { states = a.states
+              transitions = a.transitions
+              epsTransitions = Set.empty
+              startStates = set [ a.startState ]
+              finalStates = a.finalStates }
+
+    let move (a: DFA<'t, 's>) (stateIdx: int) (symbol: 't) : int option =
+        let mutable result = None
+
+        for j in 0 .. a.transitions.cols - 1 do
+            match a.transitions.data.[stateIdx, j] with
+            | Some nes when NonEmptySet.contains symbol nes -> result <- Some j
+            | _ -> ()
+
+        result
