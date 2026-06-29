@@ -15,10 +15,10 @@ module LLParser =
             let rule = g.rules.[ruleIdx]
 
             let lookahead =
-                if rule.rhs = [ Epsilon ] then
+                if Rhs.isEpsilon rule.rhs then
                     followMap |> Map.find rule.lhs
                 else
-                    let firstOfRhs = FirstFollow.firstKOfString firstMap k rule.rhs
+                    let firstOfRhs = FirstFollow.firstKOfString firstMap k (Rhs.toList rule.rhs)
 
                     let withoutEps = Set.remove [ Epsilon ] firstOfRhs
                     let followOfA = followMap |> Map.find rule.lhs
@@ -82,7 +82,7 @@ module LLParser =
                 | Some ruleIdx ->
                     let rule = g.rules.[ruleIdx]
 
-                    let newStack = rule.rhs @ restStack
+                    let newStack = Rhs.toList rule.rhs @ restStack
                     parseLoop newStack pos treeStack
                 | None -> None
 

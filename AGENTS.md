@@ -54,7 +54,7 @@ dotnet fsi Script.fsx
 
 
 # Project structure
-* Documentation in `docs/`. Root is [`main.md`](/docs/main.md)
+* Documentation in `docs/`. Root is [`main.md`](/docs/main.md). Use it for navigation. Do not try to read all sources at once.
   * Each implemented module must have a dedicated documentation file in `docs/` (e.g., `docs/matrix.md`). The file must describe:
     - Type definitions with design rationale
     - All function signatures with behavior, preconditions, and postconditions

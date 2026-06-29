@@ -69,10 +69,12 @@ module FirstFollow =
                     rules
                     |> List.choose (fun r ->
                         if r.lhs = nt then
-                            match r.rhs with
-                            | [ Epsilon ] -> Some [ Epsilon ]
-                            | (T _ as t) :: _ -> Some(truncate [ t ] k)
-                            | _ -> None
+                            if Rhs.isEpsilon r.rhs then
+                                Some [ Epsilon ]
+                            else
+                                match Rhs.toSymbols r.rhs with
+                                | (T _ as t) :: _ -> Some(truncate [ t ] k)
+                                | _ -> None
                         else
                             None)
                     |> Set.ofList
@@ -91,8 +93,8 @@ module FirstFollow =
                 let additions =
                     rules
                     |> List.choose (fun r ->
-                        if r.lhs = nt && not (r.rhs = [ Epsilon ]) then
-                            Some r.rhs
+                        if r.lhs = nt && not (Rhs.isEpsilon r.rhs) then
+                            Some(Rhs.toSymbols r.rhs)
                         else
                             None)
                     |> List.collect (fun rhs -> firstOfSymbols firstMap k rhs |> Set.toList)
@@ -137,7 +139,7 @@ module FirstFollow =
             changed <- false
 
             for rule in g.rules do
-                let rhs = rule.rhs
+                let rhs = Rhs.toSymbols rule.rhs
 
                 for idx in 0 .. rhs.Length - 1 do
                     match rhs.[idx] with

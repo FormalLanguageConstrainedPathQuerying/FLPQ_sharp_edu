@@ -1,6 +1,7 @@
 module GrammarTests
 
 open Xunit
+open FSharpPlus.Data
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
@@ -14,7 +15,7 @@ module FactTests =
         Assert.Equal(1, List.length g.rules)
         Assert.Equal(Nonterminal "S", g.start)
         Assert.Equal(Nonterminal "S", g.rules.Head.lhs)
-        Assert.Equal(4, List.length g.rules.Head.rhs)
+        Assert.Equal(4, Rhs.length g.rules.Head.rhs)
 
     [<Fact>]
     let ``parseGrammar parses multiple rules`` () =
@@ -36,7 +37,7 @@ module FactTests =
         let g = Grammar.parseGrammar text
 
         Assert.Equal(1, List.length g.rules)
-        Assert.Equal<Symbol<string, string> list>([ Epsilon ], g.rules.Head.rhs)
+        Assert.True(Rhs.isEpsilon g.rules.Head.rhs)
 
     [<Fact>]
     let ``parseGrammar ignores empty lines`` () =
@@ -58,22 +59,22 @@ module FactTests =
         let text = "S -> a B c D"
         let g = Grammar.parseGrammar text
 
-        let rhs = g.rules.Head.rhs
-        Assert.Equal(4, List.length rhs)
+        let rhsList = Rhs.toList g.rules.Head.rhs
+        Assert.Equal(4, List.length rhsList)
 
-        match rhs.[0] with
+        match rhsList.[0] with
         | T(Terminal "a") -> ()
         | _ -> Assert.Fail("Expected terminal 'a'")
 
-        match rhs.[1] with
+        match rhsList.[1] with
         | N(Nonterminal "B") -> ()
         | _ -> Assert.Fail("Expected nonterminal 'B'")
 
-        match rhs.[2] with
+        match rhsList.[2] with
         | T(Terminal "c") -> ()
         | _ -> Assert.Fail("Expected terminal 'c'")
 
-        match rhs.[3] with
+        match rhsList.[3] with
         | N(Nonterminal "D") -> ()
         | _ -> Assert.Fail("Expected nonterminal 'D'")
 
@@ -106,40 +107,41 @@ module FactTests =
         Assert.Equal(Nonterminal "S", g.start)
 
         let r1 = g.rules.[0]
-        Assert.Equal(4, List.length r1.rhs)
+        let r1List = Rhs.toList r1.rhs
+        Assert.Equal(4, List.length r1List)
 
-        match r1.rhs.[0] with
+        match r1List.[0] with
         | T(Terminal "a") -> ()
         | _ -> Assert.Fail("Expected 'a'")
 
-        match r1.rhs.[1] with
+        match r1List.[1] with
         | N(Nonterminal "S") -> ()
         | _ -> Assert.Fail("Expected 'S'")
 
-        match r1.rhs.[2] with
+        match r1List.[2] with
         | T(Terminal "b") -> ()
         | _ -> Assert.Fail("Expected 'b'")
 
-        match r1.rhs.[3] with
+        match r1List.[3] with
         | N(Nonterminal "S") -> ()
         | _ -> Assert.Fail("Expected 'S'")
 
         let r2 = g.rules.[1]
-        Assert.Equal<Symbol<string, string> list>([ Epsilon ], r2.rhs)
+        Assert.True(Rhs.isEpsilon r2.rhs)
 
     [<Fact>]
     let ``parseGrammar handles rule with single symbol`` () =
         let text = "S -> a"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(1, List.length g.rules.Head.rhs)
+        Assert.Equal(1, Rhs.length g.rules.Head.rhs)
 
     [<Fact>]
     let ``parseGrammar handles multiple spaces between symbols`` () =
         let text = "S -> a   S    b"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(3, List.length g.rules.Head.rhs)
+        Assert.Equal(3, Rhs.length g.rules.Head.rhs)
 
 
 module CnfTests =
@@ -148,10 +150,14 @@ module CnfTests =
         g.rules
         |> List.forall (fun r ->
             match r.rhs with
-            | [ Epsilon ] -> r.lhs = g.start
-            | [ T _ ] -> true
-            | [ N _; N _ ] -> true
-            | _ -> false)
+            | EpsilonRhs -> r.lhs = g.start
+            | Symbols nel ->
+                let syms = NonEmptyList.toList nel
+
+                match syms with
+                | [ T _ ] -> true
+                | [ N _; N _ ] -> true
+                | _ -> false)
 
     let private nonterminalsOfCnf (g: Grammar<string, string>) : Set<Nonterminal<string>> =
         g.rules |> List.map (fun r -> r.lhs) |> Set.ofList
@@ -160,10 +166,14 @@ module CnfTests =
         g.rules
         |> List.forall (fun r ->
             match r.rhs with
-            | [ Epsilon ] -> true
-            | [ T _ ] -> true
-            | [ N _; N _ ] -> true
-            | _ -> false)
+            | EpsilonRhs -> true
+            | Symbols nel ->
+                let syms = NonEmptyList.toList nel
+
+                match syms with
+                | [ T _ ] -> true
+                | [ N _; N _ ] -> true
+                | _ -> false)
 
     [<Fact>]
     let ``toCnf preserves grammar that is already in CNF`` () =
@@ -357,7 +367,11 @@ module CnfTests =
             cnf.rules
             |> List.exists (fun r ->
                 match r.rhs with
-                | [ N _ ] -> true
+                | Symbols nel ->
+                    NonEmptyList.length nel = 1
+                    && (match NonEmptyList.head nel with
+                        | N _ -> true
+                        | _ -> false)
                 | _ -> false)
 
         Assert.False(hasUnit)

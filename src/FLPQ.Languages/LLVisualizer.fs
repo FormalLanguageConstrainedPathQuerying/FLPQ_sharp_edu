@@ -83,7 +83,7 @@ module LLVisualizer =
                 | Some ruleIdx ->
                     let rule = g.rules.[ruleIdx]
 
-                    let newStack = rule.rhs @ restStack
+                    let newStack = Rhs.toList rule.rhs @ restStack
                     step newStack pos treeStack
                 | None -> ()
 

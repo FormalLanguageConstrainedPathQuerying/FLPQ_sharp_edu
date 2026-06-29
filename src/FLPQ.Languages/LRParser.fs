@@ -1,5 +1,6 @@
 namespace FLPQ.Languages
 
+open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
 /// LR(0) item: A -> α·β
@@ -43,7 +44,7 @@ module LRAutomaton =
     let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         { rules =
             { lhs = freshStart
-              rhs = [ N g.start ] }
+              rhs = NonEmptyList.create (N g.start) [] |> Symbols }
             :: g.rules
           start = freshStart }
 
@@ -61,7 +62,10 @@ module LRAutomaton =
                         let newItems =
                             rules
                             |> List.filter (fun r -> r.lhs = nt)
-                            |> List.map (fun r -> { Lhs = r.lhs; Rhs = r.rhs; Dot = 0 })
+                            |> List.map (fun r ->
+                                { Lhs = r.lhs
+                                  Rhs = Rhs.toSymbols r.rhs
+                                  Dot = 0 })
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -117,7 +121,7 @@ module LRAutomaton =
                                 |> Set.toList
                                 |> List.map (fun la ->
                                     { Lhs = r.lhs
-                                      Rhs = r.rhs
+                                      Rhs = Rhs.toSymbols r.rhs
                                       Dot = 0
                                       Lookahead = List.head la }))
 
@@ -150,7 +154,7 @@ module LRAutomaton =
                 aug.rules
                 (set
                     [ { Lhs = augmentedRule.lhs
-                        Rhs = augmentedRule.rhs
+                        Rhs = Rhs.toSymbols augmentedRule.rhs
                         Dot = 0 } ])
 
         let mutable states = [ startItems ]
@@ -191,8 +195,8 @@ module LRAutomaton =
         let finalStates =
             let acceptItem =
                 { Lhs = augmentedRule.lhs
-                  Rhs = augmentedRule.rhs
-                  Dot = augmentedRule.rhs.Length }
+                  Rhs = Rhs.toSymbols augmentedRule.rhs
+                  Dot = Rhs.toSymbols augmentedRule.rhs |> List.length }
 
             states
             |> List.indexed
@@ -212,7 +216,7 @@ module LRAutomaton =
                 aug.rules
                 (set
                     [ { Lhs = augmentedRule.lhs
-                        Rhs = augmentedRule.rhs
+                        Rhs = Rhs.toSymbols augmentedRule.rhs
                         Dot = 0
                         Lookahead = Epsilon } ])
                 firstMap
@@ -255,8 +259,8 @@ module LRAutomaton =
         let finalStates =
             let acceptItem =
                 { Lhs = augmentedRule.lhs
-                  Rhs = augmentedRule.rhs
-                  Dot = augmentedRule.rhs.Length
+                  Rhs = Rhs.toSymbols augmentedRule.rhs
+                  Dot = Rhs.toSymbols augmentedRule.rhs |> List.length
                   Lookahead = Epsilon }
 
             states
@@ -270,11 +274,9 @@ module LRAutomaton =
 /// All table builders and parse take an already-augmented grammar.
 module LRParser =
 
-    let private isCompleted (item: LR0Item<'t, 'nt>) : bool =
-        item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
+    let private isCompleted (item: LR0Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
 
-    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool =
-        item.Dot = item.Rhs.Length || (item.Dot = 0 && item.Rhs = [ Epsilon ])
+    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
 
     /// Build the LR(0) parsing table from an augmented grammar.
     let buildLR0Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
@@ -288,7 +290,7 @@ module LRParser =
 
         let allTerminals =
             [ for rule in aug.rules do
-                  for sym in rule.rhs do
+                  for sym in Rhs.toSymbols rule.rhs do
                       match sym with
                       | T _ as tSym -> yield tSym
                       | _ -> () ]
@@ -324,7 +326,8 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules |> List.findIndex (fun r -> r.lhs = item.Lhs && r.rhs = item.Rhs)
+                            aug.rules
+                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
 
                         for t in Epsilon :: allTerminals do
                             let key = (stateIdx, t)
@@ -380,7 +383,8 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules |> List.findIndex (fun r -> r.lhs = item.Lhs && r.rhs = item.Rhs)
+                            aug.rules
+                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
 
                         let followSet = followMap |> Map.find item.Lhs
 
@@ -438,7 +442,8 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules |> List.findIndex (fun r -> r.lhs = item.Lhs && r.rhs = item.Rhs)
+                            aug.rules
+                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
 
                         let t = item.Lookahead
 
@@ -487,7 +492,7 @@ module LRParser =
                 pos <- pos + 1
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
-                let popCount = rule.rhs |> List.filter (fun s -> s <> Epsilon) |> List.length
+                let popCount = Rhs.toSymbols rule.rhs |> List.length
 
                 let children = treeStack |> List.take popCount |> List.rev
                 stateStack <- stateStack |> List.skip popCount

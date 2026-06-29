@@ -23,7 +23,9 @@ module Cyk =
         (rules: Rule<string, string> list)
         (target: Symbol<string, string>)
         : Nonterminal<string> list =
-        rules |> List.filter (fun r -> r.rhs = [ target ]) |> List.map (fun r -> r.lhs)
+        rules
+        |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ target ])
+        |> List.map (fun r -> r.lhs)
 
     let private findBinaryProductions
         (rules: Rule<string, string> list)
@@ -31,7 +33,7 @@ module Cyk =
         (right: Symbol<string, string>)
         : Nonterminal<string> list =
         rules
-        |> List.filter (fun r -> r.rhs = [ left; right ])
+        |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ left; right ])
         |> List.map (fun r -> r.lhs)
 
     let private cykTable (cnf: Grammar<string, string>) (tokens: Symbol<string, string> list) : Matrix<CykCell> =
@@ -144,7 +146,7 @@ module Cyk =
     let parse (g: Grammar<string, string>) (input: string) : bool =
         if input = "" then
             let cnf = Grammar.toCnf g
-            cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
+            cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
         else
             let cnf = Grammar.toCnf g
             let tokens = tokenize input
@@ -157,7 +159,7 @@ module Cyk =
 
         if input = "" then
             let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
+                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)

@@ -11,4 +11,8 @@
     <Compile Include="BooleanDecomposition.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FSharpPlus" Version="1.9.1" />
+  </ItemGroup>
+
 </Project>

@@ -179,7 +179,7 @@ module Valiant =
         let terminalRules =
             cnf.rules
             |> List.choose (fun r ->
-                match r.rhs with
+                match Rhs.toSymbols r.rhs with
                 | [ T(Terminal t) ] -> Some(t, r.lhs)
                 | _ -> None)
             |> List.groupBy fst
@@ -189,7 +189,7 @@ module Valiant =
         let binaryRules =
             cnf.rules
             |> List.choose (fun r ->
-                match r.rhs with
+                match Rhs.toSymbols r.rhs with
                 | [ N left; N right ] -> Some(r.lhs, (left, right))
                 | _ -> None)
 
@@ -209,7 +209,7 @@ module Valiant =
 
         if input = "" then
             let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && r.rhs = [ Epsilon ])
+                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)

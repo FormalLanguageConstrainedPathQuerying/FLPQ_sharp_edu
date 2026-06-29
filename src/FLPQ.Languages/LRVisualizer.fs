@@ -72,7 +72,7 @@ module LRVisualizer =
                 recordStep ()
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
-                let popCount = rule.rhs |> List.filter (fun s -> s <> Epsilon) |> List.length
+                let popCount = Rhs.toSymbols rule.rhs |> List.length
 
                 let children = treeStack |> List.take popCount |> List.rev
                 stateStack <- stateStack |> List.skip popCount
