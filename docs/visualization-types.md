@@ -34,8 +34,17 @@ Data for a single LL parser visualization step. Collected during `LLParser.parse
 Data for a single LR parser visualization step. Collected during `LRParser.parseWithSteps`.
 
 - `tree: DerivationTree<'t, 'nt>` — partial derivation tree built so far
-- `stateStack: int list` — LR automaton state stack (state numbers)
+- `stack: LRStackFrame<'t, 'nt> list` — unified LR parser stack (interleaved states and symbols with trees)
 - `input: StepInput<'t, 'nt>` — input state
+
+### `LRStackFrame<'t, 'nt>` (struct)
+
+Frame on the unified LR parser stack. Replaces the previous dual-stack (separate state and tree stacks).
+
+- `LRState of int` — an LR automaton state number
+- `LRSymbol of Symbol<'t,'nt> * DerivationTree<'t,'nt>` — a grammar symbol with its associated parse tree
+
+The unified stack alternates between states and symbols: `[LRState(n), LRSymbol(X_k, t_k), ..., LRState(1), LRSymbol(X_1, t_1), LRState(0)]` (cons-based, head = top). Shift pushes `LRSymbol` then `LRState`. Reduce pops 2·|β| frames, extracts child trees in RHS order.
 
 ## Modules
 
@@ -77,3 +86,4 @@ Defined in `Valiant.fs`:
 - **`TeXRenderer` is shared**: `oneRowMatrix` handles both LL symbol stacks and LR state stacks (parametrized by item printer). `inputRow` is identical for both parsers.
 - **Struct types** for stack allocation efficiency on steps data.
 - **Visualizers remain the public API** for consumers who want pre-rendered strings (CLI, tests). Consumers who need raw data can use `parseWithSteps`/`parseWithTrace` directly.
+- **Unified LR stack**: The LR parser uses a single unified stack (`LRStackFrame`) instead of two separate stacks (state + tree). The visualizer extracts state numbers from this unified stack for rendering.

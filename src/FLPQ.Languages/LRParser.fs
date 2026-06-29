@@ -456,58 +456,79 @@ module LRParser =
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
         : Option<DerivationTree<'t, 'nt>> * LRParsingStep<'t, 'nt> list =
-        let mutable stateStack: int list = [ 0 ]
-        let mutable treeStack: DerivationTree<'t, 'nt> list = []
+        let mutable stack: LRStackFrame<'t, 'nt> list = [ LRState 0 ]
         let mutable pos = 0
         let mutable finished = false
         let mutable accepted = false
         let mutable iteration = 0
-        let mutable steps = []
+        let mutable steps: LRParsingStep<'t, 'nt> list = []
+
+        let topState () =
+            match stack with
+            | LRState s :: _ -> s
+            | _ -> failwith "Expected state on top of LR stack"
 
         let recordStep () =
+            let trees =
+                stack
+                |> List.choose (function
+                    | LRSymbol(_, t) -> Some t
+                    | _ -> None)
+
             let currentTree =
-                match treeStack with
+                match trees with
                 | [ t ] -> t
                 | [] -> Leaf(Epsilon)
-                | _ -> Node(aug.start, treeStack)
+                | _ -> Node(aug.start, trees)
 
             steps <-
                 { tree = currentTree
-                  stateStack = stateStack
+                  stack = stack
                   input = { tokens = tokens; position = pos } }
                 :: steps
+
+        let popFrames count =
+            let mutable remaining = stack
+            let mutable children = []
+
+            for _ in 1..count do
+                match remaining with
+                | LRState _ :: LRSymbol(_, tree) :: rest ->
+                    children <- tree :: children
+                    remaining <- rest
+                | _ -> failwith "Invalid LR stack frame"
+
+            stack <- remaining
+            children
 
         recordStep ()
 
         while not finished && iteration < 10000 do
             iteration <- iteration + 1
-            let currentState = stateStack.Head
+            let currentState = topState ()
 
             let lookahead = if pos < tokens.Length then tokens.[pos] else Epsilon
 
             match Map.tryFind (currentState, lookahead) table.action with
             | Some(Shift nextState) ->
-                stateStack <- nextState :: stateStack
-                treeStack <- Leaf(tokens.[pos]) :: treeStack
+                stack <- LRSymbol(tokens.[pos], Leaf(tokens.[pos])) :: stack
+                stack <- LRState nextState :: stack
                 pos <- pos + 1
                 recordStep ()
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
                 let popCount = Rhs.toSymbols rule.rhs |> List.length
 
-                let children = treeStack |> List.take popCount |> List.rev
-                stateStack <- stateStack |> List.skip popCount
-                treeStack <- treeStack |> List.skip popCount
-
+                let children = popFrames popCount
                 let newNode = Node(rule.lhs, children)
 
                 let gotoState =
-                    match Map.tryFind (stateStack.Head, rule.lhs) table.goto with
+                    match Map.tryFind (topState (), rule.lhs) table.goto with
                     | Some gs -> gs
                     | None -> failwith "Goto not found"
 
-                stateStack <- gotoState :: stateStack
-                treeStack <- newNode :: treeStack
+                stack <- LRSymbol(N rule.lhs, newNode) :: stack
+                stack <- LRState gotoState :: stack
                 recordStep ()
             | Some Accept ->
                 finished <- true
@@ -523,8 +544,14 @@ module LRParser =
                     finished <- true
 
         let tree =
-            if accepted && treeStack.Length = 1 then
-                Some treeStack.Head
+            let trees =
+                stack
+                |> List.choose (function
+                    | LRSymbol(_, t) -> Some t
+                    | _ -> None)
+
+            if accepted && trees.Length = 1 then
+                Some trees.Head
             else
                 None
 

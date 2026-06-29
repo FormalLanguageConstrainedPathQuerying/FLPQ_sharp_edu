@@ -20,11 +20,17 @@ type LLParsingStep<'t, 'nt> =
       stack: Symbol<'t, 'nt> list
       input: StepInput<'t, 'nt> }
 
+/// Frame on the unified LR parser stack.
+[<Struct>]
+type LRStackFrame<'t, 'nt> =
+    | LRState of int
+    | LRSymbol of Symbol<'t, 'nt> * DerivationTree<'t, 'nt>
+
 /// Data for a single LR parser visualization step.
 [<Struct>]
 type LRParsingStep<'t, 'nt> =
     { tree: DerivationTree<'t, 'nt>
-      stateStack: int list
+      stack: LRStackFrame<'t, 'nt> list
       input: StepInput<'t, 'nt> }
 
 /// Shared TeX rendering helpers for parser visualization.

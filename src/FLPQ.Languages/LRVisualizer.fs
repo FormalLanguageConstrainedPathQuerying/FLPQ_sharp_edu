@@ -14,6 +14,12 @@ module LRVisualizer =
 
         steps
         |> List.map (fun step ->
+            let stateNums =
+                step.stack
+                |> List.choose (function
+                    | LRState n -> Some n
+                    | _ -> None)
+
             { tree = DerivationTreeVisualizer.toDot symbolVisualizer step.tree
-              stack = TeXRenderer.oneRowMatrix string step.stateStack
+              stack = TeXRenderer.oneRowMatrix string stateNums
               input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position })

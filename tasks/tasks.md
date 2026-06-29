@@ -154,8 +154,9 @@
    45. [done] Refactor LRParserTests.fs to avoid code duplication across submodules. Create parametrizable tests.
    46. [done] Check that documentation is up to date.
    47. [done] Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.
-   48. [done] Refactoring of all parsing algorithms visualization. Paring algorithms must collect and return data for visualization represented as F# data structures (add necessary types). After that, collected data may be converted to tex using appropriate shared standalone function. E.g. to TeX conversion for LL alnd LR are te same. Some parts can be reused also for CYK and Valiant.
-   49. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
+   48. [done] Refactoring of all parsing algorithms visualization. Paring algorithms must collect and return data for visualization represented as F# data structures (add necessary types). After that, collected data may be converted to tex using appropriate shared standalone function. E.g. to TeX conversion for LL and LR are te same. Some parts can be reused also for CYK and Valiant.
+    49. [done] In LR parser use unified stack for states and symbols instead of two separated stacks: stack frame is state or symbol. Create respective type for frame. Improve visualizer respectively. 
+   50. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
         The book (Chapter 7, `04_TopDown.tex`) displays the LL parsing table for grammar $S \to aSbS \mid \varepsilon$ as:
         \begin{center}
         \begin{tabular}{ r || c | c || c | c | c }

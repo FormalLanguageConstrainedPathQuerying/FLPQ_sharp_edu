@@ -61,7 +61,7 @@ module LLParser =
         (tokens: Symbol<'t, 'nt> list)
         : Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list =
 
-        let mutable steps = []
+        let mutable steps: LLParsingStep<'t, 'nt> list = []
 
         let recordStep (stack: Symbol<'t, 'nt> list) (pos: int) (treeStack: DerivationTree<'t, 'nt> list) =
             let currentTree =
