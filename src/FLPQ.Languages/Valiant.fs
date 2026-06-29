@@ -57,10 +57,10 @@ module Valiant =
                     target.data.[m.A - m.Size + 1 + i, m.B + j] <- true
 
     let private performMultiplications
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>)
+        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
         (tasks: (Submatrix * Submatrix * Submatrix) list)
-        (pairs: (Nonterminal<string> * Nonterminal<string>) list)
+        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
         : unit =
         for (mTarget, m1, m2) in tasks do
             for pair in pairs do
@@ -82,22 +82,19 @@ module Valiant =
                     match pByPair.TryGetValue pair with
                     | true, mat -> mat
                     | _ ->
-                        let rows = leftSlice.rows
-                        let cols = rightSlice.cols
-                        // full table dimensions match the target's full matrix
                         let mat = pByPair.Values |> Seq.head
                         mat
 
                 writeSlice pairMatrix mTarget product
 
     let rec private complete
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>)
+        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
         (m: Submatrix)
-        (terminalRules: Map<string, Nonterminal<string> list>)
-        (binaryRules: (Nonterminal<string> * (Nonterminal<string> * Nonterminal<string>)) list)
-        (pairs: (Nonterminal<string> * Nonterminal<string>) list)
-        (tokens: string[])
+        (terminalRules: Map<'t, Nonterminal<'nt> list>)
+        (binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list)
+        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
+        (tokens: 't[])
         : unit =
         if m.Size = 1 then
             let i = m.A - m.Size + 1
@@ -142,14 +139,14 @@ module Valiant =
             complete tByNt pByPair t terminalRules binaryRules pairs tokens
 
     and private compute
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>)
+        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
         (i: int)
         (j: int)
-        (terminalRules: Map<string, Nonterminal<string> list>)
-        (binaryRules: (Nonterminal<string> * (Nonterminal<string> * Nonterminal<string>)) list)
-        (pairs: (Nonterminal<string> * Nonterminal<string>) list)
-        (tokens: string[])
+        (terminalRules: Map<'t, Nonterminal<'nt> list>)
+        (binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list)
+        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
+        (tokens: 't[])
         : unit =
         if j - i >= 4 then
             let mid = (i + j) / 2
@@ -163,58 +160,59 @@ module Valiant =
         let m = { A = a; B = b; Size = size }
         complete tByNt pByPair m terminalRules binaryRules pairs tokens
 
-    /// Parse a string using Valiant's algorithm.
-    /// Returns the final T table as a matrix over sets of nonterminals (n × n, CYK-style)
-    /// and a flag indicating whether the start symbol is in T[0,n].
-    let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
+    let private terminalRulesFromGrammar (cnf: Grammar<'t, 'nt>) : Map<'t, Nonterminal<'nt> list> =
+        cnf.rules
+        |> List.choose (fun r ->
+            match Rhs.toSymbols r.rhs with
+            | [ T(Terminal t) ] -> Some(t, r.lhs)
+            | _ -> None)
+        |> List.groupBy fst
+        |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
+        |> Map.ofList
+
+    let private binaryRulesFromGrammar
+        (cnf: Grammar<'t, 'nt>)
+        : (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list =
+        cnf.rules
+        |> List.choose (fun r ->
+            match Rhs.toSymbols r.rhs with
+            | [ N left; N right ] -> Some(r.lhs, (left, right))
+            | _ -> None)
+
+    /// Parse pre-tokenized input using Valiant's algorithm.
+    let parseWithTable (g: Grammar<'t, 'nt>) (tokens: 't list) : Matrix<Set<Nonterminal<'nt>>> * bool =
         let cnf = Grammar.toCnf g
-        let tokens = Tokenizer.tokenizeStrings input |> Array.ofList
-        let n = tokens.Length
+        let tokensArr = tokens |> Array.ofList
+        let n = tokensArr.Length
         let originalN = n
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1
 
         let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
 
-        let terminalRules =
-            cnf.rules
-            |> List.choose (fun r ->
-                match Rhs.toSymbols r.rhs with
-                | [ T(Terminal t) ] -> Some(t, r.lhs)
-                | _ -> None)
-            |> List.groupBy fst
-            |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
-            |> Map.ofList
-
-        let binaryRules =
-            cnf.rules
-            |> List.choose (fun r ->
-                match Rhs.toSymbols r.rhs with
-                | [ N left; N right ] -> Some(r.lhs, (left, right))
-                | _ -> None)
-
+        let terminalRules = terminalRulesFromGrammar cnf
+        let binaryRules = binaryRulesFromGrammar cnf
         let pairs = binaryRules |> List.map snd |> List.distinct
 
-        let tByNt =
-            System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>()
+        let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
 
         for nt in allNt do
             tByNt.[nt] <- Matrix.init tableSize tableSize false
 
         let pByPair =
-            System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>()
+            System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
 
         for pair in pairs do
             pByPair.[pair] <- Matrix.init tableSize tableSize false
 
-        if input = "" then
+        if tokens.IsEmpty then
             let epsAccepted =
                 cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
-            compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs tokens
+            compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs tokensArr
 
             let result =
                 Matrix.create n n (fun i j ->
@@ -232,63 +230,45 @@ module Valiant =
 
             (result, accepted)
 
-    /// Check whether a string is accepted by a grammar using Valiant's algorithm.
-    let parse (g: Grammar<string, string>) (input: string) : bool = parseWithTable g input |> snd
+    let parse (g: Grammar<'t, 'nt>) (tokens: 't list) : bool = parseWithTable g tokens |> snd
 
     /// Run Valiant with step-by-step trace.
-    /// Returns a list of TeX strings showing the recomposed matrix at each step.
-    let parseWithTrace (g: Grammar<string, string>) (input: string) : (Matrix<Set<Nonterminal<string>>> * string) list =
+    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: 't list) : (Matrix<Set<Nonterminal<'nt>>> * string) list =
         let cnf = Grammar.toCnf g
-        let tokens = Tokenizer.tokenizeStrings input |> Array.ofList
-        let n = tokens.Length
+        let tokensArr = tokens |> Array.ofList
+        let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1
 
         let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
 
-        let terminalRules =
-            cnf.rules
-            |> List.choose (fun r ->
-                match Rhs.toSymbols r.rhs with
-                | [ T(Terminal t) ] -> Some(t, r.lhs)
-                | _ -> None)
-            |> List.groupBy fst
-            |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
-            |> Map.ofList
-
-        let binaryRules =
-            cnf.rules
-            |> List.choose (fun r ->
-                match Rhs.toSymbols r.rhs with
-                | [ N left; N right ] -> Some(r.lhs, (left, right))
-                | _ -> None)
-
+        let terminalRules = terminalRulesFromGrammar cnf
+        let binaryRules = binaryRulesFromGrammar cnf
         let pairs = binaryRules |> List.map snd |> List.distinct
 
-        let tByNt =
-            System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>()
+        let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
 
         for nt in allNt do
             tByNt.[nt] <- Matrix.init tableSize tableSize false
 
         let pByPair =
-            System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>()
+            System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
 
         for pair in pairs do
             pByPair.[pair] <- Matrix.init tableSize tableSize false
 
-        if input = "" then
+        if tokens.IsEmpty then
             []
         else
             let mutable steps = []
 
-            let rec completeTrace (m: Submatrix) : unit =
+            let rec completeTrace m : unit =
                 if m.Size = 1 then
                     let i = m.A - m.Size + 1
                     let j = m.B
 
-                    if i + 1 = j && i < tokens.Length then
-                        let ch = tokens.[i]
+                    if i + 1 = j && i < tokensArr.Length then
+                        let ch = tokensArr.[i]
 
                         match Map.tryFind ch terminalRules with
                         | Some nts ->
@@ -353,7 +333,7 @@ module Valiant =
 
                     steps <- (recomposed, tex) :: steps
 
-            and computeTrace (i: int) (j: int) : unit =
+            and computeTrace i j : unit =
                 if j - i >= 4 then
                     let mid = (i + j) / 2
                     computeTrace i mid

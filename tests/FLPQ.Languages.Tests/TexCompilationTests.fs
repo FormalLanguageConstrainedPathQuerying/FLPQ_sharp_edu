@@ -12,7 +12,7 @@ let private templatePath =
 [<Trait("Category", "TeX")>]
 let ``CYK table TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Cyk.parseWithTrace g "a a"
+    let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
 
     let table, _ = trace.[0]
     let tex = Cyk.tableToTeX string table
@@ -22,7 +22,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``CYK all steps TeX compile with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Cyk.parseWithTrace g "a a"
+    let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
 
     for table, _ in trace do
         let tex = Cyk.tableToTeX string table
@@ -61,7 +61,7 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Valiant.parseWithTrace g "a a"
+    let trace = Valiant.parseWithTrace g (Tokenizer.tokenizeStrings "a a")
     Assert.NotEmpty(trace)
 
     for _, tex in trace do

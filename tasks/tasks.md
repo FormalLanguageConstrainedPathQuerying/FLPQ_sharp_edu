@@ -146,3 +146,11 @@
    37. [done] Add tests that check that TeX files compiles. Introduce respective tests category. This tests require TeX installed. These tests must be executed local only. No CI environment with TeX installed. For tests it is necessary to generate full-featured TeX document. Create respective template and reuse it. You can create TeX file and the include generated parts of code into it.
    38. [done]  Add more TeX compilation tests. For Valiant. For CYK for all steps (similar to LR tests). Fix LL test: it dose not check that generated steps compiles successfully.
    39. [done]  Perform code review. Analyze code and tests. What architectural problems you can detect? What code quality problems you can detect (unnecessary duplicates, poor coding stile, unclear structure or naming)? DO NOT FIX ANYTHING. Just generate report to code_review.md. 
+   40. Make CYK and Valiant generic to be able to handle terminals of arbitrary type (similarly LL and LR)
+   41. Refactor `buildLR0Table`, `buildSLR1Table`, `buildCLR1Table` to avoid code duplication.
+   42. Valiant must use boolean decomposition instead explicit set of matrix.
+   43. Refactor `checkDotCompiles` and `checkDotCompilesWithInfo` to avoid code duplication.
+   44. Refactor `LR0Item`/`LR1Item` to use camelCase for fields.
+   45. Refactor LRParserTests.fs to avoid code duplication across submodules. Create parametrizable tests.
+   46. Check that documentation is up to date.
+   47. Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.

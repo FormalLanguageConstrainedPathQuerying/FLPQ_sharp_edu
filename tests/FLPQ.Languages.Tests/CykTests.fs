@@ -14,12 +14,12 @@ module Grammar1Tests =
     [<Fact>]
     let ``CYK accepts expected strings`` () =
         for s in grammar1Accept do
-            Assert.True(Cyk.parse grammar1 s, s)
+            Assert.True(Cyk.parse grammar1 (Tokenizer.tokenize s), s)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
         for s in grammar1Reject do
-            Assert.False(Cyk.parse grammar1 s, s)
+            Assert.False(Cyk.parse grammar1 (Tokenizer.tokenize s), s)
 
 
 module Grammar2Tests =
@@ -29,7 +29,7 @@ module Grammar2Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 1`` (s: string) =
-            Cyk.parse grammar1 s = Cyk.parse grammar2 s
+            Cyk.parse grammar1 (Tokenizer.tokenize s) = Cyk.parse grammar2 (Tokenizer.tokenize s)
 
 
 module Grammar3Tests =
@@ -37,12 +37,12 @@ module Grammar3Tests =
     [<Fact>]
     let ``CYK accepts expected strings`` () =
         for s in grammar3Accept do
-            Assert.True(Cyk.parse grammar3 s, s)
+            Assert.True(Cyk.parse grammar3 (Tokenizer.tokenize s), s)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
         for s in grammar3Reject do
-            Assert.False(Cyk.parse grammar3 s, s)
+            Assert.False(Cyk.parse grammar3 (Tokenizer.tokenize s), s)
 
 
 module Grammar4Tests =
@@ -52,7 +52,7 @@ module Grammar4Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 3`` (s: string) =
-            Cyk.parse grammar3 s = Cyk.parse grammar4 s
+            Cyk.parse grammar3 (Tokenizer.tokenize s) = Cyk.parse grammar4 (Tokenizer.tokenize s)
 
 
 module Grammar5Tests =
@@ -62,19 +62,19 @@ module Grammar5Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 3`` (s: string) =
-            Cyk.parse grammar3 s = Cyk.parse grammar5 s
+            Cyk.parse grammar3 (Tokenizer.tokenize s) = Cyk.parse grammar5 (Tokenizer.tokenize s)
 
 
 module FactTests =
 
     [<Fact>]
     let ``parseWithTrace returns non-empty list for non-empty input`` () =
-        let trace = Cyk.parseWithTrace grammar3 "a a a"
+        let trace = Cyk.parseWithTrace grammar3 (Tokenizer.tokenize "a a a")
         Assert.NotEmpty(trace)
 
     [<Fact>]
     let ``tableToTeX contains pNiceMatrix`` () =
-        let trace = Cyk.parseWithTrace grammar1 "a b"
+        let trace = Cyk.parseWithTrace grammar1 (Tokenizer.tokenize "a b")
         let table, _highlights = trace.[0]
         let tex = Cyk.tableToTeX (fun s -> string s) table
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
@@ -82,7 +82,7 @@ module FactTests =
 
     [<Fact>]
     let ``tableToTeX prints empty cells as cdot`` () =
-        let trace = Cyk.parseWithTrace grammar3 "a a"
+        let trace = Cyk.parseWithTrace grammar3 (Tokenizer.tokenize "a a")
         let table, _highlights = trace.[0]
         let tex = Cyk.tableToTeX (fun s -> string s) table
         Assert.Contains(@"\cdot", tex)
@@ -95,8 +95,8 @@ module FactTests =
         S -> a
         "
 
-        Assert.True(Cyk.parse g "a")
-        Assert.False(Cyk.parse g "b")
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a"))
+        Assert.False(Cyk.parse g (Tokenizer.tokenize "b"))
 
     [<Fact>]
     let ``parse handles longer accepted string`` () =
@@ -108,11 +108,11 @@ module FactTests =
         S -> eps
         "
 
-        Assert.True(Cyk.parse g "a a a")
-        Assert.True(Cyk.parse g "a a a a a")
-        Assert.True(Cyk.parse g "a a a a")
-        Assert.True(Cyk.parse g "a")
-        Assert.True(Cyk.parse g "a a")
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a a a"))
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a a a a a"))
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a a a a"))
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a"))
+        Assert.True(Cyk.parse g (Tokenizer.tokenize "a a"))
 
 
 module Grammar6Tests =
@@ -123,13 +123,13 @@ module Grammar6Tests =
     let ``CYK accepts expected expression strings`` () =
         for g in grammars do
             for s in exprAccept do
-                Assert.True(Cyk.parse g s, s)
+                Assert.True(Cyk.parse g (Tokenizer.tokenize s), s)
 
     [<Fact>]
     let ``CYK rejects expected expression strings`` () =
         for g in grammars do
             for s in exprReject do
-                Assert.False(Cyk.parse g s, s)
+                Assert.False(Cyk.parse g (Tokenizer.tokenize s), s)
 
 
 module Grammar6PropertyTests =
@@ -139,12 +139,12 @@ module Grammar6PropertyTests =
 
         [<Property>]
         let ``grammar6 and grammar7 agree on expression strings`` (s: string) =
-            Cyk.parse grammar6 s = Cyk.parse grammar7 s
+            Cyk.parse grammar6 (Tokenizer.tokenize s) = Cyk.parse grammar7 (Tokenizer.tokenize s)
 
         [<Property>]
         let ``grammar6 and grammar8 agree on expression strings`` (s: string) =
-            Cyk.parse grammar6 s = Cyk.parse grammar8 s
+            Cyk.parse grammar6 (Tokenizer.tokenize s) = Cyk.parse grammar8 (Tokenizer.tokenize s)
 
         [<Property>]
         let ``grammar7 and grammar8 agree on expression strings`` (s: string) =
-            Cyk.parse grammar7 s = Cyk.parse grammar8 s
+            Cyk.parse grammar7 (Tokenizer.tokenize s) = Cyk.parse grammar8 (Tokenizer.tokenize s)

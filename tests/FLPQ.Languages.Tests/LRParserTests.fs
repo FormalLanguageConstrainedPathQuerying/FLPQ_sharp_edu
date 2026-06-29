@@ -421,7 +421,7 @@ module CrossParserPropertyTests =
             let slrResult =
                 LRParser.parse augGrammar1 slrGrammar1 (Tokenizer.tokenize s) |> Option.isSome
 
-            let cykResult = Cyk.parse grammar1 s
+            let cykResult = Cyk.parse grammar1 (Tokenizer.tokenize s)
             slrResult = cykResult
 
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
@@ -432,7 +432,7 @@ module CrossParserPropertyTests =
             let clrResult =
                 LRParser.parse augGrammar3 clrGrammar3 (Tokenizer.tokenize s) |> Option.isSome
 
-            let cykResult = Cyk.parse grammar3 s
+            let cykResult = Cyk.parse grammar3 (Tokenizer.tokenize s)
             clrResult = cykResult
 
     [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]

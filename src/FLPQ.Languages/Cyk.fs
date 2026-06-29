@@ -5,40 +5,25 @@ open FLPQ.LinearAlgebra
 
 module Cyk =
 
-    type CykCell = Option<HashSet<Symbol<string, string>>>
+    type CykCell<'t, 'nt> = Option<HashSet<Symbol<'t, 'nt>>>
 
-    let private isNonterminal (sym: Symbol<string, string>) =
-        match sym with
-        | N _ -> true
-        | _ -> false
-
-    let private nonterminalValue (sym: Symbol<string, string>) : Nonterminal<string> =
-        match sym with
-        | N nt -> nt
-        | _ -> failwith "Expected nonterminal"
-
-    let private tokenize (input: string) : Symbol<string, string> list = Tokenizer.tokenize input
-
-    let private findProducingRules
-        (rules: Rule<string, string> list)
-        (target: Symbol<string, string>)
-        : Nonterminal<string> list =
+    let private findProducingRules (rules: Rule<'t, 'nt> list) (target: Symbol<'t, 'nt>) : Nonterminal<'nt> list =
         rules
         |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ target ])
         |> List.map (fun r -> r.lhs)
 
     let private findBinaryProductions
-        (rules: Rule<string, string> list)
-        (left: Symbol<string, string>)
-        (right: Symbol<string, string>)
-        : Nonterminal<string> list =
+        (rules: Rule<'t, 'nt> list)
+        (left: Symbol<'t, 'nt>)
+        (right: Symbol<'t, 'nt>)
+        : Nonterminal<'nt> list =
         rules
         |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ left; right ])
         |> List.map (fun r -> r.lhs)
 
-    let private cykTable (cnf: Grammar<string, string>) (tokens: Symbol<string, string> list) : Matrix<CykCell> =
+    let private cykTable (cnf: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : Matrix<CykCell<'t, 'nt>> =
         let n = tokens.Length
-        let emptyCell: CykCell = None
+        let emptyCell: CykCell<'t, 'nt> = None
         let table = Matrix.init n n emptyCell
 
         for i in 0 .. n - 1 do
@@ -54,7 +39,7 @@ module Cyk =
         for len in 2..n do
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let mutable accumulated = HashSet<Symbol<string, string>>()
+                let mutable accumulated = HashSet<Symbol<'t, 'nt>>()
 
                 for k in i .. j - 1 do
                     let leftCell = table.data.[i, k]
@@ -75,7 +60,7 @@ module Cyk =
 
         table
 
-    let private cellToTeX (symbolPrinter: Symbol<string, string> -> string) (cell: CykCell) : string =
+    let private cellToTeX (symbolPrinter: Symbol<'t, 'nt> -> string) (cell: CykCell<'t, 'nt>) : string =
         match cell with
         | None -> @"\cdot"
         | Some symbols ->
@@ -85,13 +70,13 @@ module Cyk =
             |> fun s -> "\\{" + s + "\\}"
 
     let private tableTrace
-        (cnf: Grammar<string, string>)
-        (tokens: Symbol<string, string> list)
-        : (Matrix<CykCell> * Matrix.Highlight list) list =
+        (cnf: Grammar<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : (Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list) list =
         let n = tokens.Length
-        let emptyCell: CykCell = None
+        let emptyCell: CykCell<'t, 'nt> = None
         let table = Matrix.init n n emptyCell
-        let steps = ResizeArray<Matrix<CykCell> * Matrix.Highlight list>()
+        let steps = ResizeArray<Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list>()
 
         let mutable stepHighlights = []
 
@@ -119,7 +104,7 @@ module Cyk =
 
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let mutable accumulated = HashSet<Symbol<string, string>>()
+                let mutable accumulated = HashSet<Symbol<'t, 'nt>>()
 
                 for k in i .. j - 1 do
                     let leftCell = table.data.[i, k]
@@ -149,7 +134,7 @@ module Cyk =
 
         steps |> List.ofSeq
 
-    let private isAccepted (cnf: Grammar<string, string>) (table: Matrix<CykCell>) : bool =
+    let private isAccepted (cnf: Grammar<'t, 'nt>) (table: Matrix<CykCell<'t, 'nt>>) : bool =
         let n = table.rows
 
         if n = 0 then
@@ -159,29 +144,27 @@ module Cyk =
             | Some cell -> cell.Contains(N cnf.start)
             | None -> false
 
-    /// Check whether a string is accepted by a grammar using the CYK algorithm.
-    let parse (g: Grammar<string, string>) (input: string) : bool =
-        if input = "" then
-            let cnf = Grammar.toCnf g
+    /// Parse pre-tokenized input using CYK algorithm.
+    let parse (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
+        let cnf = Grammar.toCnf g
+
+        if tokens.IsEmpty then
             cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
         else
-            let cnf = Grammar.toCnf g
-            let tokens = tokenize input
             let table = cykTable cnf tokens
             isAccepted cnf table
 
     /// Run CYK and return the final table and acceptance status.
-    let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
+    let parseWithTable (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : Matrix<Set<Nonterminal<'nt>>> * bool =
         let cnf = Grammar.toCnf g
 
-        if input = "" then
+        if tokens.IsEmpty then
             let epsAccepted =
                 cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
 
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
-            let tokens = tokenize input
             let n = tokens.Length
             let table = cykTable cnf tokens
 
@@ -201,19 +184,21 @@ module Cyk =
             (result, accepted)
 
     /// Run CYK and return the sequence of working table states with highlights.
-    let parseWithTrace (g: Grammar<string, string>) (input: string) : (Matrix<CykCell> * Matrix.Highlight list) list =
+    let parseWithTrace
+        (g: Grammar<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : (Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list) list =
         let cnf = Grammar.toCnf g
-        let tokens = tokenize input
         tableTrace cnf tokens
 
     /// Convert a CYK working table to TeX with highlighted cells.
     let tableToTeXStyled
-        (symbolPrinter: Symbol<string, string> -> string)
-        (table: Matrix<CykCell>)
+        (symbolPrinter: Symbol<'t, 'nt> -> string)
+        (table: Matrix<CykCell<'t, 'nt>>)
         (highlights: Matrix.Highlight list)
         : string =
         Matrix.toTeXStyled true true (cellToTeX symbolPrinter) table highlights []
 
     /// Convert a CYK working table to TeX.
-    let tableToTeX (symbolPrinter: Symbol<string, string> -> string) (table: Matrix<CykCell>) : string =
+    let tableToTeX (symbolPrinter: Symbol<'t, 'nt> -> string) (table: Matrix<CykCell<'t, 'nt>>) : string =
         tableToTeXStyled symbolPrinter table []

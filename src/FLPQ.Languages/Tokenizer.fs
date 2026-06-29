@@ -5,12 +5,15 @@ namespace FLPQ.Languages
 module Tokenizer =
 
     /// Tokenize input into individual terminal strings.
-    /// Terminals are separated by spaces in the input.
     let tokenizeStrings (input: string) : string list =
         if System.String.IsNullOrWhiteSpace input then
             []
         else
             input.Split(' ', System.StringSplitOptions.RemoveEmptyEntries) |> Array.toList
+
+    /// Tokenize input into a list of Grammar symbols using a custom symbol classifier.
+    let tokenizeGen (classify: string -> Symbol<'t, 'nt>) (input: string) : Symbol<'t, 'nt> list =
+        tokenizeStrings input |> List.map classify
 
     /// Tokenize input into a list of Grammar symbols (terminals).
     let tokenize (input: string) : Symbol<string, string> list =
