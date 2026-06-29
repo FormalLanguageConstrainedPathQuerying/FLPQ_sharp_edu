@@ -196,8 +196,21 @@ module Valiant =
 
         let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
 
+        let initMatrix = Matrix.init tableSize tableSize (Set.empty: Set<Nonterminal<'nt>>)
+
+        for i in 0 .. tokensArr.Length - 1 do
+            match Map.tryFind tokensArr.[i] terminalRules with
+            | Some nts ->
+                for nt in nts do
+                    initMatrix.data.[i, i + 1] <- Set.add nt initMatrix.data.[i, i + 1]
+            | None -> ()
+
+        let initDecomp = BooleanDecomposition.decompose initMatrix
+
         for nt in allNt do
-            tByNt.[nt] <- Matrix.init tableSize tableSize false
+            match Map.tryFind nt initDecomp with
+            | Some mat -> tByNt.[nt] <- mat
+            | None -> tByNt.[nt] <- Matrix.init tableSize tableSize false
 
         let pByPair =
             System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
@@ -214,14 +227,17 @@ module Valiant =
         else
             compute tByNt pByPair 0 tableSize terminalRules binaryRules pairs tokensArr
 
-            let result =
-                Matrix.create n n (fun i j ->
-                    allNt
-                    |> List.filter (fun nt ->
-                        match tByNt.TryGetValue nt with
-                        | true, mat -> mat.data.[i, j + 1]
-                        | _ -> false)
-                    |> Set.ofList)
+            let decompMap =
+                allNt
+                |> List.map (fun nt ->
+                    match tByNt.TryGetValue nt with
+                    | true, mat -> (nt, mat)
+                    | _ -> (nt, Matrix.init tableSize tableSize false))
+                |> Map.ofList
+
+            let fullMatrix = BooleanDecomposition.recompose decompMap
+
+            let result = Matrix.create n n (fun i j -> fullMatrix.data.[i, j + 1])
 
             let accepted =
                 match tByNt.TryGetValue cnf.start with
@@ -248,8 +264,21 @@ module Valiant =
 
         let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
 
+        let initMatrix = Matrix.init tableSize tableSize (Set.empty: Set<Nonterminal<'nt>>)
+
+        for i in 0 .. tokensArr.Length - 1 do
+            match Map.tryFind tokensArr.[i] terminalRules with
+            | Some nts ->
+                for nt in nts do
+                    initMatrix.data.[i, i + 1] <- Set.add nt initMatrix.data.[i, i + 1]
+            | None -> ()
+
+        let initDecomp = BooleanDecomposition.decompose initMatrix
+
         for nt in allNt do
-            tByNt.[nt] <- Matrix.init tableSize tableSize false
+            match Map.tryFind nt initDecomp with
+            | Some mat -> tByNt.[nt] <- mat
+            | None -> tByNt.[nt] <- Matrix.init tableSize tableSize false
 
         let pByPair =
             System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
@@ -291,14 +320,17 @@ module Valiant =
                                         | true, mat -> mat.data.[i, j] <- true
                                         | _ -> ()
 
-                    let recomposed =
-                        Matrix.create n n (fun ri rj ->
-                            allNt
-                            |> List.filter (fun nt ->
-                                match tByNt.TryGetValue nt with
-                                | true, mat -> mat.data.[ri, rj + 1]
-                                | _ -> false)
-                            |> Set.ofList)
+                    let decompMap =
+                        allNt
+                        |> List.map (fun nt ->
+                            match tByNt.TryGetValue nt with
+                            | true, mat -> (nt, mat)
+                            | _ -> (nt, Matrix.init tableSize tableSize false))
+                        |> Map.ofList
+
+                    let fullMatrix = BooleanDecomposition.recompose decompMap
+
+                    let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
                     let tex =
                         Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
@@ -319,14 +351,17 @@ module Valiant =
                     performMultiplications tByNt pByPair [ (t, l, rightGrounded t) ] pairs
                     completeTrace t
 
-                    let recomposed =
-                        Matrix.create n n (fun ri rj ->
-                            allNt
-                            |> List.filter (fun nt ->
-                                match tByNt.TryGetValue nt with
-                                | true, mat -> mat.data.[ri, rj + 1]
-                                | _ -> false)
-                            |> Set.ofList)
+                    let decompMap =
+                        allNt
+                        |> List.map (fun nt ->
+                            match tByNt.TryGetValue nt with
+                            | true, mat -> (nt, mat)
+                            | _ -> (nt, Matrix.init tableSize tableSize false))
+                        |> Map.ofList
+
+                    let fullMatrix = BooleanDecomposition.recompose decompMap
+
+                    let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
                     let tex =
                         Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
