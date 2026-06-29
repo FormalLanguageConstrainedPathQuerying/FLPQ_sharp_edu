@@ -72,31 +72,37 @@ module LLParser =
                 | _ -> Node(g.start, treeStack)
 
             let stackTeX =
-                let cells =
-                    stack
-                    |> List.map (fun sym ->
-                        match sym with
-                        | T(Terminal _) -> string sym
-                        | N(Nonterminal _) -> string sym
-                        | Epsilon -> "\\varepsilon")
-                    |> String.concat " & "
-
-                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
-
-            let inputTeX =
-                let cells =
-                    tokens
-                    |> List.mapi (fun i sym ->
-                        let s =
+                if List.isEmpty stack then
+                    @"\begin{pNiceMatrix}[margin=2pt] \varepsilon \end{pNiceMatrix}"
+                else
+                    let cells =
+                        stack
+                        |> List.map (fun sym ->
                             match sym with
                             | T(Terminal _) -> string sym
-                            | N _ -> string sym
-                            | Epsilon -> "\\varepsilon"
+                            | N(Nonterminal _) -> string sym
+                            | Epsilon -> "\\varepsilon")
+                        |> String.concat " & "
 
-                        if i = pos then @"\underbar{" + s + "}" else s)
-                    |> String.concat " & "
+                    @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
 
-                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
+            let inputTeX =
+                if List.isEmpty tokens then
+                    @"\begin{pNiceMatrix}[margin=2pt] \varepsilon \end{pNiceMatrix}"
+                else
+                    let cells =
+                        tokens
+                        |> List.mapi (fun i sym ->
+                            let s =
+                                match sym with
+                                | T(Terminal _) -> string sym
+                                | N _ -> string sym
+                                | Epsilon -> "\\varepsilon"
+
+                            if i = pos then @"\underbar{" + s + "}" else s)
+                        |> String.concat " & "
+
+                    @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
 
             steps <-
                 { tree = DerivationTreeVisualizer.toDot symbolVisualizer currentTree

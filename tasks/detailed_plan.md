@@ -1,41 +1,18 @@
-# Detailed Plan: Tasks 29 & 30 — Epsilon transitions & NonEmptySet
-
-## Goals
-
-1. Add explicit epsilon transitions field to Automaton
-2. Change transition matrix cell type from `Set<'t>` to `Option<NonEmptySet<'t>>`
-3. Apply NonEmptyList/NonEmptySet where semantically required
+# Detailed Plan: Task 38 — More TeX compilation tests
 
 ## Changes
 
-### 1. Automaton type
+### 1. Fix LL test
+Replace string assertions (`\begin{pNiceMatrix}`) with actual `checkTexCompiles` calls for both stack and input.
 
-```fsharp
-type Automaton<'t, 's when 't: comparison> =
-    { states: 's list
-      transitions: Matrix<Option<NonEmptySet<'t>>>
-      epsTransitions: Set<int * int>
-      startStates: Set<int>
-      finalStates: Set<int> }
-```
+### 2. Add CYK all-steps TeX test
+Iterate all CYK trace steps, call `checkTexCompiles` on `tableToTeX` for each step.
 
-### 2. Automaton module functions
-
-- `alphabet`: iterate cells, collect NonEmptySet elements
-- `move`: check `Option<NonEmptySet<'t>>` cells for symbol
-- `fromTransitions`: create NonEmptySet for transition symbols, set epsTransitions
-- `toDfa`: handle new types, propagate epsTransitions
-- `isDeterministic`: check NonEmptySet count > 1 for non-determinism
-
-### 3. AutomatonVisualizer
-
-- Draw epsilon transitions as dotted edges with epsilon label
+### 3. Add Valiant TeX test
+Call `Valiant.parseWithTrace`, iterate steps, call `checkTexCompiles` on each step's TeX.
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `src/FLPQ.Languages/Automaton.fs` | Modify type, all functions |
-| `src/FLPQ.Languages/AutomatonVisualizer.fs` | Handle Option<NonEmptySet>, add epsilon edges |
-| `tests/FLPQ.Languages.Tests/AutomatonTests.fs` | Update tests |
-| `tests/FLPQ.Languages.Tests/AutomatonVisualizationTests.fs` | Update assertions |
+| `tests/FLPQ.Languages.Tests/TexCompilationTests.fs` | Fix LL test, add CYK and Valiant tests |
