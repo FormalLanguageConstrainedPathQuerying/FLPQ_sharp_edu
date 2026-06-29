@@ -75,15 +75,16 @@ module FactTests =
     [<Fact>]
     let ``tableToTeX contains pNiceMatrix`` () =
         let trace = Cyk.parseWithTrace grammar1 "a b"
-        let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
+        let table, _highlights = trace.[0]
+        let tex = Cyk.tableToTeX (fun s -> string s) table
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.Contains(@"\end{pNiceMatrix}", tex)
 
     [<Fact>]
     let ``tableToTeX prints empty cells as cdot`` () =
         let trace = Cyk.parseWithTrace grammar3 "a a"
-
-        let tex = Cyk.tableToTeX (fun s -> string s) trace.[0]
+        let table, _highlights = trace.[0]
+        let tex = Cyk.tableToTeX (fun s -> string s) table
         Assert.Contains(@"\cdot", tex)
 
     [<Fact>]

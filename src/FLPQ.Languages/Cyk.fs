@@ -39,7 +39,6 @@ module Cyk =
     let private cykTable (cnf: Grammar<string, string>) (tokens: Symbol<string, string> list) : Matrix<CykCell> =
         let n = tokens.Length
         let emptyCell: CykCell = None
-
         let table = Matrix.init n n emptyCell
 
         for i in 0 .. n - 1 do
@@ -50,7 +49,6 @@ module Cyk =
             | [] -> ()
             | nts ->
                 let cell = nts |> List.map (fun nt -> N nt) |> HashSet |> Some
-
                 table.data.[i, i] <- cell
 
         for len in 2..n do
@@ -77,12 +75,25 @@ module Cyk =
 
         table
 
-    let private tableTrace (cnf: Grammar<string, string>) (tokens: Symbol<string, string> list) : Matrix<CykCell> list =
+    let private cellToTeX (symbolPrinter: Symbol<string, string> -> string) (cell: CykCell) : string =
+        match cell with
+        | None -> @"\cdot"
+        | Some symbols ->
+            symbols
+            |> Seq.map symbolPrinter
+            |> String.concat ", "
+            |> fun s -> "\\{" + s + "\\}"
+
+    let private tableTrace
+        (cnf: Grammar<string, string>)
+        (tokens: Symbol<string, string> list)
+        : (Matrix<CykCell> * Matrix.Highlight list) list =
         let n = tokens.Length
         let emptyCell: CykCell = None
-
         let table = Matrix.init n n emptyCell
-        let steps = ResizeArray<Matrix<CykCell>>()
+        let steps = ResizeArray<Matrix<CykCell> * Matrix.Highlight list>()
+
+        let mutable stepHighlights = []
 
         for i in 0 .. n - 1 do
             let token = tokens.[i]
@@ -92,16 +103,20 @@ module Cyk =
             | [] -> ()
             | nts ->
                 let cell = nts |> List.map (fun nt -> N nt) |> HashSet |> Some
-
                 table.data.[i, i] <- cell
+                let h: Matrix.Highlight = { row = i; col = i; color = "yellow" }
+                stepHighlights <- h :: stepHighlights
 
         steps.Add(
             { rows = table.rows
               cols = table.cols
-              data = Array2D.copy table.data }
+              data = Array2D.copy table.data },
+            List.rev stepHighlights
         )
 
         for len in 2..n do
+            stepHighlights <- []
+
             for i in 0 .. n - len do
                 let j = i + len - 1
                 let mutable accumulated = HashSet<Symbol<string, string>>()
@@ -122,11 +137,14 @@ module Cyk =
 
                 if accumulated.Count > 0 then
                     table.data.[i, j] <- Some accumulated
+                    let h: Matrix.Highlight = { row = i; col = j; color = "yellow" }
+                    stepHighlights <- h :: stepHighlights
 
             steps.Add(
                 { rows = table.rows
                   cols = table.cols
-                  data = Array2D.copy table.data }
+                  data = Array2D.copy table.data },
+                List.rev stepHighlights
             )
 
         steps |> List.ofSeq
@@ -142,7 +160,6 @@ module Cyk =
             | None -> false
 
     /// Check whether a string is accepted by a grammar using the CYK algorithm.
-    /// The grammar is first converted to CNF. The input string is tokenized character by character.
     let parse (g: Grammar<string, string>) (input: string) : bool =
         if input = "" then
             let cnf = Grammar.toCnf g
@@ -153,7 +170,7 @@ module Cyk =
             let table = cykTable cnf tokens
             isAccepted cnf table
 
-    /// Run CYK and return the final table as a matrix over sets of nonterminals plus acceptance status.
+    /// Run CYK and return the final table and acceptance status.
     let parseWithTable (g: Grammar<string, string>) (input: string) : Matrix<Set<Nonterminal<string>>> * bool =
         let cnf = Grammar.toCnf g
 
@@ -183,23 +200,20 @@ module Cyk =
             let accepted = isAccepted cnf table
             (result, accepted)
 
-    /// Run CYK and return the sequence of working table states (one per diagonal).
-    /// The grammar is first converted to CNF.
-    let parseWithTrace (g: Grammar<string, string>) (input: string) : Matrix<CykCell> list =
+    /// Run CYK and return the sequence of working table states with highlights.
+    let parseWithTrace (g: Grammar<string, string>) (input: string) : (Matrix<CykCell> * Matrix.Highlight list) list =
         let cnf = Grammar.toCnf g
         let tokens = tokenize input
         tableTrace cnf tokens
 
-    /// Convert a CYK working table to TeX.
-    /// Empty cells (None) are printed as \cdot.
-    let tableToTeX (symbolPrinter: Symbol<string, string> -> string) (table: Matrix<CykCell>) : string =
-        let cellPrinter (cell: CykCell) : string =
-            match cell with
-            | None -> @"\cdot"
-            | Some symbols ->
-                symbols
-                |> Seq.map symbolPrinter
-                |> String.concat ", "
-                |> fun s -> "\\{" + s + "\\}"
+    /// Convert a CYK working table to TeX with highlighted cells.
+    let tableToTeXStyled
+        (symbolPrinter: Symbol<string, string> -> string)
+        (table: Matrix<CykCell>)
+        (highlights: Matrix.Highlight list)
+        : string =
+        Matrix.toTeXStyled true true (cellToTeX symbolPrinter) table highlights []
 
-        Matrix.toTeX true true cellPrinter table
+    /// Convert a CYK working table to TeX.
+    let tableToTeX (symbolPrinter: Symbol<string, string> -> string) (table: Matrix<CykCell>) : string =
+        tableToTeXStyled symbolPrinter table []

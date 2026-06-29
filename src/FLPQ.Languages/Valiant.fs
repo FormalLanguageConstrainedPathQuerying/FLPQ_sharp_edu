@@ -234,3 +234,138 @@ module Valiant =
 
     /// Check whether a string is accepted by a grammar using Valiant's algorithm.
     let parse (g: Grammar<string, string>) (input: string) : bool = parseWithTable g input |> snd
+
+    /// Run Valiant with step-by-step trace.
+    /// Returns a list of TeX strings showing the recomposed matrix at each step.
+    let parseWithTrace (g: Grammar<string, string>) (input: string) : (Matrix<Set<Nonterminal<string>>> * string) list =
+        let cnf = Grammar.toCnf g
+        let tokens = Tokenizer.tokenizeStrings input |> Array.ofList
+        let n = tokens.Length
+        let paddedN = nextPowerOfTwo (n + 1) - 1
+        let tableSize = paddedN + 1
+
+        let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
+
+        let terminalRules =
+            cnf.rules
+            |> List.choose (fun r ->
+                match Rhs.toSymbols r.rhs with
+                | [ T(Terminal t) ] -> Some(t, r.lhs)
+                | _ -> None)
+            |> List.groupBy fst
+            |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
+            |> Map.ofList
+
+        let binaryRules =
+            cnf.rules
+            |> List.choose (fun r ->
+                match Rhs.toSymbols r.rhs with
+                | [ N left; N right ] -> Some(r.lhs, (left, right))
+                | _ -> None)
+
+        let pairs = binaryRules |> List.map snd |> List.distinct
+
+        let tByNt =
+            System.Collections.Generic.Dictionary<Nonterminal<string>, Matrix<bool>>()
+
+        for nt in allNt do
+            tByNt.[nt] <- Matrix.init tableSize tableSize false
+
+        let pByPair =
+            System.Collections.Generic.Dictionary<Nonterminal<string> * Nonterminal<string>, Matrix<bool>>()
+
+        for pair in pairs do
+            pByPair.[pair] <- Matrix.init tableSize tableSize false
+
+        if input = "" then
+            []
+        else
+            let mutable steps = []
+
+            let rec completeTrace (m: Submatrix) : unit =
+                if m.Size = 1 then
+                    let i = m.A - m.Size + 1
+                    let j = m.B
+
+                    if i + 1 = j && i < tokens.Length then
+                        let ch = tokens.[i]
+
+                        match Map.tryFind ch terminalRules with
+                        | Some nts ->
+                            for nt in nts do
+                                match tByNt.TryGetValue nt with
+                                | true, mat -> mat.data.[i, j] <- true
+                                | _ -> ()
+                        | None -> ()
+                    else
+                        for pair in pairs do
+                            let pairHasValue =
+                                match pByPair.TryGetValue pair with
+                                | true, mat -> mat.data.[i, j]
+                                | _ -> false
+
+                            if pairHasValue then
+                                for (a, bc) in binaryRules do
+                                    if bc = pair then
+                                        match tByNt.TryGetValue a with
+                                        | true, mat -> mat.data.[i, j] <- true
+                                        | _ -> ()
+
+                    let recomposed =
+                        Matrix.create n n (fun ri rj ->
+                            allNt
+                            |> List.filter (fun nt ->
+                                match tByNt.TryGetValue nt with
+                                | true, mat -> mat.data.[ri, rj + 1]
+                                | _ -> false)
+                            |> Set.ofList)
+
+                    let tex =
+                        Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
+
+                    steps <- (recomposed, tex) :: steps
+                else
+                    let b = bottomSubmatrix m
+                    let l = leftSubmatrix m
+                    let r = rightSubmatrix m
+                    let t = topSubmatrix m
+
+                    completeTrace b
+                    performMultiplications tByNt pByPair [ (l, leftGrounded l, b) ] pairs
+                    completeTrace l
+                    performMultiplications tByNt pByPair [ (r, b, rightGrounded r) ] pairs
+                    completeTrace r
+                    performMultiplications tByNt pByPair [ (t, leftGrounded t, r) ] pairs
+                    performMultiplications tByNt pByPair [ (t, l, rightGrounded t) ] pairs
+                    completeTrace t
+
+                    let recomposed =
+                        Matrix.create n n (fun ri rj ->
+                            allNt
+                            |> List.filter (fun nt ->
+                                match tByNt.TryGetValue nt with
+                                | true, mat -> mat.data.[ri, rj + 1]
+                                | _ -> false)
+                            |> Set.ofList)
+
+                    let tex =
+                        Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
+
+                    steps <- (recomposed, tex) :: steps
+
+            and computeTrace (i: int) (j: int) : unit =
+                if j - i >= 4 then
+                    let mid = (i + j) / 2
+                    computeTrace i mid
+                    computeTrace mid j
+
+                let a = (i + j) / 2 - 1
+                let b = (i + j) / 2
+                let size = (j - i) / 2
+
+                let m = { A = a; B = b; Size = size }
+                completeTrace m
+
+            computeTrace 0 tableSize
+
+            List.rev steps

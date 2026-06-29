@@ -7,7 +7,6 @@ type Matrix<'a> = { rows: int; cols: int; data: 'a[,] }
 module Matrix =
 
     let rows (m: Matrix<'a>) = m.rows
-
     let cols (m: Matrix<'a>) = m.cols
 
     let create rows cols (f: int -> int -> 'a) : Matrix<'a> =
@@ -48,33 +47,100 @@ module Matrix =
           cols = m.rows
           data = data }
 
-    let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (m: Matrix<'a>) : string =
-        let printCell row col =
-            if showRowNumbers && col = 0 then
-                if showColNumbers && row = 0 then
-                    ""
-                else
-                    (row + 1).ToString()
-            elif showColNumbers && row = 0 then
-                (col + 1).ToString()
-            else
-                let dataRow = if showColNumbers then row - 1 else row
-                let dataCol = if showRowNumbers then col - 1 else col
-                cellPrinter m.data.[dataRow, dataCol]
+    type Highlight = { row: int; col: int; color: string }
 
+    type SubmatrixBlock =
+        { startRow: int
+          startCol: int
+          rowCount: int
+          colCount: int
+          borderColor: string option
+          fillColor: string option }
+
+    let toTeXStyled
+        (showRowNumbers: bool)
+        (showColNumbers: bool)
+        (cellPrinter: 'a -> string)
+        (m: Matrix<'a>)
+        (highlights: Highlight list)
+        (blocks: SubmatrixBlock list)
+        : string =
+        let dataRowOffset = if showColNumbers then 1 else 0
+        let dataColOffset = if showRowNumbers then 1 else 0
         let totalRows = if showColNumbers then m.rows + 1 else m.rows
         let totalCols = if showRowNumbers then m.cols + 1 else m.cols
 
-        let body =
-            [ for row in 0 .. totalRows - 1 do
-                  let cells =
-                      [ for col in 0 .. totalCols - 1 do
-                            printCell row col ]
+        let highlightSet =
+            highlights
+            |> List.map (fun h -> (h.row + dataRowOffset, h.col + dataColOffset, h.color))
+            |> Set.ofList
 
-                  String.Join(" & ", cells) + @" \\" ]
+        let sb = System.Text.StringBuilder()
+        sb.Append(@"\begin{pNiceMatrix}") |> ignore
+        sb.AppendLine() |> ignore
 
-        @"\begin{pNiceMatrix}"
-        + "\n"
-        + String.Join("\n", body)
-        + "\n"
-        + @"\end{pNiceMatrix}"
+        for block in blocks do
+            let r = block.startRow + dataRowOffset
+            let c = block.startCol + dataColOffset
+            let opts = ResizeArray<string>()
+
+            match block.borderColor with
+            | Some bc -> opts.Add(sprintf "draw=%s" bc)
+            | None -> ()
+
+            match block.fillColor with
+            | Some fc -> opts.Add(sprintf "fill=%s" fc)
+            | None -> ()
+
+            let options =
+                if opts.Count = 0 then
+                    ""
+                else
+                    "[" + String.concat "," opts + "]"
+
+            let line =
+                "\\Block"
+                + options
+                + "{"
+                + string (r + 1)
+                + "-"
+                + string (c + 1)
+                + "-"
+                + string (r + block.rowCount)
+                + "-"
+                + string (c + block.colCount)
+                + "}{}"
+
+            sb.Append(line).AppendLine() |> ignore
+
+        for row in 0 .. totalRows - 1 do
+            let cells =
+                [ for col in 0 .. totalCols - 1 do
+                      let content =
+                          if showRowNumbers && col = 0 then
+                              if showColNumbers && row = 0 then
+                                  ""
+                              else
+                                  (row + 1).ToString()
+                          elif showColNumbers && row = 0 then
+                              (col + 1).ToString()
+                          else
+                              let dataRow = row - dataRowOffset
+                              let dataCol = col - dataColOffset
+                              cellPrinter m.data.[dataRow, dataCol]
+
+                      let hc =
+                          highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)
+
+                      match hc with
+                      | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
+                      | None -> content ]
+
+            let line = String.Join(" & ", cells) + @" \\"
+            sb.Append(line).AppendLine() |> ignore
+
+        sb.Append(@"\end{pNiceMatrix}") |> ignore
+        sb.ToString()
+
+    let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (m: Matrix<'a>) : string =
+        toTeXStyled showRowNumbers showColNumbers cellPrinter m [] []
