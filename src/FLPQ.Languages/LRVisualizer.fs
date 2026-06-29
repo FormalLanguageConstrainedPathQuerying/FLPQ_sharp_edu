@@ -10,4 +10,10 @@ module LRVisualizer =
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
         : VisualizationStep list =
-        LRParser.parseWithSteps symbolVisualizer aug table tokens |> snd
+        let _, steps = LRParser.parseWithSteps aug table tokens
+
+        steps
+        |> List.map (fun step ->
+            { tree = DerivationTreeVisualizer.toDot symbolVisualizer step.tree
+              stack = TeXRenderer.oneRowMatrix string step.stateStack
+              input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position })

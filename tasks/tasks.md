@@ -151,10 +151,11 @@
    42. [done] Valiant must use boolean decomposition instead explicit set of matrix.
    43. [done] Refactor `checkDotCompiles` and `checkDotCompilesWithInfo` to avoid code duplication.
    44. [done] Refactor `LR0Item`/`LR1Item` to use camelCase for fields.
-   45. Refactor LRParserTests.fs to avoid code duplication across submodules. Create parametrizable tests.
-   46. Check that documentation is up to date.
-     47. Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.
-    48. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
+   45. [done] Refactor LRParserTests.fs to avoid code duplication across submodules. Create parametrizable tests.
+   46. [done] Check that documentation is up to date.
+   47. [done] Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.
+   48. [done] Refactoring of all parsing algorithms visualization. Paring algorithms must collect and return data for visualization represented as F# data structures (add necessary types). After that, collected data may be converted to tex using appropriate shared standalone function. E.g. to TeX conversion for LL alnd LR are te same. Some parts can be reused also for CYK and Valiant.
+   49. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
         The book (Chapter 7, `04_TopDown.tex`) displays the LL parsing table for grammar $S \to aSbS \mid \varepsilon$ as:
         \begin{center}
         \begin{tabular}{ r || c | c || c | c | c }
@@ -178,4 +179,3 @@
         Inputs: Grammar, k, FIRST[k] and FOLLOW[k] sets (already computed), built LL table (Map<Nonterminal * Symbol list, int>).
         Tests: generate TeX for LL(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category accordingly). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, nonterminal names, production rules. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the table has correct number of rows and production entries.
 
-(End of file - total 156 lines)

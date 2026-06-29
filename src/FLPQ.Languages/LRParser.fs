@@ -450,13 +450,12 @@ module LRParser =
           conflicts = List.rev conflicts }
 
     /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
-    /// Also collects visualization steps.
+    /// Also collects visualization steps as structured data.
     let parseWithSteps
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
-        : Option<DerivationTree<'t, 'nt>> * VisualizationStep list =
+        : Option<DerivationTree<'t, 'nt>> * LRParsingStep<'t, 'nt> list =
         let mutable stateStack: int list = [ 0 ]
         let mutable treeStack: DerivationTree<'t, 'nt> list = []
         let mutable pos = 0
@@ -472,29 +471,10 @@ module LRParser =
                 | [] -> Leaf(Epsilon)
                 | _ -> Node(aug.start, treeStack)
 
-            let stackTeX =
-                let cells = stateStack |> List.rev |> List.map string |> String.concat " & "
-                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
-
-            let inputTeX =
-                let cells =
-                    tokens
-                    |> List.mapi (fun i sym ->
-                        let s =
-                            match sym with
-                            | T(Terminal _) -> string sym
-                            | N _ -> string sym
-                            | Epsilon -> "\\varepsilon"
-
-                        if i = pos then @"\underbar{" + s + "}" else s)
-                    |> String.concat " & "
-
-                @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
-
             steps <-
-                { tree = DerivationTreeVisualizer.toDot symbolVisualizer currentTree
-                  stack = stackTeX
-                  input = inputTeX }
+                { tree = currentTree
+                  stateStack = stateStack
+                  input = { tokens = tokens; position = pos } }
                 :: steps
 
         recordStep ()
@@ -556,4 +536,4 @@ module LRParser =
         (table: LRTable<'t, 'nt>)
         (tokens: Symbol<'t, 'nt> list)
         : Option<DerivationTree<'t, 'nt>> =
-        parseWithSteps string aug table tokens |> fst
+        parseWithSteps aug table tokens |> fst

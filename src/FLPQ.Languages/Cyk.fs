@@ -7,6 +7,12 @@ module Cyk =
 
     type CykCell<'t, 'nt> = Option<HashSet<Symbol<'t, 'nt>>>
 
+    /// Data for a single CYK algorithm trace step.
+    [<Struct>]
+    type CykTraceStep<'t, 'nt> =
+        { table: Matrix<CykCell<'t, 'nt>>
+          highlights: Matrix.Highlight list }
+
     let private findProducingRules (rules: Rule<'t, 'nt> list) (target: Symbol<'t, 'nt>) : Nonterminal<'nt> list =
         rules
         |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ target ])
@@ -69,14 +75,11 @@ module Cyk =
             |> String.concat ", "
             |> fun s -> "\\{" + s + "\\}"
 
-    let private tableTrace
-        (cnf: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
-        : (Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list) list =
+    let private tableTrace (cnf: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : CykTraceStep<'t, 'nt> list =
         let n = tokens.Length
         let emptyCell: CykCell<'t, 'nt> = None
         let table = Matrix.init n n emptyCell
-        let steps = ResizeArray<Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list>()
+        let steps = ResizeArray<CykTraceStep<'t, 'nt>>()
 
         let mutable stepHighlights = []
 
@@ -93,10 +96,11 @@ module Cyk =
                 stepHighlights <- h :: stepHighlights
 
         steps.Add(
-            { rows = table.rows
-              cols = table.cols
-              data = Array2D.copy table.data },
-            List.rev stepHighlights
+            { table =
+                { rows = table.rows
+                  cols = table.cols
+                  data = Array2D.copy table.data }
+              highlights = List.rev stepHighlights }
         )
 
         for len in 2..n do
@@ -126,10 +130,11 @@ module Cyk =
                     stepHighlights <- h :: stepHighlights
 
             steps.Add(
-                { rows = table.rows
-                  cols = table.cols
-                  data = Array2D.copy table.data },
-                List.rev stepHighlights
+                { table =
+                    { rows = table.rows
+                      cols = table.cols
+                      data = Array2D.copy table.data }
+                  highlights = List.rev stepHighlights }
             )
 
         steps |> List.ofSeq
@@ -184,10 +189,7 @@ module Cyk =
             (result, accepted)
 
     /// Run CYK and return the sequence of working table states with highlights.
-    let parseWithTrace
-        (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
-        : (Matrix<CykCell<'t, 'nt>> * Matrix.Highlight list) list =
+    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : CykTraceStep<'t, 'nt> list =
         let cnf = Grammar.toCnf g
         tableTrace cnf tokens
 

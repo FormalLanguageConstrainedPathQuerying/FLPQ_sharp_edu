@@ -6,6 +6,11 @@ module Valiant =
 
     type Submatrix = { A: int; B: int; Size: int }
 
+    /// Data for a single Valiant algorithm trace step.
+    [<Struct>]
+    type ValiantTraceStep<'nt when 'nt: comparison> =
+        { table: Matrix<Set<Nonterminal<'nt>>> }
+
     let private submatrixCells (m: Submatrix) : (int * int) list =
         [ for i in m.A - m.Size + 1 .. m.A do
               for j in m.B .. m.B + m.Size - 1 do
@@ -249,7 +254,7 @@ module Valiant =
     let parse (g: Grammar<'t, 'nt>) (tokens: 't list) : bool = parseWithTable g tokens |> snd
 
     /// Run Valiant with step-by-step trace.
-    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: 't list) : (Matrix<Set<Nonterminal<'nt>>> * string) list =
+    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: 't list) : ValiantTraceStep<'nt> list =
         let cnf = Grammar.toCnf g
         let tokensArr = tokens |> Array.ofList
         let n = tokensArr.Length
@@ -332,10 +337,7 @@ module Valiant =
 
                     let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
-                    let tex =
-                        Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
-
-                    steps <- (recomposed, tex) :: steps
+                    steps <- { table = recomposed } :: steps
                 else
                     let b = bottomSubmatrix m
                     let l = leftSubmatrix m
@@ -363,10 +365,7 @@ module Valiant =
 
                     let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
-                    let tex =
-                        Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) recomposed
-
-                    steps <- (recomposed, tex) :: steps
+                    steps <- { table = recomposed } :: steps
 
             and computeTrace i j : unit =
                 if j - i >= 4 then

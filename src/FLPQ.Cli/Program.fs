@@ -3,6 +3,7 @@
 open System.IO
 open Argu
 open FLPQ.Languages
+open FLPQ.LinearAlgebra
 
 module Program =
 
@@ -64,15 +65,15 @@ module Program =
         let trace = Cyk.parseWithTrace grammar (Tokenizer.tokenize inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
-            let table, highlights = trace.[idx]
+            let step = trace.[idx]
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
 
             let tex =
-                if highlights.IsEmpty then
-                    Cyk.tableToTeX string table
+                if step.highlights.IsEmpty then
+                    Cyk.tableToTeX string step.table
                 else
-                    Cyk.tableToTeXStyled string table highlights
+                    Cyk.tableToTeXStyled string step.table step.highlights
 
             writeTexFile (Path.Combine(stepDir, "table.tex")) tex
 
@@ -84,9 +85,13 @@ module Program =
         let trace = Valiant.parseWithTrace grammar (Tokenizer.tokenizeStrings inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
-            let _, tex = trace.[idx]
+            let step = trace.[idx]
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
+
+            let tex =
+                Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+
             writeTexFile (Path.Combine(stepDir, "table.tex")) tex
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
@@ -97,7 +102,7 @@ module Program =
         let tokens = Tokenizer.tokenize inputTokens
         let table = LLParser.buildTable grammar k
 
-        let _, steps = LLParser.parseWithSteps string grammar table k tokens
+        let steps = LLVisualizer.visualizeSteps string grammar table k tokens
         writeStepsVisualization outputDir steps
         printfn "LL(%d) trace: %d steps written to %s" k steps.Length outputDir
 
@@ -111,7 +116,7 @@ module Program =
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let table = LRParser.buildSLR1Table aug
 
-        let _, steps = LRParser.parseWithSteps string aug table tokens
+        let steps = LRVisualizer.visualizeSteps string aug table tokens
         writeStepsVisualization outputDir steps
         printfn "LR trace: %d steps written to %s" steps.Length outputDir
 

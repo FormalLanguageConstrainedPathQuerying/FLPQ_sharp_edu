@@ -53,14 +53,13 @@ module LLParser =
             tokens.[pos .. endIdx - 1]
 
     /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
-    /// Also collects visualization steps when withSteps is true.
+    /// Also collects visualization steps as structured data.
     let parseWithSteps
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (g: Grammar<'t, 'nt>)
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
         (tokens: Symbol<'t, 'nt> list)
-        : Option<DerivationTree<'t, 'nt>> * VisualizationStep list =
+        : Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list =
 
         let mutable steps = []
 
@@ -71,43 +70,10 @@ module LLParser =
                 | [] -> Leaf(Epsilon)
                 | _ -> Node(g.start, treeStack)
 
-            let stackTeX =
-                if List.isEmpty stack then
-                    @"\begin{pNiceMatrix}[margin=2pt] \varepsilon \end{pNiceMatrix}"
-                else
-                    let cells =
-                        stack
-                        |> List.map (fun sym ->
-                            match sym with
-                            | T(Terminal _) -> string sym
-                            | N(Nonterminal _) -> string sym
-                            | Epsilon -> "\\varepsilon")
-                        |> String.concat " & "
-
-                    @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
-
-            let inputTeX =
-                if List.isEmpty tokens then
-                    @"\begin{pNiceMatrix}[margin=2pt] \varepsilon \end{pNiceMatrix}"
-                else
-                    let cells =
-                        tokens
-                        |> List.mapi (fun i sym ->
-                            let s =
-                                match sym with
-                                | T(Terminal _) -> string sym
-                                | N _ -> string sym
-                                | Epsilon -> "\\varepsilon"
-
-                            if i = pos then @"\underbar{" + s + "}" else s)
-                        |> String.concat " & "
-
-                    @"\begin{pNiceMatrix}[margin=2pt] " + cells + @" \end{pNiceMatrix}"
-
             steps <-
-                { tree = DerivationTreeVisualizer.toDot symbolVisualizer currentTree
-                  stack = stackTeX
-                  input = inputTeX }
+                { tree = currentTree
+                  stack = stack
+                  input = { tokens = tokens; position = pos } }
                 :: steps
 
         let rec parseLoop
@@ -148,4 +114,4 @@ module LLParser =
         (k: int)
         (tokens: Symbol<'t, 'nt> list)
         : Option<DerivationTree<'t, 'nt>> =
-        parseWithSteps string g table k tokens |> fst
+        parseWithSteps g table k tokens |> fst

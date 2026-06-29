@@ -11,4 +11,10 @@ module LLVisualizer =
         (k: int)
         (tokens: Symbol<'t, 'nt> list)
         : VisualizationStep list =
-        LLParser.parseWithSteps symbolVisualizer g table k tokens |> snd
+        let _, steps = LLParser.parseWithSteps g table k tokens
+
+        steps
+        |> List.map (fun step ->
+            { tree = DerivationTreeVisualizer.toDot symbolVisualizer step.tree
+              stack = TeXRenderer.oneRowMatrix symbolVisualizer step.stack
+              input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position })

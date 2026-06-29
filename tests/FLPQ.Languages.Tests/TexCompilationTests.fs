@@ -14,8 +14,8 @@ let ``CYK table TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
     let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
 
-    let table, _ = trace.[0]
-    let tex = Cyk.tableToTeX string table
+    let step = trace.[0]
+    let tex = Cyk.tableToTeX string step.table
     Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -24,8 +24,8 @@ let ``CYK all steps TeX compile with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
     let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
 
-    for table, _ in trace do
-        let tex = Cyk.tableToTeX string table
+    for step in trace do
+        let tex = Cyk.tableToTeX string step.table
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -35,7 +35,7 @@ let ``LL step stack and input TeX compile with pdflatex`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b"
 
-    let _, steps = LLParser.parseWithSteps string g table 1 tokens
+    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
     Assert.NotEmpty(steps)
 
     for step in steps do
@@ -51,7 +51,7 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenize "a a"
 
-    let _, steps = LRParser.parseWithSteps string aug table tokens
+    let steps = LRVisualizer.visualizeSteps string aug table tokens
 
     for step in steps do
         Assert.True(TestUtils.checkTexCompiles templatePath step.stack)
@@ -64,6 +64,9 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
     let trace = Valiant.parseWithTrace g (Tokenizer.tokenizeStrings "a a")
     Assert.NotEmpty(trace)
 
-    for _, tex in trace do
+    for step in trace do
+        let tex =
+            Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
