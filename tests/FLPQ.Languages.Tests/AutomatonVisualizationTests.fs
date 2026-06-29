@@ -42,12 +42,12 @@ let ``DFA from LR(0) automaton dot compiles`` () =
                     items
                     |> Set.toSeq
                     |> Seq.map (fun (item: LR0Item<string, string>) ->
-                        let lhs = item.Lhs |> fun (Nonterminal n) -> n
+                        let lhs = item.lhs |> fun (Nonterminal n) -> n
 
                         let rhs =
-                            item.Rhs
+                            item.rhs
                             |> List.mapi (fun i sym ->
-                                let prefix = if i = item.Dot then "·" else ""
+                                let prefix = if i = item.dot then "·" else ""
                                 let name = string sym
                                 prefix + name)
                             |> String.concat " "

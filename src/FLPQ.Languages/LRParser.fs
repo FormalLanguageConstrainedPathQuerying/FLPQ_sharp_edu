@@ -6,17 +6,17 @@ open FLPQ.LinearAlgebra
 /// LR(0) item: A -> α·β
 /// Dot position tracks how much of the RHS has been consumed.
 type LR0Item<'t, 'nt> =
-    { Lhs: Nonterminal<'nt>
-      Rhs: Symbol<'t, 'nt> list
-      Dot: int }
+    { lhs: Nonterminal<'nt>
+      rhs: Symbol<'t, 'nt> list
+      dot: int }
 
 /// LR(1) item: A -> α·β, l
 /// Adds a lookahead symbol to each item for more precise reduce decisions.
 type LR1Item<'t, 'nt> =
-    { Lhs: Nonterminal<'nt>
-      Rhs: Symbol<'t, 'nt> list
-      Dot: int
-      Lookahead: Symbol<'t, 'nt> }
+    { lhs: Nonterminal<'nt>
+      rhs: Symbol<'t, 'nt> list
+      dot: int
+      lookahead: Symbol<'t, 'nt> }
 
 /// Action in an LR parsing table.
 type LRAction =
@@ -56,16 +56,16 @@ module LRAutomaton =
             changed <- false
 
             for item in closure |> Set.toSeq |> Seq.toList do
-                if item.Dot < item.Rhs.Length then
-                    match item.Rhs.[item.Dot] with
+                if item.dot < item.rhs.Length then
+                    match item.rhs.[item.dot] with
                     | N nt ->
                         let newItems =
                             rules
                             |> List.filter (fun r -> r.lhs = nt)
                             |> List.map (fun r ->
-                                { Lhs = r.lhs
-                                  Rhs = Rhs.toSymbols r.rhs
-                                  Dot = 0 })
+                                { lhs = r.lhs
+                                  rhs = Rhs.toSymbols r.rhs
+                                  dot = 0 })
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -81,8 +81,8 @@ module LRAutomaton =
         (sym: Symbol<'t, 'nt>)
         : Set<LR0Item<'t, 'nt>> =
         items
-        |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
-        |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
+        |> Set.filter (fun item -> item.dot < item.rhs.Length && item.rhs.[item.dot] = sym)
+        |> Set.map (fun item -> { item with dot = item.dot + 1 })
         |> closureLR0 rules
 
     let private closureLR1
@@ -97,18 +97,18 @@ module LRAutomaton =
             changed <- false
 
             for item in closure |> Set.toSeq |> Seq.toList do
-                if item.Dot < item.Rhs.Length then
-                    match item.Rhs.[item.Dot] with
+                if item.dot < item.rhs.Length then
+                    match item.rhs.[item.dot] with
                     | N nt ->
                         let beta =
-                            if item.Dot + 1 < item.Rhs.Length then
-                                item.Rhs |> List.skip (item.Dot + 1)
+                            if item.dot + 1 < item.rhs.Length then
+                                item.rhs |> List.skip (item.dot + 1)
                             else
                                 []
 
                         let lookaheads =
                             if beta.IsEmpty then
-                                set [ [ item.Lookahead ] ]
+                                set [ [ item.lookahead ] ]
                             else
                                 FirstFollow.firstKOfString firstMap 1 beta
                                 |> Set.filter (fun s -> s <> [ Epsilon ])
@@ -120,10 +120,10 @@ module LRAutomaton =
                                 lookaheads
                                 |> Set.toList
                                 |> List.map (fun la ->
-                                    { Lhs = r.lhs
-                                      Rhs = Rhs.toSymbols r.rhs
-                                      Dot = 0
-                                      Lookahead = List.head la }))
+                                    { lhs = r.lhs
+                                      rhs = Rhs.toSymbols r.rhs
+                                      dot = 0
+                                      lookahead = List.head la }))
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -140,8 +140,8 @@ module LRAutomaton =
         (firstMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
         : Set<LR1Item<'t, 'nt>> =
         items
-        |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
-        |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
+        |> Set.filter (fun item -> item.dot < item.rhs.Length && item.rhs.[item.dot] = sym)
+        |> Set.map (fun item -> { item with dot = item.dot + 1 })
         |> (fun filtered -> closureLR1 rules filtered firstMap)
 
     /// Build the LR(0) automaton for an augmented grammar.
@@ -153,9 +153,9 @@ module LRAutomaton =
             closureLR0
                 aug.rules
                 (set
-                    [ { Lhs = augmentedRule.lhs
-                        Rhs = Rhs.toSymbols augmentedRule.rhs
-                        Dot = 0 } ])
+                    [ { lhs = augmentedRule.lhs
+                        rhs = Rhs.toSymbols augmentedRule.rhs
+                        dot = 0 } ])
 
         let mutable states = [ startItems ]
         let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
@@ -170,8 +170,8 @@ module LRAutomaton =
                 state
                 |> Set.toSeq
                 |> Seq.choose (fun item ->
-                    if item.Dot < item.Rhs.Length then
-                        Some item.Rhs.[item.Dot]
+                    if item.dot < item.rhs.Length then
+                        Some item.rhs.[item.dot]
                     else
                         None)
                 |> Seq.distinct
@@ -194,9 +194,9 @@ module LRAutomaton =
 
         let finalStates =
             let acceptItem =
-                { Lhs = augmentedRule.lhs
-                  Rhs = Rhs.toSymbols augmentedRule.rhs
-                  Dot = Rhs.toSymbols augmentedRule.rhs |> List.length }
+                { lhs = augmentedRule.lhs
+                  rhs = Rhs.toSymbols augmentedRule.rhs
+                  dot = Rhs.toSymbols augmentedRule.rhs |> List.length }
 
             states
             |> List.indexed
@@ -215,10 +215,10 @@ module LRAutomaton =
             closureLR1
                 aug.rules
                 (set
-                    [ { Lhs = augmentedRule.lhs
-                        Rhs = Rhs.toSymbols augmentedRule.rhs
-                        Dot = 0
-                        Lookahead = Epsilon } ])
+                    [ { lhs = augmentedRule.lhs
+                        rhs = Rhs.toSymbols augmentedRule.rhs
+                        dot = 0
+                        lookahead = Epsilon } ])
                 firstMap
 
         let mutable states = [ startItems ]
@@ -234,8 +234,8 @@ module LRAutomaton =
                 state
                 |> Set.toSeq
                 |> Seq.choose (fun item ->
-                    if item.Dot < item.Rhs.Length then
-                        Some item.Rhs.[item.Dot]
+                    if item.dot < item.rhs.Length then
+                        Some item.rhs.[item.dot]
                     else
                         None)
                 |> Seq.distinct
@@ -258,10 +258,10 @@ module LRAutomaton =
 
         let finalStates =
             let acceptItem =
-                { Lhs = augmentedRule.lhs
-                  Rhs = Rhs.toSymbols augmentedRule.rhs
-                  Dot = Rhs.toSymbols augmentedRule.rhs |> List.length
-                  Lookahead = Epsilon }
+                { lhs = augmentedRule.lhs
+                  rhs = Rhs.toSymbols augmentedRule.rhs
+                  dot = Rhs.toSymbols augmentedRule.rhs |> List.length
+                  lookahead = Epsilon }
 
             states
             |> List.indexed
@@ -274,9 +274,9 @@ module LRAutomaton =
 /// All table builders and parse take an already-augmented grammar.
 module LRParser =
 
-    let private isCompleted (item: LR0Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
+    let private isCompleted (item: LR0Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
 
-    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
+    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
 
     let private populateShiftGoto
         (transitions: Matrix<Option<NonEmptySet<Symbol<'t, 'nt>>>>)
@@ -327,7 +327,7 @@ module LRParser =
 
             for item in state do
                 if isCompleted item then
-                    if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
+                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
@@ -338,7 +338,7 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
 
                         for t in Epsilon :: allTerminals do
                             let key = (stateIdx, t)
@@ -371,7 +371,7 @@ module LRParser =
 
             for item in state do
                 if isCompleted item then
-                    if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
+                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
@@ -382,9 +382,9 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
 
-                        let followSet = followMap |> Map.find item.Lhs
+                        let followSet = followMap |> Map.find item.lhs
 
                         for t in followSet do
                             let la = List.head t
@@ -417,7 +417,7 @@ module LRParser =
 
             for item in state do
                 if isCompleted1 item then
-                    if item.Lhs = augmentedRule.lhs && item.Dot = 1 then
+                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
                         match Map.tryFind key action with
@@ -428,9 +428,9 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.Lhs && Rhs.toSymbols r.rhs = item.Rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
 
-                        let t = item.Lookahead
+                        let t = item.lookahead
 
                         let key = (stateIdx, t)
 
