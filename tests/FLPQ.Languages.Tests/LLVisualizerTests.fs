@@ -24,7 +24,8 @@ let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
     for step in steps do
         Assert.Contains(@"\begin{pNiceMatrix}", step.stack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
-        Assert.True(TestUtils.checkDotCompiles step.tree)
+        let info = TestUtils.checkDotCompilesWithInfo step.tree
+        Assert.True(info.nodeCount > 0)
 
 [<Fact>]
 let ``LL step visualization includes input position marker`` () =

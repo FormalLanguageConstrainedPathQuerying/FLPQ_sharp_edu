@@ -12,7 +12,10 @@ let ``leaf tree dot compiles`` () =
     let dot = DerivationTreeVisualizer.toDot string tree
     Assert.Contains("digraph DerivationTree", dot)
     Assert.Contains("shape=box", dot)
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(1, info.nodeCount)
+    Assert.Equal(0, info.edgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -22,14 +25,20 @@ let ``node with children dot compiles`` () =
 
     let dot = DerivationTreeVisualizer.toDot string tree
     Assert.Contains("digraph DerivationTree", dot)
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(4, info.nodeCount)
+    Assert.Equal(3, info.edgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``epsilon leaf dot compiles`` () =
     let tree = Node(Nonterminal "S", [ Leaf(Epsilon) ])
     let dot = DerivationTreeVisualizer.toDot string tree
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(2, info.nodeCount)
+    Assert.Equal(1, info.edgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -42,5 +51,8 @@ let ``LR parser tree dot compiles`` () =
     match LRParser.parse aug table (Tokenizer.tokenize "a a") with
     | Some tree ->
         let dot = DerivationTreeVisualizer.toDot string tree
-        Assert.True(TestUtils.checkDotCompiles dot)
+
+        let info = TestUtils.checkDotCompilesWithInfo dot
+        Assert.True(info.nodeCount > 0)
+        Assert.True(info.edgeCount > 0)
     | None -> Assert.Fail("Failed to parse")

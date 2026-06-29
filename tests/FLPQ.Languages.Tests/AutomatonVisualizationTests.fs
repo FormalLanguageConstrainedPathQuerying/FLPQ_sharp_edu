@@ -16,7 +16,10 @@ let ``simple automaton dot compiles`` () =
     Assert.Contains("rankdir=LR", dot)
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(2, info.nodeCount)
+    Assert.Equal(3, info.edgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -57,7 +60,10 @@ let ``DFA from LR(0) automaton dot compiles`` () =
             aut
 
     Assert.Contains("digraph Automaton", dot)
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.True(info.nodeCount > 0)
+    Assert.True(info.edgeCount > 0)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -65,7 +71,10 @@ let ``automaton with no transitions compiles`` () =
     let aut = Automaton.fromTransitions [ "s0" ] [] (set [ 0 ]) (set [ 0 ])
 
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(1, info.nodeCount)
+    Assert.Equal(0, info.edgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -76,4 +85,7 @@ let ``multiple start and final states`` () =
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
-    Assert.True(TestUtils.checkDotCompiles dot)
+
+    let info = TestUtils.checkDotCompilesWithInfo dot
+    Assert.Equal(3, info.nodeCount)
+    Assert.Equal(2, info.edgeCount)
