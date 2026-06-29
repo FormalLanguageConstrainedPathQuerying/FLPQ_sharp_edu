@@ -131,3 +131,72 @@ T -> c
         tex.Split([| @"\hline" |], System.StringSplitOptions.None).Length - 1
 
     Assert.Equal(3, hlineCount)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``SLR(1) table TeX compiles for grammar1`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug
+
+    let tex = LRParser.tableToTeX symbolToStr aug table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+    Assert.Contains(@"$s_", tex)
+    Assert.Contains(@"$r_", tex)
+    Assert.Contains(@"acc", tex)
+    Assert.Contains(@"S", tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LR(0) table TeX shows shift-reduce conflicts`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildLR0Table aug
+
+    let tex = LRParser.tableToTeX symbolToStr aug table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+    Assert.True(table.conflicts.Length > 0)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``CLR(1) table TeX compiles for grammar1`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildCLR1Table aug
+
+    let tex = LRParser.tableToTeX symbolToStr aug table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``SLR(1) table TeX for grammar7 has goto columns`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+E -> E + T
+E -> T
+T -> T * F
+T -> F
+F -> ( E )
+F -> x
+"
+
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug
+
+    let tex = LRParser.tableToTeX symbolToStr aug table
+
+    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+
+    Assert.Contains(@"E", tex)
+    Assert.Contains(@"T", tex)
+    Assert.Contains(@"F", tex)

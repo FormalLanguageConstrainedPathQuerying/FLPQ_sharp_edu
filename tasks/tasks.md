@@ -178,7 +178,7 @@
         Terminal/lookahead columns: production rule in math mode using `\rightarrow`, e.g. `$S \rightarrow aSbS$`, `$S \rightarrow \varepsilon$`. If no rule exists for a (nonterminal, lookahead) pair — cell is empty.
         Use `\rightarrow` in math mode (not `\to`); for epsilon-productions display `$\varepsilon$`. Epsilon in other contexts: `\varepsilon`.
         Tests: generate TeX for LL(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category accordingly). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, nonterminal names, production rules. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the table has correct number of rows and production entries.
-    51. Add LR(0), SLR(1), CLR(1) parsing table visualization to TeX using the exact same tabular format as in the book.
+    51. [done] Add LR(0), SLR(1), CLR(1) parsing table visualization to TeX using the exact same tabular format as in the book.
         The book (Chapter 7, `05_BottomUp.tex`) displays the abstract LR table structure as:
         \begin{center}
           \begin{tabular}{c||c|c|c|c|c||c|c|c|c}
