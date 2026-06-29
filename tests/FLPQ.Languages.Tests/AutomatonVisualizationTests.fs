@@ -9,7 +9,12 @@ open FLPQ.LinearAlgebra
 [<Trait("Category", "Graphviz")>]
 let ``simple automaton dot compiles`` () =
     let aut =
-        Automaton.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] (set [ 0 ]) (set [ 1 ])
+        Automaton.fromTransitions
+            [ "q0"; "q1" ]
+            [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
 
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
     Assert.Contains("digraph Automaton", dot)
@@ -68,7 +73,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``automaton with no transitions compiles`` () =
-    let aut = Automaton.fromTransitions [ "s0" ] [] (set [ 0 ]) (set [ 0 ])
+    let aut = Automaton.fromTransitions [ "s0" ] [] Set.empty (set [ 0 ]) (set [ 0 ])
 
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
 
@@ -80,7 +85,12 @@ let ``automaton with no transitions compiles`` () =
 [<Trait("Category", "Graphviz")>]
 let ``multiple start and final states`` () =
     let aut =
-        Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] (set [ 0; 1 ]) (set [ 1; 2 ])
+        Automaton.fromTransitions
+            [ "q0"; "q1"; "q2" ]
+            [ (0, 'x', 1); (1, 'y', 2) ]
+            Set.empty
+            (set [ 0; 1 ])
+            (set [ 1; 2 ])
 
     let dot = AutomatonVisualizer.toDot (fun i s -> s) aut
     Assert.Contains("fillcolor=green", dot)

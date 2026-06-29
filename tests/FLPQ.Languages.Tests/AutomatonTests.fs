@@ -9,7 +9,7 @@ module FactTests =
     [<Fact>]
     let ``fromTransitions builds correct automaton`` () =
         let a =
-            Automaton.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1) ] (set [ 0 ]) (set [ 1 ])
+            Automaton.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.Equal(2, Automaton.stateCount a)
         Assert.Equal<string>(set [ "a" ], Automaton.alphabet a)
@@ -20,6 +20,7 @@ module FactTests =
             Automaton.fromTransitions
                 [ "q0"; "q1"; "q2" ]
                 [ (0, "a", 1); (0, "a", 2); (1, "b", 2) ]
+                Set.empty
                 (set [ 0 ])
                 (set [ 2 ])
 
@@ -31,7 +32,12 @@ module FactTests =
     [<Fact>]
     let ``moveSet handles multiple states`` () =
         let a =
-            Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 2); (1, "a", 2) ] (set [ 0 ]) (set [ 2 ])
+            Automaton.fromTransitions
+                [ "q0"; "q1"; "q2" ]
+                [ (0, "a", 2); (1, "a", 2) ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 2 ])
 
         let targets = Automaton.moveSet a (set [ 0; 1 ]) "a"
         Assert.Equal<int>(set [ 2 ], targets)
@@ -42,6 +48,7 @@ module FactTests =
             Automaton.fromTransitions
                 [ "q0"; "q1"; "q2" ]
                 [ (0, "a", 1); (0, "a", 2); (1, "b", 0); (2, "b", 0) ]
+                Set.empty
                 (set [ 0 ])
                 (set [ 0 ])
 
@@ -55,6 +62,7 @@ module FactTests =
             Automaton.fromTransitions
                 [ "q0"; "q1"; "q2" ]
                 [ (0, "a", 1); (0, "a", 2); (1, "b", 2) ]
+                Set.empty
                 (set [ 0 ])
                 (set [ 2 ])
 
@@ -64,27 +72,37 @@ module FactTests =
     [<Fact>]
     let ``isDeterministic returns false for NFA`` () =
         let nfa =
-            Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 1); (0, "a", 2) ] (set [ 0 ]) (set [ 2 ])
+            Automaton.fromTransitions
+                [ "q0"; "q1"; "q2" ]
+                [ (0, "a", 1); (0, "a", 2) ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 2 ])
 
         Assert.False(Automaton.isDeterministic nfa)
 
     [<Fact>]
     let ``isDeterministic returns true for DFA`` () =
         let dfa =
-            Automaton.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1); (1, "b", 0) ] (set [ 0 ]) (set [ 1 ])
+            Automaton.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1); (1, "b", 0) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.True(Automaton.isDeterministic dfa)
 
     [<Fact>]
     let ``alphabet collects all symbols`` () =
         let a =
-            Automaton.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1); (1, "b", 0); (1, "c", 0) ] (set [ 0 ]) (set [ 1 ])
+            Automaton.fromTransitions
+                [ "q0"; "q1" ]
+                [ (0, "a", 1); (1, "b", 0); (1, "c", 0) ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         Assert.Equal<string>(set [ "a"; "b"; "c" ], Automaton.alphabet a)
 
     [<Fact>]
     let ``stateCount returns correct number`` () =
         let a =
-            Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 1) ] (set [ 0 ]) (set [ 1 ])
+            Automaton.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.Equal(3, Automaton.stateCount a)

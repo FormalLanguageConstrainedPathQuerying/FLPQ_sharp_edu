@@ -1,12 +1,15 @@
 namespace FLPQ.Languages
 
+open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
 /// Finite automaton with states parameterized by type 's.
-/// Transitions are represented as a Matrix over sets of terminal symbols.
+/// Transitions are represented as a Matrix over Option<NonEmptySet<'t>>.
+/// Epsilon transitions are explicit.
 type Automaton<'t, 's when 't: comparison> =
     { states: 's list
-      transitions: Matrix<Set<'t>>
+      transitions: Matrix<Option<NonEmptySet<'t>>>
+      epsTransitions: Set<int * int>
       startStates: Set<int>
       finalStates: Set<int> }
 
@@ -19,7 +22,9 @@ module Automaton =
 
         for i in 0 .. a.transitions.rows - 1 do
             for j in 0 .. a.transitions.cols - 1 do
-                result <- Set.union result a.transitions.data.[i, j]
+                match a.transitions.data.[i, j] with
+                | Some nes -> result <- Set.union result (NonEmptySet.toSet nes)
+                | None -> ()
 
         result
 
@@ -28,10 +33,26 @@ module Automaton =
         let mutable result = Set.empty
 
         for j in 0 .. a.transitions.cols - 1 do
-            if Set.contains symbol a.transitions.data.[stateIdx, j] then
-                result <- Set.add j result
+            match a.transitions.data.[stateIdx, j] with
+            | Some nes when NonEmptySet.contains symbol nes -> result <- Set.add j result
+            | _ -> ()
 
         result
+
+    /// All states reachable from a given state via epsilon transitions.
+    let epsilonClosure (a: Automaton<'t, 's>) (stateIdx: int) : Set<int> =
+        let mutable closure = set [ stateIdx ]
+        let mutable changed = true
+
+        while changed do
+            changed <- false
+
+            for (fromIdx, toIdx) in a.epsTransitions do
+                if Set.contains fromIdx closure && not (Set.contains toIdx closure) then
+                    closure <- Set.add toIdx closure
+                    changed <- true
+
+        closure
 
     /// All states reachable from a set of states by a specific symbol.
     let moveSet (a: Automaton<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
@@ -42,18 +63,24 @@ module Automaton =
     let fromTransitions
         (states: 's list)
         (transitionsList: (int * 't * int) list)
+        (epsTransitions: Set<int * int>)
         (startStates: Set<int>)
         (finalStates: Set<int>)
         : Automaton<'t, 's> =
         let n = states.Length
-        let matrix = Matrix.init n n Set.empty
+        let matrix = Matrix.init n n None
 
         for (fromIdx, sym, toIdx) in transitionsList do
-            let current = Set.add sym matrix.data.[fromIdx, toIdx]
-            matrix.data.[fromIdx, toIdx] <- current
+            let current =
+                match matrix.data.[fromIdx, toIdx] with
+                | Some nes -> NonEmptySet.add sym nes
+                | None -> NonEmptySet.singleton sym
+
+            matrix.data.[fromIdx, toIdx] <- Some current
 
         { states = states
           transitions = matrix
+          epsTransitions = epsTransitions
           startStates = startStates
           finalStates = finalStates }
 
@@ -65,6 +92,7 @@ module Automaton =
         let mutable dfaStates: Set<int> list = [ initialSubset ]
         let mutable dfaStateMap = Map.ofList [ (initialSubset, 0) ]
         let mutable transitions: (int * 't * int) list = []
+        let mutable epsTransitions: Set<int * int> = Set.empty
         let mutable queue = [ initialSubset ]
 
         while not (List.isEmpty queue) do
@@ -100,11 +128,12 @@ module Automaton =
                     None)
             |> Set.ofList
 
-        fromTransitions dfaStates (List.rev transitions) (set [ 0 ]) dfaFinalStates
+        fromTransitions dfaStates (List.rev transitions) epsTransitions (set [ 0 ]) dfaFinalStates
 
     /// Check whether an automaton is deterministic.
     let isDeterministic (a: Automaton<'t, 's>) : bool =
         a.startStates.Count = 1
+        && a.epsTransitions.IsEmpty
         && (let mutable ok = true
 
             for i in 0 .. a.transitions.rows - 1 do

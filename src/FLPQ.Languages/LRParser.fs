@@ -203,7 +203,7 @@ module LRAutomaton =
             |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
             |> Set.ofList
 
-        Automaton.fromTransitions states (List.rev transitions) (set [ 0 ]) finalStates
+        Automaton.fromTransitions states (List.rev transitions) Set.empty (set [ 0 ]) finalStates
 
     /// Build the LR(1) automaton for an augmented grammar.
     /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
@@ -268,7 +268,7 @@ module LRAutomaton =
             |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
             |> Set.ofList
 
-        Automaton.fromTransitions states (List.rev transitions) (set [ 0 ]) finalStates
+        Automaton.fromTransitions states (List.rev transitions) Set.empty (set [ 0 ]) finalStates
 
 /// LR parsing table construction and parser.
 /// All table builders and parse take an already-augmented grammar.
@@ -298,18 +298,21 @@ module LRParser =
 
         for i in 0 .. lr0.transitions.rows - 1 do
             for j in 0 .. lr0.transitions.cols - 1 do
-                for sym in lr0.transitions.data.[i, j] do
-                    match sym with
-                    | T _ as tSym ->
-                        let key = (i, tSym)
+                match lr0.transitions.data.[i, j] with
+                | Some symbols ->
+                    for sym in NonEmptySet.toSeq symbols do
+                        match sym with
+                        | T _ as tSym ->
+                            let key = (i, tSym)
 
-                        match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
-                        | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
-                        | None -> action <- Map.add key (Shift j) action
-                    | N nt -> goto <- Map.add (i, nt) j goto
-                    | _ -> ()
+                            match Map.tryFind key action with
+                            | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
+                            | Some(Shift _) -> ()
+                            | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
+                            | None -> action <- Map.add key (Shift j) action
+                        | N nt -> goto <- Map.add (i, nt) j goto
+                        | _ -> ()
+                | None -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
@@ -355,18 +358,21 @@ module LRParser =
 
         for i in 0 .. lr0.transitions.rows - 1 do
             for j in 0 .. lr0.transitions.cols - 1 do
-                for sym in lr0.transitions.data.[i, j] do
-                    match sym with
-                    | T _ as tSym ->
-                        let key = (i, tSym)
+                match lr0.transitions.data.[i, j] with
+                | Some symbols ->
+                    for sym in NonEmptySet.toSeq symbols do
+                        match sym with
+                        | T _ as tSym ->
+                            let key = (i, tSym)
 
-                        match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
-                        | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
-                        | None -> action <- Map.add key (Shift j) action
-                    | N nt -> goto <- Map.add (i, nt) j goto
-                    | _ -> ()
+                            match Map.tryFind key action with
+                            | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
+                            | Some(Shift _) -> ()
+                            | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
+                            | None -> action <- Map.add key (Shift j) action
+                        | N nt -> goto <- Map.add (i, nt) j goto
+                        | _ -> ()
+                | None -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
@@ -414,18 +420,21 @@ module LRParser =
 
         for i in 0 .. lr1.transitions.rows - 1 do
             for j in 0 .. lr1.transitions.cols - 1 do
-                for sym in lr1.transitions.data.[i, j] do
-                    match sym with
-                    | T _ as tSym ->
-                        let key = (i, tSym)
+                match lr1.transitions.data.[i, j] with
+                | Some symbols ->
+                    for sym in NonEmptySet.toSeq symbols do
+                        match sym with
+                        | T _ as tSym ->
+                            let key = (i, tSym)
 
-                        match Map.tryFind key action with
-                        | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
-                        | Some(Shift _) -> ()
-                        | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
-                        | None -> action <- Map.add key (Shift j) action
-                    | N nt -> goto <- Map.add (i, nt) j goto
-                    | _ -> ()
+                            match Map.tryFind key action with
+                            | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
+                            | Some(Shift _) -> ()
+                            | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
+                            | None -> action <- Map.add key (Shift j) action
+                        | N nt -> goto <- Map.add (i, nt) j goto
+                        | _ -> ()
+                | None -> ()
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]

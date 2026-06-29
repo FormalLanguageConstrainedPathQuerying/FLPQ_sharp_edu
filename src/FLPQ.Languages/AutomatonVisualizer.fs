@@ -1,5 +1,6 @@
 namespace FLPQ.Languages
 
+open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
 /// Graphviz dot visualization for finite automata.
@@ -8,6 +9,7 @@ module AutomatonVisualizer =
     /// Render an automaton as a Graphviz dot graph.
     /// stateVisualizer: int -> state data -> label string for each state.
     /// Start states are filled green, final states have double circles.
+    /// Epsilon transitions are drawn as dotted edges with epsilon label.
     let toDot (stateVisualizer: int -> 's -> string) (aut: Automaton<'t, 's>) : string =
         let sb = System.Text.StringBuilder()
 
@@ -36,17 +38,21 @@ module AutomatonVisualizer =
 
         for i in 0 .. aut.transitions.rows - 1 do
             for j in 0 .. aut.transitions.cols - 1 do
-                let symbols = aut.transitions.data.[i, j]
-
-                if not (Set.isEmpty symbols) then
+                match aut.transitions.data.[i, j] with
+                | Some symbols ->
                     let label =
                         symbols
-                        |> Set.toSeq
+                        |> NonEmptySet.toSeq
                         |> Seq.map string
                         |> String.concat ", "
                         |> fun s -> s.Replace("\"", "\\\"")
 
                     sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" i j label) |> ignore
+                | None -> ()
+
+        for (fromIdx, toIdx) in aut.epsTransitions do
+            sb.AppendLine(sprintf "  s%d -> s%d [label=\"ε\", style=dotted];" fromIdx toIdx)
+            |> ignore
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
