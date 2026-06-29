@@ -160,3 +160,20 @@ The `graphviz-tests` job has `strategy: matrix: config: [Debug, Release]`. Good.
 | **Low** | Add LL(k>1) tests | Medium |
 | **Low** | Add Valiant tests for expression grammars | Small |
 | **Low** | Remove `nonterminalsOfCnf` (unused) | Small |
+
+---
+
+## 7. Issues Resolved (Tasks 40—45)
+
+| Task | Issue | Resolution |
+|------|-------|------------|
+| 40 | CYK/Valiant hardcoded to `string` | Made `Cyk` and `Valiant` generic over `'t, 'nt`; accept pre-tokenized input |
+| 41 | `buildLR0Table`/`buildSLR1Table`/`buildCLR1Table` duplication | Extracted shared `populateShiftGoto` helper |
+| 42 | Valiant bypasses `BooleanDecomposition` | Valiant now uses `decompose` for initial matrix and `recompose` for result extraction |
+| 43 | `checkDotCompiles`/`checkDotCompilesWithInfo` duplication | `checkDotCompiles` delegates to `checkDotCompilesWithInfo` |
+| 44 | `LR0Item`/`LR1Item` PascalCase fields | Renamed to camelCase: `lhs`, `rhs`, `dot`, `lookahead` |
+| 45 | `LRParserTests.fs` submodule duplication | Extracted parameterized test helpers (`testAcceptReject`, `testLeaves`, etc.) — reduced from 448 to 346 lines |
+
+## 8. Documentation (Task 46)
+
+Missing documentation for visualization modules and CLI was added: `automaton-viz.md`, `derivation-tree-viz.md`, `visualization-types.md`, `cli.md`. Updated `main.md` index.

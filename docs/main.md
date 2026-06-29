@@ -12,3 +12,7 @@
 * [DerivationTree module design and logic](derivation-tree.md)
 * [LL parser module design and logic](ll-parser.md)
 * [LR parser module design and logic](lr-parser.md)
+* [AutomatonVisualizer module design and logic](automaton-viz.md)
+* [DerivationTreeVisualizer module design and logic](derivation-tree-viz.md)
+* [LL and LR steps visualization](visualization-types.md)
+* [CLI console application](cli.md)

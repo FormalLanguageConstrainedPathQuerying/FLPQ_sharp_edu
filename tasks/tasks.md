@@ -154,5 +154,28 @@
    45. Refactor LRParserTests.fs to avoid code duplication across submodules. Create parametrizable tests.
    46. Check that documentation is up to date.
      47. Some previous tasks fix problems described in code_review.md. Update code review: remove problems solved.
+    48. Add LL(k) parsing table visualization to TeX using the exact same tabular format as in the book.
+        The book (Chapter 7, `04_TopDown.tex`) displays the LL parsing table for grammar $S \to aSbS \mid \varepsilon$ as:
+        \begin{center}
+        \begin{tabular}{ r || c | c || c | c | c }
+        N & $\first$ & $\follow$ & a & b & $\$ $ \\ \hline
+        $S$ & $\{ a, \varepsilon \}$ & $\{ b, \$ \}$ & $S \rightarrow aSbS$ & $S \rightarrow \varepsilon$ & $S \rightarrow \varepsilon$
+        \end{tabular}
+        \end{center}
+        Specification of the generated TeX — exact column layout and content.
+        Wrapper: \begin{center}...\end{center}. Environment: \begin{tabular}{ r || c | c || c | c | ... | c }.
+        Column 1 `r` (right-aligned) — header `N`, one cell per nonterminal with the nonterminal name (e.g. `$S$`).
+        Column 2 `c` — header `$\first$`, FIRST set (e.g. `$\{ a, \varepsilon \}$`).
+        Column 3 `c` — header `$\follow$`, FOLLOW set (e.g. `$\{ b, \$ \}$`).
+        Double bar `||` separates metadata columns (N, FIRST, FOLLOW) from action columns.
+        Columns 4+ `c` — one per terminal + `$\$ $` for end marker. Header is the terminal name (e.g. `a`, `b`) and `$\$ $` for end marker. Single bars `|` between individual terminal columns.
+        \hline after the header row. One row per nonterminal.
+        N column: nonterminal in math mode, e.g. `$S$`.
+        \first column: set notation in math mode, e.g. `$\{ a, \varepsilon \}$`. Use `$\varnothing$` for empty set.
+        \follow column: set notation, same style.
+        Terminal/lookahead columns: production rule in math mode using `\rightarrow`, e.g. `$S \rightarrow aSbS$`, `$S \rightarrow \varepsilon$`. If no rule exists for a (nonterminal, lookahead) pair — cell is empty.
+        Use `\rightarrow` in math mode (not `\to`); for epsilon-productions display `$\varepsilon$`. Epsilon in other contexts: `\varepsilon`.
+        Inputs: Grammar, k, FIRST[k] and FOLLOW[k] sets (already computed), built LL table (Map<Nonterminal * Symbol list, int>).
+        Tests: generate TeX for LL(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category accordingly). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, nonterminal names, production rules. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the table has correct number of rows and production entries.
 
 (End of file - total 156 lines)
