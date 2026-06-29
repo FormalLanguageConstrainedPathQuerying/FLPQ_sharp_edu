@@ -135,8 +135,22 @@ let checkTexCompiles (templatePath: string) (tex: string) : bool =
         processInfo.StartInfo.UseShellExecute <- false
         processInfo.StartInfo.WorkingDirectory <- tempDir
         processInfo.Start() |> ignore
+        let stdout = processInfo.StandardOutput.ReadToEnd()
         processInfo.WaitForExit(30000) |> ignore
-        processInfo.ExitCode = 0
+
+        let hasErrors =
+            let lines = stdout.Split('\n')
+
+            lines
+            |> Array.exists (fun line ->
+                line.StartsWith('!') || line.Contains("Fatal error") || line.Contains("Error:"))
+
+        let pdfPath = Path.Combine(tempDir, "test.pdf")
+        let pdfExists = File.Exists pdfPath
+        let pdfNonZero = pdfExists && FileInfo(pdfPath).Length > 0L
+        let exitOk = processInfo.ExitCode = 0
+
+        exitOk && not hasErrors && pdfNonZero
     finally
         try
             Directory.Delete(tempDir, true)
