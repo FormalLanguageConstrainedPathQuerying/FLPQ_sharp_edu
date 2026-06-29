@@ -129,17 +129,15 @@
   23. [done] Implement derivation tree visualization using dot. As far as nonterms and terms are generic type, visualizer must be parametized with symbols visulaization. Add tests that check result compilation. 
   24. [done] Add LL parser steps visualization. Each step visualize three parts: derivation tree, current stack (tex, one-row nicematrix, bottom is left), input (tex, full input with marked current position).  Add tests. Introduce struct type to represent visualization result of step. 
   25. [done] Add LR parser steps visualization. Each step visualize three parts: derivation tree, current stack (tex, one-row nicematrix, bottom is left), input (tex, full input with marked current position). Add tests.
-  26. Some tests require graphviz installed. Mark such tests (use `[<Trait("Category", <category_name>)>]`) to be able to run them only in appropriate environment. Improve CI. For ubuntu add installation of graphvis (from apt). All tests, excluding tests that require graphviz, must be executed on all operation systems. Tets that require graphviz must be executed only on ubuntu.
-  27. Improve graphs and trees visualization tests. Generated with -Tplain files contain text with information about graph layout that can be easily parsed. Check that the file contains expected data (eg expected number of nodes and edges).
-  28. Refactor grammar representation types. Now it is still possible crete production with empty right part that is incorrect. Use NonEmptyList (https://fsprojects.github.io/FSharpPlus/reference/fsharpplus-data-nonemptylist.html) from FSharpPlus (https://www.nuget.org/packages/FSharpPlus) to prevent it. Right part of rule is non empty list of symbols or epsilon. Do not forget to update technologies.md.
-  29. Introduce epsilon transition in finite automata explcitely. Similarly to grammars. Use NonEmptySet (https://fsprojects.github.io/FSharpPlus/reference/fsharpplus-data-nonemptyset.html) from FSharpPlus (https://www.nuget.org/packages/FSharpPlus) to avoid incorrect empty sets of symbols in transition matrix.
-  30. Analyze code and use non-empty-list and non-empty-set where it is required.
-  31. Split deterministic and nondeterministic automaton on type level. Deterministic has exactly one start state and does not have epsilon transitions.
-  32. Remove code duplication for algorithms steps visualization. Just collect information for visualization during regular execution. Moreover, in some cases collected information contains part of regular result. E.g. for CYK table from last step is exactly resulting table. The same for tree in LL and LR.
-  33. Improve Matrix visualization. 
-      1.  It must has a parameter that specify cells to highlight (and color for highlighting). 
-      2.  It must provide ability to border and fill specified submatrix.
-  34. Improve CYK visualization. Highlight each step modified cells.
-  35. Add steps visualization for Valiant. Highlight each step modified cells. Visualize both boolean decomposition and recomposed matrix. Use \cdot for false and empty cells. Use 1 for true. Border and fill submatrices processed at he step. Use different colors to highlight resulting submatrix and "input" submatrices.
-  36. Create console application to run algorithms. Use Argu to create CLI. interface must allow to user specify algorithm, input files, output directory. For parsing algorithm (CYK, Valiant, LR, LL): file with input string, file with input grammar, root directory to write steps visualization. Each step is a separated subdirectory. One artefact per file (eg for LR three files: stack, input, tree). Create common helpers to read grammars and strings from files. Create common helpers to write TeX and Dot files. For TeX files: in output file must be only code for visualization. No any standard headers or similar stuff.
-  37. Add tests that check that TeX files compiles. Introduce respective tests category. This tests require TeX installed. These tests must be executed local only. No CI environment with TeX installed. For tests it is necessary to generate full-featured TeX document. Create respective template and reuse it. You can create TeX file and the include generated parts of code into it.
+26. [done] Some tests require graphviz installed.
+27. [done] Improve graphs and trees visualization tests.
+28. [done] Refactor grammar representation types.
+29. [done] Introduce epsilon transition in finite automata explcitely.
+30. [done] Analyze code and use non-empty-list and non-empty-set where it is required.
+31. [done] Split deterministic and nondeterministic automaton on type level.
+32. [done] Remove code duplication for algorithms steps visualization.
+33. [done] Improve Matrix visualization.
+34. [done] Improve CYK visualization.
+35. [done] Add steps visualization for Valiant.
+36. [done] Create console application to run algorithms.
+37. [done] Add tests that check that TeX files compiles.
