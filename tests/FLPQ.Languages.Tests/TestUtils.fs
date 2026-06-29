@@ -113,3 +113,32 @@ let checkDotCompilesWithInfo (dot: string) : DotInfo =
           edgeLabels = List.rev edgeLabels }
     finally
         File.Delete(tempFile)
+
+let checkTexCompiles (templatePath: string) (tex: string) : bool =
+    let template = File.ReadAllText templatePath
+    let fullDoc = template.Replace("__CONTENT__", tex)
+    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    Directory.CreateDirectory tempDir |> ignore
+    let texFile = Path.Combine(tempDir, "test.tex")
+
+    try
+        File.WriteAllText(texFile, fullDoc)
+
+        let processInfo = new Diagnostics.Process()
+        processInfo.StartInfo.FileName <- "pdflatex"
+
+        processInfo.StartInfo.Arguments <-
+            sprintf "-interaction=nonstopmode -output-directory=\"%s\" \"%s\"" tempDir texFile
+
+        processInfo.StartInfo.RedirectStandardOutput <- true
+        processInfo.StartInfo.RedirectStandardError <- true
+        processInfo.StartInfo.UseShellExecute <- false
+        processInfo.StartInfo.WorkingDirectory <- tempDir
+        processInfo.Start() |> ignore
+        processInfo.WaitForExit(30000) |> ignore
+        processInfo.ExitCode = 0
+    finally
+        try
+            Directory.Delete(tempDir, true)
+        with _ ->
+            ()

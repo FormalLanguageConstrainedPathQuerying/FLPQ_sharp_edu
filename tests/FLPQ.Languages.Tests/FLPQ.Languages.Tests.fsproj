@@ -19,6 +19,14 @@
     <Compile Include="DerivationTreeVisualizationTests.fs" />
     <Compile Include="LLVisualizerTests.fs" />
     <Compile Include="LRVisualizerTests.fs" />
+    <Compile Include="TexCompilationTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\data\tex_template.tex">
+      <Link>tex_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
