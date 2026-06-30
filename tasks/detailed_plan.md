@@ -1,63 +1,42 @@
-# Detailed Plan: Task 52 — Modified Valiant Algorithm
+# Detailed Plan: Task 53 — RSM (Recursive State Machine) Type
 
 ## Overview
-Implement the modified Valiant algorithm from Book Chapter 7, `02_Valiant.tex`, subsection "Модифицированный алгоритм". The algorithm structures the parsing table into V-shaped layers of disjoint submatrices, enabling batched/parallel matrix multiplications.
+Implement the RSM type from Book Chapter 6, `03_RecursiveAutomata.tex`. An RSM is a collection of deterministic finite automata (blocks), one per nonterminal, where transitions are labeled by terminals (read input) or start states of other blocks (recursive call).
 
 ## Design Decisions
 
-### 1. Layer Construction
-- `constructLayer(i)`: builds a set of disjoint submatrices of size `2^i`
-- Base submatrix: `submatrixByBottomCellAndSize((2^i-1, 2^i), 2^i)`
-- Shift by `(k·2^i, k·2^i)` for k ≥ 0, keep those fitting within T matrix
-- Use existing `Submatrix` type
+### 1. RSM Transition Symbol Type
+`RsmSymbol<'t, 'nt>` — discriminated union: either `RsmTerm of Terminal<'t>` or `RsmNonterm of Nonterminal<'nt>`.
+- Must support `comparison` (required by DFA type constraint)
+- Nonterminal references map to start states of other blocks via the RSM's block mapping
 
-### 2. Neighbor Functions
-- `rightNeighbor(m)`: shift down by size — `sshift(m, m.Size, 0)`
-- `leftNeighbor(m)`: shift left by size — `sshift(m, 0, -m.Size)`
-- These map between quarters of the same parent submatrix:
-  - rightNeighbor(left_quarter) = bottom_quarter
-  - leftNeighbor(right_quarter) = bottom_quarter (via col shift)
-- Verified with property-based tests against standard Valiant
+### 2. Block Type
+Reuse existing `DFA<'t, 's>` type. For each block:
+- `'t` = `RsmSymbol<'t, 'nt>` (transition labels)
+- `'s` = `int` (simple state indices)
+- Block wraps the DFA with its corresponding nonterminal
 
-### 3. Core Procedures
-- `completeLayer(M)`: processes a set M of submatrices of equal size
-  - If size=1: fill T[i,j] for bottom cells where i+1 ≠ j (diagonal cells handled in init)
-  - Otherwise: recursively `completeLayer` on bottom quarters, then `completeVLayer(M)`
-- `completeVLayer(M)`: the core parallel processing
-  - Build leftSubLayer, rightSubLayer, topSubLayer from quarters of each m in M
-  - 3 batches of multiplications with `performMultiplications` (already supports task lists)
-  - Interleaved with recursive `completeLayer` calls on sub-layers
+### 3. RSM Type
+Contains list of blocks, start block nonterminal, terminal set, nonterminal set, and start state set Q_S.
 
-### 4. Integration with Existing Code
-- Reuse: `Submatrix` type, all helper functions (bottomSubmatrix, leftSubmatrix, rightSubmatrix, topSubmatrix, sshift, rightGrounded, leftGrounded, extractSlice, writeSlice, nextPowerOfTwo)
-- Reuse: `performMultiplications` (already takes list of triples)
-- Reuse: `terminalRulesFromGrammar`, `binaryRulesFromGrammar`, `BooleanDecomposition.decompose/recompose`
-- New: `parseModified`, `parseModifiedWithTable`, `parseModifiedWithTrace`
+### 4. Accessor Functions
+- `blocks`: list all blocks
+- `blockOf`: get block by nonterminal
+- `startBlock`: get the start block
+- `terminals`: list all terminals
+- `nonterminals`: list all nonterminals
+- `startStates`: set of all block start states (Q_S)
 
-### 5. Visualization
-- Modified trace step type: `ModifiedValiantTraceStep` with layer submatrices and colors
-- Each layer shown independently with submatrices highlighted in different colors
-- Visualize both boolean decomposition and recomposed matrices
-- Use `\cdot` for false/empty, `1` for true
-- Border and fill submatrices
-
-### 6. Tests
-- Property-based: modified Valiant == standard Valiant (same acceptance, same table)
-- TeX compilation tests for visualization steps
-- Layer correctness: each layer covers disjoint submatrices, union covers upper triangle
-
-## Files to Modify
-1. `src/FLPQ.Languages/Valiant.fs` — add modified algorithm
-2. `tests/FLPQ.Languages.Tests/ValiantTests.fs` — add tests
-3. `tests/FLPQ.Languages.Tests/TexCompilationTests.fs` — add TeX tests
-4. `docs/valiant.md` — update documentation
+## Files to Create/Modify
+1. `src/FLPQ.Languages/RSM.fs` — new module with RSM type and accessors
+2. `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add Compile entry
+3. `tests/FLPQ.Languages.Tests/RSMTests.fs` — tests
+4. `docs/rsm.md` — documentation
 
 ## Implementation Steps
-1. Implement `constructLayer`, `rightNeighbor`, `leftNeighbor`
-2. Implement `completeLayer` and `completeVLayer`
-3. Implement `parseModifiedWithTable`
-4. Implement `parseModified` and `parseModifiedWithTrace`
-5. Add property-based tests
-6. Add visualization trace type
-7. Add TeX compilation tests
-8. Update documentation
+1. Define `RsmSymbol` type
+2. Define `RsmBlock` type
+3. Define `RSM` type
+4. Implement accessor functions
+5. Write tests (construction, accessors)
+6. Update documentation

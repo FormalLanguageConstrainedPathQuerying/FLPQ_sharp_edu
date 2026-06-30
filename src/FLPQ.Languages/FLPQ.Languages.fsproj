@@ -10,6 +10,7 @@
     <Compile Include="Tokenizer.fs" />
     <Compile Include="FirstFollow.fs" />
     <Compile Include="Automaton.fs" />
+    <Compile Include="RSM.fs" />
     <Compile Include="DerivationTree.fs" />
     <Compile Include="VisualizationTypes.fs" />
     <Compile Include="DerivationTreeVisualizer.fs" />

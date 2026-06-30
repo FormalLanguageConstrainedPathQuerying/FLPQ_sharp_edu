@@ -13,6 +13,7 @@
     <Compile Include="ValiantTests.fs" />
     <Compile Include="FirstFollowTests.fs" />
     <Compile Include="AutomatonTests.fs" />
+    <Compile Include="RSMTests.fs" />
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
