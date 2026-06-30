@@ -287,4 +287,13 @@
         - Test with all applicable parsing algorithms: CYK, Valiant, modified Valiant, LL (for LL-compatible grammars), LR (for LR-compatible grammars)
         - Use the existing test grammars infrastructure: grammars that are in BNF already (grammar1, grammar2, grammar3 from tasks 6 and 11) can be mechanically converted to EBNF (e.g., `S -> a S b S | eps` in EBNF becomes `S -> a S b S | eps` — same syntax since EBNF accepts `|`), and the round-trip through RSM and back to BNF should produce an equivalent grammar
         - Add specific test: the Dyck language grammar `S -> ( a S b )*` in EBNF, converted to RSM then to BNF, should recognize the same strings as the standard BNF grammar `S -> a S b S | eps` (from task 6)
+56. [done] Refactoring.
+      1. In all RsmBuilderTests tests in EbnfParserTests.fs check that all produced boxes are really deterministic automaton. Looks like there is isDeterministic function to do it.
+      2. Add more ebnf parsing tests
+         1. `S -> a (a | b)` must produse exactly the same result as  `S -> a (a|b)` and `S -> a(a |b)`
+         2. `S -> a S | (eps)` must produce exactly the same result as `S -> a S | ((eps))` and `S -> a S |(eps)` and `S -> a S |eps`
+         3. `S -> a (a ( a | b))` must produce exactly the same result as `S -> a(a (a | b))` and `S -> a (a ( a |     b))`
+      3. Add more ebnf conversion property-based tests (using parsing)
+         1. Parisn with `S -> a S | eps` must acceps and rejects te same strings as parsing for `S -> (a*) (a*)`
+      4. Fix test ``Build RSM for a* a* grammar``  Waht is exact number of states? Explain in comments, why. I expect, it must be exactly one state and transition 0 -[a]-> 0, 0 is start and final. Are you sure you implement operatyions priority parsing correctly? This must parse like `(a*) (a*)` not `(a* a)*`
 
