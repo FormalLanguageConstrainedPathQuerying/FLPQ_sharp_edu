@@ -1,96 +1,164 @@
 # Automaton Module
 
-Generic finite automaton type and operations. Used as the basis for LR(0) and LR(1) automata construction.
+Generic finite automaton types and operations: nondeterministic (NFA) and deterministic (DFA). Used as the basis for LR automata construction and RSM blocks.
 
-## Type Definition
+## Type Definitions
 
-### `Automaton<'t, 's>`
+### `NFA<'t, 's>`
 
 ```fsharp
-type Automaton<'t, 's when 't: comparison> =
+type NFA<'t, 's when 't: comparison> =
     { states: 's list
-      transitions: Matrix<Set<'t>>
+      transitions: Matrix<Option<NonEmptySet<'t>>>
+      epsTransitions: Set<int * int>
       startStates: Set<int>
       finalStates: Set<int> }
 ```
 
-A finite automaton parameterized by transition label type `'t` and state data type `'s`.
-
+A nondeterministic finite automaton with epsilon transitions.
 - `states`: ordered list of state data (states are identified by their index).
-- `transitions`: square matrix (`n × n`) where cell `[i, j]` contains the set of symbols labeling the transition from state `i` to state `j`.
-- `startStates`: indices of initial states.
-- `finalStates`: indices of accepting states.
+- `transitions`: square matrix where cell `[i, j]` contains `Some set` of symbols labeling transitions from state `i` to `j`, or `None`.
+- `epsTransitions`: set of epsilon transitions `(fromIdx, toIdx)`, consumed without reading input.
+- `startStates`: set of initial state indices (multiple allowed).
+- `finalStates`: set of accepting state indices.
 
-## Function Signatures
-
-### `Automaton.stateCount`
+### `DFA<'t, 's>`
 
 ```fsharp
-val stateCount: Automaton<'t, 's> -> int
+type DFA<'t, 's when 't: comparison> =
+    { states: 's list
+      transitions: Matrix<Option<NonEmptySet<'t>>>
+      startState: int
+      finalStates: Set<int> }
 ```
 
-Returns the number of states in the automaton.
+A deterministic finite automaton with exactly one start state and no epsilon transitions.
+- `states`: ordered list of state data.
+- `transitions`: square matrix where cell `[i, j]` contains `Some set` of symbols, or `None`.
+- `startState`: single start state index.
+- `finalStates`: set of accepting state indices.
 
-### `Automaton.alphabet`
+## Nfa Module — Function Signatures
+
+### `Nfa.buildMatrix`
 
 ```fsharp
-val alphabet: Automaton<'t, 's> -> Set<'t>
+val buildMatrix: 's list -> (int * 't * int) list -> Matrix<Option<NonEmptySet<'t>>>
+```
+
+Builds a transition matrix from a list of `(fromIdx, symbol, toIdx)` transitions.
+
+### `Nfa.fromTransitions`
+
+```fsharp
+val fromTransitions: 's list -> (int * 't * int) list -> Set<int * int> -> Set<int> -> Set<int> -> NFA<'t, 's>
+```
+
+Constructs an NFA from transition list, epsilon transitions, start states, and final states.
+
+### `Nfa.stateCount`
+
+```fsharp
+val stateCount: NFA<'t, 's> -> int
+```
+
+Returns the number of states.
+
+### `Nfa.alphabet`
+
+```fsharp
+val alphabet: NFA<'t, 's> -> Set<'t>
 ```
 
 Collects all transition symbols appearing anywhere in the automaton.
 
-### `Automaton.move`
+### `Nfa.move`
 
 ```fsharp
-val move: Automaton<'t, 's> -> int -> 't -> Set<int>
+val move: NFA<'t, 's> -> int -> 't -> Set<int>
 ```
 
 Returns the set of state indices reachable from a given state by a specific symbol.
 
-### `Automaton.moveSet`
+### `Nfa.epsilonClosure`
 
 ```fsharp
-val moveSet: Automaton<'t, 's> -> Set<int> -> 't -> Set<int>
+val epsilonClosure: NFA<'t, 's> -> int -> Set<int>
 ```
 
-Returns the set of state indices reachable from any state in a set by a specific symbol.
-Equivalent to the union of `move` over all states in the set.
+Returns the epsilon-closure of a state: all states reachable via zero or more epsilon transitions.
 
-### `Automaton.fromTransitions`
+### `Nfa.moveSet`
 
 ```fsharp
-val fromTransitions: 's list -> (int * 't * int) list -> Set<int> -> Set<int> -> Automaton<'t, 's>
+val moveSet: NFA<'t, 's> -> Set<int> -> 't -> Set<int>
 ```
 
-Constructs an automaton from a list of transitions `(fromIdx, symbol, toIdx)`, state data, start states, and final states.
-Builds the transition matrix internally.
+Returns states reachable from any state in the set by a given symbol. Union of `move` over all states.
 
-### `Automaton.toDfa`
+### `Nfa.toDfa`
 
 ```fsharp
-val toDfa: Automaton<'t, 's> -> Automaton<'t, Set<int>>
+val toDfa: NFA<'t, 's> -> DFA<'t, Set<int>>
 ```
 
-Converts a nondeterministic automaton to a deterministic one via subset construction.
-Each state of the resulting DFA is a `Set<int>` representing a set of original state indices.
+Converts NFA to DFA via subset construction. Each DFA state is a `Set<int>` representing a set of NFA states.
 
-### `Automaton.isDeterministic`
+## Dfa Module — Function Signatures
+
+### `Dfa.fromTransitions`
 
 ```fsharp
-val isDeterministic: Automaton<'t, 's> -> bool
+val fromTransitions: 's list -> (int * 't * int) list -> int -> Set<int> -> DFA<'t, 's>
 ```
 
-Checks whether the automaton is deterministic: exactly one start state and at most one target state per symbol per source state.
+Constructs a DFA from transition list, start state, and final states.
+
+### `Dfa.stateCount`
+
+```fsharp
+val stateCount: DFA<'t, 's> -> int
+```
+
+Returns the number of states.
+
+### `Dfa.alphabet`
+
+```fsharp
+val alphabet: DFA<'t, 's> -> Set<'t>
+```
+
+Collects all transition symbols appearing anywhere in the DFA.
+
+### `Dfa.move`
+
+```fsharp
+val move: DFA<'t, 's> -> int -> 't -> int option
+```
+
+Returns the target state index reachable from a given state by a specific symbol, or `None`.
+
+### `Dfa.isDeterministic`
+
+```fsharp
+val isDeterministic: DFA<'t, 's> -> bool
+```
+
+Checks whether the DFA is deterministic: for each state and each alphabet symbol, there is at most one target state (i.e., no two columns in the same row contain the same symbol).
 
 ## Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
 | States identified by index | Transitions use integer indices; state data (`'s`) carries semantic information (e.g., set of LR items). |
-| Transition matrix over `Set<'t>` | Supports nondeterminism naturally; each cell holds all symbols for that transition. |
-| Generic over `'t` and `'s` | Reusable for LR(0) (with `Set<LR0Item>` states) and LR(1) (with `Set<LR1Item>` states). |
-| `fromTransitions` builder | Simplifies construction; clients don't need to build the transition matrix manually. |
+| Transition matrix over `Option<NonEmptySet<'t>>` | Uses `NonEmptySet` to prevent empty transition labels; supports multiple symbols between same pair of states. |
+| NFA has epsilon transitions | Explicit epsilon transitions enable natural encoding of regular expression operations (union, star). |
+| DFA has single start state, no epsilon | Deterministic semantics: exactly one transition per (state, symbol) pair. |
+| `Dfa.isDeterministic` validates construction | Since `Dfa.fromTransitions` does not enforce determinism at type level, this function is used to verify correctness of manually constructed DFAs. |
+| Generic over `'t` and `'s` | Reusable for LR(0) (with `Set<LR0Item>` states), LR(1) (with `Set<LR1Item>` states), and RSM blocks. |
 
 ## Book Relationship
 
-The automaton module provides the generic finite automaton infrastructure. It is used by the LR automata construction (`LRAutomaton.buildLR0`, `buildLR1`) to represent the resulting DFA.
+The automaton module provides the generic finite automaton infrastructure. It is used by:
+- LR automata construction (`LRAutomaton.buildLR0`, `buildLR1`) to represent the resulting DFA.
+- RSM builder (`RsmBuilder`) to construct deterministic blocks from EBNF rules via Brzozowski derivatives.

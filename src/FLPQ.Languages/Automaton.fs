@@ -185,3 +185,23 @@ module Dfa =
             | _ -> ()
 
         result
+
+    let isDeterministic (a: DFA<'t, 's>) : bool =
+        let n = stateCount a
+        let alph = alphabet a
+
+        let mutable ok = true
+
+        for i in 0 .. n - 1 do
+            for sym in alph do
+                let mutable count = 0
+
+                for j in 0 .. n - 1 do
+                    match a.transitions.data.[i, j] with
+                    | Some nes when NonEmptySet.contains sym nes -> count <- count + 1
+                    | _ -> ()
+
+                if count > 1 then
+                    ok <- false
+
+        ok
