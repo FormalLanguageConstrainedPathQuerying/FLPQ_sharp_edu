@@ -12,6 +12,7 @@
     <Compile Include="Automaton.fs" />
     <Compile Include="RSM.fs" />
     <Compile Include="EbnfParser.fs" />
+    <Compile Include="RsmToGrammar.fs" />
     <Compile Include="DerivationTree.fs" />
     <Compile Include="VisualizationTypes.fs" />
     <Compile Include="DerivationTreeVisualizer.fs" />

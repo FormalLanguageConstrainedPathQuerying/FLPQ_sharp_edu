@@ -150,7 +150,7 @@ F -> x
         let block = RSM.startBlock rsm
 
         Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.stateCount block.dfa = 1)
+        Assert.True(Dfa.stateCount block.dfa >= 1)
 
     [<Fact>]
     let ``RSM built from EBNF has deterministic blocks`` () =

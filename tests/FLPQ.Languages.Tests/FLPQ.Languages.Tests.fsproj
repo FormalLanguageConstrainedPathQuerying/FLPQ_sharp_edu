@@ -15,6 +15,7 @@
     <Compile Include="AutomatonTests.fs" />
     <Compile Include="RSMTests.fs" />
     <Compile Include="EbnfParserTests.fs" />
+    <Compile Include="RsmToGrammarTests.fs" />
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />

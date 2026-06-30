@@ -270,7 +270,7 @@
         - Grammar2 from task 11 (expression grammar): verify RSM blocks correspond to E, T, F
         - Verify that the constructed DFAs are deterministic and have the expected number of states (for simple grammars)
         - Generate dot visualizations of RSM blocks and verify they compile with graphviz (use existing infrastructure)
-    55. Implement conversion of DFA to CFG and RSM to BNF grammar.
+     [done] 55. Implement conversion of DFA to CFG and RSM to BNF grammar.
         The book (Chapter 5, `06_LinearGrammars.tex`) provides the conversion: given a DFA $M = \langle \Sigma, Q, q_s, Q_f, \delta \rangle$, build a right-linear grammar $G = \langle \Sigma, N, S, P \rangle$ where $N = Q$, $S = q_s$, $P = \{q_i \to t\,q_j \mid (q_i, t, q_j) \in \delta\} \cup \{q_i \to \varepsilon \mid q_i \in Q_f\}$.
         The book (Chapter 6, `02_EBNF.tex`, Theorem `\ref{thm:ebnf_cfg}`) describes converting an EBNF grammar back to BNF: for each rule $N \to R$, build a DFA for $R$, convert the DFA to a right-linear grammar $G_R$, then replace rule $N \to R$ with the rules of $G_R$, identifying nonterminal $N$ with the nonterminal corresponding to the DFA's start state.
         Based on this, implement the function `rsmToGrammar` that converts an RSM to a BNF grammar:

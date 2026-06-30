@@ -10,6 +10,8 @@
 * [FirstFollow module design and logic](first-follow.md)
 * [Automaton module design and logic](automaton.md)
 * [RSM module design and logic](rsm.md)
+* [EBNF Parser module design and logic](ebnf-parser.md)
+* [RSM to Grammar module design and logic](rsm-to-grammar.md)
 * [DerivationTree module design and logic](derivation-tree.md)
 * [LL parser module design and logic](ll-parser.md)
 * [LR parser module design and logic](lr-parser.md)
