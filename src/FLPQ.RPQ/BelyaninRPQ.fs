@@ -12,24 +12,6 @@ open FLPQ.Languages
 /// Propagates simultaneously through the automaton (backward) and the graph (forward).
 module BelyaninRPQ =
 
-    let private nfaToPerLabelMatrices (nfa: NFA<'t, int>) : Map<'t, Matrix<bool>> =
-        let vCount = Nfa.stateCount nfa
-        let labels = Nfa.alphabet nfa
-
-        labels
-        |> Set.toList
-        |> List.map (fun label ->
-            let m = Matrix.init vCount vCount false
-
-            for i in 0 .. vCount - 1 do
-                for j in 0 .. vCount - 1 do
-                    match nfa.transitions.data.[i, j] with
-                    | Some nes when NonEmptySet.contains label nes -> m.data.[i, j] <- true
-                    | _ -> ()
-
-            (label, m))
-        |> Map.ofList
-
     /// Run Belyanin's RPQ algorithm for a single source vertex.
     let private runSingleSource
         (dfa: DFA<'t, int>)
@@ -85,7 +67,7 @@ module BelyaninRPQ =
     /// Output: |sources| × |V| boolean matrix indicating reachable vertices from each source.
     let evaluate (dfa: DFA<'t, int>) (graph: NFA<'t, int>) : Matrix<bool> =
         let sources = graph.startStates |> Set.toArray
-        let perLabel = nfaToPerLabelMatrices graph
+        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.transitions
         let vCount = Nfa.stateCount graph
 
         let result = Matrix.init sources.Length vCount false

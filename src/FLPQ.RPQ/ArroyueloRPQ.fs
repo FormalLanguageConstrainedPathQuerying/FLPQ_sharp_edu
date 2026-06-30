@@ -1,6 +1,5 @@
 namespace FLPQ.RPQ
 
-open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 open FLPQ.Languages
@@ -11,24 +10,6 @@ open FLPQ.Languages
 /// Translates a regular expression into a Boolean matrix expression and evaluates it.
 /// Uses dense Boolean matrices.
 module ArroyueloRPQ =
-
-    let private nfaToPerLabelMatrices (nfa: NFA<'t, int>) : Map<'t, Matrix<bool>> =
-        let vCount = Nfa.stateCount nfa
-        let labels = Nfa.alphabet nfa
-
-        labels
-        |> Set.toList
-        |> List.map (fun label ->
-            let m = Matrix.init vCount vCount false
-
-            for i in 0 .. vCount - 1 do
-                for j in 0 .. vCount - 1 do
-                    match nfa.transitions.data.[i, j] with
-                    | Some nes when NonEmptySet.contains label nes -> m.data.[i, j] <- true
-                    | _ -> ()
-
-            (label, m))
-        |> Map.ofList
 
     /// Compute transitive closure of a square Boolean matrix using repeated squaring.
     let private transitiveClosure (m: Matrix<bool>) : Matrix<bool> =
@@ -84,7 +65,7 @@ module ArroyueloRPQ =
     /// Evaluate a regexp on the given graph and return a |sources| × |V| boolean reachability matrix.
     /// Sources are taken from the NFA's start states.
     let evaluate (graph: NFA<'t, int>) (regexp: Regexp<'t, 'nt>) : Matrix<bool> =
-        let perLabel = nfaToPerLabelMatrices graph
+        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.transitions
         let vCount = Nfa.stateCount graph
         let sources = graph.startStates |> Set.toArray
 

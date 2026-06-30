@@ -1,5 +1,7 @@
 namespace FLPQ.LinearAlgebra
 
+open FSharpPlus.Data
+
 /// Boolean decomposition of a matrix over sets into a family of Boolean matrices,
 /// one per distinct element. Based on definition from the book.
 module BooleanDecomposition =
@@ -19,6 +21,31 @@ module BooleanDecomposition =
         |> List.map (fun elem ->
             let boolMatrix =
                 Matrix.create m.rows m.cols (fun i j -> Set.contains elem m.data.[i, j])
+
+            (elem, boolMatrix))
+        |> Map.ofList
+
+    /// Decompose a matrix of option-of-non-empty-sets into a map from each
+    /// distinct element to a Boolean matrix where cell[i,j] = true
+    /// iff the element is in the non-empty set at that position.
+    /// None cells are treated as empty sets.
+    let decomposeNonEmptySet (m: Matrix<Option<NonEmptySet<'a>>>) : Map<'a, Matrix<bool>> =
+        let allElements =
+            [ for i in 0 .. m.rows - 1 do
+                  for j in 0 .. m.cols - 1 do
+                      match m.data.[i, j] with
+                      | Some nes -> yield! NonEmptySet.toSeq nes
+                      | None -> () ]
+            |> Set.ofList
+
+        allElements
+        |> Set.toList
+        |> List.map (fun elem ->
+            let boolMatrix =
+                Matrix.create m.rows m.cols (fun i j ->
+                    match m.data.[i, j] with
+                    | Some nes -> NonEmptySet.contains elem nes
+                    | None -> false)
 
             (elem, boolMatrix))
         |> Map.ofList
