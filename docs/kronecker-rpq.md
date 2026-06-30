@@ -2,7 +2,8 @@
 
 ## Overview
 
-The `KroneckerRPQ` module in `FLPQ.Languages` implements the Kronecker product-based RPQ algorithm with MS-BFS filtering. Based on Chapter 12, `03_TensorProduct.tex`, adapted to RPQ.
+The `KroneckerRPQ` module in `FLPQ.RPQ` implements the Kronecker product-based RPQ algorithm with MS-BFS filtering. Based on Chapter 12, `03_TensorProduct.tex`, adapted to RPQ.
+Accepts a DFA (query) and the graph as an NFA. Returns a |sources| × |V| boolean reachability matrix.
 
 ## Algorithm
 

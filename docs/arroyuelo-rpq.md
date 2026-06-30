@@ -2,7 +2,8 @@
 
 ## Overview
 
-The `ArroyueloRPQ` module in `FLPQ.Languages` implements Arroyuelo's matrix-based RPQ algorithm. Based on Chapter 11, `03_Arroyuelo.tex`.
+The `ArroyueloRPQ` module in `FLPQ.RPQ` implements Arroyuelo's matrix-based RPQ algorithm. Based on Chapter 11, `03_Arroyuelo.tex`.
+Accepts the graph as an NFA and a regular expression AST. Returns a |sources| × |V| boolean reachability matrix.
 
 ## Algorithm
 

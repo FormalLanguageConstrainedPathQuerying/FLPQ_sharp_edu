@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="GraphReader.fs" />
+    <Compile Include="BelyaninRPQ.fs" />
+    <Compile Include="ArroyueloRPQ.fs" />
+    <Compile Include="KroneckerRPQ.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\FLPQ.GraphAnalysis\FLPQ.GraphAnalysis.fsproj" />
+    <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharpPlus" Version="1.9.1" />
+  </ItemGroup>
+
+</Project>

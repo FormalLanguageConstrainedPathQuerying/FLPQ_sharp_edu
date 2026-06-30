@@ -296,7 +296,7 @@
       3. Add more ebnf conversion property-based tests (using parsing)
          1. Parisn with `S -> a S | eps` must acceps and rejects te same strings as parsing for `S -> (a*) (a*)`
         4. Fix test ``Build RSM for a* a* grammar``  Waht is exact number of states? Explain in comments, why. I expect, it must be exactly one state and transition 0 -[a]-> 0, 0 is start and final. Are you sure you implement operatyions priority parsing correctly? This must parse like `(a*) (a*)` not `(a* a)*`
-[done] 57. Implement linear-algebra based multiple-source BFS as described in the book (Chapter 3, `05_BFS.tex`, algorithm `\ref{algo:MS-BFS_linal}`). This is a building block used by RPQ algorithms, implement it before them.
+57. [done] Implement linear-algebra based multiple-source BFS as described in the book (Chapter 3, `05_BFS.tex`, algorithm `\ref{algo:MS-BFS_linal}`). This is a building block used by RPQ algorithms, implement it before them.
         MS-BFS (multiple-source BFS) performs independent BFS traversals from $k$ starting vertices simultaneously. The front is a $k \times |V|$ boolean matrix where row $i$ is the BFS front for source vertex $K[i]$. The algorithm uses two algebraic structures:
         - $\BbbB = \langle \{0,1\}, \vee, \wedge \rangle$ — standard Boolean semiring (element-wise OR as addition, AND as multiplication)
         - $\BbbM = \langle \{0,1\}, \oplus \rangle$ — mask structure with $0\oplus 0=0$, $1\oplus1=0$, $0\oplus1=0$, $1\oplus0=1$ (inverted mask: result keeps values from the first operand only where the second operand is 0)
@@ -319,7 +319,7 @@
         - Complete graph of $n$ vertices, single source $v_0$: row 0 is all-ones
         - No-source edge case: $K$ is empty, front stays zero, result is zero matrix
         - Property-based: for any graph, the MS-BFS result for source set $K$ must equal running |K| independent single-source BFS traversals and stacking the results row-wise
-[done] 58. Add matrix operations needed for MS-BFS and RPQ algorithms (Belyanin, Arroyuelo, Kronecker-based). All operations are expressed through existing generic matrix operations (map2, mxm, map, kron from tasks 2 and 3). Do not introduce ad-hoc loops.
+58. [done] Add matrix operations needed for MS-BFS and RPQ algorithms (Belyanin, Arroyuelo, Kronecker-based). All operations are expressed through existing generic matrix operations (map2, mxm, map, kron from tasks 2 and 3). Do not introduce ad-hoc loops.
         The following algebraic structures and operations are needed, as defined in the book:
         1. Boolean semiring $\BbbB = \langle \{0,1\}, \vee, \wedge \rangle$ (element-wise OR as addition `\opAddFrom{\BbbB}`, AND as multiplication `\mmultFrom{\BbbB}`). Express `\opAddFrom{\BbbB}` via `map2 (||)` and `\mmultFrom{\BbbB}` via `mxm (&&) (||) false`.
         2. Mask semiring $\BbbM = \langle \{0,1\}, \oplus \rangle$ where $0\oplus 0=0$, $1\oplus1=0$, $0\oplus1=0$, $1\oplus0=1$ — inverted mask. Express `\opAddFrom{\BbbM}` via `map2` with the custom mask operation. This is used in BFS (Chapter 3, `05_BFS.tex`) to filter the new front: `current_front ← new_front \opAddFrom{\BbbM} visited` — only vertices not yet visited remain in the front.
@@ -331,7 +331,7 @@
         5. Kronecker product $\kron$ (Chapter 1, `07_MatricesAndVectors.tex`) — already implemented as `kron` in task 3. Needed for the Kronecker-based RPQ algorithm: $K_a = N^a \kron G^a$.
         6. MS-BFS (Chapter 3, `05_BFS.tex`, algorithm `\ref{algo:MS-BFS_linal}`). Front is a $k \times |V|$ matrix where row $i$ is the BFS front for source $K[i]$. Operation: `new_front ← current_front \mmultFrom{\BbbB} M` (matrix-matrix product, each row independently propagates). Filter: `current_front ← new_front \opAddFrom{\BbbM} visited`. Initialization: for each source $i$, set `current_front[i, K[i]] ← 1`. MS-BFS is used in the Kronecker-based RPQ to filter reachable (state, vertex) pairs.
         Tests: property-based tests for each operation. `\mmultFrom{\BbbB}` must equal the standard Boolean matrix product. `\opAddFrom{\BbbM}` must correctly implement inverted mask (verify: `[1,0] +_M [0,1] = [1,0]` and `[1,1] +_M [0,1] = [0,1]`). MS-BFS on a simple path graph must produce the correct reachability matrix for multiple sources. BoolDecomposition round-trip: recomposing from per-label matrices produces the original adjacency matrix.
-[done] 59. Implement Belyanin's LARPQ algorithm (BFS-based single-source RPQ, Chapter 11, `02_BFS.tex`, algorithm `\ref{algo:RPQ_BFS_semiring}`). The algorithm operates on two $|Q| \times |V|$ matrices: front $M$ and accumulated results $P$.
+59. [done] Implement Belyanin's LARPQ algorithm (BFS-based single-source RPQ, Chapter 11, `02_BFS.tex`, algorithm `\ref{algo:RPQ_BFS_semiring}`). The algorithm operates on two $|Q| \times |V|$ matrices: front $M$ and accumulated results $P$.
         Pseudocode:
         ```
         M ← 0_{|Q|×|V|}
@@ -361,7 +361,7 @@
         - Query `a | b` on graph with both `a` and `b` edges from v0: verify both paths considered
         - Query with reverse label `a^-`: verify traversing edge backward
         - Use test grammars infrastructure for reusable test cases
-[done] 60. Implement Arroyuelo's RPQ algorithm (Chapter 11, `03_Arroyuelo.tex`). Translate a 2-way regular expression $E$ (over $L^{\leftrightarrow}$ with forward labels $a$ and backward labels $a^{-}$) into a Boolean matrix expression and evaluate it.
+60. [done] Implement Arroyuelo's RPQ algorithm (Chapter 11, `03_Arroyuelo.tex`). Translate a 2-way regular expression $E$ (over $L^{\leftrightarrow}$ with forward labels $a$ and backward labels $a^{-}$) into a Boolean matrix expression and evaluate it.
         The translation function $\mathcal{M}$ maps each sub-expression to a Boolean matrix:
         - $\mathcal{M}(\varepsilon) = I$ (identity matrix)
         - $\mathcal{M}(a) = M_a$ (graph adjacency matrix for label $a$)
@@ -382,7 +382,7 @@
         - Query with star: `a*` on graph `v0 -[a]-> v1 -[a]-> v2`, all pairs within the reachable set
         - Query with alternation + concatenation: `a (b|c)` on graph with both branches
         - Identity: query `\varepsilon` returns identity matrix (every vertex reaches itself)
-[done] 61. Implement RPQ algorithm based on Kronecker product of adjacency matrices with MS-BFS filtering. This algorithm is not described explicitly in the book but follows from the tensor product approach in Chapter 12 (`03_TensorProduct.tex`) adapted to RPQ:
+61. [done] Implement RPQ algorithm based on Kronecker product of adjacency matrices with MS-BFS filtering. This algorithm is not described explicitly in the book but follows from the tensor product approach in Chapter 12 (`03_TensorProduct.tex`) adapted to RPQ:
         Given a regular expression query parsed into a DFA (via EBNF parser from task 54, reuse the automaton), build a single large intersection matrix via the Kronecker product and then filter reachable (state, vertex) pairs using MS-BFS.
         Algorithm steps:
         1. Compute kronecker product of transition matrices where elementwise operation is a set intersection.
@@ -394,11 +394,11 @@
         - Same test cases as for Belyanin (task 58) and Arroyuelo (task 59) — all three must produce identical results
         - Multiple sources: graph with vertices v0, v1, v2 and edges v0-[a]->v2, v1-[b]->v2. Query `a` from sources [v0, v1]: only v2 reachable from v0
         - Single-state automaton (epsilon query): the Kronecker product is just the graph adjacency — MS-BFS reduces to standard multi-source BFS
-[done] 62. Implement graph reading function. Input format for graph files:
+62. [done] Implement graph reading function. Input format for graph files:
         - First line (optional): space-separated list of start vertex indices (0-based). If absent, all vertices are considered start vertices
         - Following lines: triples `fromVertex label toVertex`
         - Parse the file into graph adjacency representation, then build per-label boolean matrices. 
-[done] 63. Property-based tests: all three RPQ algorithms (Belyanin, Arroyuelo, Kronecker+MS-BFS) must return identical results on any input.
+63. [done] Property-based tests: all three RPQ algorithms (Belyanin, Arroyuelo, Kronecker+MS-BFS) must return identical results on any input.
         Generate random test data:
         1. Random regular expressions over a small alphabet (2–4 symbols). Build random regex ASTs using the EBNF regex type (Epsilon, Terminal from alphabet, Concatenate, Alternative, Star). Avoid excessive nesting (limit depth to 3–4) to keep expressions manageable.
         2. Convert each regex to a DFA via the derivatives-based construction from the EBNF parser (task 54) to get the automaton for Belyanin and Kronecker algorithms.
@@ -412,6 +412,11 @@
         - Assert all three result matrices are identical
         - Also test: for single-source case, Belyanin result equals the corresponding row of Arroyuelo result
         - Test with all semantics (reachability, simple paths, trails if implemented)
+[done] 64. Refactoring. 
+    1. Move RPQ algorithms to separsted project (tests too).
+    2. Move MS-BFS to GraphAnalysis project. Create respective tests project.
+    3. Unify RPQ algorithms interafece. All of them must accept graph as NFA. Graph builder must returns NFA. Start vertices are start states of NFA. 
+    4. Implement fold for Matrix<'t> Use it instead anyTrue in ms-bfs.
 
 
 

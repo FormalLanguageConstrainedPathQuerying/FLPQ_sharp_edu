@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,9 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Matrix.fs" />
-    <Compile Include="LinearAlgebra.fs" />
-    <Compile Include="BooleanDecomposition.fs" />
+    <Compile Include="MsBfs.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

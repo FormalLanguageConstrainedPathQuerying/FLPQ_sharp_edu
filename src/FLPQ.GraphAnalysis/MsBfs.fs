@@ -1,4 +1,6 @@
-namespace FLPQ.LinearAlgebra
+namespace FLPQ.GraphAnalysis
+
+open FLPQ.LinearAlgebra
 
 /// Multiple-source BFS and supporting matrix operations for RPQ algorithms.
 /// Based on Chapter 3, 05_BFS.tex, algorithm algo:MS-BFS_linal.
@@ -25,14 +27,7 @@ module MsBfs =
 
     /// Check if a boolean matrix has any true cell.
     let private anyTrue (m: Matrix<bool>) : bool =
-        let mutable found = false
-
-        for i in 0 .. m.rows - 1 do
-            for j in 0 .. m.cols - 1 do
-                if m.data.[i, j] then
-                    found <- true
-
-        found
+        Matrix.fold (fun acc x -> acc || x) false m
 
     /// Multiple-source BFS (MS-BFS).
     /// Performs independent BFS traversals from k starting vertices simultaneously.

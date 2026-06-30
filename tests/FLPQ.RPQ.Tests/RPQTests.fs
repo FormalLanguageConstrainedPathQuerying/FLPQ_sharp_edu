@@ -3,36 +3,21 @@ module RPQTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
-open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.Languages
+open FLPQ.RPQ
+open FLPQ.GraphAnalysis
 
 module MyGen = FsCheck.FSharp.Gen
 module MyArb = FsCheck.FSharp.Arb
 
-let private smallGraph (edges: (int * string * int) list) : Map<string, Matrix<bool>> =
+let private smallGraphNfa (edges: (int * string * int) list) : NFA<string, int> =
     let allVerts = edges |> List.collect (fun (f, _, t) -> [ f; t ]) |> List.distinct
-
     let vCount = if List.isEmpty allVerts then 0 else (List.max allVerts) + 1
+    let states = [ 0 .. vCount - 1 ]
+    Nfa.fromTransitions states edges Set.empty Set.empty Set.empty
 
-    let labels = edges |> List.map (fun (_, l, _) -> l) |> List.distinct
-
-    labels
-    |> List.map (fun label ->
-        let m = Matrix.init vCount vCount false
-
-        for (f, l, t) in edges do
-            if l = label then
-                m.data.[f, t] <- true
-
-        (label, m))
-    |> Map.ofList
-
-let private vCount (adj: Map<string, Matrix<bool>>) =
-    adj
-    |> Map.values
-    |> Seq.tryHead
-    |> Option.map (fun m -> m.rows)
-    |> Option.defaultValue 0
+let private vc (nfa: NFA<string, int>) = Nfa.stateCount nfa
 
 let private buildDfa (transitions: (int * string * int) list) (startState: int) (finalStates: int list) =
     let allStates =
@@ -44,145 +29,146 @@ let private buildDfa (transitions: (int * string * int) list) (startState: int) 
 
     Dfa.fromTransitions (List.map id allStates) transitions startState (Set.ofList finalStates)
 
-// --- GraphReader tests (task 62) ---
+let private nfaWithSources (edges: (int * string * int) list) (sources: int list) : NFA<string, int> =
+    let allVerts = edges |> List.collect (fun (f, _, t) -> [ f; t ]) |> List.distinct
+
+    let allWithSources = allVerts @ sources |> List.distinct
+
+    let vCount =
+        if List.isEmpty allWithSources then
+            0
+        else
+            (List.max allWithSources) + 1
+
+    let states = [ 0 .. vCount - 1 ]
+    Nfa.fromTransitions states edges Set.empty (Set.ofList sources) Set.empty
+
+// --- GraphReader tests (task 62, updated for task 64) ---
 
 [<Fact>]
 let ``GraphReader: no start vertices specified, all vertices as sources`` () =
     let text = "0 a 1\n1 b 2"
     let g = GraphReader.parseGraph text
-    Assert.Equal<int>(3, g.vertexCount)
-    Assert.Equal<int>(3, g.startVertices.Length)
-    Assert.Equal(0, g.startVertices.[0])
-    Assert.Equal(1, g.startVertices.[1])
-    Assert.Equal(2, g.startVertices.[2])
+    Assert.Equal(3, Nfa.stateCount g)
+    Assert.True(Set.ofList [ 0; 1; 2 ] = g.startStates)
+    Assert.True(g.transitions.data.[0, 1].IsSome)
+    Assert.True(g.transitions.data.[1, 2].IsSome)
 
 [<Fact>]
 let ``GraphReader: explicit start vertices`` () =
     let text = "0 2\n0 a 1\n1 b 2"
     let g = GraphReader.parseGraph text
-    Assert.Equal<int>(3, g.vertexCount)
-    Assert.Equal<int>(2, g.startVertices.Length)
-    Assert.Equal(0, g.startVertices.[0])
-    Assert.Equal(2, g.startVertices.[1])
+    Assert.Equal(3, Nfa.stateCount g)
+    Assert.True(Set.ofList [ 0; 2 ] = g.startStates)
 
 [<Fact>]
 let ``GraphReader: per-label adjacency`` () =
     let text = "0 a 1\n0 b 2"
     let g = GraphReader.parseGraph text
-    Assert.Equal<int>(2, g.labels.Count)
-    Assert.True(g.adjacency.ContainsKey "a")
-    Assert.True(g.adjacency.ContainsKey "b")
-    Assert.True(g.adjacency.["a"].data.[0, 1])
-    Assert.True(g.adjacency.["b"].data.[0, 2])
+    Assert.True(Set.ofList [ "a"; "b" ] = Nfa.alphabet g)
+    Assert.True(g.transitions.data.[0, 1].IsSome)
+    Assert.True(g.transitions.data.[0, 2].IsSome)
 
-// --- Belyanin tests (task 59) ---
+// --- Belyanin tests (task 59, updated for task 64) ---
 
 [<Fact>]
 let ``Belyanin: single edge v0-[a]->v1, query a, v1 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1) ]
+    let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
-    let result = BelyaninRPQ.evaluate dfa adj 0
-    Assert.True(result.[1])
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.True(result.data.[0, 1])
 
 [<Fact>]
 let ``Belyanin: v0-[a]->v1-[b]->v2, query a*b, v2 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "b", 2) ]
-    // DFA for a* b: 0 -a-> 0, 0 -b-> 1(final)
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0); (0, "b", 1) ] 0 [ 1 ]
-    let result = BelyaninRPQ.evaluate dfa adj 0
-    Assert.True(result.[2])
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Belyanin: v0-[a]->v1-[a]->v2, query a+, v1 and v2 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "a", 2) ]
-    // DFA for a+: 0 -a-> 1, 1 -a-> 1(final)
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1); (1, "a", 1) ] 0 [ 1 ]
-    let result = BelyaninRPQ.evaluate dfa adj 0
-    Assert.True(result.[1])
-    Assert.True(result.[2])
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.True(result.data.[0, 1])
+    Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Belyanin: cycle v0-[a]->v1-[a]->v0, query a*, both reachable`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "a", 0) ]
-    // DFA for a*: 0 -a-> 0(final)
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 0) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0) ] 0 [ 0 ]
-    let result = BelyaninRPQ.evaluate dfa adj 0
-    Assert.True(result.[0])
-    Assert.True(result.[1])
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.True(result.data.[0, 0])
+    Assert.True(result.data.[0, 1])
 
-// --- Arroyuelo tests (task 60) ---
+// --- Arroyuelo tests (task 60, updated for task 64) ---
 
 [<Fact>]
 let ``Arroyuelo: single edge v0-[a]->v1, query a, v1 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1) ]
-    let vc = vCount adj
+    let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let regexp = Regexp.RTerm(Terminal "a")
-    let result = ArroyueloRPQ.evaluateWithSources adj vc regexp (Some [| 0 |])
+    let result = ArroyueloRPQ.evaluate nfa regexp
     Assert.True(result.data.[0, 1])
 
 [<Fact>]
 let ``Arroyuelo: v0-[a]->v1-[b]->v2, query a b, v2 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "b", 2) ]
-    let vc = vCount adj
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let regexp = Regexp.RSeq(Regexp.RTerm(Terminal "a"), Regexp.RTerm(Terminal "b"))
-    let result = ArroyueloRPQ.evaluateWithSources adj vc regexp (Some [| 0 |])
+    let result = ArroyueloRPQ.evaluate nfa regexp
     Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Arroyuelo: alternation a|b, both branches`` () =
-    let adj = smallGraph [ (0, "a", 1); (0, "b", 2) ]
-    let vc = vCount adj
+    let nfa = nfaWithSources [ (0, "a", 1); (0, "b", 2) ] [ 0 ]
     let regexp = Regexp.RAlt(Regexp.RTerm(Terminal "a"), Regexp.RTerm(Terminal "b"))
-    let result = ArroyueloRPQ.evaluateWithSources adj vc regexp (Some [| 0 |])
+    let result = ArroyueloRPQ.evaluate nfa regexp
     Assert.True(result.data.[0, 1])
     Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Arroyuelo: Kleene star a* on path, all pairs`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "a", 2) ]
-    let vc = vCount adj
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 2) ] [ 0 ]
     let regexp = Regexp.RStar(Regexp.RTerm(Terminal "a"))
-    let result = ArroyueloRPQ.evaluateWithSources adj vc regexp (Some [| 0 |])
+    let result = ArroyueloRPQ.evaluate nfa regexp
     Assert.True(result.data.[0, 0])
     Assert.True(result.data.[0, 1])
     Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Arroyuelo: epsilon query returns identity`` () =
-    let adj = smallGraph [ (0, "a", 1) ]
-    let vc = vCount adj
+    let nfa = nfaWithSources [ (0, "a", 1) ] [ 0; 1 ]
     let regexp = Regexp.REps
-    let result = ArroyueloRPQ.evaluateWithSources adj vc regexp (Some [| 0; 1 |])
+    let result = ArroyueloRPQ.evaluate nfa regexp
     Assert.True(result.data.[0, 0])
     Assert.False(result.data.[0, 1])
     Assert.True(result.data.[1, 1])
     Assert.False(result.data.[1, 0])
 
-// --- Kronecker tests (task 61) ---
+// --- Kronecker tests (task 61, updated for task 64) ---
 
 [<Fact>]
 let ``Kronecker: single edge v0-[a]->v1, query a, v1 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1) ]
+    let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
-    let result = KroneckerRPQ.evaluate dfa adj [| 0 |]
+    let result = KroneckerRPQ.evaluate dfa nfa
     Assert.True(result.data.[0, 1])
 
 [<Fact>]
 let ``Kronecker: v0-[a]->v1-[b]->v2, query a*b, v2 reachable`` () =
-    let adj = smallGraph [ (0, "a", 1); (1, "b", 2) ]
+    let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0); (0, "b", 1) ] 0 [ 1 ]
-    let result = KroneckerRPQ.evaluate dfa adj [| 0 |]
+    let result = KroneckerRPQ.evaluate dfa nfa
     Assert.True(result.data.[0, 2])
 
 [<Fact>]
 let ``Kronecker: multiple sources, only one connects`` () =
-    let adj = smallGraph [ (0, "a", 2); (1, "b", 2) ]
+    let nfa = nfaWithSources [ (0, "a", 2); (1, "b", 2) ] [ 0; 1 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
-    let result = KroneckerRPQ.evaluate dfa adj [| 0; 1 |]
+    let result = KroneckerRPQ.evaluate dfa nfa
     Assert.True(result.data.[0, 2])
     Assert.False(result.data.[1, 2])
 
-// --- Cross-algorithm property-based tests (task 63) ---
+// --- Cross-algorithm property-based tests (task 63, updated for task 64) ---
 
 type RPQTestData =
     { vertexCount: int
@@ -210,7 +196,7 @@ type RPQGenerators =
                                 |> MyGen.map (fun sources ->
                                     let edges =
                                         List.zip3 fromList labelList toList
-                                        |> List.filter (fun (f, _, t) -> f <> t) // no self-loops
+                                        |> List.filter (fun (f, _, t) -> f <> t)
 
                                     { vertexCount = n
                                       edges = edges
@@ -220,37 +206,17 @@ type RPQGenerators =
 [<Properties(Arbitrary = [| typeof<RPQGenerators> |])>]
 module PropertyTests =
 
-    let private smallGraphFromEdges (edges: (int * string * int) list) : Map<string, Matrix<bool>> =
-        let vCount =
-            if List.isEmpty edges then
-                0
-            else
-                let mutable m = -1
+    let private smallGraphNfaFromEdges (vCount: int) (edges: (int * string * int) list) : NFA<string, int> =
+        let states = [ 0 .. vCount - 1 ]
+        Nfa.fromTransitions states edges Set.empty Set.empty Set.empty
 
-                for (f, _, t) in edges do
-                    m <- max m (max f t)
-
-                m + 1
-
-        let labels = edges |> List.map (fun (_, l, _) -> l) |> List.distinct
-
-        labels
-        |> List.map (fun label ->
-            let m = Matrix.init vCount vCount false
-
-            for (f, l, t) in edges do
-                if l = label then
-                    m.data.[f, t] <- true
-
-            (label, m))
-        |> Map.ofList
-
-    let private vc (adj: Map<string, Matrix<bool>>) =
-        adj
-        |> Map.values
-        |> Seq.tryHead
-        |> Option.map (fun m -> m.rows)
-        |> Option.defaultValue 0
+    let private nfaWithSourcesProp
+        (vCount: int)
+        (edges: (int * string * int) list)
+        (sources: int[])
+        : NFA<string, int> =
+        let states = [ 0 .. vCount - 1 ]
+        Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
 
     [<Property>]
     let ``Belyanin and Arroyuelo produce identical results for single source with single-label regex``
@@ -259,30 +225,24 @@ module PropertyTests =
         if d.sources.Length = 0 then
             true
         else
-            let adj = smallGraphFromEdges d.edges
-            let v = vc adj
+            let v = d.vertexCount
 
             if v = 0 then
                 true
             else
-                // Build a simple DFA for label "a": 0 -a-> 1(final)
-                let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
-
-                // Run Belyanin for first source
                 let source = min d.sources.[0] (v - 1)
+                let nfaBely = nfaWithSourcesProp v d.edges [| source |]
+                let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
+                let belyResult = BelyaninRPQ.evaluate dfa nfaBely
 
-                let belyResult = BelyaninRPQ.evaluate dfa adj source
-
-                // Run Arroyuelo with regex "a", all sources
+                let nfaArro = nfaWithSourcesProp v d.edges [| source |]
                 let regexp = Regexp.RTerm(Terminal "a")
-                let safeSources = d.sources |> Array.map (fun s -> min s (v - 1))
-                let arroResult = ArroyueloRPQ.evaluateWithSources adj v regexp (Some safeSources)
+                let arroResult = ArroyueloRPQ.evaluate nfaArro regexp
 
-                // Compare row for first source
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.[j] <> arroResult.data.[0, j] then
+                    if belyResult.data.[0, j] <> arroResult.data.[0, j] then
                         ok <- false
 
                 ok
@@ -292,21 +252,21 @@ module PropertyTests =
         if d.sources.Length = 0 then
             true
         else
-            let adj = smallGraphFromEdges d.edges
-            let v = vc adj
+            let v = d.vertexCount
 
             if v = 0 then
                 true
             else
-                let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
                 let source = min d.sources.[0] (v - 1)
-                let belyResult = BelyaninRPQ.evaluate dfa adj source
-                let kronResult = KroneckerRPQ.evaluate dfa adj [| source |]
+                let nfa = nfaWithSourcesProp v d.edges [| source |]
+                let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
+                let belyResult = BelyaninRPQ.evaluate dfa nfa
+                let kronResult = KroneckerRPQ.evaluate dfa nfa
 
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.[j] <> kronResult.data.[0, j] then
+                    if belyResult.data.[0, j] <> kronResult.data.[0, j] then
                         ok <- false
 
                 ok
@@ -316,21 +276,24 @@ module PropertyTests =
         if d.sources.Length = 0 then
             true
         else
-            let adj = smallGraphFromEdges d.edges
-            let v = vc adj
+            let v = d.vertexCount
 
             if v = 0 then
                 true
             else
+                let safeSources =
+                    d.sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
+
+                let nfa = nfaWithSourcesProp v d.edges safeSources
                 let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
                 let regexp = Regexp.RTerm(Terminal "a")
-                let safeSources = d.sources |> Array.map (fun s -> min s (v - 1))
-                let arroResult = ArroyueloRPQ.evaluateWithSources adj v regexp (Some safeSources)
-                let kronResult = KroneckerRPQ.evaluate dfa adj safeSources
+                let arroResult = ArroyueloRPQ.evaluate nfa regexp
+                let kronResult = KroneckerRPQ.evaluate dfa nfa
 
                 let mutable ok = true
+                let rows = arroResult.rows
 
-                for i in 0 .. safeSources.Length - 1 do
+                for i in 0 .. rows - 1 do
                     for j in 0 .. v - 1 do
                         if arroResult.data.[i, j] <> kronResult.data.[i, j] then
                             ok <- false

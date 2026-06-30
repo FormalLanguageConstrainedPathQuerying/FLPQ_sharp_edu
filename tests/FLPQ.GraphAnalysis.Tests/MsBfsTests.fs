@@ -4,6 +4,7 @@ open Xunit
 open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
+open FLPQ.GraphAnalysis
 
 module MyGen = FsCheck.FSharp.Gen
 module MyArb = FsCheck.FSharp.Arb

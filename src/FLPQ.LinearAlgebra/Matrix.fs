@@ -23,6 +23,15 @@ module Matrix =
           cols = Array2D.length2 arr
           data = arr }
 
+    let fold (folder: 'acc -> 'a -> 'acc) (state: 'acc) (m: Matrix<'a>) : 'acc =
+        let mutable acc = state
+
+        for i in 0 .. m.rows - 1 do
+            for j in 0 .. m.cols - 1 do
+                acc <- folder acc m.data.[i, j]
+
+        acc
+
     let map (f: 'a -> 'b) (m: Matrix<'a>) : Matrix<'b> =
         let data = Array2D.map f m.data
 

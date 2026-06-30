@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `MsBfs` module in `FLPQ.LinearAlgebra` implements the multiple-source BFS algorithm and supporting Boolean semiring operations. Based on Chapter 3, `05_BFS.tex`.
+The `MsBfs` module in `FLPQ.GraphAnalysis` implements the multiple-source BFS algorithm and supporting Boolean semiring operations. Based on Chapter 3, `05_BFS.tex`.
 
 ## Type Definitions
 

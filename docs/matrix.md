@@ -67,6 +67,12 @@ Element-wise binary operation on two matrices. Applies `f` to corresponding cell
 **Postcondition**:
 - Result has dimensions `a.rows × a.cols`.
 
+#### `fold`
+```fsharp
+val fold: folder:('acc -> 'a -> 'acc) -> state:'acc -> m:Matrix<'a> -> 'acc
+```
+Left-to-right, top-to-bottom fold over all matrix cells. Applies `folder` to the accumulator and each cell in row-major order.
+
 #### `transpose`
 ```fsharp
 val transpose: Matrix<'a> -> Matrix<'a>

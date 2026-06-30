@@ -13,10 +13,6 @@
     <Compile Include="RSM.fs" />
     <Compile Include="EbnfParser.fs" />
     <Compile Include="RsmToGrammar.fs" />
-    <Compile Include="GraphReader.fs" />
-    <Compile Include="BelyaninRPQ.fs" />
-    <Compile Include="ArroyueloRPQ.fs" />
-    <Compile Include="KroneckerRPQ.fs" />
     <Compile Include="DerivationTree.fs" />
     <Compile Include="VisualizationTypes.fs" />
     <Compile Include="DerivationTreeVisualizer.fs" />

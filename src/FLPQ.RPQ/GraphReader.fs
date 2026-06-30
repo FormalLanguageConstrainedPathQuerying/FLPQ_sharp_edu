@@ -1,22 +1,16 @@
-namespace FLPQ.Languages
+namespace FLPQ.RPQ
 
 open System.IO
 open FLPQ.LinearAlgebra
+open FLPQ.Languages
 
 /// Graph file reading.
 /// Input format:
 /// - First line (optional): space-separated list of start vertex indices (0-based).
 ///   If absent, all vertices are considered start vertices.
 /// - Following lines: triples `fromVertex label toVertex`
-/// Builds per-label boolean adjacency matrices.
+/// Returns the graph as an NFA where states are vertices and transitions are edges.
 module GraphReader =
-
-    /// Parsed graph data: per-label adjacency matrices and start vertices.
-    type LabeledGraph<'t when 't: comparison> =
-        { vertexCount: int
-          labels: Set<'t>
-          adjacency: Map<'t, Matrix<bool>>
-          startVertices: int[] }
 
     let private parseLine (line: string) : (int * string * int) option =
         let trimmed = line.Trim()
@@ -34,9 +28,9 @@ module GraphReader =
             let toV = System.Int32.Parse parts.[2]
             Some(fromV, label, toV)
 
-    /// Parse a graph from text.
-    /// Returns a Map from label to boolean adjacency matrix and the set of start vertices.
-    let parseGraph (text: string) : LabeledGraph<string> =
+    /// Parse a graph from text and return it as an NFA.
+    /// Vertices become states, edges become transitions, start vertices become start states.
+    let parseGraph (text: string) : NFA<string, int> =
         let lines =
             text.Split('\n', System.StringSplitOptions.RemoveEmptyEntries)
             |> Array.map (fun s -> s.Trim())
@@ -62,9 +56,6 @@ module GraphReader =
 
         let edges = edgeLines |> List.choose parseLine
 
-        let labels =
-            edges |> List.map (fun (_, label, _) -> label) |> List.distinct |> Set.ofList
-
         let maxVertex =
             if List.isEmpty edges then
                 -1
@@ -78,29 +69,17 @@ module GraphReader =
 
         let vertexCount = maxVertex + 1
 
-        let adjacency =
-            labels
-            |> Set.toList
-            |> List.map (fun label ->
-                let matrix = Matrix.init vertexCount vertexCount false
+        let states = [ 0 .. vertexCount - 1 ]
 
-                for (fromV, l, toV) in edges do
-                    if l = label then
-                        matrix.data.[fromV, toV] <- true
+        let transitions = edges |> List.map (fun (fromV, label, toV) -> (fromV, label, toV))
 
-                (label, matrix))
-            |> Map.ofList
-
-        let startVerticesArr =
+        let startStatesSet =
             if startVertices.Length = 0 && vertexCount > 0 then
-                [| 0 .. vertexCount - 1 |]
+                Set.ofList [ 0 .. vertexCount - 1 ]
             else
-                startVertices
+                Set.ofArray startVertices
 
-        { vertexCount = vertexCount
-          labels = labels
-          adjacency = adjacency
-          startVertices = startVerticesArr }
+        Nfa.fromTransitions states transitions Set.empty startStatesSet Set.empty
 
     /// Parse a graph from a file.
-    let parseGraphFile (path: string) : LabeledGraph<string> = File.ReadAllText path |> parseGraph
+    let parseGraphFile (path: string) : NFA<string, int> = File.ReadAllText path |> parseGraph

@@ -2,7 +2,8 @@
 
 ## Overview
 
-The `BelyaninRPQ` module in `FLPQ.Languages` implements Belyanin's BFS-based single-source RPQ algorithm. Based on Chapter 11, `02_BFS.tex`, algorithm `algo:RPQ_BFS_semiring`.
+The `BelyaninRPQ` module in `FLPQ.RPQ` implements Belyanin's LARPQ algorithm. Based on Chapter 11, `02_BFS.tex`, algorithm `algo:RPQ_BFS_semiring`.
+Accepts a DFA (query) and the graph as an NFA. Returns a |sources| × |V| boolean reachability matrix.
 
 ## Algorithm
 
