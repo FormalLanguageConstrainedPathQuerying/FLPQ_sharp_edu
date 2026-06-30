@@ -19,15 +19,16 @@ Operates on two |Q|×|V| matrices: front M and accumulated results P.
 
 ## Function Signatures
 
-### `evaluate: DFA<'t, int> -> Map<'t, Matrix<bool>> -> int -> bool[]`
+### `evaluate: DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
 Run Belyanin's RPQ algorithm.
-- Input: DFA (query automaton), per-label graph adjacency matrices, start vertex index.
-- Output: boolean vector of length |V| indicating reachable vertices from v_s.
+- Input: DFA (query automaton) and graph as NFA.
+- Output: |sources| × |V| boolean matrix where each row indicates reachable vertices from the corresponding source vertex.
+- Sources are taken from the NFA's start states. Per-label graph matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`.
 
 ## Design Decisions
 
-- Uses DFA's single start state (deterministic automaton).
-- Per-label matrices are built on-the-fly from the DFA's transition matrix.
+- Sources are taken from the NFA's start states; runs the single-source algorithm per source and stacks results.
+- Per-label graph matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`.
 - Uses `MsBfs.boolAdd`, `MsBfs.boolMul`, and `MsBfs.maskFilter` for Boolean semiring operations.
 - The index-based unary operator I^P_reach is implemented via `maskFilter`: filtering out already accumulated (q,v) pairs from P.
 

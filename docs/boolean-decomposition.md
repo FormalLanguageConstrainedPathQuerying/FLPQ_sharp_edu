@@ -2,7 +2,7 @@
 
 ## Module Purpose
 
-Implements boolean decomposition of matrices over sets, as defined in the book. Decomposes a `Matrix<Set<'a>>` into a family of `Matrix<bool>`, one per distinct element. The inverse operation reconstructs the original set-valued matrix from the decomposition.
+Implements boolean decomposition of matrices over sets and non-empty sets, as defined in the book. Decomposes a `Matrix<Set<'a>>` (or `Matrix<Option<NonEmptySet<'a>>>`) into a family of `Matrix<bool>`, one per distinct element. The inverse operation reconstructs the original set-valued matrix from the decomposition.
 
 ## Function Signatures
 
@@ -13,6 +13,12 @@ val decompose: Matrix<Set<'a>> -> Map<'a, Matrix<bool>>
 Decomposes a matrix of sets into a map from each distinct element to a Boolean matrix of the same dimensions. The Boolean matrix at key `e` has `true` at position `[i,j]` iff `e ∈ original[i,j]`.
 
 **Postcondition**: For each key `e` in the result, `result[e].rows = original.rows` and `result[e].cols = original.cols`.
+
+### `decomposeNonEmptySet`
+```fsharp
+val decomposeNonEmptySet: Matrix<Option<NonEmptySet<'a>>> -> Map<'a, Matrix<bool>>
+```
+Decomposes a matrix of option-of-non-empty-sets. None cells are treated as empty. Equivalent semantics to `decompose` but works directly on the `NonEmptySet` representation used by automaton transition matrices.
 
 ### `recompose`
 ```fsharp

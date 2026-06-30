@@ -16,10 +16,11 @@ The result is a |startVertices|×|V| boolean reachability matrix.
 
 ## Function Signatures
 
-### `evaluate: DFA<'t, int> -> Map<'t, Matrix<bool>> -> int[] -> Matrix<bool>`
+### `evaluate: DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
 Run Kronecker-based RPQ.
-- Input: DFA query, per-label graph adjacency matrices, source vertex indices.
-- Output: |sources|×|V| boolean reachability matrix.
+- Input: DFA query and graph as NFA.
+- Output: |sources| × |V| boolean reachability matrix.
+- Sources are taken from the NFA's start states. Per-label graph matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`.
 
 ## Design Decisions
 

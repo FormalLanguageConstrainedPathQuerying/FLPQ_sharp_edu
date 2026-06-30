@@ -19,11 +19,8 @@ Uses dense Boolean matrices. The key contribution is the mapping from regular ex
 
 ## Function Signatures
 
-### `evaluate: Map<'t, Matrix<bool>> -> int -> Regexp<'t, 'nt> -> Matrix<bool>`
-Evaluate a regular expression AST to a full |V|×|V| Boolean matrix.
-
-### `evaluateWithSources: Map<'t, Matrix<bool>> -> int -> Regexp<'t, 'nt> -> int[] option -> Matrix<bool>`
-Evaluate a regexp and restrict to source rows. Returns |startVertices|×|V| matrix.
+### `evaluate: NFA<'t, int> -> Regexp<'t, 'nt> -> Matrix<bool>`
+Evaluate a regular expression AST on the given graph. The graph is provided as an NFA where states are vertices and transitions are labeled edges. Per-label boolean adjacency matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`. Returns a |sources| × |V| boolean reachability matrix where sources are taken from the NFA's start states.
 
 ### `transitiveClosure: Matrix<bool> -> Matrix<bool>` (private)
 Compute transitive closure of a square Boolean matrix using repeated squaring.
@@ -33,7 +30,8 @@ Compute transitive closure of a square Boolean matrix using repeated squaring.
 - Reuses the `Regexp` AST type from `EbnfParser.fs`.
 - Transitive closure uses O(n) iterations of repeated squaring (n = matrix size).
 - Uses `MsBfs.boolAdd` and `MsBfs.boolMul` for Boolean semiring operations.
-- Source restriction: when sources are specified, extracts corresponding rows from the full matrix.
+- Uses `BooleanDecomposition.decomposeNonEmptySet` to derive per-label matrices from the NFA.
+- Sources are taken from the NFA's start states; the full |V|×|V| result is restricted to source rows.
 
 ## Relationship to the Book
 
