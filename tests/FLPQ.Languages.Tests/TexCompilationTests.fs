@@ -69,7 +69,7 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings "a a")
+        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     Assert.NotEmpty(trace)
 
@@ -86,7 +86,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings "a a")
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     Assert.NotEmpty(trace)
 
@@ -102,7 +102,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``Modified Valiant trace TeX with expression grammar compiles`` () =
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings "x + x")
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize "x + x")
 
     Assert.NotEmpty(trace)
 

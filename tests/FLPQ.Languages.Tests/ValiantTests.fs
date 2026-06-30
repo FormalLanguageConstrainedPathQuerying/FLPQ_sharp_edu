@@ -23,13 +23,13 @@ module ValiantParseTests =
             for s in accept do
                 Assert.Equal(
                     Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s),
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s)
+                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s)
                 )
 
             for s in reject do
                 Assert.Equal(
                     Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s),
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s)
+                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s)
                 )
 
     [<Fact>]
@@ -37,11 +37,11 @@ module ValiantParseTests =
         let input = "a b"
 
         let table, accepted =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         Assert.True(accepted)
-        Assert.Equal(Tokenizer.tokenizeStrings input |> List.length, table.rows)
-        Assert.Equal(Tokenizer.tokenizeStrings input |> List.length, table.cols)
+        Assert.Equal(Tokenizer.tokenize input |> List.length, table.rows)
+        Assert.Equal(Tokenizer.tokenize input |> List.length, table.cols)
 
     [<Fact>]
     let ``Valiant table matches CYK table for small example`` () =
@@ -51,7 +51,7 @@ module ValiantParseTests =
             Cyk.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize input)
 
         let valTable, valAcc =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize input)
 
         Assert.Equal(cykAcc, valAcc)
         Assert.Equal(cykTable.rows, valTable.rows)
@@ -71,7 +71,7 @@ module ValiantParseTests =
             Cyk.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         let valTable, valAcc =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         Assert.Equal(cykAcc, valAcc)
 
@@ -94,14 +94,14 @@ module ModifiedValiantTests =
         for (g, accept, reject) in cases do
             for s in accept do
                 Assert.Equal(
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s),
-                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s)
+                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s),
+                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenize s)
                 )
 
             for s in reject do
                 Assert.Equal(
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s),
-                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings s)
+                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s),
+                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenize s)
                 )
 
     [<Fact>]
@@ -109,10 +109,10 @@ module ModifiedValiantTests =
         let input = "a b a b"
 
         let valTable, valAcc =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         let modTable, modAcc =
-            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         Assert.Equal(valAcc, modAcc)
 
@@ -127,10 +127,10 @@ module ModifiedValiantTests =
         let input = "a a a a"
 
         let valTable, valAcc =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize input)
 
         let modTable, modAcc =
-            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeStrings input)
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize input)
 
         Assert.Equal(valAcc, modAcc)
 
@@ -145,10 +145,10 @@ module ModifiedValiantTests =
         let input = "x + x * x"
 
         let valTable, valAcc =
-            Valiant.parseWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings input)
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize input)
 
         let modTable, modAcc =
-            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings input)
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize input)
 
         Assert.Equal(valAcc, modAcc)
 
@@ -163,7 +163,7 @@ module ModifiedValiantTests =
         let input = "a b"
 
         let trace =
-            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         Assert.NotEmpty(trace)
 
@@ -175,7 +175,7 @@ module ModifiedValiantTests =
         let input = "a b a b"
 
         let trace =
-            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings input)
+            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize input)
 
         Assert.NotEmpty(trace)
 
@@ -201,7 +201,7 @@ module PropertyTests =
             Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s) = Valiant.parse
                 Grammar.freshStringNonterminal
                 grammar1
-                (Tokenizer.tokenizeStrings s)
+                (Tokenizer.tokenize s)
 
         [<Property>]
         let ``Valiant and CYK tables match for grammar 1`` (s: string) =
@@ -212,7 +212,7 @@ module PropertyTests =
                     Cyk.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
                 let valTable, valAcc =
-                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
                 let n = cykTable.rows
 
@@ -225,10 +225,10 @@ module PropertyTests =
 
         [<Property>]
         let ``Modified Valiant and standard Valiant agree on acceptance for grammar 1`` (s: string) =
-            Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s) = Valiant.parseModified
+            Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s) = Valiant.parseModified
                 Grammar.freshStringNonterminal
                 grammar1
-                (Tokenizer.tokenizeStrings s)
+                (Tokenizer.tokenize s)
 
         [<Property>]
         let ``Modified Valiant and standard Valiant tables match for grammar 1`` (s: string) =
@@ -236,10 +236,10 @@ module PropertyTests =
                 true
             else
                 let valTable, valAcc =
-                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
                 let modTable, modAcc =
-                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
                 let n = valTable.rows
 
@@ -258,7 +258,7 @@ module PropertyTests =
             Cyk.parse Grammar.freshStringNonterminal grammar2 (Tokenizer.tokenize s) = Valiant.parse
                 Grammar.freshStringNonterminal
                 grammar2
-                (Tokenizer.tokenizeStrings s)
+                (Tokenizer.tokenize s)
 
         [<Property>]
         let ``Valiant and CYK tables match for grammar 2`` (s: string) =
@@ -269,7 +269,7 @@ module PropertyTests =
                     Cyk.parseWithTable Grammar.freshStringNonterminal grammar2 (Tokenizer.tokenize s)
 
                 let valTable, valAcc =
-                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar2 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar2 (Tokenizer.tokenize s)
 
                 let n = cykTable.rows
 
@@ -288,7 +288,7 @@ module PropertyTests =
             Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s) = Valiant.parse
                 Grammar.freshStringNonterminal
                 grammar3
-                (Tokenizer.tokenizeStrings s)
+                (Tokenizer.tokenize s)
 
         [<Property>]
         let ``Valiant and CYK tables match for grammar 3`` (s: string) =
@@ -299,7 +299,7 @@ module PropertyTests =
                     Cyk.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s)
 
                 let valTable, valAcc =
-                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s)
 
                 let n = cykTable.rows
 
@@ -319,7 +319,7 @@ module PropertyTests =
                 Cyk.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
             let valTable, valAcc =
-                Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
             if cykAcc || valAcc then
                 true
@@ -338,10 +338,10 @@ module PropertyTests =
         [<Property>]
         let ``Modified Valiant and standard Valiant reject tables are identical for grammar 1`` (s: string) =
             let valTable, valAcc =
-                Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
             let modTable, modAcc =
-                Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
             if valAcc || modAcc then
                 true
@@ -359,10 +359,10 @@ module PropertyTests =
 
         [<Property>]
         let ``Modified Valiant and standard Valiant agree on acceptance for grammar 6`` (s: string) =
-            Valiant.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings s) = Valiant.parseModified
+            Valiant.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize s) = Valiant.parseModified
                 Grammar.freshStringNonterminal
                 grammar6
-                (Tokenizer.tokenizeStrings s)
+                (Tokenizer.tokenize s)
 
         [<Property>]
         let ``Modified Valiant and standard Valiant tables match for grammar 6`` (s: string) =
@@ -370,10 +370,124 @@ module PropertyTests =
                 true
             else
                 let valTable, valAcc =
-                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize s)
 
                 let modTable, modAcc =
-                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings s)
+                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize s)
+
+                let n = valTable.rows
+
+                valAcc = modAcc
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
+                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                                 yield false ]
+                   |> List.forall id
+
+    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    module Grammar7PropertyTests =
+
+        [<Property>]
+        let ``Valiant and CYK agree on acceptance for grammar 7`` (s: string) =
+            Cyk.parse Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s) = Valiant.parse
+                Grammar.freshStringNonterminal
+                grammar7
+                (Tokenizer.tokenize s)
+
+        [<Property>]
+        let ``Valiant and CYK tables match for grammar 7`` (s: string) =
+            if s = "" then
+                true
+            else
+                let cykTable, cykAcc =
+                    Cyk.parseWithTable Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s)
+
+                let valTable, valAcc =
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s)
+
+                let n = cykTable.rows
+
+                cykAcc = valAcc
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
+                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                                 yield false ]
+                   |> List.forall id
+
+        [<Property>]
+        let ``Modified Valiant and standard Valiant agree on acceptance for grammar 7`` (s: string) =
+            Valiant.parse Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s) = Valiant.parseModified
+                Grammar.freshStringNonterminal
+                grammar7
+                (Tokenizer.tokenize s)
+
+        [<Property>]
+        let ``Modified Valiant and standard Valiant tables match for grammar 7`` (s: string) =
+            if s = "" then
+                true
+            else
+                let valTable, valAcc =
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s)
+
+                let modTable, modAcc =
+                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s)
+
+                let n = valTable.rows
+
+                valAcc = modAcc
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
+                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                                 yield false ]
+                   |> List.forall id
+
+    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    module Grammar8PropertyTests =
+
+        [<Property>]
+        let ``Valiant and CYK agree on acceptance for grammar 8`` (s: string) =
+            Cyk.parse Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s) = Valiant.parse
+                Grammar.freshStringNonterminal
+                grammar8
+                (Tokenizer.tokenize s)
+
+        [<Property>]
+        let ``Valiant and CYK tables match for grammar 8`` (s: string) =
+            if s = "" then
+                true
+            else
+                let cykTable, cykAcc =
+                    Cyk.parseWithTable Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s)
+
+                let valTable, valAcc =
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s)
+
+                let n = cykTable.rows
+
+                cykAcc = valAcc
+                && [ for i in 0 .. n - 1 do
+                         for j in i .. n - 1 do
+                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                                 yield false ]
+                   |> List.forall id
+
+        [<Property>]
+        let ``Modified Valiant and standard Valiant agree on acceptance for grammar 8`` (s: string) =
+            Valiant.parse Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s) = Valiant.parseModified
+                Grammar.freshStringNonterminal
+                grammar8
+                (Tokenizer.tokenize s)
+
+        [<Property>]
+        let ``Modified Valiant and standard Valiant tables match for grammar 8`` (s: string) =
+            if s = "" then
+                true
+            else
+                let valTable, valAcc =
+                    Valiant.parseWithTable Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s)
+
+                let modTable, modAcc =
+                    Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenize s)
 
                 let n = valTable.rows
 

@@ -412,11 +412,16 @@
         - Assert all three result matrices are identical
         - Also test: for single-source case, Belyanin result equals the corresponding row of Arroyuelo result
         - Test with all semantics (reachability, simple paths, trails if implemented)
-[done] 64. Refactoring. 
+64. [done] Refactoring. 
     1. Move RPQ algorithms to separsted project (tests too).
     2. Move MS-BFS to GraphAnalysis project. Create respective tests project.
     3. Unify RPQ algorithms interafece. All of them must accept graph as NFA. Graph builder must returns NFA. Start vertices are start states of NFA. 
     4. Implement fold for Matrix<'t> Use it instead anyTrue in ms-bfs.
-
-
-
+[done] 65. Refactoring.
+    1. Paring algorithms (LL, LR, versions of Valiant, CYK) have inconsistent type for input sequence. Input for parsing algorithm is a list of Terminals.
+    2. Lines 160–194 and 224–257 in `LRParser.fs` are structurally identical except for `closureLR0` vs `closureLR1` and the final-state check. ~60 lines of duplicated state-exploration logic. Remove code duplications.
+    3. `MsBfsTests.fs` has a `[<Property>]` test but implements random generation manually via `System.Random.Shared` in a `for` loop rather than using FsCheck generators and the FsCheck framework to drive iterations. The test manually sets `succeeded <- false` on mismatch. Create common random graphs generator that can be used for MS-BFS and for RPQ algorithms. Generate graph as Matrix. May be you can use existin matrix generators. Reuse them.
+    4. `ValiantTests.fs` covers grammars 1–5 but not 6–8 (the arithmetic expression grammars). Add necessary tests for both variants of Valiant.
+    5. Lines 38–52 in `src/FLPQ.Cli/Program.fs` define `writeDotFile` and `writeTexFile` with byte-identical bodies. Should be a single `writeOutputFile` function.
+    6. `completeTrace` (lines 412–494) and `computeTrace` (lines 483–498) copy ~90% of `complete` (lines 124–195) and `compute` (lines 175–195). Tracing logic (BooleanDecomposition recompose per submatrix) is entangled with computation. We can have only instance with traceing. The algorithm collects trace data as F# data structures. At he final it may be converted to TeX or other formats if necessary.
+    7. Valiant init block duplicated 4x. The ~40-line setup block (building `tByNt` dictionary, `pByPair` dictionary, terminal rule initialization via `BooleanDecomposition.decompose`, and the epsilon-acceptance early-exit) is copy-pasted identically 4 times in `Valiant.fs Remove code duplication.

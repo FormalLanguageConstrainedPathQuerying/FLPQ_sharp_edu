@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="RandomGraphGenerators.fs" />
     <Compile Include="MsBfsTests.fs" />
   </ItemGroup>
 

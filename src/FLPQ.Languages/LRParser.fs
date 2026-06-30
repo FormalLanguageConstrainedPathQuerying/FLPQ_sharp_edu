@@ -144,19 +144,12 @@ module LRAutomaton =
         |> Set.map (fun item -> { item with dot = item.dot + 1 })
         |> (fun filtered -> closureLR1 rules filtered firstMap)
 
-    /// Build the LR(0) automaton for an augmented grammar.
-    /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
-    let buildLR0 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
-        let augmentedRule = aug.rules.[0]
-
-        let startItems =
-            closureLR0
-                aug.rules
-                (set
-                    [ { lhs = augmentedRule.lhs
-                        rhs = Rhs.toSymbols augmentedRule.rhs
-                        dot = 0 } ])
-
+    let private buildAutomaton
+        (startItems: Set<'item>)
+        (getSymbols: Set<'item> -> Symbol<'t, 'nt> list)
+        (goto: Set<'item> -> Symbol<'t, 'nt> -> Set<'item>)
+        (isAcceptState: Set<'item> -> bool)
+        : DFA<Symbol<'t, 'nt>, Set<'item>> =
         let mutable states = [ startItems ]
         let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
         let mutable queue = [ startItems ]
@@ -166,19 +159,10 @@ module LRAutomaton =
             let stateIdx = states |> List.findIndex (fun s -> s = state)
             queue <- queue.Tail
 
-            let symbols =
-                state
-                |> Set.toSeq
-                |> Seq.choose (fun item ->
-                    if item.dot < item.rhs.Length then
-                        Some item.rhs.[item.dot]
-                    else
-                        None)
-                |> Seq.distinct
-                |> Seq.toList
+            let symbols = getSymbols state
 
             for sym in symbols do
-                let target = gotoLR0 aug.rules state sym
+                let target = goto state sym
 
                 if not (Set.isEmpty target) then
                     let targetIdx =
@@ -193,17 +177,48 @@ module LRAutomaton =
                     transitions <- (stateIdx, sym, targetIdx) :: transitions
 
         let finalStates =
+            states
+            |> List.indexed
+            |> List.choose (fun (idx, s) -> if isAcceptState s then Some idx else None)
+            |> Set.ofList
+
+        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
+
+    /// Build the LR(0) automaton for an augmented grammar.
+    /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
+    let buildLR0 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
+        let augmentedRule = aug.rules.[0]
+
+        let startItems =
+            closureLR0
+                aug.rules
+                (set
+                    [ { lhs = augmentedRule.lhs
+                        rhs = Rhs.toSymbols augmentedRule.rhs
+                        dot = 0 } ])
+
+        let getSymbols (state: Set<LR0Item<'t, 'nt>>) =
+            state
+            |> Set.toSeq
+            |> Seq.choose (fun item ->
+                if item.dot < item.rhs.Length then
+                    Some item.rhs.[item.dot]
+                else
+                    None)
+            |> Seq.distinct
+            |> Seq.toList
+
+        let gotoFn state sym = gotoLR0 aug.rules state sym
+
+        let isAcceptState (state: Set<LR0Item<'t, 'nt>>) =
             let acceptItem =
                 { lhs = augmentedRule.lhs
                   rhs = Rhs.toSymbols augmentedRule.rhs
                   dot = Rhs.toSymbols augmentedRule.rhs |> List.length }
 
-            states
-            |> List.indexed
-            |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
-            |> Set.ofList
+            Set.contains acceptItem state
 
-        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
+        buildAutomaton startItems getSymbols gotoFn isAcceptState
 
     /// Build the LR(1) automaton for an augmented grammar.
     /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
@@ -221,54 +236,29 @@ module LRAutomaton =
                         lookahead = Epsilon } ])
                 firstMap
 
-        let mutable states = [ startItems ]
-        let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
-        let mutable queue = [ startItems ]
+        let getSymbols (state: Set<LR1Item<'t, 'nt>>) =
+            state
+            |> Set.toSeq
+            |> Seq.choose (fun item ->
+                if item.dot < item.rhs.Length then
+                    Some item.rhs.[item.dot]
+                else
+                    None)
+            |> Seq.distinct
+            |> Seq.toList
 
-        while not (List.isEmpty queue) do
-            let state = queue.Head
-            let stateIdx = states |> List.findIndex (fun s -> s = state)
-            queue <- queue.Tail
+        let gotoFn state sym = gotoLR1 aug.rules state sym firstMap
 
-            let symbols =
-                state
-                |> Set.toSeq
-                |> Seq.choose (fun item ->
-                    if item.dot < item.rhs.Length then
-                        Some item.rhs.[item.dot]
-                    else
-                        None)
-                |> Seq.distinct
-                |> Seq.toList
-
-            for sym in symbols do
-                let target = gotoLR1 aug.rules state sym firstMap
-
-                if not (Set.isEmpty target) then
-                    let targetIdx =
-                        match states |> List.tryFindIndex (fun s -> s = target) with
-                        | Some idx -> idx
-                        | None ->
-                            let idx = List.length states
-                            states <- states @ [ target ]
-                            queue <- queue @ [ target ]
-                            idx
-
-                    transitions <- (stateIdx, sym, targetIdx) :: transitions
-
-        let finalStates =
+        let isAcceptState (state: Set<LR1Item<'t, 'nt>>) =
             let acceptItem =
                 { lhs = augmentedRule.lhs
                   rhs = Rhs.toSymbols augmentedRule.rhs
                   dot = Rhs.toSymbols augmentedRule.rhs |> List.length
                   lookahead = Epsilon }
 
-            states
-            |> List.indexed
-            |> List.choose (fun (idx, s) -> if Set.contains acceptItem s then Some idx else None)
-            |> Set.ofList
+            Set.contains acceptItem state
 
-        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
+        buildAutomaton startItems getSymbols gotoFn isAcceptState
 
 /// LR parsing table construction and parser.
 /// All table builders and parse take an already-augmented grammar.

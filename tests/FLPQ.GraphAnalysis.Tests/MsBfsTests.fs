@@ -123,31 +123,12 @@ let ``msBfs: self-loop source, reachable only to self`` () =
     Assert.True(result.data.[0, 0])
     Assert.False(result.data.[0, 1])
 
-[<Property>]
-let ``msBfs equals independent single-source BFS`` () =
-    let mutable succeeded = true
+[<Properties(Arbitrary = [| typeof<RandomGraphGenerators.RandomGraphGenerators> |])>]
+module PropertyTests =
 
-    for _ in 0..9 do
-        let k = 1 + System.Random.Shared.Next(4)
-        let n = 1 + System.Random.Shared.Next(7)
-
-        let edges =
-            let ec = System.Random.Shared.Next(n * 2)
-
-            [ for _ in 1..ec do
-                  let f = System.Random.Shared.Next(n)
-                  let t = System.Random.Shared.Next(n)
-
-                  if f <> t then
-                      (f, t) ]
-
-        let sources = [| for _ in 1..k -> System.Random.Shared.Next(n) |]
-
-        let m = Matrix.init n n false
-
-        for (fromV, toV) in edges do
-            m.data.[fromV, toV] <- true
-
+    [<Property>]
+    let ``msBfs equals independent single-source BFS`` ((m: Matrix<bool>, sources: int[])) =
+        let n = m.rows
         let msResult = MsBfs.msBfs sources m
 
         let single (source: int) : bool[] =
@@ -174,11 +155,13 @@ let ``msBfs equals independent single-source BFS`` () =
 
             [| for j in 0 .. n - 1 -> Set.contains j visited |]
 
-        for i in 0 .. sources.Length - 1 do
-            let expected = single sources.[i]
+        if n = 0 then
+            true
+        else
+            [ for i in 0 .. sources.Length - 1 do
+                  let expected = single sources.[i]
 
-            for j in 0 .. n - 1 do
-                if msResult.data.[i, j] <> expected.[j] then
-                    succeeded <- false
-
-    succeeded
+                  for j in 0 .. n - 1 do
+                      if msResult.data.[i, j] <> expected.[j] then
+                          yield false ]
+            |> List.forall id

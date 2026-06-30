@@ -35,15 +35,7 @@ module Program =
 
         File.ReadAllText(path).Trim()
 
-    let private writeTexFile path content =
-        let dir = Path.GetDirectoryName path
-
-        if not (Directory.Exists dir) then
-            Directory.CreateDirectory dir |> ignore
-
-        File.WriteAllText(path, content)
-
-    let private writeDotFile path content =
+    let private writeOutputFile path content =
         let dir = Path.GetDirectoryName path
 
         if not (Directory.Exists dir) then
@@ -55,9 +47,9 @@ module Program =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            writeDotFile (Path.Combine(stepDir, "tree.dot")) steps.[idx].tree
-            writeTexFile (Path.Combine(stepDir, "stack.tex")) steps.[idx].stack
-            writeTexFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
+            writeOutputFile (Path.Combine(stepDir, "tree.dot")) steps.[idx].tree
+            writeOutputFile (Path.Combine(stepDir, "stack.tex")) steps.[idx].stack
+            writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
 
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
@@ -77,7 +69,7 @@ module Program =
                 else
                     Cyk.tableToTeXStyled string step.table step.highlights
 
-            writeTexFile (Path.Combine(stepDir, "table.tex")) tex
+            writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         printfn "CYK trace: %d steps written to %s" trace.Length outputDir
 
@@ -86,7 +78,7 @@ module Program =
         let inputTokens = readFile inputFile
 
         let trace =
-            Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeStrings inputTokens)
+            Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenize inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -96,7 +88,7 @@ module Program =
             let tex =
                 Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
 
-            writeTexFile (Path.Combine(stepDir, "table.tex")) tex
+            writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 

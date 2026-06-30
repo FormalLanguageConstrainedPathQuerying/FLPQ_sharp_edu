@@ -103,6 +103,6 @@ module CrossParserPropertyTests =
                 LLParser.parse grammar1 llTable 1 (Tokenizer.tokenize s) |> Option.isSome
 
             let valResult =
-                Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeStrings s)
+                Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
 
             llResult = valResult

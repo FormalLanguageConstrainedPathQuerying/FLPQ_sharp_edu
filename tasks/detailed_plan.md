@@ -1,227 +1,157 @@
-# Detailed Plan: Task 64 — Refactoring (RPQ project separation, MS-BFS to GraphAnalysis, NFA interface unification, Matrix.fold)
+# Detailed Plan: Task 65 — Refactoring
 
 ## Overview
 
-Refactor the project structure to separate RPQ algorithms and MS-BFS into their own projects,
-unify RPQ algorithm interfaces to accept NFA as graph representation, and add `fold` to `Matrix`.
+Refactor 7 code quality issues: unify input types across parsing algorithms, remove code duplication in LRParser, Valiant, CLI, fix broken property test, and add missing tests.
 
 ## Sub-tasks
 
-### 1. Add `fold` to `Matrix` module
+### 1. Unify parsing algorithm input types (Valiant: `'t list` → `Symbol<'t,'nt> list`)
 
-- Add `Matrix.fold : ('acc -> 'a -> 'acc) -> 'acc -> Matrix<'a> -> 'acc` to `Matrix.fs`
-- Implementation: iterate over all cells left-to-right, top-to-bottom, applying the folder
-- Replace the private `anyTrue` in `MsBfs.fs` with `Matrix.fold (fun acc x -> acc || x) false m`
+**Current state**:
+- CYK, LL, LR accept `Symbol<'t, 'nt> list` (tokenized via `Tokenizer.tokenize`)
+- Valiant alone accepts raw `'t list` (tokenized via `Tokenizer.tokenizeStrings`)
 
-### 2. Create `FLPQ.GraphAnalysis` project
-
-- Create `src/FLPQ.GraphAnalysis/` directory
-- Create `src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj`:
-  - TargetFramework: `net10.0`
-  - `GenerateDocumentationFile: true`
-  - Compile: `MsBfs.fs`
-  - ProjectReference: `FLPQ.LinearAlgebra`
-  - PackageReference: `FSharpPlus` (may be needed for NonEmptySet if used internally — actually no, MsBfs doesn't use FSharpPlus, but keep for consistency)
-- Move `MsBfs.fs` from `src/FLPQ.LinearAlgebra/` to `src/FLPQ.GraphAnalysis/`
-  - Change namespace from `FLPQ.LinearAlgebra` to `FLPQ.GraphAnalysis`
-  - Add `open FLPQ.LinearAlgebra`
-  - Replace private `anyTrue` with `Matrix.fold (fun acc x -> acc || x) false m`
-- Remove `MsBfs.fs` from `src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj`
-
-### 3. Create `FLPQ.GraphAnalysis.Tests` project
-
-- Create `tests/FLPQ.GraphAnalysis.Tests/` directory
-- Create `tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj`:
-  - TargetFramework: `net10.0`, `IsPackable: false`
-  - Compile: `MsBfsTests.fs`
-  - PackageReferences: same as other test projects (coverlet, FsCheck.Xunit, FSharpPlus, xunit, etc.)
-  - ProjectReferences: `FLPQ.GraphAnalysis`, `FLPQ.LinearAlgebra`
-- Move `MsBfsTests.fs` from `tests/FLPQ.LinearAlgebra.Tests/` to `tests/FLPQ.GraphAnalysis.Tests/`
-  - Update `open FLPQ.GraphAnalysis` (instead of only `open FLPQ.LinearAlgebra`)
-- Remove `MsBfsTests.fs` from `tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj`
-
-### 4. Create `FLPQ.RPQ` project
-
-- Create `src/FLPQ.RPQ/` directory
-- Create `src/FLPQ.RPQ/FLPQ.RPQ.fsproj`:
-  - TargetFramework: `net10.0`, `GenerateDocumentationFile: true`
-  - Compile order: `GraphReader.fs` → `BelyaninRPQ.fs` → `ArroyueloRPQ.fs` → `KroneckerRPQ.fs`
-  - ProjectReferences: `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, `FLPQ.Languages`
-  - PackageReference: `FSharpPlus`
-- Move files from `src/FLPQ.Languages/` to `src/FLPQ.RPQ/`:
-  - `GraphReader.fs` → namespace `FLPQ.RPQ`
-  - `BelyaninRPQ.fs` → namespace `FLPQ.RPQ`
-  - `ArroyueloRPQ.fs` → namespace `FLPQ.RPQ`
-  - `KroneckerRPQ.fs` → namespace `FLPQ.RPQ`
-- Remove these files from `src/FLPQ.Languages/FLPQ.Languages.fsproj`
-
-### 5. Unify RPQ algorithms interface (accept graph as NFA)
-
-#### NFA-to-perLabel helper
-
-Add a helper function (private in each module or shared) to convert `NFA<'t, int>` to `Map<'t, Matrix<bool>>`.
-
-```fsharp
-let private nfaToPerLabelMatrices (nfa: NFA<'t, int>) : Map<'t, Matrix<bool>> =
-    let vCount = Nfa.stateCount nfa
-    let labels = Nfa.alphabet nfa
-    labels |> Set.toList |> List.map (fun label ->
-        let m = Matrix.init vCount vCount false
-        for i in 0..vCount-1 do
-            for j in 0..vCount-1 do
-                match nfa.transitions.data.[i, j] with
-                | Some nes when NonEmptySet.contains label nes -> m.data.[i, j] <- true
-                | _ -> ()
-        (label, m)
-    ) |> Map.ofList
-```
-
-#### BelyaninRPQ.evaluate
-
-New signature: `DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
-
-- Extract source vertices from `nfa.startStates`
-- Convert NFA to per-label matrices
-- For each source vertex, run the single-source algorithm
-- Stack results into |sources| × |V| matrix
-- Return `Matrix<bool>` instead of `bool[]`
-
-#### ArroyueloRPQ.evaluate (rename from evaluateWithSources)
-
-New signature: `NFA<'t, int> -> Regexp<'t, 'nt> -> Matrix<bool>`
-
-- Extract source vertices from `nfa.startStates`
-- Convert NFA to per-label matrices
-- Derive `vCount` from `Nfa.stateCount nfa`
-- Compute full |V|×|V| matrix via `evaluate` (keep internal name)
-- Extract rows for source vertices
-- Return |sources| × |V| matrix
-
-#### KroneckerRPQ.evaluate
-
-New signature: `DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
-
-- Extract source vertices from `nfa.startStates`
-- Convert NFA to per-label matrices
-- Derive `vCount` from `Nfa.stateCount nfa`
-- Run the Kronecker algorithm as before
-- Return |sources| × |V| matrix
-
-#### GraphReader.parseGraph
-
-Change return type from `LabeledGraph<string>` to `NFA<string, int>`.
-
-- Keep the internal parsing logic (parse edges, determine max vertex, etc.)
-- Build NFA: all vertices are states, edges become transitions, start vertices become start states, all vertices are final states (for completeness)
-- Remove `LabeledGraph` type (no longer needed externally, or keep internal)
-
-Actually, remove `LabeledGraph` type entirely since it's no longer used. Return `NFA<string, int>` directly.
-
-### 6. Create `FLPQ.RPQ.Tests` project
-
-- Create `tests/FLPQ.RPQ.Tests/` directory
-- Create `tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj`:
-  - TargetFramework: `net10.0`, `IsPackable: false`
-  - Compile: `RPQTests.fs`
-  - PackageReferences: same as other test projects
-  - ProjectReferences: `FLPQ.RPQ`, `FLPQ.Languages`, `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`
-- Move `RPQTests.fs` from `tests/FLPQ.Languages.Tests/` to `tests/FLPQ.RPQ.Tests/`
-  - Update `open` statements: add `open FLPQ.RPQ`, `open FLPQ.GraphAnalysis`
-  - Update tests to use NFA-based interfaces
-  - Update GraphReader tests to check NFA properties instead of LabeledGraph properties
-  - Update `smallGraph` helper to return NFA or adapt to NFA
-- Remove `RPQTests.fs` from `tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj`
-
-### 7. Update solution file
-
-- Add new projects to `FLPQ.slnx`:
-  ```xml
-  <Folder Name="/src/">
-    ...
-    <Project Path="src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj" />
-    <Project Path="src/FLPQ.RPQ/FLPQ.RPQ.fsproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    ...
-    <Project Path="tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj" />
-    <Project Path="tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj" />
-  </Folder>
+**Plan**:
+- In `Valiant.fs`, extract terminals from `Symbol<'t, 'nt> list` at the entry point:
+  ```fsharp
+  let private extractTerminals (tokens: Symbol<'t, 'nt> list) : 't list =
+      tokens |> List.choose (function T(Terminal t) -> Some t | _ -> None)
   ```
+- Change all 6 public Valiant functions to accept `Symbol<'t, 'nt> list`
+- Internally call `extractTerminals` to get `'t list` for existing logic
+- Update `Tokenizer.fs`: remove `tokenizeStrings` (no longer needed)
+- Update all test files calling Valiant: replace `Tokenizer.tokenizeStrings s` with `Tokenizer.tokenize s`
+  - `ValiantTests.fs` — all calls
+  - `Program.fs` — `runValiant`
+- Update `docs/valiant.md` if it mentions the old type
 
-### 8. Update documentation
+### 2. Remove duplicated LR0/LR1 state-exploration logic in LRParser.fs
 
-- `docs/architecture.md`: Add FLPQ.GraphAnalysis and FLPQ.RPQ projects, update file listings
-- `docs/main.md`: Add links to new modules if needed, update existing links
-- Individual module docs: update namespace in docs (msbfs.md, belyanin-rpq.md, arroyuelo-rpq.md, kronecker-rpq.md, graph-reader.md)
-- `docs/matrix.md`: Document the new `fold` function
+**Current state**: `buildLR0` (lines 164-194) and `buildLR1` (lines 228-257) are structurally identical except for `gotoLR0` vs `gotoLR1` and the final-state check.
 
-### 9. Verify
+**Plan**:
+- Extract common logic into a private helper:
+  ```fsharp
+  let private buildAutomaton
+      (aug: Grammar<'t, 'nt>)
+      (startItems: 'items)
+      (gotoFn: ('items -> Symbol<'t, 'nt> -> 'items))
+      (isAcceptItem: 'items -> bool)
+      : DFA<Symbol<'t, 'nt>, 'items>
+  ```
+- The helper:
+  1. Takes computed start items (already closure-applied)
+  2. Takes a goto function (gotoLR0 or gotoLR1 wrapper)
+  3. Takes a predicate to identify accept items
+  4. Runs the BFS state exploration loop
+  5. Builds and returns the DFA
+- `buildLR0` and `buildLR1` become thin wrappers that compute start items, then call `buildAutomaton`
+
+### 3. Fix MsBfsTests.fs property test, create common random graph generator
+
+**Current state**: The `[<Property>]` test at line 126 uses `System.Random.Shared` in a `for` loop rather than FsCheck generators.
+
+**Plan**:
+- Create a proper FsCheck `Arbitrary<Matrix<bool>>` generator for random graphs:
+  - Generate small boolean matrices (n=1..6 vertices, density ~20-30%)
+  - Ensure self-loops are avoided (no (i,i) edges) for clean BFS semantics
+- Add to existing `MsBfsTests.fs` (or create as a generator type like in MatrixTests)
+- Rewrite the property test to use the generator: `let ``msBfs equals independent single-source BFS`` (m: Matrix<bool>, sources: int[]) = ...`
+- The graph generator should be in `MsBfsTests.fs` for now (it's simple enough). If needed for RPQ tests later, it can be moved.
+- Generate sources as a non-empty array of valid vertex indices
+
+### 4. Add grammars 7 and 8 to ValiantTests
+
+**Current state**: Valiant tests cover grammars 1-6 but not 7-8.
+
+**Plan**:
+- Add property-based tests for grammar 7:
+  - `Valiant and CYK agree on acceptance for grammar 7` (use AbStringGenerators with spaces, or create ExprStringGenerators-like generator for grammar 7/8 language)
+  - `Valiant and CYK tables match for grammar 7`
+  - `Modified Valiant and standard Valiant agree on acceptance for grammar 7`
+  - `Modified Valiant and standard Valiant tables match for grammar 7`
+- Add same set for grammar 8
+- Reuse `ExprStringGenerators` since grammar 6, 7, 8 define the same language
+
+### 5. Combine `writeDotFile`/`writeTexFile` in Program.fs
+
+**Plan**:
+- Replace two functions with one:
+  ```fsharp
+  let private writeOutputFile path content =
+      let dir = Path.GetDirectoryName path
+      if not (Directory.Exists dir) then
+          Directory.CreateDirectory dir |> ignore
+      File.WriteAllText(path, content)
+  ```
+- Update all call sites (2 in `writeStepsVisualization`, 4 in `runCyk`, `runValiant`)
+
+### 6. Merge `complete`/`completeTrace` and `compute`/`computeTrace` in Valiant.fs
+
+**Current state**: `parseWithTrace` has ~80 lines copied from `complete` plus trace recording.
+
+**Plan**:
+- Keep only the tracing variants internally. The non-tracing `parse` and `parseWithTable` can use the same algorithm but with an `option` of trace accumulator (or just ignore it).
+- Actually a cleaner approach: make `complete` and `compute` always collect steps into an optional `ResizeArray<ValiantTraceStep<'nt>>` parameter. When it's `None`, no tracing happens.
+  ```fsharp
+  let rec private complete
+      ...
+      (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
+      ...
+  ```
+- When `traceAcc` is `Some`, recompose and add a step after each submatrix completion.
+- `parseWithTable` passes `None`, `parseWithTrace` passes `Some(resizeArray)`.
+- Remove `completeTrace` and `computeTrace` entirely.
+
+### 7. Extract duplicated Valiant init block
+
+**Current state**: ~25 lines of init code repeated 4 times (lines 310-332, 383-404, 520-542, 600-622).
+
+**Plan**:
+- Create a private record type or tuple to hold initialization results:
+  ```fsharp
+  type private InitData<'t, 'nt> = {
+      tByNt: Dictionary<Nonterminal<'nt>, Matrix<bool>>
+      pByPair: Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>
+      tokensArr: 't[]
+      tableSize: int
+      n: int
+      allNt: Nonterminal<'nt> list
+      binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list
+      pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list
+      terminalRules: Map<'t, Nonterminal<'nt> list>
+  }
+  ```
+- Create `let private initValiant (tokens: Symbol<'t,'nt> list) (cnf: Grammar<'t,'nt>) : InitData = ...`
+- Replace all 4 instances with a single call.
+
+## Execution Order
+
+1. Subtask 7 (extract init block) — foundation for subtask 6
+2. Subtask 6 (merge complete/completeTrace) — simpler after init extraction
+3. Subtask 1 (unify input types) — main API change
+4. Subtask 2 (LR parser dedup) — independent
+5. Subtask 3 (MsBfsTests property) — independent
+6. Subtask 4 (Valiant tests grammars 7-8) — depends on subtask 1
+7. Subtask 5 (CLI dedup) — independent, very small
+
+## Files to Modify
+
+| File | Sub-tasks |
+|------|-----------|
+| `src/FLPQ.Languages/Valiant.fs` | 1, 6, 7 |
+| `src/FLPQ.Languages/Tokenizer.fs` | 1 |
+| `src/FLPQ.Languages/LRParser.fs` | 2 |
+| `src/FLPQ.Cli/Program.fs` | 1, 5 |
+| `tests/FLPQ.Languages.Tests/ValiantTests.fs` | 1, 4 |
+| `tests/FLPQ.GraphAnalysis.Tests/MsBfsTests.fs` | 3 |
+| `tests/FLPQ.Languages.Tests/LRParserTests.fs` (if exists) | 2 |
+| `docs/valiant.md` | 1, 6, 7 |
+| `docs/lr-parser.md` | 2 |
+
+## Verification
 
 - `dotnet fantomas .` — format
-- `dotnet build -c Release` — compile
+- `dotnet build -c Release` — compile (0 warnings)
 - `dotnet test` — all tests pass
-- `dotnet test --filter "Category=TexCompilation"` — TeX tests pass (if applicable)
-
-## Files to CREATE
-
-| File | Description |
-|------|-------------|
-| `src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj` | New project for MS-BFS |
-| `src/FLPQ.GraphAnalysis/MsBfs.fs` | Moved from FLPQ.LinearAlgebra |
-| `src/FLPQ.RPQ/FLPQ.RPQ.fsproj` | New project for RPQ algorithms |
-| `src/FLPQ.RPQ/GraphReader.fs` | Moved from FLPQ.Languages |
-| `src/FLPQ.RPQ/BelyaninRPQ.fs` | Moved from FLPQ.Languages |
-| `src/FLPQ.RPQ/ArroyueloRPQ.fs` | Moved from FLPQ.Languages |
-| `src/FLPQ.RPQ/KroneckerRPQ.fs` | Moved from FLPQ.Languages |
-| `tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj` | New test project |
-| `tests/FLPQ.GraphAnalysis.Tests/MsBfsTests.fs` | Moved from FLPQ.LinearAlgebra.Tests |
-| `tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj` | New test project |
-| `tests/FLPQ.RPQ.Tests/RPQTests.fs` | Moved from FLPQ.Languages.Tests |
-
-## Files to MODIFY
-
-| File | Change |
-|------|--------|
-| `src/FLPQ.LinearAlgebra/Matrix.fs` | Add `fold` function |
-| `src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj` | Remove MsBfs.fs |
-| `src/FLPQ.Languages/FLPQ.Languages.fsproj` | Remove GraphReader.fs, BelyaninRPQ.fs, ArroyueloRPQ.fs, KroneckerRPQ.fs |
-| `tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj` | Remove MsBfsTests.fs |
-| `tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj` | Remove RPQTests.fs |
-| `FLPQ.slnx` | Add new projects |
-| `docs/architecture.md` | Update structure |
-| `docs/main.md` | Update links |
-| `docs/matrix.md` | Document `fold` |
-| `docs/msbfs.md` | Update namespace |
-| `docs/graph-reader.md` | Update namespace, return type |
-| `docs/belyanin-rpq.md` | Update namespace, interface |
-| `docs/arroyuelo-rpq.md` | Update namespace, interface |
-| `docs/kronecker-rpq.md` | Update namespace, interface |
-
-## Files to DELETE
-
-| File | Reason |
-|------|--------|
-| `src/FLPQ.LinearAlgebra/MsBfs.fs` | Moved to FLPQ.GraphAnalysis |
-| `src/FLPQ.Languages/GraphReader.fs` | Moved to FLPQ.RPQ |
-| `src/FLPQ.Languages/BelyaninRPQ.fs` | Moved to FLPQ.RPQ |
-| `src/FLPQ.Languages/ArroyueloRPQ.fs` | Moved to FLPQ.RPQ |
-| `src/FLPQ.Languages/KroneckerRPQ.fs` | Moved to FLPQ.RPQ |
-| `tests/FLPQ.LinearAlgebra.Tests/MsBfsTests.fs` | Moved to FLPQ.GraphAnalysis.Tests |
-| `tests/FLPQ.Languages.Tests/RPQTests.fs` | Moved to FLPQ.RPQ.Tests |
-
-## Dependency Graph (Updated)
-
-```
-FLPQ.LinearAlgebra
-    ↑               ↑
-    │               │
-    │         FLPQ.GraphAnalysis
-    │               ↑
-FLPQ.Languages     │
-    ↑               │
-    └───→ FLPQ.RPQ ─┘
-             ↑
-      FLPQ.RPQ.Tests
-             ↑
-      FLPQ.Cli (unchanged, no RPQ usage)
-```
