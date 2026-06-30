@@ -1,26 +1,39 @@
-* [List of third-party libraries that used in this project with breaf reason to use.](technologies.md)
-* [Overall architecture description](architecture.md)
-* [Matrix module design and logic](matrix.md)
-* [LinearAlgebra module design and logic](linear-algebra.md)
-* [BooleanDecomposition module design and logic](boolean-decomposition.md)
-* [MS-BFS and matrix operations module design and logic](msbfs.md)
-* [Grammar module design and logic](grammar.md)
-* [Tokenizer module design and logic](tokenizer.md)
-* [CYK algorithm module design and logic](cyk.md)
-* [Valiant algorithm module design and logic](valiant.md)
-* [FirstFollow module design and logic](first-follow.md)
-* [Automaton module design and logic](automaton.md)
-* [RSM module design and logic](rsm.md)
-* [EBNF Parser module design and logic](ebnf-parser.md)
-* [RSM to Grammar module design and logic](rsm-to-grammar.md)
-* [Graph Reader module design and logic](graph-reader.md)
-* [Belyanin RPQ module design and logic](belyanin-rpq.md)
-* [Arroyuelo RPQ module design and logic](arroyuelo-rpq.md)
-* [Kronecker RPQ module design and logic](kronecker-rpq.md)
-* [DerivationTree module design and logic](derivation-tree.md)
-* [LL parser module design and logic](ll-parser.md)
-* [LR parser module design and logic](lr-parser.md)
-* [AutomatonVisualizer module design and logic](automaton-viz.md)
-* [DerivationTreeVisualizer module design and logic](derivation-tree-viz.md)
+# Documentation
+
+* [Third-party libraries](technologies.md)
+* [Project architecture](architecture.md)
+
+## Projects
+
+* [FLPQ.LinearAlgebra](FLPQ.LinearAlgebra.md) — generic matrix types and linear algebra
+* [FLPQ.GraphAnalysis](FLPQ.GraphAnalysis.md) — MS-BFS and semiring operations
+* [FLPQ.Languages](FLPQ.Languages.md) — grammar, parsing, automata, visualization
+* [FLPQ.RPQ](FLPQ.RPQ.md) — regular path querying algorithms
+* [FLPQ.Cli](FLPQ.Cli.md) — CLI console application
+
+## Module Index
+
+* [Matrix module](matrix.md)
+* [LinearAlgebra module](linear-algebra.md)
+* [BooleanDecomposition module](boolean-decomposition.md)
+* [MS-BFS and matrix operations module](msbfs.md)
+* [Grammar module](grammar.md)
+* [Tokenizer module](tokenizer.md)
+* [CYK algorithm](cyk.md)
+* [Valiant algorithm](valiant.md)
+* [FirstFollow module](first-follow.md)
+* [Automaton module](automaton.md)
+* [RSM module](rsm.md)
+* [EBNF Parser module](ebnf-parser.md)
+* [RSM to Grammar module](rsm-to-grammar.md)
+* [Graph Reader module](graph-reader.md)
+* [Belyanin RPQ module](belyanin-rpq.md)
+* [Arroyuelo RPQ module](arroyuelo-rpq.md)
+* [Kronecker RPQ module](kronecker-rpq.md)
+* [DerivationTree module](derivation-tree.md)
+* [LL parser module](ll-parser.md)
+* [LR parser module](lr-parser.md)
+* [AutomatonVisualizer module](automaton-viz.md)
+* [DerivationTreeVisualizer module](derivation-tree-viz.md)
 * [LL and LR steps visualization](visualization-types.md)
 * [CLI console application](cli.md)

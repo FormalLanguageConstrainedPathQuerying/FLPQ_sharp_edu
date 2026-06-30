@@ -73,31 +73,18 @@ FLPQ.slnx
 - [fantomas](https://fsprojects.github.io/fantomas/) — F# code formatter (local tool)
 - [nicematrix](https://ctan.org/pkg/nicematrix) — LaTeX package for matrix rendering
 
-## Module Documentation
+## Project Documentation
 
-Design and logic of each implemented module is documented in a dedicated file in `docs/`:
+Each project has a hub documentation file grouping its modules. Design and logic of individual modules is documented in dedicated files linked from these hubs.
 
-| File | Module |
-|------|--------|
-| [`docs/matrix.md`](matrix.md) | Matrix type, operations, and TeX printing |
-| [`docs/linear-algebra.md`](linear-algebra.md) | Matrix multiplication and Kronecker product |
-| [`docs/boolean-decomposition.md`](boolean-decomposition.md) | Boolean decomposition of set-valued matrices |
-| [`docs/msbfs.md`](msbfs.md) | MS-BFS and Boolean/Mask semiring operations |
-| [`docs/grammar.md`](grammar.md) | Grammar types, BNF parser, and CNF transformation |
-| [`docs/tokenizer.md`](tokenizer.md) | Common tokenizer for all parsing algorithms |
-| [`docs/first-follow.md`](first-follow.md) | First_k and follow_k computations |
-| [`docs/automaton.md`](automaton.md) | Generic finite automaton type and operations |
-| [`docs/rsm.md`](rsm.md) | Recursive State Machine type |
-| [`docs/ebnf-parser.md`](ebnf-parser.md) | EBNF parser and RSM construction |
-| [`docs/rsm-to-grammar.md`](rsm-to-grammar.md) | RSM to BNF grammar conversion |
-| [`docs/derivation-tree.md`](derivation-tree.md) | Derivation tree type and leaf collection |
-| [`docs/cyk.md`](cyk.md) | CYK parsing algorithm |
-| [`docs/valiant.md`](valiant.md) | Valiant parsing algorithm |
-| [`docs/ll-parser.md`](ll-parser.md) | LL(k) parsing table construction and parser |
-| [`docs/lr-parser.md`](lr-parser.md) | LR automata, table construction, and parser |
-| [`docs/graph-reader.md`](graph-reader.md) | Graph file reading |
-| [`docs/belyanin-rpq.md`](belyanin-rpq.md) | Belyanin's RPQ algorithm |
-| [`docs/arroyuelo-rpq.md`](arroyuelo-rpq.md) | Arroyuelo's RPQ algorithm |
-| [`docs/kronecker-rpq.md`](kronecker-rpq.md) | Kronecker-based RPQ algorithm |
+| Project | Hub Document |
+|---------|-------------|
+| FLPQ.LinearAlgebra | [FLPQ.LinearAlgebra.md](FLPQ.LinearAlgebra.md) |
+| FLPQ.GraphAnalysis | [FLPQ.GraphAnalysis.md](FLPQ.GraphAnalysis.md) |
+| FLPQ.Languages | [FLPQ.Languages.md](FLPQ.Languages.md) |
+| FLPQ.RPQ | [FLPQ.RPQ.md](FLPQ.RPQ.md) |
+| FLPQ.Cli | [FLPQ.Cli.md](FLPQ.Cli.md) |
 
-When adding a new module, create a corresponding `docs/<module>.md` file following the same structure.
+See [main.md](main.md) for the full documentation index including the flat module listing.
+
+When adding a new module, create a corresponding `docs/<module>.md` file and update the respective project hub.

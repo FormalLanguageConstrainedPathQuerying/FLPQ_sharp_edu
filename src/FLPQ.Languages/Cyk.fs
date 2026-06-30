@@ -150,8 +150,8 @@ module Cyk =
             | None -> false
 
     /// Parse pre-tokenized input using CYK algorithm.
-    let parse (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
-        let cnf = Grammar.toCnf g
+    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
+        let cnf = Grammar.toCnf freshNonterminal g
 
         if tokens.IsEmpty then
             cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
@@ -160,8 +160,12 @@ module Cyk =
             isAccepted cnf table
 
     /// Run CYK and return the final table and acceptance status.
-    let parseWithTable (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : Matrix<Set<Nonterminal<'nt>>> * bool =
-        let cnf = Grammar.toCnf g
+    let parseWithTable
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : Matrix<Set<Nonterminal<'nt>>> * bool =
+        let cnf = Grammar.toCnf freshNonterminal g
 
         if tokens.IsEmpty then
             let epsAccepted =
@@ -189,8 +193,12 @@ module Cyk =
             (result, accepted)
 
     /// Run CYK and return the sequence of working table states with highlights.
-    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : CykTraceStep<'t, 'nt> list =
-        let cnf = Grammar.toCnf g
+    let parseWithTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: Symbol<'t, 'nt> list)
+        : CykTraceStep<'t, 'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
         tableTrace cnf tokens
 
     /// Convert a CYK working table to TeX with highlighted cells.

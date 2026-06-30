@@ -62,7 +62,9 @@ module Program =
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
-        let trace = Cyk.parseWithTrace grammar (Tokenizer.tokenize inputTokens)
+
+        let trace =
+            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenize inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -82,7 +84,9 @@ module Program =
     let private runValiant (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
-        let trace = Valiant.parseWithTrace grammar (Tokenizer.tokenizeStrings inputTokens)
+
+        let trace =
+            Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeStrings inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]

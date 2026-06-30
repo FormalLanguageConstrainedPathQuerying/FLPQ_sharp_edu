@@ -187,7 +187,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -200,7 +200,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -214,7 +214,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -222,7 +222,7 @@ module CnfTests =
     let ``toCnf handles long right-hand sides`` () =
         let text = "S -> a b c d"
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -236,7 +236,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -249,7 +249,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -263,7 +263,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -276,7 +276,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -289,7 +289,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -303,7 +303,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -321,7 +321,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
         Assert.True(allRhsSymbolsAreNonterminals cnf)
@@ -330,7 +330,7 @@ module CnfTests =
     let ``toCnf handles grammar with only epsilon`` () =
         let text = "S -> eps"
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -346,7 +346,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         Assert.True(isCnf cnf)
 
@@ -361,7 +361,7 @@ module CnfTests =
         "
 
         let g = Grammar.parseGrammar text
-        let cnf = Grammar.toCnf g
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         let hasUnit =
             cnf.rules

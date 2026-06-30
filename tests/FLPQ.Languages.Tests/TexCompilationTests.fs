@@ -14,7 +14,9 @@ let private templatePath =
 [<Trait("Category", "TeX")>]
 let ``CYK table TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
+
+    let trace =
+        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     let step = trace.[0]
     let tex = Cyk.tableToTeX string step.table
@@ -24,7 +26,9 @@ let ``CYK table TeX compiles with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``CYK all steps TeX compile with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Cyk.parseWithTrace g (Tokenizer.tokenize "a a")
+
+    let trace =
+        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     for step in trace do
         let tex = Cyk.tableToTeX string step.table
@@ -63,7 +67,10 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Valiant.parseWithTrace g (Tokenizer.tokenizeStrings "a a")
+
+    let trace =
+        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings "a a")
+
     Assert.NotEmpty(trace)
 
     for step in trace do
@@ -77,7 +84,10 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``Modified Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let trace = Valiant.parseModifiedWithTrace g (Tokenizer.tokenizeStrings "a a")
+
+    let trace =
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeStrings "a a")
+
     Assert.NotEmpty(trace)
 
     let cellPrinter (s: Set<Nonterminal<string>>) =
@@ -92,7 +102,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
 [<Trait("Category", "TeX")>]
 let ``Modified Valiant trace TeX with expression grammar compiles`` () =
     let trace =
-        Valiant.parseModifiedWithTrace grammar6 (Tokenizer.tokenizeStrings "x + x")
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeStrings "x + x")
 
     Assert.NotEmpty(trace)
 

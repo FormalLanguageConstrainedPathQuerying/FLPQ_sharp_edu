@@ -289,8 +289,12 @@ module Valiant =
             | _ -> None)
 
     /// Parse pre-tokenized input using Valiant's algorithm.
-    let parseWithTable (g: Grammar<'t, 'nt>) (tokens: 't list) : Matrix<Set<Nonterminal<'nt>>> * bool =
-        let cnf = Grammar.toCnf g
+    let parseWithTable
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: 't list)
+        : Matrix<Set<Nonterminal<'nt>>> * bool =
+        let cnf = Grammar.toCnf freshNonterminal g
         let tokensArr = tokens |> Array.ofList
         let n = tokensArr.Length
         let originalN = n
@@ -355,11 +359,16 @@ module Valiant =
 
             (result, accepted)
 
-    let parse (g: Grammar<'t, 'nt>) (tokens: 't list) : bool = parseWithTable g tokens |> snd
+    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: 't list) : bool =
+        parseWithTable freshNonterminal g tokens |> snd
 
-    /// Run Valiant with step-by-step trace.
-    let parseWithTrace (g: Grammar<'t, 'nt>) (tokens: 't list) : ValiantTraceStep<'nt> list =
-        let cnf = Grammar.toCnf g
+    /// Run Valiant and return the sequence of working table states.
+    let parseWithTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: 't list)
+        : ValiantTraceStep<'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
         let tokensArr = tokens |> Array.ofList
         let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1
@@ -490,8 +499,12 @@ module Valiant =
 
     /// Modified Valiant: parse with table.
     /// Uses V-shaped layers of disjoint submatrices for batched parallel multiplications.
-    let parseModifiedWithTable (g: Grammar<'t, 'nt>) (tokens: 't list) : Matrix<Set<Nonterminal<'nt>>> * bool =
-        let cnf = Grammar.toCnf g
+    let parseModifiedWithTable
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: 't list)
+        : Matrix<Set<Nonterminal<'nt>>> * bool =
+        let cnf = Grammar.toCnf freshNonterminal g
         let tokensArr = tokens |> Array.ofList
         let n = tokensArr.Length
         let originalN = n
@@ -563,11 +576,16 @@ module Valiant =
             (result, accepted)
 
     /// Modified Valiant: check acceptance only.
-    let parseModified (g: Grammar<'t, 'nt>) (tokens: 't list) : bool = parseModifiedWithTable g tokens |> snd
+    let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: 't list) : bool =
+        parseModifiedWithTable freshNonterminal g tokens |> snd
 
     /// Modified Valiant: run with step-by-step trace.
-    let parseModifiedWithTrace (g: Grammar<'t, 'nt>) (tokens: 't list) : ModifiedValiantTraceStep<'nt> list =
-        let cnf = Grammar.toCnf g
+    let parseModifiedWithTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (tokens: 't list)
+        : ModifiedValiantTraceStep<'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
         let tokensArr = tokens |> Array.ofList
         let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1

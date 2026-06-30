@@ -104,7 +104,7 @@ module Grammar =
     /// Parse a grammar from a .bnf file.
     let parseGrammarFromFile (path: string) : Grammar<string, string> = File.ReadAllText(path) |> parseGrammar
 
-    let private nonterminalsOf (g: Grammar<string, string>) : Set<Nonterminal<string>> =
+    let private nonterminalsOf (g: Grammar<'t, 'nt>) : Set<Nonterminal<'nt>> =
         g.rules
         |> List.collect (fun r ->
             let rhsNts =
@@ -116,7 +116,7 @@ module Grammar =
             r.lhs :: rhsNts)
         |> Set.ofList
 
-    let private terminalsOf (g: Grammar<string, string>) : Set<Terminal<string>> =
+    let private terminalsOf (g: Grammar<'t, 'nt>) : Set<Terminal<'t>> =
         g.rules
         |> List.collect (fun r ->
             Rhs.toSymbols r.rhs
@@ -125,23 +125,8 @@ module Grammar =
                 | _ -> None))
         |> Set.ofList
 
-    let private freshGen (existing: Set<Nonterminal<string>>) : unit -> Nonterminal<string> =
-        let mutable used = existing
-
-        fun () ->
-            let rec loop n =
-                let candidate = Nonterminal($"N_CNF_{n}")
-
-                if Set.contains candidate used then
-                    loop (n + 1)
-                else
-                    used <- Set.add candidate used
-                    candidate
-
-            loop 1
-
-    let private computeNullable (rules: Rule<string, string> list) : Set<Nonterminal<string>> =
-        let rec loop (current: Set<Nonterminal<string>>) =
+    let private computeNullable (rules: Rule<'t, 'nt> list) : Set<Nonterminal<'nt>> =
+        let rec loop (current: Set<Nonterminal<'nt>>) =
             let newNullable =
                 rules
                 |> List.filter (fun r ->
@@ -167,12 +152,12 @@ module Grammar =
         |> loop
 
     let private computeUnitPairs
-        (rules: Rule<string, string> list)
-        (nts: Set<Nonterminal<string>>)
-        : Set<Nonterminal<string> * Nonterminal<string>> =
+        (rules: Rule<'t, 'nt> list)
+        (nts: Set<Nonterminal<'nt>>)
+        : Set<Nonterminal<'nt> * Nonterminal<'nt>> =
         let initial = nts |> Set.map (fun a -> (a, a))
 
-        let rec loop (current: Set<Nonterminal<string> * Nonterminal<string>>) =
+        let rec loop (current: Set<Nonterminal<'nt> * Nonterminal<'nt>>) =
             let newPairs =
                 rules
                 |> List.filter (fun r ->
@@ -216,18 +201,13 @@ module Grammar =
 
         loop indices
 
-    let private eliminateEpsilon (g: Grammar<string, string>) : Grammar<string, string> =
+    let private eliminateEpsilon (fresh: unit -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         let nullable = computeNullable g.rules
 
         let hasEps =
             g.rules |> List.exists (fun r -> r.lhs = g.start && Rhs.isEpsilon r.rhs)
 
-        let newStart =
-            if hasEps then
-                let fresh = freshGen (nonterminalsOf g) ()
-                fresh
-            else
-                g.start
+        let newStart = if hasEps then Nonterminal(fresh ()) else g.start
 
         let startRule =
             { lhs = newStart
@@ -283,7 +263,7 @@ module Grammar =
         { rules = List.distinct allRules
           start = newStart }
 
-    let private eliminateUnit (g: Grammar<string, string>) : Grammar<string, string> =
+    let private eliminateUnit (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         let nts = nonterminalsOf g
         let pairs = computeUnitPairs g.rules nts
 
@@ -320,12 +300,14 @@ module Grammar =
         { g with
             rules = List.distinct withoutUnits }
 
-    let private replaceTerminals (g: Grammar<string, string>) : Grammar<string, string> =
+    let private replaceTerminals (fresh: unit -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         let terminals = terminalsOf g
-        let fresh = freshGen (nonterminalsOf g)
 
         let terminalToNt =
-            terminals |> Set.toList |> List.map (fun t -> (t, fresh ())) |> Map.ofList
+            terminals
+            |> Set.toList
+            |> List.map (fun t -> (t, Nonterminal(fresh ())))
+            |> Map.ofList
 
         let termRules =
             terminalToNt
@@ -359,9 +341,7 @@ module Grammar =
         { g with
             rules = List.distinct (termRules @ newRules) }
 
-    let private binarize (g: Grammar<string, string>) : Grammar<string, string> =
-        let fresh = freshGen (nonterminalsOf g)
-
+    let private binarize (fresh: unit -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         let newRules =
             g.rules
             |> List.collect (fun r ->
@@ -374,13 +354,13 @@ module Grammar =
                     | [ _ ] -> [ r ]
                     | [ _; _ ] -> [ r ]
                     | first :: rest ->
-                        let rec breakDown (prevNt: Nonterminal<string>) (remaining: Symbol<string, string> list) =
+                        let rec breakDown (prevNt: Nonterminal<'nt>) (remaining: Symbol<'t, 'nt> list) =
                             match remaining with
                             | [ s1; s2 ] ->
                                 [ { lhs = prevNt
                                     rhs = NonEmptyList.create s1 [ s2 ] |> Symbols } ]
                             | s1 :: more ->
-                                let newNt = fresh ()
+                                let newNt = Nonterminal(fresh ())
 
                                 let restRules = breakDown newNt more
 
@@ -389,7 +369,7 @@ module Grammar =
                                 :: restRules
                             | _ -> []
 
-                        let newNt = fresh ()
+                        let newNt = Nonterminal(fresh ())
                         let rhsRules = breakDown newNt rest
 
                         { lhs = r.lhs
@@ -400,14 +380,26 @@ module Grammar =
         { g with
             rules = List.distinct newRules }
 
+    /// A convenience function: generate a fresh nonterminal name from an integer index
+    /// for use with string-based grammars (Nonterminal<string>).
+    let freshStringNonterminal (i: int) : string = $"N_CNF_{i}"
+
     /// Transform a grammar into Chomsky Normal Form.
     /// Resulting grammar has only rules of the form:
     /// A -> BC (two nonterminals), A -> a (one terminal), or S -> eps (only start).
     /// Binarization is applied first to reduce the number of combinations
     /// generated during epsilon elimination for long rules with nullable nonterminals.
-    let toCnf (g: Grammar<string, string>) : Grammar<string, string> =
-        let s1 = binarize g
-        let s2 = eliminateEpsilon s1
+    /// `freshNonterminal` produces a fresh nonterminal from an integer index.
+    /// The caller is responsible for ensuring uniqueness (different indices produce different nonterminals).
+    let toCnf (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
+        let counter = ref 0
+
+        let fresh () =
+            counter.Value <- counter.Value + 1
+            freshNonterminal counter.Value
+
+        let s1 = binarize fresh g
+        let s2 = eliminateEpsilon fresh s1
         let s3 = eliminateUnit s2
-        let s4 = replaceTerminals s3
+        let s4 = replaceTerminals fresh s3
         s4
