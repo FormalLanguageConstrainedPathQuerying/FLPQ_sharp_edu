@@ -135,3 +135,34 @@ The function `cellPrinter: 'a -> string` controls how each matrix element is ren
 | 1-based numbering in TeX output | Standard matrix notation (row 1, column 1 is the top-left element) |
 | Manual row/column prepending vs nicematrix `first-row`/`first-col` options | Simpler implementation; avoids dependency on nicematrix options and works with any LaTeX engine |
 | Cell printer as function parameter | Maximum flexibility: caller controls how any element type renders in TeX |
+
+### Styled TeX Printing
+
+```fsharp
+type Highlight = { row: int; col: int; color: string }
+
+type SubmatrixBlock =
+    { startRow: int
+      startCol: int
+      rowCount: int
+      colCount: int
+      borderColor: string option
+      fillColor: string option }
+
+val toTeXStyled:
+    showRowNumbers: bool ->
+    showColNumbers: bool ->
+    cellPrinter: ('a -> string) ->
+    m: Matrix<'a> ->
+    highlights: Highlight list ->
+    blocks: SubmatrixBlock list ->
+    string
+```
+
+Extended TeX printing with cell highlighting and submatrix block borders. Highlights color individual cells using `\cellcolor{color}{content}`. Submatrix blocks draw borders around rectangular regions using nicematrix `\Block[draw=color]{rows-cols}{content}` commands placed at the top-left cell of each block.
+
+| Decision | Rationale |
+|----------|-----------|
+| `\Block` uses `{rows-cols}` dimension syntax | Compatible with nicematrix v6+ (2024+), which removed the old `{r1-c1-r2-c2}` positional syntax |
+| Block command embedded in cell content | nicematrix `\Block` must be placed at the block's top-left cell, not before the matrix |
+| If multiple blocks start at same cell, only first is kept | nicematrix cannot handle overlapping `\Block` commands at the same position |

@@ -142,3 +142,28 @@ This brings in `FsCheck` transitively.
 ### Property-Based Tests from Task Spec
 
 When a task specification states that certain constructs "can be used for property-based tests", the intended implementation is FsCheck `[<Property>]` tests with generated random inputs. Do NOT replace them with `[<Fact>]` tests iterating over hardcoded strings or values. The generators must cover the input space relevant to the property (bounded randomization is acceptable when exhaustive generation is impractical, e.g., bounding string length or matrix dimensions).
+
+## nicematrix v6+ (2024+) `\Block` Syntax
+
+**Problem**: nicematrix versions 6.x and later (distributed with TeX Live 2024+) use a different `\Block` syntax than older versions. The old positional syntax `\Block[draw=red]{r1-c1-r2-c2}{}` was removed.
+
+**New syntax** (v6+): `\Block[draw=red]{rows-cols}{content}`
+- `rows`: number of rows the block spans
+- `cols`: number of columns the block spans
+- `content`: the content displayed in the block (overrides the top-left cell content)
+
+**Placement**: `\Block` must be placed at the top-left cell of the block within the matrix, not before the matrix. In `toTeXStyled`, this means merging the `\Block` command into the cell content string at the block's starting position.
+
+**Resolved in**: Matrix.fs `toTeXStyled` function (task 52), which generates `\Block[draw=color]{rowCount-colCount}{styledCellContent}` at the appropriate cell.
+
+## F# Record Type Ambiguity in Module with Shadowed Name
+
+**Problem**: When a module defines its own record type (e.g., `type Submatrix = { A: int; B: int; Size: int }` in Valiant module), constructing a record from a different namespace (e.g., `Matrix.SubmatrixBlock`) using qualified field syntax (`{ Matrix.SubmatrixBlock.field = val }`) may fail because F# resolves the record type based on the first field name and finds an ambiguous match.
+
+**Solution**: Use a separate `let` binding with an explicit type annotation:
+```fsharp
+let block: Matrix.SubmatrixBlock =
+    { startRow = r
+      startCol = c
+      ... }
+```

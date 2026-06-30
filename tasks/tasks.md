@@ -216,4 +216,75 @@
         Rule numbering: rules are numbered 0, 1, 2, ... corresponding to the order in the grammar (as in the book). The augmented rule is included in the numbering.
         Must support three LR table variants: LR(0) — built from LR(0) automaton, may contain conflicts (multiple entries per cell, shown comma-separated as in the book); SLR(1) — same automaton as LR(0), but reduce entries restricted by FOLLOW sets, column layout identical to LR(0); CLR(1) — built from CLR(1) automaton, visually identical layout.
         Tests: generate TeX for SLR(1) table of grammar S -> aSbS | eps and verify it compiles with TeX (use existing TeX compilation test infrastructure, name category TexCompilation). Generate TeX for LR(0) table of the same grammar and verify it shows shift-reduce conflicts (comma-separated entries in cells). Verify generated TeX contains expected structural elements: correct number of \hline, correct column count, state numbers, shift/reduce/accept entries, goto entries. For a grammar with multiple nonterminals (e.g. grammar2 from task 11), verify the GOTO section has correct number of columns and entries. Test that all three table variants (LR(0), SLR(1), CLR(1)) produce compilable TeX for the same grammar.
+    52. Implement modified Valiant algorithm. The book (Chapter 7, `02_Valiant.tex`, subsection "Модифицированный алгоритм") describes a modification that structures the parsing table into V-shaped layers of disjoint submatrices of equal size, enabling parallel execution of matrix multiplications.
+        The algorithm operates as follows. The main procedure $main()$ first initializes the diagonal cells of $T$ ($T[\ell-1, \ell]$ for all $\ell \in [1,n]$) with trivial productions. Then, for each layer $i = 1, 2, \dots$ up to $\lceil \log n \rceil$, it constructs a layer via $constructLayer(i)$ and calls $completeVLayer$ on it.
+        Procedure $constructLayer(i)$ builds a set of disjoint submatrices of size $2^i$: first it constructs submatrix $\mathcal{A} = submatrixByBottomCellAndSize((2^i-1, 2^i), 2^i)$, then returns all submatrices obtained by shifting $\mathcal{A}$ by $(k\cdot2^i, k\cdot2^i)$ for $k \geq 0$, keeping only those that fit within the $T$ matrix bounds.
+        Procedure $completeLayer(M)$ processes a set $M$ of submatrices of equal size. If all $m \in M$ have $size(m) = 1$, it fills $T[i,j]$ for all bottom cells $(i,j)$ of submatrices in $M$ where $i+1 \neq j$ (the case $i+1 = j$ is handled in $main()$): $T[i,j] = \{A \mid \exists (B,C) \in P[i,j]: A \to BC \in R\}$. Otherwise, it recursively calls $completeLayer$ on the bottom submatrices, then calls $completeVLayer(M)$.
+        Procedure $completeVLayer(M)$ is the core. For each $m \in M$, it process the three upper quarters: $leftSubmatrix(m)$, $rightSubmatrix(m)$, and $topSubmatrix(m)$. It builds three multiplication tasks:
+        - $firstMultiplicationTask$: for each $m$ in $leftSubLayer$, multiply $leftGrounded(m)$ and $rightNeighbor(m)$; for each $m$ in $rightSubLayer$, multiply $leftNeighbor(m)$ and $rightGrounded(m)$
+        - $secondMultiplicationTask$: for each $m$ in $topSubLayer$, multiply $leftGrounded(m)$ and $rightNeighbor(m)$
+        - $thirdMultiplicationTask$: for each $m$ in $topSubLayer$, multiply $leftNeighbor(m)$ and $rightGrounded(m)$
+        Then $performMultiplications$ is called on the first task, followed by recursively calling $completeLayer$ on the union of $leftSubLayer$ and $rightSubLayer$, then $performMultiplications$ for the second and third tasks, and finally $completeLayer$ on $topSubLayer$.
+        The key difference from the standard Valiant: $performMultiplications$ in the modified algorithm receives sets of multiple triples (not just one), enabling parallel execution of independent matrix multiplications. Procedure $performMultiplications(tasks)$ iterates over each triple $(m, m_1, m_2)$ and each pair $(B,C)$ of nonterminals, computing $P_{BC}[m] \mathrel{+}= T_B[m_1] \times T_C[m_2]$ (Boolean matrix multiplication).
+        Preconditions for $completeVLayer$: all submatrices in $M$ are disjoint and of equal size; for each $m \in M$, cells in $bottomSubmatrix(m)$ and cells $(i,j)$ where both indices are within $m$ but $(i,j)$ is in a strictly smaller submatrix of $m$ must already be computed. The $P$ matrix must satisfy: for each $m \in M$, $P[i,j] = \{(B,C) \mid \exists k: a < k < b; a_{i+1}\dots a_k \in L(B) \land a_{k+1}\dots a_j \in L(C)\}$ where $(a,b)$ are the coordinates of submatrix $m$.
+        Use the same boolean decomposition representation as in the standard Valiant implementation (task 8, task 42). The modified algorithm must integrate with the existing Valiant infrastructure (boolean matrices, submatrix operations, grounded submatrix helpers).
+        Implement step-by-step visualization of the modified Valiant algorithm. Since layers consist of disjoint non-overlapping submatrices, visualize each layer independently: for each layer, show the $T$ matrix with all submatrices of that layer highlighted. Use different colors for different submatrices within a layer. After each multiplication step, highlight the cells that were modified. Use the same visual conventions as the standard Valiant visualization (bool decomposition + recomposed, \cdot for false, 1 for true, border and fill submatrices).
+        Tests: use property-based tests — for any grammar (from existing test grammars) and any input string, the standard Valiant and modified Valiant must return identical results: same acceptance status and same final table (matrix over sets). For step-by-step execution with visualization, verify that each layer covers disjoint submatrices and that the union of all layers covers the upper triangle of $T$. Verify that TeX output for modified Valiant steps compiles successfully (use existing TeX compilation tests).
+    53. Implement type for storing RSM (Recursive State Machine). The book (Chapter 6, `03_RecursiveAutomata.tex`) defines an RSM as a tuple $\mathcal{R} = \langle \mathcal{N},\Sigma,B,B_S,Q,Q_S\rangle$ where:
+        - $\mathcal{N}$ — set of nonterminal symbols
+        - $\Sigma$ — set of terminal symbols
+        - $Q$ — set of all automaton states
+        - $Q_S$ — set of start states of all blocks
+        - $B = \{B_{N_i} \mid N_i \in \mathcal{N}\}$ — set of blocks, where each $B_{N_i} = \langle Q_{N_i}, q_S, Q_F^{N_i}, \delta \rangle$ is a deterministic finite automaton (block) for nonterminal $N_i$. $Q_{N_i} \subseteq Q$, $q_S \in Q_{N_i} \cap Q_S$, $Q_F^{N_i} \subseteq Q_{N_i}$, $\delta \subseteq Q_{N_i} \times (\Sigma \cup Q_S) \times Q_{N_i}$ — transition function over alphabet of terminals and start states of other blocks
+        - $B_S \in B$ — start block
+        RSM is a collection of deterministic finite automata, one per nonterminal. Transitions are labeled by either terminals (read input) or start states of other blocks (recursive call). Represent using the existing deterministic finite automaton type (task 14, task 31). Each block is a DFA over the alphabet $\Sigma \cup Q_S$. Map each block's start state to its corresponding nonterminal. The RSM type must be generic over terminal and nonterminal types. Provide accessors: list of all blocks, get block by nonterminal, get start block, list all terminals, list all nonterminals.
+    54. Implement reading of EBNF grammar and construction of RSM from it. The book (Chapter 6, `02_EBNF.tex`) defines EBNF grammar as $\langle \Sigma, N, P, S \rangle$ where each rule $N_i \to R$ has a regular expression $R$ over $\Sigma \cup N$ as the right-hand side.
+        EBNF input format: file with extension `.ebnf`. One rule per line. Empty lines allowed. Each rule has form `<nonterm> -> <regex>`. Nonterminal naming follows the same convention as BNF (PascalCase: starts with capital letter). Terminal naming: camelCase (starts with lowercase). The `eps` symbol is used explicitly to denote epsilon.
+        Extended regular expression syntax in right-hand sides supports:
+        - Concatenation (juxtaposition): `a b c`
+        - Alternative: `|`
+        - Kleene star: `*` (zero or more)
+        - Plus: `+` (one or more, shorthand for $R \cdot R^*$)
+        - Optional: `?` (zero or one, shorthand for $R \mid \varepsilon$)
+        - Parentheses for grouping: `( ... )`
+        - `eps` as an explicit epsilon symbol (matches empty string)
+        Examples of valid EBNF rules: `S -> a S b S | eps` (same as BNF), `S -> ( a S b )*`, `A -> a+ b? c*`, `Expr -> Term ( (+ | -) Term )*`.
+        If multiple rules have the same left-hand side nonterminal (e.g., `S -> a S b S` and `S -> eps` on separate lines), join their right-hand sides with alternative: `S -> a S b S | eps` at the AST level before building automata. This means after parsing, the grammar AST groups rules by nonterminal: each nonterminal has exactly one regular expression that is the disjunction (|) of all right-hand sides from rules with this nonterminal.
+        Use FParsec (https://www.nuget.org/packages/fparsec/) for parsing. Implement parsing in two stages: (1) parse into an AST representing the EBNF grammar with explicit regular expression nodes (Epsilon, Terminal, Nonterminal, Concatenate, Alternative, Star, Plus, Optional); (2) group rules by nonterminal and build a single combined regex per nonterminal.
+        To build DFA for each regular expression, use Brzozowski derivatives. Reuse the implementation from `https://github.com/gsvgit/CFPQ_GLL/blob/Parsing/CFPQ_GLL/RsmBuilder.fs`. The algorithm: starting from the initial state (the regex itself), compute derivatives with respect to each symbol in $\Sigma \cup N$, creating new states for distinct derivatives. Continue until closure (no new derivatives). Each derivative that matches the empty string (nullable) corresponds to a final state.
+        Steps to build RSM:
+        1. Parse EBNF file into AST (FParsec)
+        2. Group rules by nonterminal: for each nonterminal, build a combined regex by joining all right-hand sides with `|`
+        3. For each nonterminal $N_i$ with combined regex $R_i$, build a DFA using Brzozowski derivatives over alphabet $\Sigma \cup \mathcal{N}$. Each DFA state is a regular expression (derivative). The start state is $R_i$. Final states are those derivatives that are nullable. Transitions: from derivative $d$ on symbol $x$, go to derivative $d_x$ (the derivative of $d$ w.r.t. $x$)
+        4. After building all DFA blocks, identify block start states: each block's start state $q_S$ is its DFA start state (index 0). The set $Q_S$ is the collection of all block start states
+        5. Relabel transitions: replace terminal/nonterminal symbols with proper types. Transitions labeled with nonterminals become transitions on the start state of the corresponding block (using the block's $q_S$). This is because RSM transitions are over $\Sigma \cup Q_S$
+        6. Assemble the RSM: collect all blocks, set the start block to the block for the grammar's start nonterminal
+        Tests:
+        - Grammar `S -> eps`: RSM has one block (S) with one state (start state), no transitions, the start state is also final
+        - Grammar `S -> a*`: RSM has one block (S) with one state, one transition on `a` looping back, start state is final
+        - Grammar `S -> a b`: RSM has one block (S) with 3 states, 2 edges, last state final
+        - Grammar `S -> a* a*`: RSM has one block (S) with one state, one transition on `a` looping back, start state is final
+        - Grammar `S -> (a S b)*`: EBNF for Dyck language — 3 states, 3 transitions, the start state is also final
+        - Grammar `S -> a+ b?`: tests + and ? operators
+        - Grammar with multiple rules for same nonterminal: `S -> a S b S` and `S -> eps` — verify rules are merged correctly
+        - Grammar2 from task 11 (expression grammar): verify RSM blocks correspond to E, T, F
+        - Verify that the constructed DFAs are deterministic and have the expected number of states (for simple grammars)
+        - Generate dot visualizations of RSM blocks and verify they compile with graphviz (use existing infrastructure)
+    55. Implement conversion of DFA to CFG and RSM to BNF grammar.
+        The book (Chapter 5, `06_LinearGrammars.tex`) provides the conversion: given a DFA $M = \langle \Sigma, Q, q_s, Q_f, \delta \rangle$, build a right-linear grammar $G = \langle \Sigma, N, S, P \rangle$ where $N = Q$, $S = q_s$, $P = \{q_i \to t\,q_j \mid (q_i, t, q_j) \in \delta\} \cup \{q_i \to \varepsilon \mid q_i \in Q_f\}$.
+        The book (Chapter 6, `02_EBNF.tex`, Theorem `\ref{thm:ebnf_cfg}`) describes converting an EBNF grammar back to BNF: for each rule $N \to R$, build a DFA for $R$, convert the DFA to a right-linear grammar $G_R$, then replace rule $N \to R$ with the rules of $G_R$, identifying nonterminal $N$ with the nonterminal corresponding to the DFA's start state.
+        Based on this, implement the function `rsmToGrammar` that converts an RSM to a BNF grammar:
+        1. For each block $B_{N_i}$ of the RSM, convert the DFA block to a right-linear grammar fragment:
+           - For each transition $(q, x, q') \in \delta$ where $x \in \Sigma$ (terminal), add rule $Q_q \to x\,Q_{q'}$
+           - For each transition $(q, s', q') \in \delta$ where $s' \in Q_S$ (call to another block), find the nonterminal $N_j$ whose start state is $s'$, and add rule $Q_q \to N_j\,Q_{q'}$
+           - For each final state $q_f \in Q_F^{N_i}$, add rule $Q_{q_f} \to \varepsilon$
+        2. For each block $B_{N_i}$:
+           - Identify nonterminal $N_i$ with the grammar nonterminal $Q_{q_S}$ (where $q_S$ is the block's start state)
+           - Therefore: $N_i \to RHS$ for each rule with left-hand side $Q_{q_S}$, and all rules produced for other states of the block are auxiliary nonterminals
+        3. The resulting BNF grammar uses the book's Nonterminal and Terminal types. The start nonterminal of the BNF grammar is the nonterminal from the RSM's start block
+        After implementing the conversion, write property-based tests: for any grammar that can be expressed both as BNF and EBNF, and any input string:
+        - (grammar loaded as BNF → parsing algorithm) and (grammar loaded as EBNF → built RSM → converted to BNF → same parsing algorithm) must return identical accept/reject results
+        - Test with all applicable parsing algorithms: CYK, Valiant, modified Valiant, LL (for LL-compatible grammars), LR (for LR-compatible grammars)
+        - Use the existing test grammars infrastructure: grammars that are in BNF already (grammar1, grammar2, grammar3 from tasks 6 and 11) can be mechanically converted to EBNF (e.g., `S -> a S b S | eps` in EBNF becomes `S -> a S b S | eps` — same syntax since EBNF accepts `|`), and the round-trip through RSM and back to BNF should produce an equivalent grammar
+        - Add specific test: the Dyck language grammar `S -> ( a S b )*` in EBNF, converted to RSM then to BNF, should recognize the same strings as the standard BNF grammar `S -> a S b S | eps` (from task 6)
 

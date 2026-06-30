@@ -75,43 +75,36 @@ module Matrix =
             |> List.map (fun h -> (h.row + dataRowOffset, h.col + dataColOffset, h.color))
             |> Set.ofList
 
+        let blockMap =
+            blocks
+            |> List.map (fun b ->
+                let r = b.startRow + dataRowOffset
+                let c = b.startCol + dataColOffset
+
+                let opts = ResizeArray<string>()
+
+                match b.borderColor with
+                | Some bc -> opts.Add(sprintf "draw=%s" bc)
+                | None -> ()
+
+                match b.fillColor with
+                | Some fc -> opts.Add(sprintf "fill=%s" fc)
+                | None -> ()
+
+                let options =
+                    if opts.Count = 0 then
+                        ""
+                    else
+                        "[" + String.concat "," opts + "]"
+
+                (r, c), (options, b.rowCount, b.colCount))
+            |> List.groupBy fst
+            |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
+            |> Map.ofList
+
         let sb = System.Text.StringBuilder()
         sb.Append(@"\begin{pNiceMatrix}") |> ignore
         sb.AppendLine() |> ignore
-
-        for block in blocks do
-            let r = block.startRow + dataRowOffset
-            let c = block.startCol + dataColOffset
-            let opts = ResizeArray<string>()
-
-            match block.borderColor with
-            | Some bc -> opts.Add(sprintf "draw=%s" bc)
-            | None -> ()
-
-            match block.fillColor with
-            | Some fc -> opts.Add(sprintf "fill=%s" fc)
-            | None -> ()
-
-            let options =
-                if opts.Count = 0 then
-                    ""
-                else
-                    "[" + String.concat "," opts + "]"
-
-            let line =
-                "\\Block"
-                + options
-                + "{"
-                + string (r + 1)
-                + "-"
-                + string (c + 1)
-                + "-"
-                + string (r + block.rowCount)
-                + "-"
-                + string (c + block.colCount)
-                + "}{}"
-
-            sb.Append(line).AppendLine() |> ignore
 
         for row in 0 .. totalRows - 1 do
             let cells =
@@ -132,9 +125,20 @@ module Matrix =
                       let hc =
                           highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)
 
-                      match hc with
-                      | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
-                      | None -> content ]
+                      match Map.tryFind (row, col) blockMap with
+                      | Some(blockOpts, rowCount, colCount) ->
+                          sprintf
+                              @"\Block%s{%d-%d}{%s}"
+                              blockOpts
+                              rowCount
+                              colCount
+                              (match hc with
+                               | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
+                               | None -> content)
+                      | None ->
+                          match hc with
+                          | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
+                          | None -> content ]
 
             let line = String.Join(" & ", cells) + @" \\"
             sb.Append(line).AppendLine() |> ignore

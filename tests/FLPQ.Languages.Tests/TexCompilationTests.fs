@@ -5,6 +5,8 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
+open TestGrammars
+
 let private templatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_template.tex")
 
@@ -68,6 +70,37 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
         let tex =
             Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
 
+        Assert.Contains(@"\begin{pNiceMatrix}", tex)
+        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``Modified Valiant trace TeX compiles with pdflatex`` () =
+    let g = Grammar.parseGrammar "S -> a S\nS -> a"
+    let trace = Valiant.parseModifiedWithTrace g (Tokenizer.tokenizeStrings "a a")
+    Assert.NotEmpty(trace)
+
+    let cellPrinter (s: Set<Nonterminal<string>>) =
+        if Set.isEmpty s then @"\cdot" else string s
+
+    for step in trace do
+        let tex = Valiant.stepToTeX cellPrinter step
+        Assert.Contains(@"\begin{pNiceMatrix}", tex)
+        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``Modified Valiant trace TeX with expression grammar compiles`` () =
+    let trace =
+        Valiant.parseModifiedWithTrace grammar6 (Tokenizer.tokenizeStrings "x + x")
+
+    Assert.NotEmpty(trace)
+
+    let cellPrinter (s: Set<Nonterminal<string>>) =
+        if Set.isEmpty s then @"\cdot" else string s
+
+    for step in trace do
+        let tex = Valiant.stepToTeX cellPrinter step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
