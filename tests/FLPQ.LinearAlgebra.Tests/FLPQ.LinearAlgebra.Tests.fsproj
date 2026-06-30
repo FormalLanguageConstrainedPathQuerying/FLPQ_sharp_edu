@@ -9,6 +9,7 @@
     <Compile Include="MatrixTests.fs" />
     <Compile Include="LinearAlgebraTests.fs" />
     <Compile Include="BooleanDecompositionTests.fs" />
+    <Compile Include="MsBfsTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

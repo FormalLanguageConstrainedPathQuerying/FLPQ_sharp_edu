@@ -8,13 +8,23 @@ FLPQ.slnx
 │   ├── FLPQ.LinearAlgebra/     # Linear algebra library
 │   │   ├── Matrix.fs               # Generic matrix type and operations
 │   │   ├── LinearAlgebra.fs        # Matrix multiplication and Kronecker product
-│   │   └── BooleanDecomposition.fs # Boolean decomposition of set-valued matrices
+│   │   ├── BooleanDecomposition.fs # Boolean decomposition of set-valued matrices
+│   │   └── MsBfs.fs                # MS-BFS and Boolean/Mask semiring operations
 │   └── FLPQ.Languages/         # Languages library (depends on FLPQ.LinearAlgebra)
 │       ├── Grammar.fs              # Grammar types, BNF parser, and CNF transformation
 │       ├── Tokenizer.fs            # Common tokenizer for all parsing algorithms
 │       ├── FirstFollow.fs          # First_k and follow_k computations
 │       ├── Automaton.fs            # Generic finite automaton type and operations
+│       ├── RSM.fs                  # Recursive State Machine type
+│       ├── EbnfParser.fs           # EBNF parser and RSM construction via Brzozowski derivatives
+│       ├── RsmToGrammar.fs         # RSM to BNF grammar conversion
+│       ├── GraphReader.fs          # Graph file reading with per-label adjacency
+│       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
+│       ├── ArroyueloRPQ.fs         # Arroyuelo's matrix-based RPQ algorithm
+│       ├── KroneckerRPQ.fs         # Kronecker product-based RPQ with MS-BFS filtering
 │       ├── DerivationTree.fs       # Derivation tree type and operations
+│       ├── VisualizationTypes.fs   # Shared visualization types
+│       ├── DerivationTreeVisualizer.fs
 │       ├── Cyk.fs                  # CYK parsing algorithm
 │       ├── Valiant.fs              # Valiant parsing algorithm
 │       ├── LLParser.fs             # LL(k) parsing table and parser
@@ -23,14 +33,20 @@ FLPQ.slnx
     ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
     │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
     │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
-    │   └── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
+    │   ├── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
+    │   └── MsBfsTests.fs                 # MS-BFS and Boolean/Mask semiring tests
     └── FLPQ.Languages.Tests/      # Tests for languages
+        ├── TestUtils.fs                  # Shared test utilities (dot/TeX compilation)
         ├── TestGrammars.fs               # Shared pre-parsed grammars and generators
         ├── GrammarTests.fs               # Unit tests for Grammar and CNF
         ├── CykTests.fs                   # Unit tests for CYK algorithm
         ├── ValiantTests.fs               # Unit and property tests for Valiant
         ├── FirstFollowTests.fs           # Tests for FirstFollow
         ├── AutomatonTests.fs             # Tests for Automaton
+        ├── RSMTests.fs                   # Tests for RSM type
+        ├── EbnfParserTests.fs            # Tests for EBNF parser
+        ├── RsmToGrammarTests.fs          # Tests for RSM to grammar conversion
+        ├── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
         ├── LLParserTests.fs              # Tests for LL parser
         └── LRParserTests.fs              # Tests for LR parser
 ```

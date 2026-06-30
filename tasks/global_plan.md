@@ -1,103 +1,89 @@
-# Global Plan: Tasks 52—55
+# Global Plan: Tasks 57—63
 
 ## Task Summary
 
 | ID | Description | Type |
 |----|-------------|------|
-| 52 | Modified Valiant algorithm (V-shaped layers, batched multiplications) | Feature |
-| 53 | RSM (Recursive State Machine) type | Feature (new type) |
-| 54 | EBNF grammar reading and RSM construction (Brzozowski derivatives) | Feature |
-| 55 | DFA to CFG and RSM to BNF grammar conversion | Feature |
+| 57 | Linear-algebra based multiple-source BFS (MS-BFS) | Feature |
+| 58 | Matrix operations for MS-BFS and RPQ algorithms | Feature |
+| 59 | Belyanin's LARPQ algorithm (BFS-based single-source RPQ) | Feature |
+| 60 | Arroyuelo's RPQ algorithm (Matrix-based regex evaluation) | Feature |
+| 61 | Kronecker-based RPQ algorithm with MS-BFS filtering | Feature |
+| 62 | Graph reading from file | Feature |
+| 63 | Property-based tests for all three RPQ algorithms | Feature (Tests) |
 
 ## Dependencies
 
 ```
-Task 52 (Modified Valiant)     independent
-Task 53 (RSM type)             independent, prerequisite for 54, 55
-Task 54 (EBNF parsing + RSM)  depends on 53
-Task 55 (RSM to BNF)           depends on 53, 54
+Task 57 (MS-BFS) ───────────────┐
+                                 ├──> Task 61 (Kronecker RPQ)
+Task 58 (Matrix operations) ────┤
+                                 ├──> Task 59 (Belyanin RPQ)
+                                 ├──> Task 60 (Arroyuelo RPQ)
+Task 62 (Graph reader) ─────────┤
+                                 └──> Task 63 (Property-based tests)
 ```
+
+- Tasks 57 and 58 are independent of each other but both go into the LinearAlgebra project
+- Tasks 59, 60, 61 depend on 57, 58 (matrix operations) and 62 (graph reading for tests)
+- Task 63 depends on all of 57-62
 
 ## Potential Conflicts
 
 | Task | Files Modified/Created | Conflicts With |
 |------|----------------------|----------------|
-| 52 | `Valiant.fs` (add new functions), `ValiantTests.fs` (add tests), `TexCompilationTests.fs` (add TeX tests) | None |
-| 53 | New `RSM.fs` (new module), `FLPQ.Languages.fsproj` (add Compile), `Automaton.fs` (no changes expected) | None |
-| 54 | New `EbnfParser.fs`, modifications to `RSM.fs`, `FLPQ.Languages.fsproj` (add Compile + NuGet ref for FParsec) | Minor: 53 created `RSM.fs` |
-| 55 | New `RsmToGrammar.fs` or modifications to `RSM.fs`, `FLPQ.Languages.fsproj`, `TestGrammars.fs` (add EBNF grammars) | 53, 54 created RSM modules |
+| 57+58 | New `MsBfs.fs`, modify `FLPQ.LinearAlgebra.fsproj` | None |
+| 59 | New `BelyaninRPQ.fs`, modify `FLPQ.Languages.fsproj` | None |
+| 60 | New `ArroyueloRPQ.fs`, modify `FLPQ.Languages.fsproj` | None |
+| 61 | New `KroneckerRPQ.fs`, modify `FLPQ.Languages.fsproj` | Uses MS-BFS from 57 |
+| 62 | New `GraphReader.fs`, modify `FLPQ.Languages.fsproj` | None |
+| 63 | New/modified test files, modify test `.fsproj` | None |
+
+All tasks create new files — no conflicts with existing code.
 
 ## Shared Infrastructure
 
-- All tasks use the existing `Grammar` and `Automaton` types
-- Task 52 uses existing `BooleanDecomposition` and `Valiant.Submatrix` helpers
-- Task 53 reuses `DFA<'t,'s>` from `Automaton.fs`
-- Task 54 uses FParsec (new NuGet dependency) and Brzozowski derivatives
-- Task 55 uses `RSM` type (from 53), `DFA` type (from Automaton), `Grammar` type, and right-linear grammar construction pattern from the book
-- All test infrastructure (xUnit, FsCheck, FSharpPlus, TeX compilation) already exists
+- Tasks 57-58 share the `Matrix` and `LinearAlgebra` modules from `FLPQ.LinearAlgebra`
+- Tasks 59, 60, 61 all use per-label boolean matrix decomposition (`BooleanDecomposition.decompose/recompose`)
+- Tasks 59, 61 use the automaton type (`DFA<'t,'s>`) for query representation
+- Task 60 reuses the `Regexp` AST from `EbnfParser.fs`
+- Task 61 uses MS-BFS from task 57
+- Task 62 provides graph reading infrastructure used by tests for all RPQ algorithms
+- All test infrastructure (xUnit, FsCheck, TeX compilation) already exists
 
 ## Execution Order
 
-1. **Task 52** — Modified Valiant (independent, no dependencies on 53-55)
-2. **Task 53** — RSM type (prerequisite for 54 and 55)
-3. **Task 54** — EBNF parsing and RSM construction (needs RSM type from 53)
-4. **Task 55** — RSM to BNF conversion (needs RSM from 53 and EBNF parser from 54)
+1. **Tasks 57+58** (combined) — MS-BFS and supporting matrix operations in LinearAlgebra project
+2. **Task 62** — Graph reader (independent, needed for tests)
+3. **Task 59** — Belyanin's LARPQ
+4. **Task 60** — Arroyuelo's RPQ 
+5. **Task 61** — Kronecker-based RPQ (uses MS-BFS from 57)
+6. **Task 63** — Property-based tests for all three algorithms
 
-## Task Details
+## New Files to Create
 
-### Task 52: Modified Valiant
-- **Source**: Book Chapter 7, `02_Valiant.tex`, subsection "Модифицированный алгоритм"
-- **Reference paper**: `10.1007/978-3-030-63061-4_17`
-- **Key design**: V-shaped layers of disjoint equal-size submatrices. `constructLayer(i)` builds layer of size 2^i. `completeVLayer(M)` processes all submatrices in a layer with batched multiplications.
-- **Reuse**: Boolean decomposition (`BooleanDecomposition.decompose/recompose`), Submatrix helpers (bottomSubmatrix, leftSubmatrix, rightSubmatrix, topSubmatrix, rightGrounded, leftGrounded, sshift, extractSlice, writeSlice), performMultiplications (already accepts list of tasks).
-- **New types/functions**: `parseModified`, `parseModifiedWithTable`, `parseModifiedWithTrace` (returning trace steps with submatrix layer information for visualization).
-- **Visualization**: Each layer shows the T matrix with disjoint submatrices highlighted. Use different colors per submatrix. Show both bool decomposition and recomposed matrices.
-- **Tests**: Property-based — for any grammar and input string, standard Valiant and modified Valiant must return identical results (acceptance status and final table). TeX compilation tests for visualization.
+### Source files:
+- `src/FLPQ.LinearAlgebra/MsBfs.fs` — MS-BFS, Boolean semiring ops, Mask semiring ops (tasks 57-58)
+- `src/FLPQ.Languages/GraphReader.fs` — Graph file reading (task 62)
+- `src/FLPQ.Languages/BelyaninRPQ.fs` — Belyanin's algorithm (task 59)
+- `src/FLPQ.Languages/ArroyueloRPQ.fs` — Arroyuelo's algorithm (task 60)
+- `src/FLPQ.Languages/KroneckerRPQ.fs` — Kronecker-based algorithm (task 61)
 
-### Task 53: RSM Type
-- **Source**: Book Chapter 6, `03_RecursiveAutomata.tex`
-- **Type**: `RSM<'t, 'nt when 't: comparison and 'nt: comparison>` with blocks, start block, sets of terminals/nonterminals/states/start states.
-- **Block type**: `RsmBlock<'t, 'nt>` wrapping a DFA over `Σ ∪ Q_S` (terminals + start states of other blocks).
-- **Reuse**: `DFA<'t,'s>` from Automaton.fs for block internals. `Nonterminal<'nt>`, `Terminal<'t>` from Grammar.fs.
-- **New types**: `RsmTransitionSymbol` or similar to represent the alphabet `Σ ∪ Q_S`, `RsmBlock`, `RSM`.
+### Test files:
+- `tests/FLPQ.LinearAlgebra.Tests/MsBfsTests.fs` — MS-BFS and matrix operations tests
+- `tests/FLPQ.Languages.Tests/RPQTests.fs` — RPQ algorithms tests (all three + property-based)
 
-### Task 54: EBNF Parsing and RSM Construction
-- **Source**: Book Chapter 6, `02_EBNF.tex`
-- **Input format**: `.ebnf` files. Nonterminals in PascalCase, terminals in camelCase. Operators: `|`, `*`, `+`, `?`, `(…)`, `eps`.
-- **Stages**:
-  1. Parse EBNF using FParsec into regex AST (Epsilon, Terminal, Nonterminal, Concatenate, Alternative, Star, Plus, Optional)
-  2. Group rules by nonterminal: join right-hand sides with `|`
-  3. For each nonterminal, build DFA using Brzozowski derivatives (reference: `https://github.com/gsvgit/CFPQ_GLL/blob/Parsing/CFPQ_GLL/RsmBuilder.fs`)
-  4. Relabel nonterminal transitions to use block start states
-  5. Assemble RSM
-- **New NuGet dependency**: FParsec
-- **Tests**: Grammar `S -> eps` (1 block, 1 state, no transitions, start=final), `S -> a*`, `S -> a b`, `S -> (a S b)*`, expression grammar, etc. Dot visualization compilation for RSM blocks.
+### Documentation:
+- `docs/msbfs.md` — MS-BFS module
+- `docs/graph-reader.md` — Graph reader module
+- `docs/belyanin-rpq.md` — Belyanin's RPQ
+- `docs/arroyuelo-rpq.md` — Arroyuelo's RPQ
+- `docs/kronecker-rpq.md` — Kronecker-based RPQ
 
-### Task 55: RSM to BNF Conversion
-- **Source**: Book Chapter 5, `06_LinearGrammars.tex` (DFA→right-linear grammar) + Chapter 6, `02_EBNF.tex` (Theorem `thm:ebnf_cfg`)
-- **Algorithm**:
-  1. For each RSM block, convert DFA to right-linear grammar
-  2. Transitions on terminals → right-linear rules
-  3. Transitions on block start states → rules with referenced nonterminal
-  4. Final states → epsilon rules
-  5. Identify block start nonterminal with grammar nonterminal
-- **Tests**: Round-trip property tests: grammar loaded as BNF vs. EBNF-converted-to-RSM-converted-back-to-BNF must produce identical parsing results (CYK, Valiant, Modified Valiant, LL, LR). Dyck language round-trip test.
-
-## Files to Create/Modify
-
-### Created:
-- `src/FLPQ.Languages/RSM.fs` (tasks 53, 54, 55)
-- `src/FLPQ.Languages/EbnfParser.fs` (task 54) 
-- `src/FLPQ.Languages/RsmToGrammar.fs` (task 55) — or integrate into `RSM.fs`
-
-### Modified:
-- `src/FLPQ.Languages/Valiant.fs` — add `parseModified`, `parseModifiedWithTable`, `parseModifiedWithTrace`
-- `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add new .fs files, add FParsec package reference
-- `tests/FLPQ.Languages.Tests/ValiantTests.fs` — add modified Valiant tests
-- `tests/FLPQ.Languages.Tests/TexCompilationTests.fs` — add modified Valiant TeX tests
-- `tests/FLPQ.Languages.Tests/TestGrammars.fs` — add EBNF grammars
-
-### New Test Files:
-- `tests/FLPQ.Languages.Tests/RSMTests.fs`
-- `tests/FLPQ.Languages.Tests/EbnfParserTests.fs`
-- `tests/FLPQ.Languages.Tests/RsmToGrammarTests.fs`
+### Modified files:
+- `src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj` — add `MsBfs.fs`
+- `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add new source files
+- `tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj` — add test file
+- `tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj` — add test file
+- `docs/main.md` — add links to new docs
+- `docs/architecture.md` — update with new modules
