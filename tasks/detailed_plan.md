@@ -1,42 +1,35 @@
-# Detailed Plan: Task 53 — RSM (Recursive State Machine) Type
+# Detailed Plan: Task 54 — EBNF Grammar Reading and RSM Construction
 
 ## Overview
-Implement the RSM type from Book Chapter 6, `03_RecursiveAutomata.tex`. An RSM is a collection of deterministic finite automata (blocks), one per nonterminal, where transitions are labeled by terminals (read input) or start states of other blocks (recursive call).
+Implement EBNF grammar parsing (`.ebnf` files) and RSM construction using Brzozowski derivatives. The book defines EBNF as grammars where right-hand sides are regular expressions over `Σ ∪ N`.
 
 ## Design Decisions
 
-### 1. RSM Transition Symbol Type
-`RsmSymbol<'t, 'nt>` — discriminated union: either `RsmTerm of Terminal<'t>` or `RsmNonterm of Nonterminal<'nt>`.
-- Must support `comparison` (required by DFA type constraint)
-- Nonterminal references map to start states of other blocks via the RSM's block mapping
+### 1. EBNF Parser
+- Use FParsec for parsing
+- Two-stage: parse into regex AST, group rules by nonterminal
+- Nonterminals: PascalCase (uppercase first), terminals: camelCase
+- Operators: `|`, `*`, `+`, `?`, `(...)`, `eps`
+- Multiple rules with same LHS → join with `|`
 
-### 2. Block Type
-Reuse existing `DFA<'t, 's>` type. For each block:
-- `'t` = `RsmSymbol<'t, 'nt>` (transition labels)
-- `'s` = `int` (simple state indices)
-- Block wraps the DFA with its corresponding nonterminal
+### 2. Regular Expression AST
+- Epsilon, Empty, Terminal, Nonterminal, Sequence, Alternative, Star
+- Plus = Sequence(x, Star x), Optional = Alternative(x, Epsilon)
 
-### 3. RSM Type
-Contains list of blocks, start block nonterminal, terminal set, nonterminal set, and start state set Q_S.
+### 3. Brzozowski Derivatives
+- `derive(regexp, symbol)` — symbolic derivative
+- `nullable(regexp)` — does regexp match empty string?
+- `getSymbols(regexp)` — all symbols in the expression
+- Build DFA: closure under derivatives, nullable states are final
 
-### 4. Accessor Functions
-- `blocks`: list all blocks
-- `blockOf`: get block by nonterminal
-- `startBlock`: get the start block
-- `terminals`: list all terminals
-- `nonterminals`: list all nonterminals
-- `startStates`: set of all block start states (Q_S)
+### 4. RSM Construction Pipeline
+1. Parse EBNF → regex AST per nonterminal
+2. For each nonterminal, build DFA via Brzozowski derivatives
+3. Relabel nonterminal edges → block start states
+4. Assemble RSM
 
 ## Files to Create/Modify
-1. `src/FLPQ.Languages/RSM.fs` — new module with RSM type and accessors
-2. `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add Compile entry
-3. `tests/FLPQ.Languages.Tests/RSMTests.fs` — tests
-4. `docs/rsm.md` — documentation
-
-## Implementation Steps
-1. Define `RsmSymbol` type
-2. Define `RsmBlock` type
-3. Define `RSM` type
-4. Implement accessor functions
-5. Write tests (construction, accessors)
-6. Update documentation
+1. `src/FLPQ.Languages/EbnfParser.fs` — EBNF parser + regex AST + derivatives
+2. `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add compile and FParsec ref
+3. `tests/FLPQ.Languages.Tests/EbnfParserTests.fs` — tests
+4. `docs/ebnf-parser.md` — documentation
