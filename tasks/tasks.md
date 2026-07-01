@@ -474,16 +474,35 @@ digraph G {
     {rank=same; a0; a1; S0; b; S1 }
 }
 ```
-[done] 77. For LR visualize all stack frames, including state frames.
-[done] 78. For visualization of all algorithms using pattern must be similar to follows
+77. [done] For LR visualize all stack frames, including state frames.
+78. [done] For visualization of all algorithms using pattern must be similar to follows
 ```
 let _,trace = parseWithTrace
 let visualized = visualize trace
 (* write to files, check, etc*)
 ```
 But no I see that `visualizeSteps` calls, for example LR parser. That is bad idea because I cannot call LR parser once and that handle result and trace independantly.
-[done] 79. Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and sored in map. Graph provides functions to operate with verties and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored.
-[done] 80. Filtering of graph outgoing/incoming edges via matrices multiplications. To choose edges from/to vertices i, j, k you must multiply matrix on diagonal matrix where (i,i) (j,j) (k,k) are 1, all other 0.
-81. Intersection of automaton.
-82. Simplify Kronecker RPQ
-83.   GLL.
+79. [done] Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and sored in map. Graph provides functions to operate with verties and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored.
+80. [done] Filtering of graph outgoing/incoming edges via matrices multiplications. To choose edges from/to vertices i, j, k you must multiply matrix on diagonal matrix where (i,i) (j,j) (k,k) are 1, all other 0.
+81. Implement automata acceptance algorithm (input: list of Terminals). Classical algorithm with working set of configurations. Introduce configuration type (state and input position). While working set is not empty, handle next configuration. Tests
+     1. re: a+  ; Accepts: a, aa, aaa. Rejects: <empty string>
+     2. re: a*  ; Accepts: <empty string>, a, aa, aaa. Rejects: b
+     3. re: (ab)*  ; Accepts: <empty string>, ab, abab, ababab. Rejects: ba, bab, aaa, bbb, b, a
+     4. re: c(ab)*  ; Accepts: c, cab, cabab, cababab. Rejects: cba, bab, aaa, bbb, b, a, <empty string>, ca, cb
+     5. re: c(ab)+  ; Accepts: cab, cabab, cababab. Rejects: c, cba, bab, aaa, bbb, b, a, <empty string>, ca, cb
+     6. re: c(a|b)*  ; Accepts: c, cab, cabab, cababab, cba, cbab, caaa, cbbb, ca, cb. Rejects: ba, bab, aaa, bbb, b, a, <empty string>
+     7. DFA: state 0 start and final, no transitions. Accepts: <empty string>. Rejects: a
+     8. NFA: 0 -[eps]-> 1, state 0 start, state 1 final. Accepts: <empty string>. Rejects: a
+     9. NFA: 0 -[eps]-> 1; 1 -[eps]-> 0, state 0 start, state 1 final. Accepts: <empty string>. Rejects: a
+     10. NFA: 0 -[eps]-> 1; 1 -[eps]-> 0, state 0 start, state 1 final. Accepts: <empty string>. Rejects: a
+     11. DFA: 0 -[a]-> 1; 1 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
+     12. NFA: 0 -[a]-> 0; 0 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
+82. Implememt two automaton intercestion (this algo is applicable for NFA without epsilon-transitions). The algo:
+     1. Kronecker product of transition matrices
+     2. MS-BFS (linear algebra) from start states to detect states reachable from start states
+     3. MS-BFS (linear algebra) from final states (in graph with reversed edges) to detect states can reach final states.
+     4. Intersect vertices from 2 and 3 (map2 over matrices) to detect vertices that on paths from start to final. Do not forget include start and final states (reflexive relation).
+     5. Select edges detween vertices from step 4. Use filtering form task 80. Now can you filter out useless transitions.
+    Tests: property based tests: intersection must accepts strings that accepted by both automaton and rejects string that rejected by at leas one automata.
+83.  Simplify Kronecker RPQ
+84.    GLL.

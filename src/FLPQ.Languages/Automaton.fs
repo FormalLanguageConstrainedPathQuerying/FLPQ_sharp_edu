@@ -4,6 +4,9 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
+[<Struct>]
+type Config = { state: int; position: int }
+
 /// Nondeterministic finite automaton with multiple start states and epsilon transitions.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type NFA<'t, 's when 't: comparison> =
@@ -139,6 +142,46 @@ module Nfa =
           startState = 0
           finalStates = dfaFinalStates }
 
+    /// Classical NFA acceptance with working set of configurations.
+    /// Handles epsilon transitions via epsilon closure expansion.
+    /// Uses a visited set to prevent infinite loops from epsilon cycles.
+    let accept (nfa: NFA<'t, 's>) (input: Terminal<'t> list) : bool =
+        let n = List.length input
+
+        let rawInput = input |> List.map (fun (Terminal sym) -> sym)
+
+        let initConfigs =
+            [ for s in nfa.startStates do
+                  for c in epsilonClosure nfa s -> { state = c; position = 0 } ]
+            |> Set.ofList
+
+        let mutable currentConfigs = initConfigs
+        let mutable visited = initConfigs
+
+        let mutable result = false
+
+        while not (Set.isEmpty currentConfigs) && not result do
+            let cfg = currentConfigs |> Set.minElement
+            currentConfigs <- Set.remove cfg currentConfigs
+
+            if cfg.position = n && Set.contains cfg.state nfa.finalStates then
+                result <- true
+            elif cfg.position < n then
+                let sym = rawInput.[cfg.position]
+                let targets = move nfa cfg.state sym
+
+                for t in targets do
+                    for ec in epsilonClosure nfa t do
+                        let newCfg =
+                            { state = ec
+                              position = cfg.position + 1 }
+
+                        if not (Set.contains newCfg visited) then
+                            visited <- Set.add newCfg visited
+                            currentConfigs <- Set.add newCfg currentConfigs
+
+        result
+
 module Dfa =
 
     /// Build a DFA from a list of transitions.
@@ -190,3 +233,21 @@ module Dfa =
                     ok <- false
 
         ok
+
+    /// DFA acceptance — sequential state transitions.
+    /// Follows the input symbols one by one; accepts iff the final state is accepting.
+    let accept (dfa: DFA<'t, 's>) (input: Terminal<'t> list) : bool =
+        let mutable state = dfa.startState
+        let mutable ok = true
+
+        let mutable remaining = input
+
+        while ok && not (List.isEmpty remaining) do
+            let (Terminal sym) = List.head remaining
+            remaining <- List.tail remaining
+
+            match move dfa state sym with
+            | Some next -> state <- next
+            | None -> ok <- false
+
+        ok && Set.contains state dfa.finalStates

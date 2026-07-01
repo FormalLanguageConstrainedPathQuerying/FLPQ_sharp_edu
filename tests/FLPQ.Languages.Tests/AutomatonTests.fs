@@ -88,3 +88,368 @@ module FactTests =
             Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.Equal(3, Nfa.stateCount a)
+
+module AcceptanceTests =
+
+    let T s = Terminal s
+
+    module Re_aPlus =
+        let nfa =
+            Nfa.fromTransitions [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        let dfa = Nfa.toDfa nfa
+
+        [<Fact>]
+        let ``NFA accepts a`` () = Assert.True(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``NFA accepts aa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a" ])
+
+        [<Fact>]
+        let ``NFA accepts aaa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``NFA rejects empty`` () = Assert.False(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``DFA accepts a`` () = Assert.True(Dfa.accept dfa [ T "a" ])
+
+        [<Fact>]
+        let ``DFA accepts aaa`` () =
+            Assert.True(Dfa.accept dfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``DFA rejects empty`` () = Assert.False(Dfa.accept dfa [])
+
+    module Re_aStar =
+        let nfa =
+            Nfa.fromTransitions [ 0 ] [ (0, "a", 0) ] Set.empty (set [ 0 ]) (set [ 0 ])
+
+        let dfa = Nfa.toDfa nfa
+
+        [<Fact>]
+        let ``NFA accepts empty`` () = Assert.True(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``NFA accepts a`` () = Assert.True(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``NFA accepts aa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a" ])
+
+        [<Fact>]
+        let ``NFA accepts aaa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``NFA rejects b`` () = Assert.False(Nfa.accept nfa [ T "b" ])
+
+        [<Fact>]
+        let ``DFA accepts empty`` () = Assert.True(Dfa.accept dfa [])
+
+        [<Fact>]
+        let ``DFA accepts aa`` () =
+            Assert.True(Dfa.accept dfa [ T "a"; T "a" ])
+
+        [<Fact>]
+        let ``DFA rejects b`` () = Assert.False(Dfa.accept dfa [ T "b" ])
+
+    module Re_abStar =
+        let nfa =
+            Nfa.fromTransitions
+                [ 0; 1; 2; 3 ]
+                [ (0, "a", 1); (1, "b", 2); (2, "a", 3); (3, "b", 0) ]
+                (set [ (2, 0) ])
+                (set [ 0 ])
+                (set [ 0 ])
+
+        [<Fact>]
+        let ``accepts empty`` () = Assert.True(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``accepts ab`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts abab`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts ababab`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "b"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects ba`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bab`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects aaa`` () =
+            Assert.False(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bbb`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "b"; T "b" ])
+
+        [<Fact>]
+        let ``rejects b`` () = Assert.False(Nfa.accept nfa [ T "b" ])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+    module Re_c_abStar =
+        let nfa =
+            Nfa.fromTransitions
+                [ 0; 1; 2; 3; 4 ]
+                [ (0, "c", 1); (1, "a", 2); (2, "b", 3); (3, "a", 4); (4, "b", 1) ]
+                (set [ (3, 1) ])
+                (set [ 0 ])
+                (set [ 1 ])
+
+        [<Fact>]
+        let ``accepts c`` () = Assert.True(Nfa.accept nfa [ T "c" ])
+
+        [<Fact>]
+        let ``accepts cab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cabab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cababab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects cba`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "b"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bab`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects aaa`` () =
+            Assert.False(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bbb`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "b"; T "b" ])
+
+        [<Fact>]
+        let ``rejects b`` () = Assert.False(Nfa.accept nfa [ T "b" ])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``rejects ca`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "a" ])
+
+        [<Fact>]
+        let ``rejects cb`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "b" ])
+
+    module Re_c_abPlus =
+        let nfa =
+            Nfa.fromTransitions
+                [ 0; 1; 2; 3; 4 ]
+                [ (0, "c", 1); (1, "a", 2); (2, "b", 3); (3, "a", 4); (4, "b", 1) ]
+                (set [ (3, 1) ])
+                (set [ 0 ])
+                (set [ 3 ])
+
+        [<Fact>]
+        let ``accepts cab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cabab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cababab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects c`` () = Assert.False(Nfa.accept nfa [ T "c" ])
+
+        [<Fact>]
+        let ``rejects cba`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "b"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bab`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects aaa`` () =
+            Assert.False(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bbb`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "b"; T "b" ])
+
+        [<Fact>]
+        let ``rejects b`` () = Assert.False(Nfa.accept nfa [ T "b" ])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``rejects ca`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "a" ])
+
+        [<Fact>]
+        let ``rejects cb`` () =
+            Assert.False(Nfa.accept nfa [ T "c"; T "b" ])
+
+    module Re_c_aORbStar =
+        let nfa =
+            Nfa.fromTransitions
+                [ 0; 1; 2 ]
+                [ (0, "c", 1)
+                  (1, "a", 1)
+                  (1, "b", 1)
+                  (1, "a", 2)
+                  (1, "b", 2)
+                  (2, "a", 1)
+                  (2, "b", 1) ]
+                (set [ (2, 1) ])
+                (set [ 0 ])
+                (set [ 1; 2 ])
+
+        [<Fact>]
+        let ``accepts c`` () = Assert.True(Nfa.accept nfa [ T "c" ])
+
+        [<Fact>]
+        let ``accepts cab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cabab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts cba`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "b"; T "a" ])
+
+        [<Fact>]
+        let ``accepts cbab`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``accepts caaa`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``accepts cbbb`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "b"; T "b"; T "b" ])
+
+        [<Fact>]
+        let ``accepts ca`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "a" ])
+
+        [<Fact>]
+        let ``accepts cb`` () =
+            Assert.True(Nfa.accept nfa [ T "c"; T "b" ])
+
+        [<Fact>]
+        let ``rejects ba`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bab`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "a"; T "b" ])
+
+        [<Fact>]
+        let ``rejects aaa`` () =
+            Assert.False(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects bbb`` () =
+            Assert.False(Nfa.accept nfa [ T "b"; T "b"; T "b" ])
+
+        [<Fact>]
+        let ``rejects b`` () = Assert.False(Nfa.accept nfa [ T "b" ])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(Nfa.accept nfa [])
+
+    module DFA_noTransitions =
+        let dfa = Dfa.fromTransitions [ 0 ] [] 0 (set [ 0 ])
+
+        [<Fact>]
+        let ``accepts empty`` () = Assert.True(Dfa.accept dfa [])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Dfa.accept dfa [ T "a" ])
+
+    module NFA_epsToFinal =
+        let nfa = Nfa.fromTransitions [ 0; 1 ] [] (set [ (0, 1) ]) (set [ 0 ]) (set [ 1 ])
+
+        [<Fact>]
+        let ``accepts empty`` () = Assert.True(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+    module NFA_epsCycle =
+        let nfa =
+            Nfa.fromTransitions [ 0; 1 ] [] (set [ (0, 1); (1, 0) ]) (set [ 0 ]) (set [ 1 ])
+
+        [<Fact>]
+        let ``accepts empty`` () = Assert.True(Nfa.accept nfa [])
+
+        [<Fact>]
+        let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
+
+    module DFA_aPlus =
+        let dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] 0 (set [ 1 ])
+
+        [<Fact>]
+        let ``accepts a`` () = Assert.True(Dfa.accept dfa [ T "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(Dfa.accept dfa [ T "a"; T "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(Dfa.accept dfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(Dfa.accept dfa [])
+
+    module NFA_aPlus_nondet =
+        let nfa =
+            Nfa.fromTransitions [ 0; 1 ] [ (0, "a", 0); (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        [<Fact>]
+        let ``accepts a`` () = Assert.True(Nfa.accept nfa [ T "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(Nfa.accept nfa [ T "a"; T "a"; T "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(Nfa.accept nfa [])
