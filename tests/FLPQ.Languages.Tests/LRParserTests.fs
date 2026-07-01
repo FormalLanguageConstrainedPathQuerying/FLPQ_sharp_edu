@@ -14,16 +14,16 @@ module FactTests =
         let table = builder augGrammar
 
         for s in accept do
-            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenize s) |> Option.isSome, s)
+            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) |> Option.isSome, s)
 
         for s in reject do
-            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenize s) |> Option.isNone, s)
+            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) |> Option.isNone, s)
 
     let private testLeaves builder augGrammar accept =
         let table = builder augGrammar
 
         for s in accept do
-            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
+            match LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 Assert.Equal(s, leafTokens)
@@ -211,10 +211,10 @@ module FactTests =
 
             for s in accept @ reject do
                 let slrResult =
-                    LRParser.parse augGrammar slr (Tokenizer.tokenize s) |> Option.isSome
+                    LRParser.parse augGrammar slr (Tokenizer.tokenizeTerminals s) |> Option.isSome
 
                 let clrResult =
-                    LRParser.parse augGrammar clr (Tokenizer.tokenize s) |> Option.isSome
+                    LRParser.parse augGrammar clr (Tokenizer.tokenizeTerminals s) |> Option.isSome
 
                 Assert.Equal(slrResult, clrResult)
 
@@ -236,8 +236,12 @@ module FactTests =
             let t8 = LRParser.buildCLR1Table augGrammar8
 
             for s in exprAccept @ exprReject do
-                let r7 = LRParser.parse augGrammar7 t7 (Tokenizer.tokenize s) |> Option.isSome
-                let r8 = LRParser.parse augGrammar8 t8 (Tokenizer.tokenize s) |> Option.isSome
+                let r7 =
+                    LRParser.parse augGrammar7 t7 (Tokenizer.tokenizeTerminals s) |> Option.isSome
+
+                let r8 =
+                    LRParser.parse augGrammar8 t8 (Tokenizer.tokenizeTerminals s) |> Option.isSome
+
                 Assert.Equal(r7, r8)
 
 module PropertyTests =
@@ -248,7 +252,7 @@ module PropertyTests =
         let private clrTable = LRParser.buildCLR1Table augGrammar3
 
         let private leavesMatch augGrammar table (s: string) =
-            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
+            match LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
@@ -256,10 +260,10 @@ module PropertyTests =
 
         let private parsersAgree augGrammar slr clr (s: string) =
             let slrResult =
-                LRParser.parse augGrammar slr (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar slr (Tokenizer.tokenizeTerminals s) |> Option.isSome
 
             let clrResult =
-                LRParser.parse augGrammar clr (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar clr (Tokenizer.tokenizeTerminals s) |> Option.isSome
 
             slrResult = clrResult
 
@@ -283,7 +287,7 @@ module PropertyTests =
         let private clrTable = LRParser.buildCLR1Table augGrammar1
 
         let private leavesMatch augGrammar table (s: string) =
-            match LRParser.parse augGrammar table (Tokenizer.tokenize s) with
+            match LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
@@ -298,10 +302,12 @@ module PropertyTests =
         [<Property>]
         let ``SLR(1) and CLR(1) agree on grammar1`` (s: string) =
             let slrResult =
-                LRParser.parse augGrammar1 slrTable (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar1 slrTable (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             let clrResult =
-                LRParser.parse augGrammar1 clrTable (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar1 clrTable (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             slrResult = clrResult
 
@@ -317,10 +323,11 @@ module CrossParserPropertyTests =
         [<Property>]
         let ``SLR(1) and CYK agree on grammar1 acceptance`` (s: string) =
             let slrResult =
-                LRParser.parse augGrammar1 slrGrammar1 (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar1 slrGrammar1 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             let cykResult =
-                Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
+                Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s)
 
             slrResult = cykResult
 
@@ -330,10 +337,11 @@ module CrossParserPropertyTests =
         [<Property>]
         let ``CLR(1) and CYK agree on grammar3 acceptance`` (s: string) =
             let clrResult =
-                LRParser.parse augGrammar3 clrGrammar3 (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar3 clrGrammar3 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             let cykResult =
-                Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s)
+                Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s)
 
             clrResult = cykResult
 
@@ -345,6 +353,10 @@ module CrossParserPropertyTests =
 
         [<Property>]
         let ``CLR(1) grammar7 and grammar8 agree on expression strings`` (s: string) =
-            let r7 = LRParser.parse augGrammar7 clr7 (Tokenizer.tokenize s) |> Option.isSome
-            let r8 = LRParser.parse augGrammar8 clr8 (Tokenizer.tokenize s) |> Option.isSome
+            let r7 =
+                LRParser.parse augGrammar7 clr7 (Tokenizer.tokenizeTerminals s) |> Option.isSome
+
+            let r8 =
+                LRParser.parse augGrammar8 clr8 (Tokenizer.tokenizeTerminals s) |> Option.isSome
+
             r7 = r8

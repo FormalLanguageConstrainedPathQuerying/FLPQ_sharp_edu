@@ -11,9 +11,9 @@ module LLStepVisualizer =
         (g: Grammar<'t, 'nt>)
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : VisualizationStep list =
-        let _, steps = LLParser.parseWithSteps g table k tokens
+        let _, steps = LLParser.parseWithSteps g table k terminals
 
         steps
         |> List.map (fun step ->

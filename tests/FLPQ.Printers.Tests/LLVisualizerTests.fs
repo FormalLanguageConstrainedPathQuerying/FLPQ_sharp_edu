@@ -17,7 +17,7 @@ let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
         "
 
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenize "a b"
+    let tokens = Tokenizer.tokenizeTerminals "a b"
     let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)
@@ -38,7 +38,7 @@ let ``LL step visualization includes input position marker`` () =
         "
 
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenize "a b a b"
+    let tokens = Tokenizer.tokenizeTerminals "a b a b"
     let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
@@ -53,7 +53,7 @@ let ``LL step visualization stack has bottom on left`` () =
         "
 
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenize "a b"
+    let tokens = Tokenizer.tokenizeTerminals "a b"
     let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)
@@ -68,7 +68,7 @@ let ``LL step visualization for accepted string returns success steps`` () =
         "
 
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenize "a b"
+    let tokens = Tokenizer.tokenizeTerminals "a b"
     let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)

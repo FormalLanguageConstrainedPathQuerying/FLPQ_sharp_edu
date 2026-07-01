@@ -10,9 +10,9 @@ module LRStepVisualizer =
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : VisualizationStep list =
-        let _, steps = LRParser.parseWithSteps aug table tokens
+        let _, steps = LRParser.parseWithSteps aug table terminals
 
         steps
         |> List.map (fun step ->

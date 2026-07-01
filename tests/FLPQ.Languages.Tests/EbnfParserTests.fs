@@ -271,7 +271,7 @@ module EbnfPropertyTests =
             let rsm2 = RsmBuilder.buildRSMFromText "S -> a* a*"
             let g2 = RsmToGrammar.convert rsm2
 
-            Cyk.parse Grammar.freshStringNonterminal g1 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal g1 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 g2
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)

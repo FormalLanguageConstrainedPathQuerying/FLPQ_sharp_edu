@@ -141,7 +141,8 @@ module Cyk =
             | None -> false
 
     /// Parse pre-tokenized input using CYK algorithm.
-    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
+    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
+        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
         let cnf = Grammar.toCnf freshNonterminal g
 
         if tokens.IsEmpty then
@@ -154,8 +155,9 @@ module Cyk =
     let parseWithTable
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Matrix<Set<Nonterminal<'nt>>> * bool =
+        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
         let cnf = Grammar.toCnf freshNonterminal g
 
         if tokens.IsEmpty then
@@ -187,7 +189,8 @@ module Cyk =
     let parseWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : CykTraceStep<'t, 'nt> list =
+        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
         let cnf = Grammar.toCnf freshNonterminal g
         tableTrace cnf tokens

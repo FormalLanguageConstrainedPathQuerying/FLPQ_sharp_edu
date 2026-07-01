@@ -14,12 +14,12 @@ module Grammar1Tests =
     [<Fact>]
     let ``CYK accepts expected strings`` () =
         for s in grammar1Accept do
-            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s), s)
+            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s), s)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
         for s in grammar1Reject do
-            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s), s)
+            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s), s)
 
 
 module Grammar2Tests =
@@ -29,10 +29,10 @@ module Grammar2Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 1`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar2
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)
 
 
 module Grammar3Tests =
@@ -40,12 +40,12 @@ module Grammar3Tests =
     [<Fact>]
     let ``CYK accepts expected strings`` () =
         for s in grammar3Accept do
-            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s), s)
+            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s), s)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
         for s in grammar3Reject do
-            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s), s)
+            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s), s)
 
 
 module Grammar4Tests =
@@ -55,10 +55,10 @@ module Grammar4Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 3`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar4
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)
 
 
 module Grammar5Tests =
@@ -68,10 +68,10 @@ module Grammar5Tests =
 
         [<Property>]
         let ``accepts same strings as grammar 3`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar5
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)
 
 
 module FactTests =
@@ -79,7 +79,7 @@ module FactTests =
     [<Fact>]
     let ``parseWithTrace returns non-empty list for non-empty input`` () =
         let trace =
-            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize "a a a")
+            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals "a a a")
 
         Assert.NotEmpty(trace)
 
@@ -91,8 +91,8 @@ module FactTests =
         S -> a
         "
 
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a"))
-        Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "b"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
+        Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "b"))
 
     [<Fact>]
     let ``parse handles longer accepted string`` () =
@@ -104,11 +104,11 @@ module FactTests =
         S -> eps
         "
 
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a a"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a"))
 
 
 module Grammar6Tests =
@@ -119,13 +119,13 @@ module Grammar6Tests =
     let ``CYK accepts expected expression strings`` () =
         for g in grammars do
             for s in exprAccept do
-                Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s), s)
+                Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s), s)
 
     [<Fact>]
     let ``CYK rejects expected expression strings`` () =
         for g in grammars do
             for s in exprReject do
-                Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenize s), s)
+                Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s), s)
 
 
 module Grammar6PropertyTests =
@@ -135,21 +135,21 @@ module Grammar6PropertyTests =
 
         [<Property>]
         let ``grammar6 and grammar7 agree on expression strings`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar7
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)
 
         [<Property>]
         let ``grammar6 and grammar8 agree on expression strings`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar8
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)
 
         [<Property>]
         let ``grammar7 and grammar8 agree on expression strings`` (s: string) =
-            Cyk.parse Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenize s) = Cyk.parse
+            Cyk.parse Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
                 grammar8
-                (Tokenizer.tokenize s)
+                (Tokenizer.tokenizeTerminals s)

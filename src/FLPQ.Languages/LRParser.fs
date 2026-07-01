@@ -444,8 +444,9 @@ module LRParser =
     let parseWithSteps
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> * LRParsingStep<'t, 'nt> list =
+        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
         let mutable stack: LRStackFrame<'t, 'nt> list = [ LRState 0 ]
         let mutable pos = 0
         let mutable finished = false
@@ -551,6 +552,6 @@ module LRParser =
     let parse
         (aug: Grammar<'t, 'nt>)
         (table: LRTable<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> =
-        parseWithSteps aug table tokens |> fst
+        parseWithSteps aug table terminals |> fst

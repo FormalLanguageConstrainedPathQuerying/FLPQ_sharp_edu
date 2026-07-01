@@ -58,8 +58,9 @@ module LLParser =
         (g: Grammar<'t, 'nt>)
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list =
+        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
 
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
@@ -112,6 +113,6 @@ module LLParser =
         (g: Grammar<'t, 'nt>)
         (table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>)
         (k: int)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> =
-        parseWithSteps g table k tokens |> fst
+        parseWithSteps g table k terminals |> fst

@@ -49,7 +49,7 @@ let ``LR parser tree dot compiles`` () =
     let aug = LRAutomaton.augmentGrammar freshStart grammar
     let table = LRParser.buildSLR1Table aug
 
-    match LRParser.parse aug table (Tokenizer.tokenize "a a") with
+    match LRParser.parse aug table (Tokenizer.tokenizeTerminals "a a") with
     | Some tree ->
         let dot = DerivationTreeDot.toDot string tree
 

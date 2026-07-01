@@ -57,7 +57,7 @@ module Program =
         let inputTokens = readFile inputFile
 
         let trace =
-            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenize inputTokens)
+            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -79,7 +79,7 @@ module Program =
         let inputTokens = readFile inputFile
 
         let trace =
-            Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenize inputTokens)
+            Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -96,7 +96,7 @@ module Program =
     let private runLL (grammarFile: string) (inputFile: string) (outputDir: string) (k: int) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
-        let tokens = Tokenizer.tokenize inputTokens
+        let tokens = Tokenizer.tokenizeTerminals inputTokens
         let table = LLParser.buildTable grammar k
 
         let steps = LLStepVisualizer.visualizeSteps string grammar table k tokens
@@ -106,7 +106,7 @@ module Program =
     let private runLR (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
-        let tokens = Tokenizer.tokenize inputTokens
+        let tokens = Tokenizer.tokenizeTerminals inputTokens
 
         let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
 

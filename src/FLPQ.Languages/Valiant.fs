@@ -308,12 +308,6 @@ module Valiant =
             | [ N left; N right ] -> Some(r.lhs, (left, right))
             | _ -> None)
 
-    let private extractTerminals (tokens: Symbol<'t, 'nt> list) : 't list =
-        tokens
-        |> List.choose (function
-            | T(Terminal t) -> Some t
-            | _ -> None)
-
     let private initValiant (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitData<'t, 'nt> =
         let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1
@@ -361,10 +355,10 @@ module Valiant =
     let parseWithTable
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Matrix<Set<Nonterminal<'nt>>> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
-        let tokensArr = tokens |> extractTerminals |> Array.ofList
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
 
         if tokensArr.Length = 0 then
             let epsAccepted =
@@ -395,16 +389,16 @@ module Valiant =
 
             (result, accepted)
 
-    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
-        parseWithTable freshNonterminal g tokens |> snd
+    let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
+        parseWithTable freshNonterminal g terminals |> snd
 
     let parseWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : ValiantTraceStep<'nt> list =
         let cnf = Grammar.toCnf freshNonterminal g
-        let tokensArr = tokens |> extractTerminals |> Array.ofList
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
 
         if tokensArr.Length = 0 then
             []
@@ -417,10 +411,10 @@ module Valiant =
     let parseModifiedWithTable
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : Matrix<Set<Nonterminal<'nt>>> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
-        let tokensArr = tokens |> extractTerminals |> Array.ofList
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
         let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1
@@ -489,16 +483,16 @@ module Valiant =
 
             (result, accepted)
 
-    let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : bool =
-        parseModifiedWithTable freshNonterminal g tokens |> snd
+    let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
+        parseModifiedWithTable freshNonterminal g terminals |> snd
 
     let parseModifiedWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
-        (tokens: Symbol<'t, 'nt> list)
+        (terminals: Terminal<'t> list)
         : ModifiedValiantTraceStep<'nt> list =
         let cnf = Grammar.toCnf freshNonterminal g
-        let tokensArr = tokens |> extractTerminals |> Array.ofList
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
         let n = tokensArr.Length
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1

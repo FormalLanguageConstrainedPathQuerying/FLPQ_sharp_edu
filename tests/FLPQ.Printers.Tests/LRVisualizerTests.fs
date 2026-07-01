@@ -19,7 +19,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid dot and TeX`` () 
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
-    let tokens = Tokenizer.tokenize "a a"
+    let tokens = Tokenizer.tokenizeTerminals "a a"
     let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.NotEmpty(steps)
@@ -42,7 +42,7 @@ let ``LR step visualization includes input position marker`` () =
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
-    let tokens = Tokenizer.tokenize "a a b a b b"
+    let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
     let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
@@ -63,7 +63,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
-    let tokens = Tokenizer.tokenize "x + x"
+    let tokens = Tokenizer.tokenizeTerminals "x + x"
     let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.NotEmpty(steps)

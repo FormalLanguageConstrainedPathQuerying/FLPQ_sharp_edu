@@ -25,7 +25,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Accept do
-            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenize s)
+            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals s)
             Assert.True(result.IsSome, s)
 
     [<Fact>]
@@ -33,7 +33,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Reject do
-            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenize s)
+            let result = LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals s)
             Assert.True(result.IsNone, s)
 
     [<Fact>]
@@ -41,7 +41,7 @@ module FactTests =
         let table = LLParser.buildTable grammar1 1
 
         for s in grammar1Accept do
-            match LLParser.parse grammar1 table 1 (Tokenizer.tokenize s) with
+            match LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 Assert.Equal(s, leafTokens)
@@ -51,7 +51,7 @@ module FactTests =
     let ``LL(1) tree structure for simple parse`` () =
         let table = LLParser.buildTable grammar1 1
 
-        match LLParser.parse grammar1 table 1 (Tokenizer.tokenize "a b") with
+        match LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals "a b") with
         | Some tree ->
             match tree with
             | Node(Nonterminal "S", _) -> ()
@@ -72,7 +72,7 @@ module PropertyTests =
 
         [<Property>]
         let ``LL parser leaves match input for grammar1`` (s: string) =
-            match LLParser.parse grammar1 table 1 (Tokenizer.tokenize s) with
+            match LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
                 leafTokens = s
@@ -90,19 +90,22 @@ module CrossParserPropertyTests =
         [<Property>]
         let ``LL(1) and SLR(1) agree on grammar1 acceptance`` (s: string) =
             let llResult =
-                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenize s) |> Option.isSome
+                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             let slrResult =
-                LRParser.parse augGrammar1 slrTable (Tokenizer.tokenize s) |> Option.isSome
+                LRParser.parse augGrammar1 slrTable (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             llResult = slrResult
 
         [<Property>]
         let ``LL(1) and Valiant agree on grammar1 acceptance`` (s: string) =
             let llResult =
-                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenize s) |> Option.isSome
+                LLParser.parse grammar1 llTable 1 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
 
             let valResult =
-                Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize s)
+                Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s)
 
             llResult = valResult

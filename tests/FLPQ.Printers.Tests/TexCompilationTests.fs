@@ -15,7 +15,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
+        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     let step = trace.[0]
     let tex = CykTeX.tableToTeX string step.table
@@ -27,7 +27,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
+        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     for step in trace do
         let tex = CykTeX.tableToTeX string step.table
@@ -38,7 +38,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
 let ``LL step stack and input TeX compile with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenize "a b"
+    let tokens = Tokenizer.tokenizeTerminals "a b"
 
     let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
     Assert.NotEmpty(steps)
@@ -54,7 +54,7 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
-    let tokens = Tokenizer.tokenize "a a"
+    let tokens = Tokenizer.tokenizeTerminals "a a"
 
     let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
@@ -68,7 +68,7 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
+        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     Assert.NotEmpty(trace)
 
@@ -85,7 +85,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     Assert.NotEmpty(trace)
 
@@ -110,7 +110,7 @@ S -> ( S )
 "
 
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize "x + x")
+        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeTerminals "x + x")
 
     Assert.NotEmpty(trace)
 
