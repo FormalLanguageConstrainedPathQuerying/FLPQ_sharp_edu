@@ -36,13 +36,13 @@ module Program =
 
         File.ReadAllText(path).Trim()
 
-    let private writeOutputFile path content =
-        let dir = Path.GetDirectoryName path
+    let private writeOutputFile (path: string) (content: string) =
+        let dir = System.IO.Path.GetDirectoryName path
 
         if not (Directory.Exists dir) then
             Directory.CreateDirectory dir |> ignore
 
-        File.WriteAllText(path, content)
+        System.IO.File.WriteAllText(path, content)
 
     let private writeStepsVisualization (outputDir: string) (steps: VisualizationStep list) =
         for idx in 0 .. steps.Length - 1 do
