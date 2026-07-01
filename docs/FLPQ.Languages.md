@@ -1,12 +1,12 @@
 # FLPQ.Languages
 
-Languages library providing grammar types, parsing algorithms, finite automata, and visualization. Depends on `FLPQ.LinearAlgebra`.
+Languages library providing grammar types, parsing algorithms, and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 
 ## Project
 
 - **Type**: F# class library (`net10.0`)
 - **Path**: `src/FLPQ.Languages/`
-- **Dependencies**: `FLPQ.LinearAlgebra`, FSharpPlus
+- **Dependencies**: `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, FSharpPlus
 
 ## Modules
 
@@ -57,10 +57,6 @@ Languages library providing grammar types, parsing algorithms, finite automata, 
 | Module | Source | Documentation |
 |--------|--------|---------------|
 | `VisualizationTypes` | `VisualizationTypes.fs` | [LL and LR steps visualization](visualization-types.md) |
-| `AutomatonVisualizer` | `AutomatonVisualizer.fs` | [AutomatonVisualizer module design and logic](automaton-viz.md) |
-| `DerivationTreeVisualizer` | `DerivationTreeVisualizer.fs` | [DerivationTreeVisualizer module design and logic](derivation-tree-viz.md) |
-| `LLVisualizer` | `LLVisualizer.fs` | (see [visualization-types.md](visualization-types.md)) |
-| `LRVisualizer` | `LRVisualizer.fs` | (see [visualization-types.md](visualization-types.md)) |
 
 ## Role
 
@@ -68,9 +64,8 @@ Central library for formal language processing:
 - **Grammar types** — BNF grammar, CNF transformation, generic over terminal/nonterminal types
 - **Parsing** — CYK, Valiant (standard and modified), LL(k), LR(0)/SLR(1)/CLR(1) with derivation tree construction
 - **Lexing** — first_k, follow_k computations, tokenizer
-- **Automata** — NFA/DFA (deterministic/non-deterministic separated at type level), RSM (Recursive State Machine)
+- **Automata** — NFA/DFA (deterministic/non-deterministic separated at type level, wrapping `Graph` from `FLPQ.GraphAnalysis`), RSM (Recursive State Machine)
 - **EBNF** — EBNF grammar parsing via FParsec, DFA construction via Brzozowski derivatives, RSM to BNF conversion
-- **Visualization** — dot (Graphviz) for automata and derivation trees, TeX (nicematrix) for parsing tables and step-by-step algorithm execution
 
 ## Book References
 

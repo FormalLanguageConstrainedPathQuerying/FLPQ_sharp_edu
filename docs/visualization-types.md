@@ -98,9 +98,9 @@ Defined in `Valiant.fs`:
 
 ## Design Decisions
 
-- **Separation of data collection and rendering**: `parseWithSteps` in LLParser/LRParser collects raw F# data (`LLParsingStep`/`LRParsingStep`). Rendering to TeX/DOT strings happens in `LLVisualizer`/`LRVisualizer` using shared `TeXRenderer` functions. CYK and Valiant trace functions similarly return structured data (`CykTraceStep`/`ValiantTraceStep`); TeX conversion happens at call sites.
+- **Separation of data collection and rendering**: `parseWithSteps` in LLParser/LRParser collects raw F# data (`LLParsingStep`/`LRParsingStep`). Rendering to TeX/DOT strings happens in `LLStepVisualizer`/`LRStepVisualizer` using shared `TeXRenderer` functions. CYK and Valiant trace functions similarly return structured data (`CykTraceStep`/`ValiantTraceStep`); TeX conversion happens at call sites.
 - **Single combined DOT for stack+tree**: The LL and LR visualizers produce a single combined DOT graph (`treeAndStack`) instead of separate `tree.dot` and `stack.tex` files. The combined DOT shows the derivation tree with an overlay stack chain (dashed edges, `rank=same` constraint on stack nodes). Input visualization remains as TeX.
-- **Common `toDotWithStack` function**: Shared `DerivationTreeDot.toDotWithStack` generates combined DOT for both LL and LR visualizers. Stack tree nodes are matched against the derivation tree via structural equality; non-matching nodes are rendered standalone.
+- **LL uses `toDotWithStack`**, **LR uses `toDotWithLRStack`**: LL visualizer uses `DerivationTreeDot.toDotWithStack` (stack trees only). LR visualizer uses `DerivationTreeDot.toDotWithLRStack` which renders all `LRStackFrame` frames including `LRState` frames (labeled "sN" nodes with gray fill).
 - **`TeXRenderer` is shared**: `inputRow` is identical for both parsers.
 - **Struct types** for stack allocation efficiency on steps data.
 - **Visualizers remain the public API** for consumers who want pre-rendered strings (CLI, tests). Consumers who need raw data can use `parseWithSteps`/`parseWithTrace` directly.

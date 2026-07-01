@@ -47,6 +47,12 @@ val ofArray2D: arr:'a[,] -> Matrix<'a>
 ```
 Wraps an existing 2D array into a `Matrix<'a>`. Dimensions are inferred from the array. The array is **not** copied — the result shares the underlying array.
 
+#### `diagonal`
+```fsharp
+val diagonal: size:int -> indices:Set<int> -> one:'a -> zero:'a -> Matrix<'a>
+```
+Creates a diagonal matrix of the given size. Positions `(i, i)` for `i ∈ indices` receive `one`, all other positions receive `zero`. For Boolean matrices, `diagonal n selected true false` produces a selector matrix that, when multiplied with an adjacency matrix, preserves only rows/columns of selected vertices. Used by `Graph.filterOutgoing` and `Graph.filterIncoming`.
+
 ### Transformation Functions
 
 #### `map`

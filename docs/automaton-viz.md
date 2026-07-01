@@ -1,4 +1,6 @@
-# Automaton Visualizer
+# Automaton Dot Renderer
+
+Module: `AutomatonDot` in `FLPQ.Printers`.
 
 ## Overview
 

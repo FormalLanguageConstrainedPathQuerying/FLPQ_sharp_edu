@@ -10,8 +10,9 @@ FLPQ.slnx
 │   │   ├── LinearAlgebra.fs        # Matrix multiplication and Kronecker product
 │   │   └── BooleanDecomposition.fs # Boolean decomposition of set-valued matrices
 │   ├── FLPQ.GraphAnalysis/     # Graph analysis library (depends on FLPQ.LinearAlgebra)
+│   │   ├── Graph.fs                # Generic graph type and operations
 │   │   └── MsBfs.fs                # MS-BFS and Boolean/Mask semiring operations
-│   ├── FLPQ.Languages/         # Languages library (depends on FLPQ.LinearAlgebra)
+│   ├── FLPQ.Languages/         # Languages library (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis)
 │   │   ├── Grammar.fs              # Grammar types, BNF parser, and CNF transformation
 │   │   ├── Tokenizer.fs            # Common tokenizer for all parsing algorithms
 │   │   ├── FirstFollow.fs          # First_k and follow_k computations
@@ -47,6 +48,8 @@ FLPQ.slnx
     │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
     │   └── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
     ├── FLPQ.GraphAnalysis.Tests/  # Tests for graph analysis
+    │   ├── RandomGraphGenerators.fs      # Random graph generators
+    │   ├── GraphTests.fs                 # Tests for Graph module
     │   └── MsBfsTests.fs                 # MS-BFS and Boolean/Mask semiring tests
     ├── FLPQ.Languages.Tests/      # Tests for languages
     │   ├── TestUtils.fs                  # Shared test utilities (dot/TeX compilation)
@@ -76,8 +79,8 @@ FLPQ.slnx
 ## Projects
 
 - **FLPQ.LinearAlgebra** — F# class library (net10.0). Generic matrix operations, linear algebra, and boolean decomposition.
-- **FLPQ.GraphAnalysis** — F# class library (net10.0). MS-BFS and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
-- **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra`.
+- **FLPQ.GraphAnalysis** — F# class library (net10.0). Generic graph type, MS-BFS, and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
+- **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
 - **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.

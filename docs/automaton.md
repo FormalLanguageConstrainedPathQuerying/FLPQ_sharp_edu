@@ -1,6 +1,6 @@
 # Automaton Module
 
-Generic finite automaton types and operations: nondeterministic (NFA) and deterministic (DFA). Used as the basis for LR automata construction and RSM blocks.
+Generic finite automaton types and operations: nondeterministic (NFA) and deterministic (DFA). Both wrap the generic `Graph` type from `FLPQ.GraphAnalysis`. Used as the basis for LR automata construction and RSM blocks.
 
 ## Type Definitions
 
@@ -8,16 +8,18 @@ Generic finite automaton types and operations: nondeterministic (NFA) and determ
 
 ```fsharp
 type NFA<'t, 's when 't: comparison> =
-    { states: 's list
-      transitions: Matrix<Option<NonEmptySet<'t>>>
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
       epsTransitions: Set<int * int>
       startStates: Set<int>
       finalStates: Set<int> }
+    member this.states = this.graph |> Graph.vertices |> List.map snd
+    member this.transitions = this.graph.edges
 ```
 
 A nondeterministic finite automaton with epsilon transitions.
-- `states`: ordered list of state data (states are identified by their index).
-- `transitions`: square matrix where cell `[i, j]` contains `Some set` of symbols labeling transitions from state `i` to `j`, or `None`.
+- `graph`: the underlying graph; vertices are state labels, edges are transition symbol sets.
+- `states`: computed member property — returns state labels as an ordered list (delegates to `Graph.vertices`).
+- `transitions`: computed member property — returns the edge matrix (delegates to `Graph.edges`).
 - `epsTransitions`: set of epsilon transitions `(fromIdx, toIdx)`, consumed without reading input.
 - `startStates`: set of initial state indices (multiple allowed).
 - `finalStates`: set of accepting state indices.
@@ -26,15 +28,17 @@ A nondeterministic finite automaton with epsilon transitions.
 
 ```fsharp
 type DFA<'t, 's when 't: comparison> =
-    { states: 's list
-      transitions: Matrix<Option<NonEmptySet<'t>>>
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
       startState: int
       finalStates: Set<int> }
+    member this.states = this.graph |> Graph.vertices |> List.map snd
+    member this.transitions = this.graph.edges
 ```
 
 A deterministic finite automaton with exactly one start state and no epsilon transitions.
-- `states`: ordered list of state data.
-- `transitions`: square matrix where cell `[i, j]` contains `Some set` of symbols, or `None`.
+- `graph`: the underlying graph.
+- `states`: computed member property (as in NFA).
+- `transitions`: computed member property (as in NFA).
 - `startState`: single start state index.
 - `finalStates`: set of accepting state indices.
 
@@ -150,7 +154,8 @@ Checks whether the DFA is deterministic: for each state and each alphabet symbol
 
 | Decision | Rationale |
 |----------|-----------|
-| States identified by index | Transitions use integer indices; state data (`'s`) carries semantic information (e.g., set of LR items). |
+| Automaton wraps `Graph<'s, ...>` | Separates graph structure (vertices + edges) from automaton semantics (start/final state annotations), following the book's hierarchy. |
+| `.states` and `.transitions` as member properties | Backward compatibility: existing code that accesses `nfa.states` or `dfa.transitions` works unchanged. Record construction uses `graph = Graph.fromEdges ...`. |
 | Transition matrix over `Option<NonEmptySet<'t>>` | Uses `NonEmptySet` to prevent empty transition labels; supports multiple symbols between same pair of states. |
 | NFA has epsilon transitions | Explicit epsilon transitions enable natural encoding of regular expression operations (union, star). |
 | DFA has single start state, no epsilon | Deterministic semantics: exactly one transition per (state, symbol) pair. |

@@ -35,7 +35,7 @@ Algorithm (`algo:MS-BFS_linal`):
 ## Design Decisions
 
 - All operations expressed through existing generic matrix operations (`map2`, `mxm`) — no ad-hoc loops.
-- MS-BFS is in the LinearAlgebra project because it's a pure matrix operation that doesn't depend on language types.
+- MS-BFS is in the `FLPQ.GraphAnalysis` project, grouped with graph-related operations.
 - The `anyTrue` helper is a private function for checking the termination condition.
 - Boolean semiring operations are exposed as standalone functions for reuse by RPQ algorithms.
 
