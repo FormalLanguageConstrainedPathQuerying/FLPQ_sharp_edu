@@ -431,7 +431,19 @@
 69. [done] Input for all parsing algorithms MUST ve a list of Terminals, not Symbols. Input MUST NOT contains Nonterminals.
 70. [done] nonterminalsOf/terminalsOf duplicated across modules. Make them public in `Grammar.fs` and use in all locations.
 71. [done] Use `MyGen`/`MyArb` instead of `System.Random.Shared` in property tetes generators.
-72. Add test on LL(2) parsing.
+72. [done] Add test on LL(2) parsing.
+    Grammar: 
+    ```
+    S -> S1 
+    S -> S2
+    S1 -> a b S c
+    S1 -> eps 
+    S2 -> a x S y
+    S2 -> eps
+    ```
+    Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
+    Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
+73. Add test on LL(2) parsing.
     Grammar: 
     ```
     S -> S1 
@@ -442,9 +454,10 @@
     ```
     Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
     Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
-73. In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
-74. In LR. Use single one steck for symbols and tree. Tree nodes are symbols. So, roots of partial tree are plced in stack and can be used as symbolds.
-75. For visulization of updated LR and LL use the following structure. Visualize input as in previous version. Combined stack and trees visualize fully using dot. Stack is a linear graph. Edges goes form top to bottom. Some nodes of trees are in stack. Create as common functions and types to visualiza LL and LR as possible. Example (LL-like):
+    Strings same as for previous task. Reuse it.
+74. In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
+75. In LR. Use single one steck for symbols and tree. Tree nodes are symbols. So, roots of partial tree are plced in stack and can be used as symbolds.
+76. For visulization of updated LR and LL use the following structure. Visualize input as in previous version. Combined stack and trees visualize fully using dot. Stack is a linear graph. Edges goes form top to bottom. Some nodes of trees are in stack. Create as common functions and types to visualiza LL and LR as possible. Example (LL-like):
 ```
 digraph G {
     S1 -> b;
@@ -461,4 +474,4 @@ digraph G {
     {rank=same; a0; a1; S0; b; S1 }
 }
 ```
-76. GLL.
+1.  GLL.
