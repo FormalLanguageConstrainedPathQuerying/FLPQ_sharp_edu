@@ -182,6 +182,133 @@ module Nfa =
 
         result
 
+    /// Intersect two NFAs without epsilon transitions using linear algebra.
+    /// Algorithm:
+    /// 1. Kronecker product of per-label transition matrices → combined boolean matrix K.
+    /// 2. Forward MS-BFS from start pairs on K.
+    /// 3. Backward MS-BFS from final pairs on K^T.
+    /// 4. Intersect forward and backward visited to find useful product states.
+    /// 5. Build result NFA with only useful states and transitions between them.
+    /// Returns an NFA whose language is L(a) ∩ L(b).
+    let intersect (a: NFA<'t, 's>) (b: NFA<'t, 'v>) : NFA<'t, int * int> =
+        let nA = stateCount a
+        let nB = stateCount b
+
+        if nA = 0 || nB = 0 then
+            { graph = Graph.fromEdges [] (buildMatrix 0 [])
+              epsTransitions = Set.empty
+              startStates = Set.empty
+              finalStates = Set.empty }
+        else
+            let n = nA * nB
+
+            let idx iA iB = iA * nB + iB
+
+            let perLabelA = BooleanDecomposition.decomposeNonEmptySet a.transitions
+            let perLabelB = BooleanDecomposition.decomposeNonEmptySet b.transitions
+
+            let k = Matrix.init n n false
+
+            for KeyValue(label, matB) in perLabelB do
+                match Map.tryFind label perLabelA with
+                | Some matA ->
+                    let kronMat = LinearAlgebra.kron matA matB (&&) false
+
+                    for i in 0 .. n - 1 do
+                        for j in 0 .. n - 1 do
+                            if kronMat.data.[i, j] then
+                                k.data.[i, j] <- true
+                | None -> ()
+
+            let startPairs =
+                [| for sA in a.startStates do
+                       for sB in b.startStates -> idx sA sB |]
+
+            let forwardVisited = MsBfs.msBfs startPairs k
+
+            let kT = Matrix.transpose k
+
+            let finalPairs =
+                [| for fA in a.finalStates do
+                       for fB in b.finalStates -> idx fA fB |]
+
+            let backwardVisited = MsBfs.msBfs finalPairs kT
+
+            let reachableFromStart = Array.create n false
+
+            for s in 0 .. startPairs.Length - 1 do
+                for p in 0 .. n - 1 do
+                    if forwardVisited.data.[s, p] then
+                        reachableFromStart.[p] <- true
+
+            for sp in startPairs do
+                reachableFromStart.[sp] <- true
+
+            let canReachFinal = Array.create n false
+
+            for s in 0 .. finalPairs.Length - 1 do
+                for p in 0 .. n - 1 do
+                    if backwardVisited.data.[s, p] then
+                        canReachFinal.[p] <- true
+
+            for fp in finalPairs do
+                canReachFinal.[fp] <- true
+
+            let usefulStates =
+                [| for p in 0 .. n - 1 do
+                       if reachableFromStart.[p] && canReachFinal.[p] then
+                           p |]
+
+            let usefulSet = Set.ofArray usefulStates
+
+            let usefulStateMap =
+                usefulStates |> Array.mapi (fun i prodIdx -> (prodIdx, i)) |> Map.ofArray
+
+            let resultStateCount = usefulStates.Length
+
+            let resultStates =
+                usefulStates
+                |> Array.map (fun p ->
+                    let iA = p / nB
+                    let iB = p % nB
+                    (iA, iB))
+                |> Array.toList
+
+            let resultStartStates =
+                startPairs
+                |> Array.filter (fun sp -> Set.contains sp usefulSet)
+                |> Array.map (fun sp -> Map.find sp usefulStateMap)
+                |> Set.ofArray
+
+            let resultFinalStates =
+                finalPairs
+                |> Array.filter (fun fp -> Set.contains fp usefulSet)
+                |> Array.map (fun fp -> Map.find fp usefulStateMap)
+                |> Set.ofArray
+
+            let transitions = ResizeArray()
+
+            for pIdx in usefulStates do
+                let pA = pIdx / nB
+                let pB = pIdx % nB
+
+                for qIdx in usefulStates do
+                    let qA = qIdx / nB
+                    let qB = qIdx % nB
+
+                    match a.transitions.data.[pA, qA], b.transitions.data.[pB, qB] with
+                    | Some nesA, Some nesB ->
+                        let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
+
+                        for label in common do
+                            transitions.Add(Map.find pIdx usefulStateMap, label, Map.find qIdx usefulStateMap)
+                    | _ -> ()
+
+            { graph = Graph.fromEdges resultStates (buildMatrix resultStateCount (List.ofSeq transitions))
+              epsTransitions = Set.empty
+              startStates = resultStartStates
+              finalStates = resultFinalStates }
+
 module Dfa =
 
     /// Build a DFA from a list of transitions.
