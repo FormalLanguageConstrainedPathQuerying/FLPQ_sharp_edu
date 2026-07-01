@@ -15,7 +15,7 @@ module BelyaninRPQ =
     /// Run Belyanin's RPQ algorithm for a single source vertex.
     let private runSingleSource
         (dfa: DFA<'t, int>)
-        (perLabel: Map<'t, Matrix<bool>>)
+        (perLabel: Map<AutomatonLabel<'t>, Matrix<bool>>)
         (source: int)
         (vCount: int)
         : bool[] =
@@ -39,18 +39,22 @@ module BelyaninRPQ =
                 let mutable newM = Matrix.init qCount vCount false
 
                 for KeyValue(label, gMat) in perLabel do
-                    let nMat = Matrix.init qCount qCount false
+                    match label with
+                    | AEpsilon -> ()
+                    | ATerm t ->
 
-                    for i in 0 .. qCount - 1 do
-                        for j in 0 .. qCount - 1 do
-                            match dfa.transitions.data.[i, j] with
-                            | Some nes when NonEmptySet.contains label nes -> nMat.data.[i, j] <- true
-                            | _ -> ()
+                        let nMat = Matrix.init qCount qCount false
 
-                    let nTranspose = Matrix.transpose nMat
-                    let step1 = MsBfs.boolMul nTranspose m
-                    let step2 = MsBfs.boolMul step1 gMat
-                    newM <- MsBfs.boolAdd newM step2
+                        for i in 0 .. qCount - 1 do
+                            for j in 0 .. qCount - 1 do
+                                match dfa.transitions.data.[i, j] with
+                                | Some nes when NonEmptySet.contains (ATerm t) nes -> nMat.data.[i, j] <- true
+                                | _ -> ()
+
+                        let nTranspose = Matrix.transpose nMat
+                        let step1 = MsBfs.boolMul nTranspose m
+                        let step2 = MsBfs.boolMul step1 gMat
+                        newM <- MsBfs.boolAdd newM step2
 
                 m <- newM
 

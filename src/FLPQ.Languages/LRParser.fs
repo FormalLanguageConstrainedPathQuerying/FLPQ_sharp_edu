@@ -270,7 +270,7 @@ module LRParser =
     let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
 
     let private populateShiftGoto
-        (transitions: Matrix<Option<NonEmptySet<Symbol<'t, 'nt>>>>)
+        (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<Symbol<'t, 'nt>>>>>)
         (action: byref<Map<int * Symbol<'t, 'nt>, LRAction>>)
         (goto: byref<Map<int * Nonterminal<'nt>, int>>)
         (conflicts: byref<LRConflict<'t, 'nt> list>)
@@ -281,7 +281,7 @@ module LRParser =
                 | Some symbols ->
                     for sym in NonEmptySet.toSeq symbols do
                         match sym with
-                        | T _ as tSym ->
+                        | ATerm(T _ as tSym) ->
                             let key = (i, tSym)
 
                             match Map.tryFind key action with
@@ -289,7 +289,7 @@ module LRParser =
                             | Some(Shift _) -> ()
                             | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
                             | None -> action <- Map.add key (Shift j) action
-                        | N nt -> goto <- Map.add (i, nt) j goto
+                        | ATerm(N nt) -> goto <- Map.add (i, nt) j goto
                         | _ -> ()
                 | None -> ()
 

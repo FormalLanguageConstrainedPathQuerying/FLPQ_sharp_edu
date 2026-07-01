@@ -34,20 +34,24 @@ module KroneckerRPQ =
             let k = Matrix.init n n false
 
             for KeyValue(label, gMat) in perLabel do
-                let nMat = Matrix.init qCount qCount false
+                match label with
+                | AEpsilon -> ()
+                | ATerm t ->
 
-                for i in 0 .. qCount - 1 do
-                    for j in 0 .. qCount - 1 do
-                        match dfa.transitions.data.[i, j] with
-                        | Some nes when NonEmptySet.contains label nes -> nMat.data.[i, j] <- true
-                        | _ -> ()
+                    let nMat = Matrix.init qCount qCount false
 
-                let kronMat = LinearAlgebra.kron nMat gMat (&&) false
+                    for i in 0 .. qCount - 1 do
+                        for j in 0 .. qCount - 1 do
+                            match dfa.transitions.data.[i, j] with
+                            | Some nes when NonEmptySet.contains (ATerm t) nes -> nMat.data.[i, j] <- true
+                            | _ -> ()
 
-                for i in 0 .. n - 1 do
-                    for j in 0 .. n - 1 do
-                        if kronMat.data.[i, j] then
-                            k.data.[i, j] <- true
+                    let kronMat = LinearAlgebra.kron nMat gMat (&&) false
+
+                    for i in 0 .. n - 1 do
+                        for j in 0 .. n - 1 do
+                            if kronMat.data.[i, j] then
+                                k.data.[i, j] <- true
 
             let startPairs = sources |> Array.map (fun v -> qvToIndex dfa.startState v)
 

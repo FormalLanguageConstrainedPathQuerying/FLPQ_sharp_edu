@@ -35,25 +35,41 @@ module AutomatonDot =
 
             sb.AppendLine(sprintf "  s%d [%s];" idx attrs) |> ignore
 
-    let private transitionEdges (transitions: Matrix<Option<NonEmptySet<'t>>>) (sb: System.Text.StringBuilder) : unit =
+    let private transitionEdges
+        (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
+        (sb: System.Text.StringBuilder)
+        : unit =
         for i in 0 .. transitions.rows - 1 do
             for j in 0 .. transitions.cols - 1 do
                 match transitions.data.[i, j] with
                 | Some symbols ->
-                    let label =
+                    let termLabels =
                         symbols
                         |> NonEmptySet.toSeq
-                        |> Seq.map string
-                        |> String.concat ", "
-                        |> fun s -> s.Replace("\"", "\\\"")
+                        |> Seq.choose (fun l ->
+                            match l with
+                            | ATerm t -> Some(string t)
+                            | AEpsilon -> None)
+                        |> List.ofSeq
 
-                    sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" i j label) |> ignore
+                    if not (List.isEmpty termLabels) then
+                        let label = termLabels |> String.concat ", " |> (fun s -> s.Replace("\"", "\\\""))
+
+                        sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" i j label) |> ignore
+                    else
+                        ()
                 | None -> ()
 
-    let private epsEdges (epsTransitions: Set<int * int>) (sb: System.Text.StringBuilder) : unit =
-        for (fromIdx, toIdx) in epsTransitions do
-            sb.AppendLine(sprintf "  s%d -> s%d [label=\"ε\", style=dotted];" fromIdx toIdx)
-            |> ignore
+    let private epsEdges
+        (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
+        (sb: System.Text.StringBuilder)
+        : unit =
+        for i in 0 .. transitions.rows - 1 do
+            for j in 0 .. transitions.cols - 1 do
+                match transitions.data.[i, j] with
+                | Some symbols when NonEmptySet.contains AEpsilon symbols ->
+                    sb.AppendLine(sprintf "  s%d -> s%d [label=\"ε\", style=dotted];" i j) |> ignore
+                | _ -> ()
 
     /// Render an NFA as a Graphviz dot graph.
     let nfaToDot (stateVisualizer: int -> 's -> string) (nfa: NFA<'t, 's>) : string =
@@ -64,7 +80,7 @@ module AutomatonDot =
 
         stateDeclarations nfa.states.Length stateVisualizer nfa.states nfa.startStates nfa.finalStates sb
         transitionEdges nfa.transitions sb
-        epsEdges nfa.epsTransitions sb
+        epsEdges nfa.transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()

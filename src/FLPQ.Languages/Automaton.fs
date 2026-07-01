@@ -7,11 +7,15 @@ open FLPQ.GraphAnalysis
 [<Struct>]
 type Config = { state: int; position: int }
 
-/// Nondeterministic finite automaton with multiple start states and epsilon transitions.
+type AutomatonLabel<'t> =
+    | ATerm of 't
+    | AEpsilon
+
+/// Nondeterministic finite automaton with multiple start states.
+/// Epsilon transitions are stored in the transition matrix as AEpsilon-labeled edges.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type NFA<'t, 's when 't: comparison> =
-    { graph: Graph<'s, Option<NonEmptySet<'t>>>
-      epsTransitions: Set<int * int>
+    { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startStates: Set<int>
       finalStates: Set<int> }
 
@@ -21,7 +25,7 @@ type NFA<'t, 's when 't: comparison> =
 /// Deterministic finite automaton with exactly one start state and no epsilon transitions.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type DFA<'t, 's when 't: comparison> =
-    { graph: Graph<'s, Option<NonEmptySet<'t>>>
+    { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startState: int
       finalStates: Set<int> }
 
@@ -30,7 +34,10 @@ type DFA<'t, 's when 't: comparison> =
 
 module Nfa =
 
-    let buildMatrix (n: int) (transitionsList: (int * 't * int) list) : Matrix<Option<NonEmptySet<'t>>> =
+    let buildMatrix
+        (n: int)
+        (transitionsList: (int * AutomatonLabel<'t> * int) list)
+        : Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>> =
         let matrix = Matrix.init n n None
 
         for (fromIdx, sym, toIdx) in transitionsList do
@@ -44,6 +51,7 @@ module Nfa =
         matrix
 
     /// Build an NFA from a list of transitions.
+    /// epsTransitions are merged into the matrix as AEpsilon-labeled edges.
     let fromTransitions
         (states: 's list)
         (transitionsList: (int * 't * int) list)
@@ -51,8 +59,13 @@ module Nfa =
         (startStates: Set<int>)
         (finalStates: Set<int>)
         : NFA<'t, 's> =
-        { graph = Graph.fromEdges states (buildMatrix states.Length transitionsList)
-          epsTransitions = epsTransitions
+        let termTransitions = transitionsList |> List.map (fun (f, s, t) -> (f, ATerm s, t))
+
+        let epsT = epsTransitions |> Set.toList |> List.map (fun (f, t) -> (f, AEpsilon, t))
+
+        let allTransitions = termTransitions @ epsT
+
+        { graph = Graph.fromEdges states (buildMatrix states.Length allTransitions)
           startStates = startStates
           finalStates = finalStates }
 
@@ -64,7 +77,11 @@ module Nfa =
         for i in 0 .. a.transitions.rows - 1 do
             for j in 0 .. a.transitions.cols - 1 do
                 match a.transitions.data.[i, j] with
-                | Some nes -> result <- Set.union result (NonEmptySet.toSet nes)
+                | Some nes ->
+                    for label in NonEmptySet.toSeq nes do
+                        match label with
+                        | ATerm t -> result <- Set.add t result
+                        | AEpsilon -> ()
                 | None -> ()
 
         result
@@ -74,7 +91,7 @@ module Nfa =
 
         for j in 0 .. a.transitions.cols - 1 do
             match a.transitions.data.[stateIdx, j] with
-            | Some nes when NonEmptySet.contains symbol nes -> result <- Set.add j result
+            | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Set.add j result
             | _ -> ()
 
         result
@@ -86,10 +103,16 @@ module Nfa =
         while changed do
             changed <- false
 
-            for (fromIdx, toIdx) in a.epsTransitions do
-                if Set.contains fromIdx closure && not (Set.contains toIdx closure) then
-                    closure <- Set.add toIdx closure
-                    changed <- true
+            let n = stateCount a
+
+            for fromIdx in closure |> Set.toList do
+                for toIdx in 0 .. n - 1 do
+                    match a.transitions.data.[fromIdx, toIdx] with
+                    | Some nes when NonEmptySet.contains AEpsilon nes ->
+                        if not (Set.contains toIdx closure) then
+                            closure <- Set.add toIdx closure
+                            changed <- true
+                    | _ -> ()
 
         closure
 
@@ -138,7 +161,10 @@ module Nfa =
                     None)
             |> Set.ofList
 
-        { graph = Graph.fromEdges dfaStates (buildMatrix dfaStates.Length (List.rev transitions))
+        { graph =
+            Graph.fromEdges
+                dfaStates
+                (buildMatrix dfaStates.Length (List.rev transitions |> List.map (fun (f, s, t) -> (f, ATerm s, t))))
           startState = 0
           finalStates = dfaFinalStates }
 
@@ -188,7 +214,7 @@ module Nfa =
     /// 2. Forward MS-BFS from start pairs on boolean mask of productTransitions.
     /// 3. Backward MS-BFS from final pairs on transposed boolean mask.
     /// 4. Intersect forward and backward visited (via reduceByColumn) to find useful product states.
-    /// 5. Filter productTransitions to keep only edges between useful states, then extract result NFA.
+    /// 5. Keep only useful product states via Graph.keepVertices.
     /// Returns an NFA whose language is L(a) ∩ L(b).
     let intersect (a: NFA<'t, 's>) (b: NFA<'t, 'v>) : NFA<'t, int * int> =
         let nA = stateCount a
@@ -196,7 +222,6 @@ module Nfa =
 
         if nA = 0 || nB = 0 then
             { graph = Graph.fromEdges [] (buildMatrix 0 [])
-              epsTransitions = Set.empty
               startStates = Set.empty
               finalStates = Set.empty }
         else
@@ -205,9 +230,9 @@ module Nfa =
             let idx iA iB = iA * nB + iB
 
             let intersectedEdge
-                (optA: Option<NonEmptySet<'t>>)
-                (optB: Option<NonEmptySet<'t>>)
-                : Option<NonEmptySet<'t>> =
+                (optA: Option<NonEmptySet<AutomatonLabel<'t>>>)
+                (optB: Option<NonEmptySet<AutomatonLabel<'t>>>)
+                : Option<NonEmptySet<AutomatonLabel<'t>>> =
                 match optA, optB with
                 | Some nesA, Some nesB ->
                     let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
@@ -272,7 +297,6 @@ module Nfa =
                 |> List.map (fun p -> (p / nB, p % nB))
                 |> fun labels -> Graph.fromEdges labels productTransitions
                 |> Graph.keepVertices usefulSet
-              epsTransitions = Set.empty
               startStates = resultStartStates
               finalStates = resultFinalStates }
 
@@ -285,25 +309,36 @@ module Dfa =
         (startState: int)
         (finalStates: Set<int>)
         : DFA<'t, 's> =
-        { graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) transitionsList)
+        let labeledTransitions =
+            transitionsList |> List.map (fun (f, s, t) -> (f, ATerm s, t))
+
+        { graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) labeledTransitions)
           startState = startState
           finalStates = finalStates }
 
     let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.graph
 
     let alphabet (a: DFA<'t, 's>) : Set<'t> =
-        Nfa.alphabet
-            { graph = a.graph
-              epsTransitions = Set.empty
-              startStates = set [ a.startState ]
-              finalStates = a.finalStates }
+        let mutable result = Set.empty
+
+        for i in 0 .. a.transitions.rows - 1 do
+            for j in 0 .. a.transitions.cols - 1 do
+                match a.transitions.data.[i, j] with
+                | Some nes ->
+                    for label in NonEmptySet.toSeq nes do
+                        match label with
+                        | ATerm t -> result <- Set.add t result
+                        | AEpsilon -> ()
+                | None -> ()
+
+        result
 
     let move (a: DFA<'t, 's>) (stateIdx: int) (symbol: 't) : int option =
         let mutable result = None
 
         for j in 0 .. a.transitions.cols - 1 do
             match a.transitions.data.[stateIdx, j] with
-            | Some nes when NonEmptySet.contains symbol nes -> result <- Some j
+            | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Some j
             | _ -> ()
 
         result
@@ -320,7 +355,7 @@ module Dfa =
 
                 for j in 0 .. n - 1 do
                     match a.transitions.data.[i, j] with
-                    | Some nes when NonEmptySet.contains sym nes -> count <- count + 1
+                    | Some nes when NonEmptySet.contains (ATerm sym) nes -> count <- count + 1
                     | _ -> ()
 
                 if count > 1 then

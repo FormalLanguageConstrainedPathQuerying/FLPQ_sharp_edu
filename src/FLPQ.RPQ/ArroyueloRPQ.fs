@@ -32,7 +32,7 @@ module ArroyueloRPQ =
     /// M(E1 | E2) = M(E1) ∨ M(E2), M(E1 / E2) = M(E1) × M(E2),
     /// M(E+) = M(E)^+, M(E*) = I ∨ M(E)^+.
     let rec private evalExpression
-        (graphAdj: Map<'t, Matrix<bool>>)
+        (graphAdj: Map<AutomatonLabel<'t>, Matrix<bool>>)
         (vCount: int)
         (regexp: Regexp<'t, 'nt>)
         : Matrix<bool> =
@@ -45,7 +45,7 @@ module ArroyueloRPQ =
         | Regexp.REps -> identity
         | Regexp.REmpty -> Matrix.init vCount vCount false
         | Regexp.RTerm(Terminal t) ->
-            match Map.tryFind t graphAdj with
+            match Map.tryFind (ATerm t) graphAdj with
             | Some m -> m
             | None -> Matrix.init vCount vCount false
         | Regexp.RNonterm _ -> Matrix.init vCount vCount false
