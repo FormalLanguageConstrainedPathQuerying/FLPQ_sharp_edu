@@ -1,22 +1,25 @@
-# Detailed Plan: Task 68 — Unify buildLR0/buildLR1
+# Detailed Plan: Task 72 — LL(2) parsing tests
 
 ## Goal
 
-Merge duplicated structure between buildLR0 and buildLR1 into a single parametrized function.
+Add tests for LL(2) parsing with a grammar that requires 2-token lookahead.
 
-## Shared structure
+## Grammar
 
-Both functions:
-1. Get augmentedRule = aug.rules.[0]  
-2. Create start item from augmented rule
-3. Compute startItems via closure
-4. Define `getSymbols` with identical pattern (iterate items, get symbol at dot position)
-5. Define `gotoFn`
-6. Create `isAcceptState` via Set.contains acceptItem
-7. Call buildAutomaton
+```
+S -> S1 | S2
+S1 -> a b S c
+S1 -> eps 
+S2 -> a x S y
+S2 -> eps
+```
 
-## Approach
+LL(1) detects a conflict (both S1 and S2 start with 'a'), LL(2) works.
 
-Extract `getSymbols` into a parameterized helper (takes `dotOf` and `rhsOf` accessors).
-Create `buildLR` that handles steps 1-7 given item constructors and closure/goto functions.
-`buildLR0` and `buildLR1` become 8-line wrappers.
+Accept: "", abc, axy, ababcc, axaxyy, axabcy, abaxyc
+Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
+
+## Changes
+
+1. TestGrammars.fs: add grammar definition + accept/reject lists
+2. LLParserTests.fs: add LL(1) conflict test, LL(2) no-conflict test, LL(2) accept/reject tests, leaf matching test

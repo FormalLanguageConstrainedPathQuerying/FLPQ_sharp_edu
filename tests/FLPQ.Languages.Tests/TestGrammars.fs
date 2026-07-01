@@ -132,3 +132,37 @@ let augGrammar6 = augmentStringGrammar grammar6
 let augGrammar7 = augmentStringGrammar grammar7
 
 let augGrammar8 = augmentStringGrammar grammar8
+
+let grammar9 =
+    Grammar.parseGrammar
+        "
+    S -> S1
+    S -> S2
+    S1 -> a b S c
+    S1 -> eps
+    S2 -> a x S y
+    S2 -> eps
+    "
+
+let grammar9Accept =
+    [ ""
+      "a b c"
+      "a x y"
+      "a b a b c c"
+      "a x a x y y"
+      "a x a b c y"
+      "a b a x y c" ]
+
+let grammar9Reject =
+    [ "a"
+      "x"
+      "y"
+      "c"
+      "a x c"
+      "a b y"
+      "a x a b"
+      "a b a x y"
+      "a x a b c"
+      "a x a b y" ]
+
+let augGrammar9 = augmentStringGrammar grammar9

@@ -62,6 +62,47 @@ module FactTests =
     let ``LL(1) table for grammar8 expression grammar detects conflict`` () =
         Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar8 1 |> ignore)
 
+    [<Fact>]
+    let ``LL(1) table for grammar9 detects conflict`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar9 1 |> ignore)
+
+    [<Fact>]
+    let ``LL(2) table for grammar9 also detects conflict`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar9 2 |> ignore)
+
+    [<Fact>]
+    let ``Valiant and CYK agree on grammar9 acceptance`` () =
+        for s in grammar9Accept do
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals s)
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals s)
+
+            if cykResult <> valResult then
+                Assert.True(false, userMessage = s)
+
+        for s in grammar9Reject do
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals s)
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals s)
+
+            if cykResult <> valResult then
+                Assert.True(false, userMessage = s)
+
+    [<Fact>]
+    let ``Valiant parseWithTable for grammar9 returns correct dimension`` () =
+        let input = "a b c"
+
+        let table, accepted =
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals input)
+
+        Assert.True(accepted)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
+
 
 module PropertyTests =
 

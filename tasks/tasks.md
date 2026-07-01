@@ -427,7 +427,7 @@
     7. Valiant init block duplicated 4x. The ~40-line setup block (building `tByNt` dictionary, `pByPair` dictionary, terminal rule initialization via `BooleanDecomposition.decompose`, and the epsilon-acceptance early-exit) is copy-pasted identically 4 times in `Valiant.fs Remove code duplication.
 66. [done] Refactoring. Create separate project for printers (to dot and to TeX). Move all printing logic to it. Algortihms just collect data as F# data structures. When data collected, one can use respective printer to print it if necessary.
 67. [done] For modified Valiant: merge parsing with trace and parsing with table. Resulting table is a table from the last step. So you can collect ctrace and ten extract resulting table form the last step.
-68. In `LRParser.fs`. `buildLR0` and `buildLR1` lloks pretty similar. Can these two function be converted to one parametrized function? Do it if yes.
+68. [done] In `LRParser.fs`. `buildLR0` and `buildLR1` lloks pretty similar. Can these two function be converted to one parametrized function? Do it if yes.
 69. [done] Input for all parsing algorithms MUST ve a list of Terminals, not Symbols. Input MUST NOT contains Nonterminals.
 70. [done] nonterminalsOf/terminalsOf duplicated across modules. Make them public in `Grammar.fs` and use in all locations.
 71. [done] Use `MyGen`/`MyArb` instead of `System.Random.Shared` in property tetes generators.
@@ -437,9 +437,8 @@
     S -> S1 
     S -> S2
     S1 -> a b S c
-    S1 -> eps 
-    S2 -> a x S y
-    S2 -> eps
+    S -> eps 
+    S2 -> a x S y    
     ```
     Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
     Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
