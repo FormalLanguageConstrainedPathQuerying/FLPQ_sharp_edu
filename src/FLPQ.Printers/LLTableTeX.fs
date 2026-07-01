@@ -40,19 +40,6 @@ module LLTableTeX =
 
         @"$" + lhs + @" \rightarrow " + rhs + @"$"
 
-    let private nonterminalsOf (g: Grammar<'t, 'nt>) : Nonterminal<'nt> list =
-        g.rules |> List.map (fun r -> r.lhs) |> List.distinct
-
-    let private terminalsOf (g: Grammar<'t, 'nt>) : Terminal<'t> list =
-        g.rules
-        |> List.collect (fun r ->
-            Rhs.toSymbols r.rhs
-            |> List.choose (fun sym ->
-                match sym with
-                | T t -> Some t
-                | _ -> None))
-        |> List.distinct
-
     /// Render the LL(k) parsing table as a TeX tabular.
     let tableToTeX
         (symbolPrinter: Symbol<'t, 'nt> -> string)
@@ -64,8 +51,8 @@ module LLTableTeX =
         : string =
         let sb = System.Text.StringBuilder()
 
-        let nts = nonterminalsOf g
-        let terms = terminalsOf g
+        let nts = Grammar.nonterminalsOf g |> Set.toList
+        let terms = Grammar.terminalsOf g |> Set.toList
 
         let colSpec =
             let termCols = String.replicate terms.Length "c | "

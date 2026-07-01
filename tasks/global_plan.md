@@ -1,89 +1,90 @@
-# Global Plan: Tasks 57—63
+# Global Plan: Tasks 67--72
 
 ## Task Summary
 
-| ID | Description | Type |
-|----|-------------|------|
-| 57 | Linear-algebra based multiple-source BFS (MS-BFS) | Feature |
-| 58 | Matrix operations for MS-BFS and RPQ algorithms | Feature |
-| 59 | Belyanin's LARPQ algorithm (BFS-based single-source RPQ) | Feature |
-| 60 | Arroyuelo's RPQ algorithm (Matrix-based regex evaluation) | Feature |
-| 61 | Kronecker-based RPQ algorithm with MS-BFS filtering | Feature |
-| 62 | Graph reading from file | Feature |
-| 63 | Property-based tests for all three RPQ algorithms | Feature (Tests) |
+| ID | Description | Type | Status |
+|----|-------------|------|--------|
+| 67 | Merge modified Valiant trace + table (table extracted from last trace step) | Refactoring | Pending |
+| 68 | Unify `buildLR0`/`buildLR1` into single parametrized function | Refactoring | Pending |
+| 69 | Input for all parsing algorithms must be `Terminal list`, not `Symbol list` | Refactoring | Pending |
+| 70 | Make `nonterminalsOf`/`terminalsOf` public in `Grammar.fs`, deduplicate | Refactoring | Pending |
+| 71 | Use `MyGen`/`MyArb` instead of `System.Random.Shared` in property test generators | Refactoring | Pending |
+| 72 | Add LL(2) parsing tests with specific grammar | Test | Pending |
 
 ## Dependencies
 
 ```
-Task 57 (MS-BFS) ───────────────┐
-                                 ├──> Task 61 (Kronecker RPQ)
-Task 58 (Matrix operations) ────┤
-                                 ├──> Task 59 (Belyanin RPQ)
-                                 ├──> Task 60 (Arroyuelo RPQ)
-Task 62 (Graph reader) ─────────┤
-                                 └──> Task 63 (Property-based tests)
+Task 70 (public nonterminalsOf/terminalsOf) ── independent, small
+Task 69 (Terminal list input) ── independent, affects many files
+Task 67 (merge Valiant trace+table) ── independent
+Task 68 (unify buildLR0/buildLR1) ── independent
+Task 71 (MyGen/MyArb cleanup) ── independent, may be already done
+Task 72 (LL(2) tests) ── independent
 ```
 
-- Tasks 57 and 58 are independent of each other but both go into the LinearAlgebra project
-- Tasks 59, 60, 61 depend on 57, 58 (matrix operations) and 62 (graph reading for tests)
-- Task 63 depends on all of 57-62
+All tasks are independent. Execution order can be any, but tasks 69 touches most files so should be done early to avoid merge conflicts.
 
 ## Potential Conflicts
 
-| Task | Files Modified/Created | Conflicts With |
-|------|----------------------|----------------|
-| 57+58 | New `MsBfs.fs`, modify `FLPQ.LinearAlgebra.fsproj` | None |
-| 59 | New `BelyaninRPQ.fs`, modify `FLPQ.Languages.fsproj` | None |
-| 60 | New `ArroyueloRPQ.fs`, modify `FLPQ.Languages.fsproj` | None |
-| 61 | New `KroneckerRPQ.fs`, modify `FLPQ.Languages.fsproj` | Uses MS-BFS from 57 |
-| 62 | New `GraphReader.fs`, modify `FLPQ.Languages.fsproj` | None |
-| 63 | New/modified test files, modify test `.fsproj` | None |
-
-All tasks create new files — no conflicts with existing code.
-
-## Shared Infrastructure
-
-- Tasks 57-58 share the `Matrix` and `LinearAlgebra` modules from `FLPQ.LinearAlgebra`
-- Tasks 59, 60, 61 all use per-label boolean matrix decomposition (`BooleanDecomposition.decompose/recompose`)
-- Tasks 59, 61 use the automaton type (`DFA<'t,'s>`) for query representation
-- Task 60 reuses the `Regexp` AST from `EbnfParser.fs`
-- Task 61 uses MS-BFS from task 57
-- Task 62 provides graph reading infrastructure used by tests for all RPQ algorithms
-- All test infrastructure (xUnit, FsCheck, TeX compilation) already exists
+| Task | Files Modified | Conflicts With |
+|------|---------------|----------------|
+| 67 | `src/FLPQ.Languages/Valiant.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs` | Task 69 (Valiant signature change) |
+| 68 | `src/FLPQ.Languages/LRParser.fs` | Task 69 (LRParser signature change) |
+| 69 | Many files across src/ and tests/ | Tasks 67, 68, 72 |
+| 70 | `src/FLPQ.Languages/Grammar.fs`, `src/FLPQ.Printers/LLTableTeX.fs`, `tests/FLPQ.Languages.Tests/GrammarTests.fs` | None |
+| 71 | `tests/FLPQ.GraphAnalysis.Tests/RandomGraphGenerators.fs` (may be already done) | None |
+| 72 | `tests/FLPQ.Languages.Tests/LLParserTests.fs`, `tests/FLPQ.Languages.Tests/TestGrammars.fs` | None |
 
 ## Execution Order
 
-1. **Tasks 57+58** (combined) — MS-BFS and supporting matrix operations in LinearAlgebra project
-2. **Task 62** — Graph reader (independent, needed for tests)
-3. **Task 59** — Belyanin's LARPQ
-4. **Task 60** — Arroyuelo's RPQ 
-5. **Task 61** — Kronecker-based RPQ (uses MS-BFS from 57)
-6. **Task 63** — Property-based tests for all three algorithms
+Recommended order (minimizing rework):
+1. **Task 70** — Small, independent, makes nonterminalsOf/terminalsOf public for other tasks
+2. **Task 71** — Investigate, likely already done, mark accordingly
+3. **Task 69** — Changes input types across all parsing algorithms (major refactoring)
+4. **Task 67** — Modified Valiant refactoring (after task 69 so signatures align)
+5. **Task 68** — LR buildLR0/buildLR1 unification (after task 69)
+6. **Task 72** — LL(2) tests (after task 69 for correct tokenizer usage)
 
-## New Files to Create
+## Shared Infrastructure
 
-### Source files:
-- `src/FLPQ.LinearAlgebra/MsBfs.fs` — MS-BFS, Boolean semiring ops, Mask semiring ops (tasks 57-58)
-- `src/FLPQ.Languages/GraphReader.fs` — Graph file reading (task 62)
-- `src/FLPQ.Languages/BelyaninRPQ.fs` — Belyanin's algorithm (task 59)
-- `src/FLPQ.Languages/ArroyueloRPQ.fs` — Arroyuelo's algorithm (task 60)
-- `src/FLPQ.Languages/KroneckerRPQ.fs` — Kronecker-based algorithm (task 61)
+All tasks operate on existing modules. Task 69 introduces a consistent input type across all parsing algorithms.
 
-### Test files:
-- `tests/FLPQ.LinearAlgebra.Tests/MsBfsTests.fs` — MS-BFS and matrix operations tests
-- `tests/FLPQ.Languages.Tests/RPQTests.fs` — RPQ algorithms tests (all three + property-based)
+## Detailed Changes Per Task
 
-### Documentation:
-- `docs/msbfs.md` — MS-BFS module
-- `docs/graph-reader.md` — Graph reader module
-- `docs/belyanin-rpq.md` — Belyanin's RPQ
-- `docs/arroyuelo-rpq.md` — Arroyuelo's RPQ
-- `docs/kronecker-rpq.md` — Kronecker-based RPQ
+### Task 67 — Merge modified Valiant
+- Remove code duplication between `parseModifiedWithTable` and `parseModifiedWithTrace`
+- Have single internal computation that collects trace
+- `parseModifiedWithTable` extracts last step's table → derive acceptance from it
+- `parseModified` calls `parseModifiedWithTable` and returns `snd`
+- Also apply same pattern to standard Valiant (`parseWithTable`/`parseWithTrace`)
 
-### Modified files:
-- `src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj` — add `MsBfs.fs`
-- `src/FLPQ.Languages/FLPQ.Languages.fsproj` — add new source files
-- `tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj` — add test file
-- `tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj` — add test file
-- `docs/main.md` — add links to new docs
-- `docs/architecture.md` — update with new modules
+### Task 68 — Unify buildLR0/buildLR1
+- Extract `getSymbols` as shared generic helper
+- Create `buildLR` that takes item-specific parameters
+- `buildLR0` and `buildLR1` become thin wrappers calling `buildLR`
+
+### Task 69 — Terminal list input
+- Change all parsing function signatures: `Symbol<'t,'nt> list` → `Terminal<'t> list`
+- Add `Terminal.toSymbols: Terminal<'t> list -> Symbol<'t,'nt> list` helper
+- Update Tokenizer to expose `tokenizeTerminals` as the main entry
+- Update all tests to use `Tokenizer.tokenizeTerminals`
+
+### Task 70 — Make nonterminalsOf/terminalsOf public
+- Change `private` → public in `Grammar.fs`
+- Replace duplicates in `LLTableTeX.fs` with calls to `Grammar.nonterminalsOf`/`Grammar.terminalsOf`
+- Update `GrammarTests.fs` private `nonterminalsOfCnf` if applicable
+
+### Task 71 — MyGen/MyArb cleanup
+- Verify no `System.Random.Shared` usage remains in .fs files
+- If already clean, just verify and mark done
+- If found, replace with FsCheck `MyGen`/`MyArb` patterns
+
+### Task 72 — LL(2) tests
+- Add grammar definition to `TestGrammars.fs`
+- Add accept/reject string lists
+- Add tests in `LLParserTests.fs`:
+  - LL(2) table has no conflicts
+  - Accepts all valid strings
+  - Rejects all invalid strings
+  - Leaves match input string
+  - Also add property-based test with cross-check against CYK/Valiant

@@ -104,7 +104,7 @@ module Grammar =
     /// Parse a grammar from a .bnf file.
     let parseGrammarFromFile (path: string) : Grammar<string, string> = File.ReadAllText(path) |> parseGrammar
 
-    let private nonterminalsOf (g: Grammar<'t, 'nt>) : Set<Nonterminal<'nt>> =
+    let nonterminalsOf (g: Grammar<'t, 'nt>) : Set<Nonterminal<'nt>> =
         g.rules
         |> List.collect (fun r ->
             let rhsNts =
@@ -116,7 +116,7 @@ module Grammar =
             r.lhs :: rhsNts)
         |> Set.ofList
 
-    let private terminalsOf (g: Grammar<'t, 'nt>) : Set<Terminal<'t>> =
+    let terminalsOf (g: Grammar<'t, 'nt>) : Set<Terminal<'t>> =
         g.rules
         |> List.collect (fun r ->
             Rhs.toSymbols r.rhs
