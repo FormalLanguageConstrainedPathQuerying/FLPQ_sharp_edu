@@ -257,51 +257,21 @@ module Nfa =
             let usefulStateMap =
                 usefulStates |> Array.mapi (fun i prodIdx -> (prodIdx, i)) |> Map.ofArray
 
-            let resultStateCount = usefulStates.Length
-
-            let resultStates =
-                usefulStates
-                |> Array.map (fun p ->
-                    let iA = p / nB
-                    let iB = p % nB
-                    (iA, iB))
-                |> Array.toList
-
             let resultStartStates =
                 startPairs
-                |> Array.filter (fun sp -> Set.contains sp usefulSet)
-                |> Array.map (fun sp -> Map.find sp usefulStateMap)
+                |> Array.choose (fun sp -> Map.tryFind sp usefulStateMap)
                 |> Set.ofArray
 
             let resultFinalStates =
                 finalPairs
-                |> Array.filter (fun fp -> Set.contains fp usefulSet)
-                |> Array.map (fun fp -> Map.find fp usefulStateMap)
+                |> Array.choose (fun fp -> Map.tryFind fp usefulStateMap)
                 |> Set.ofArray
 
-            let productGraph = Graph.fromEdges [ 0 .. n - 1 ] productTransitions
-
-            let orElse a b =
-                match a with
-                | Some _ -> a
-                | None -> b
-
-            let filteredGraph =
-                productGraph
-                |> Graph.filterOutgoingGeneric None (fun keep edge -> if keep then edge else None) orElse usefulSet
-                |> Graph.filterIncomingGeneric None (fun edge keep -> if keep then edge else None) orElse usefulSet
-
-            let transitions = ResizeArray()
-
-            for pIdx in usefulStates do
-                for qIdx in usefulStates do
-                    match filteredGraph.edges.data.[pIdx, qIdx] with
-                    | Some nes ->
-                        for label in NonEmptySet.toSeq nes do
-                            transitions.Add(Map.find pIdx usefulStateMap, label, Map.find qIdx usefulStateMap)
-                    | None -> ()
-
-            { graph = Graph.fromEdges resultStates (buildMatrix resultStateCount (List.ofSeq transitions))
+            { graph =
+                [ 0 .. n - 1 ]
+                |> List.map (fun p -> (p / nB, p % nB))
+                |> fun labels -> Graph.fromEdges labels productTransitions
+                |> Graph.keepVertices usefulSet
               epsTransitions = Set.empty
               startStates = resultStartStates
               finalStates = resultFinalStates }

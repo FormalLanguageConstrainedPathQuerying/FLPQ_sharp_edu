@@ -34,6 +34,23 @@ module Graph =
         { vertexMap = states |> List.indexed |> List.map (fun (i, v) -> (i, v)) |> Map.ofList
           edges = edgeMatrix }
 
+    /// Keep only the specified vertices and edges between them.
+    /// Vertex indices are remapped to 0..|keep|-1 preserving ascending order.
+    let keepVertices (keep: Set<int>) (g: Graph<'v, 'e>) : Graph<'v, 'e> =
+        let keepArr = keep |> Set.toArray |> Array.sort
+        let newSize = keepArr.Length
+
+        let newVertexMap =
+            keepArr
+            |> Array.mapi (fun newIdx oldIdx -> (newIdx, g.vertexMap.[oldIdx]))
+            |> Map.ofArray
+
+        let newEdges =
+            Matrix.create newSize newSize (fun i j -> g.edges.data.[keepArr.[i], keepArr.[j]])
+
+        { vertexMap = newVertexMap
+          edges = newEdges }
+
     /// Generic filter: keep only outgoing edges from specified vertices.
     /// result = diagonal(selectedVertices) × edges using maskOp for multiplication
     /// and combineOp for addition. maskOp : bool -> 'e -> 'e determines whether
