@@ -39,12 +39,30 @@ Generic graph structure where:
 - `mapVertices: ('v -> 'w) -> Graph<'v, 'e> -> Graph<'w, 'e>` — transforms vertex labels.
 - `mapEdges: ('e -> 'f) -> Graph<'v, 'e> -> Graph<'v, 'f>` — transforms edge values.
 
+### Vertex Removal
+
+- `keepVertices: Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only the specified vertices and edges between them. Vertex indices are remapped to 0..|keep|-1 preserving ascending order. Useful states are retained with their original labels; edges are extracted from the original matrix at the corresponding positions.
+
+### Generic Graph Filtering
+
+- `filterOutgoingGeneric: zero:'e -> maskOp:(bool -> 'e -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only outgoing edges from selected vertices. Multiplies `diagonal(selected)` by `edges` using `maskOp` (keep flag × edge) and `combineOp` (merge multiple edges between same pair). Generalized for arbitrary edge types, not just `bool`.
+
+- `filterIncomingGeneric: zero:'e -> maskOp:('e -> bool -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only incoming edges to selected vertices. Multiplies `edges` by `diagonal(selected)`.
+
 ### Boolean Graph Filtering
 
-- `filterOutgoing: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only outgoing edges from selected vertices. Uses Boolean semiring matrix multiplication: `diagonal(selected) * edges`.
-- `filterIncoming: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only incoming edges to selected vertices. Uses Boolean semiring matrix multiplication: `edges * diagonal(selected)`. 
+- `filterOutgoing: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only outgoing edges from selected vertices. Delegates to `filterOutgoingGeneric` with `zero=false`, `maskOp=(&&)`, `combineOp=(||)`.
+- `filterIncoming: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only incoming edges to selected vertices. Delegates to `filterIncomingGeneric`.
 
 **Relationship to the book**: Chapter 3, `05_BFS.tex` — filtering is done via multiplication by diagonal matrices that serve as vertex selectors. For selecting vertices i, j, k, multiply the adjacency matrix by a diagonal matrix with ones at (i,i), (j,j), (k,k) and zeros elsewhere.
+
+### Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Generic filter functions parameterized by `zero`/`maskOp`/`combineOp` | Enables filtering on graphs with arbitrary edge types (e.g., `Option<NonEmptySet<AutomatonLabel<'t>>>`) without requiring Boolean decomposition. Boolean versions delegate to generic ones. |
+| `keepVertices` instead of filter-combinations | Removing vertices automatically removes all incident edges — no separate edge-filtering step needed. More direct than `filterOutgoing |> filterIncoming`. |
+| `keepVertices` preserves ascending order | Remapped indices are deterministic and predictable. Callers building maps from old to new indices can rely on this order. |
 
 ## Integration with Automaton Types
 
@@ -52,14 +70,11 @@ NFA and DFA types wrap Graph for their state/transition storage:
 
 ```fsharp
 type NFA<'t, 's when 't: comparison> =
-    { graph: Graph<'s, Option<NonEmptySet<'t>>>
-      epsTransitions: Set<int * int>
+    { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startStates: Set<int>
       finalStates: Set<int> }
     member this.states = this.graph |> Graph.vertices |> List.map snd
     member this.transitions = this.graph.edges
 ```
-
-**Design decision**: `.states` and `.transitions` are provided as member properties (not record fields) for backward compatibility with existing code that accesses `dfa.states` or `nfa.transitions`. The underlying storage uses `graph` as a record field. Record construction uses `graph = Graph.fromEdges ...` instead of the old `states = ..., transitions = ...` pattern.
 
 This separation follows the book's hierarchy: a graph is a generic structure, and an automaton is a graph with additional information about start and final states.

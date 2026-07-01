@@ -53,6 +53,12 @@ val diagonal: size:int -> indices:Set<int> -> one:'a -> zero:'a -> Matrix<'a>
 ```
 Creates a diagonal matrix of the given size. Positions `(i, i)` for `i ∈ indices` receive `one`, all other positions receive `zero`. For Boolean matrices, `diagonal n selected true false` produces a selector matrix that, when multiplied with an adjacency matrix, preserves only rows/columns of selected vertices. Used by `Graph.filterOutgoing` and `Graph.filterIncoming`.
 
+#### `reduceByColumn`
+```fsharp
+val reduceByColumn: op:('a -> 'a -> 'a) -> init:'a -> m:Matrix<'a> -> 'a[]
+```
+Reduces each column to a single value using the given binary operation. Returns an array of length `m.cols`. Column `j` accumulates: `op(init, m.data[0,j]), op(result, m.data[1,j]), ...`. For Boolean matrices, `reduceByColumn (||) false` performs column-wise OR-reduction, collapsing a `k × n` MS-BFS result into an `n`-element array indicating which columns have any true in any row. Used by `Nfa.intersect` to find product states reachable from any start pair.
+
 ### Transformation Functions
 
 #### `map`

@@ -167,3 +167,35 @@ let block: Matrix.SubmatrixBlock =
       startCol = c
       ... }
 ```
+
+## FSharpPlus 1.9.1 `NonEmptySet` API
+
+### `NonEmptySet.intersect` — Not Available
+
+`NonEmptySet.intersect` does not exist in FSharpPlus 1.9.1. To intersect two `NonEmptySet<'a>` values, convert to plain `Set<'a>` via `NonEmptySet.toSet`, use `Set.intersect`, check for emptiness, and convert back via `NonEmptySet.ofSet` (which returns `NonEmptySet<'a>` directly, not `Option`).
+
+```fsharp
+let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
+if Set.isEmpty common then None
+else Some(NonEmptySet.ofSet common)
+```
+
+### `NonEmptySet.ofSet` Returns `NonEmptySet<'a>`, Not `Option`
+
+Despite what some FSharpPlus documentation suggests, in v1.9.1 `NonEmptySet.ofSet : Set<'a> -> NonEmptySet<'a>` returns the value directly (throws on empty). Always check for emptiness before calling.
+
+### Available Members
+
+| Function | Signature | Notes |
+|----------|-----------|-------|
+| `NonEmptySet.singleton` | `'a -> NonEmptySet<'a>` | Create singleton. Used in `Nfa.buildMatrix`. |
+| `NonEmptySet.add` | `'a -> NonEmptySet<'a> -> NonEmptySet<'a>` | Add element. |
+| `NonEmptySet.contains` | `'a -> NonEmptySet<'a> -> bool` | Membership test. |
+| `NonEmptySet.toSet` | `NonEmptySet<'a> -> Set<'a>` | Convert to plain Set. |
+| `NonEmptySet.toSeq` | `NonEmptySet<'a> -> seq<'a>` | Enumerate elements. |
+| `NonEmptySet.ofSet` | `Set<'a> -> NonEmptySet<'a>` | Convert from Set. Throws if empty. |
+
+## Fish Speculative Import Hunting
+
+When searching for usages of a removed field or renamed function, prefer `grep` with narrow patterns over glob-based file reading. Example: to find all direct field accesses of `epsTransitions`, use `grep "\.epsTransitions"` — this catches property accesses while excluding `Set.empty` passed as a parameter.
+
