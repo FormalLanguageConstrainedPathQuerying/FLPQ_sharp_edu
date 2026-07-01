@@ -184,11 +184,11 @@ module Nfa =
 
     /// Intersect two NFAs without epsilon transitions using linear algebra.
     /// Algorithm:
-    /// 1. Kronecker product of per-label transition matrices → combined boolean matrix K.
-    /// 2. Forward MS-BFS from start pairs on K.
-    /// 3. Backward MS-BFS from final pairs on K^T.
-    /// 4. Intersect forward and backward visited to find useful product states.
-    /// 5. Build result NFA with only useful states and transitions between them.
+    /// 1. Kronecker product of transition matrices with set intersection → productTransitions.
+    /// 2. Forward MS-BFS from start pairs on boolean mask of productTransitions.
+    /// 3. Backward MS-BFS from final pairs on transposed boolean mask.
+    /// 4. Intersect forward and backward visited (via reduceByColumn) to find useful product states.
+    /// 5. Filter productTransitions to keep only edges between useful states, then extract result NFA.
     /// Returns an NFA whose language is L(a) ∩ L(b).
     let intersect (a: NFA<'t, 's>) (b: NFA<'t, 'v>) : NFA<'t, int * int> =
         let nA = stateCount a
@@ -204,21 +204,24 @@ module Nfa =
 
             let idx iA iB = iA * nB + iB
 
-            let perLabelA = BooleanDecomposition.decomposeNonEmptySet a.transitions
-            let perLabelB = BooleanDecomposition.decomposeNonEmptySet b.transitions
+            let intersectedEdge
+                (optA: Option<NonEmptySet<'t>>)
+                (optB: Option<NonEmptySet<'t>>)
+                : Option<NonEmptySet<'t>> =
+                match optA, optB with
+                | Some nesA, Some nesB ->
+                    let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
 
-            let k = Matrix.init n n false
+                    if Set.isEmpty common then
+                        None
+                    else
+                        Some(NonEmptySet.ofSet common)
+                | _ -> None
 
-            for KeyValue(label, matB) in perLabelB do
-                match Map.tryFind label perLabelA with
-                | Some matA ->
-                    let kronMat = LinearAlgebra.kron matA matB (&&) false
+            let productTransitions =
+                LinearAlgebra.kron a.transitions b.transitions intersectedEdge None
 
-                    for i in 0 .. n - 1 do
-                        for j in 0 .. n - 1 do
-                            if kronMat.data.[i, j] then
-                                k.data.[i, j] <- true
-                | None -> ()
+            let k = Matrix.map Option.isSome productTransitions
 
             let startPairs =
                 [| for sA in a.startStates do
@@ -234,22 +237,12 @@ module Nfa =
 
             let backwardVisited = MsBfs.msBfs finalPairs kT
 
-            let reachableFromStart = Array.create n false
-
-            for s in 0 .. startPairs.Length - 1 do
-                for p in 0 .. n - 1 do
-                    if forwardVisited.data.[s, p] then
-                        reachableFromStart.[p] <- true
+            let reachableFromStart = Matrix.reduceByColumn (||) false forwardVisited
 
             for sp in startPairs do
                 reachableFromStart.[sp] <- true
 
-            let canReachFinal = Array.create n false
-
-            for s in 0 .. finalPairs.Length - 1 do
-                for p in 0 .. n - 1 do
-                    if backwardVisited.data.[s, p] then
-                        canReachFinal.[p] <- true
+            let canReachFinal = Matrix.reduceByColumn (||) false backwardVisited
 
             for fp in finalPairs do
                 canReachFinal.[fp] <- true
@@ -286,23 +279,27 @@ module Nfa =
                 |> Array.map (fun fp -> Map.find fp usefulStateMap)
                 |> Set.ofArray
 
+            let productGraph = Graph.fromEdges [ 0 .. n - 1 ] productTransitions
+
+            let orElse a b =
+                match a with
+                | Some _ -> a
+                | None -> b
+
+            let filteredGraph =
+                productGraph
+                |> Graph.filterOutgoingGeneric None (fun keep edge -> if keep then edge else None) orElse usefulSet
+                |> Graph.filterIncomingGeneric None (fun edge keep -> if keep then edge else None) orElse usefulSet
+
             let transitions = ResizeArray()
 
             for pIdx in usefulStates do
-                let pA = pIdx / nB
-                let pB = pIdx % nB
-
                 for qIdx in usefulStates do
-                    let qA = qIdx / nB
-                    let qB = qIdx % nB
-
-                    match a.transitions.data.[pA, qA], b.transitions.data.[pB, qB] with
-                    | Some nesA, Some nesB ->
-                        let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
-
-                        for label in common do
+                    match filteredGraph.edges.data.[pIdx, qIdx] with
+                    | Some nes ->
+                        for label in NonEmptySet.toSeq nes do
                             transitions.Add(Map.find pIdx usefulStateMap, label, Map.find qIdx usefulStateMap)
-                    | _ -> ()
+                    | None -> ()
 
             { graph = Graph.fromEdges resultStates (buildMatrix resultStateCount (List.ofSeq transitions))
               epsTransitions = Set.empty

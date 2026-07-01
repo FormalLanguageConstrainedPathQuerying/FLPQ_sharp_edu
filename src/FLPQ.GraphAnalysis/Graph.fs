@@ -34,22 +34,43 @@ module Graph =
         { vertexMap = states |> List.indexed |> List.map (fun (i, v) -> (i, v)) |> Map.ofList
           edges = edgeMatrix }
 
-    /// Filter to keep only outgoing edges from specified vertices.
-    /// Multiplies diagonal(selectedVertices) by edges in the Boolean semiring:
-    /// result[i,j] = OR_k (diag[i,k] AND edges[k,j]).
-    /// This preserves edges where the source vertex is in selectedVertices.
-    let filterOutgoing (selectedVertices: Set<int>) (g: Graph<'v, bool>) : Graph<'v, bool> =
+    /// Generic filter: keep only outgoing edges from specified vertices.
+    /// result = diagonal(selectedVertices) × edges using maskOp for multiplication
+    /// and combineOp for addition. maskOp : bool -> 'e -> 'e determines whether
+    /// the edge is kept (keep flag times edge). combineOp : 'e -> 'e -> 'e merges
+    /// multiple edges between the same pair.
+    let filterOutgoingGeneric
+        (zero: 'e)
+        (maskOp: bool -> 'e -> 'e)
+        (combineOp: 'e -> 'e -> 'e)
+        (selectedVertices: Set<int>)
+        (g: Graph<'v, 'e>)
+        : Graph<'v, 'e> =
         let n = vertexCount g
         let diag = Matrix.diagonal n selectedVertices true false
-        let filtered = LinearAlgebra.mxm diag g.edges (&&) (||) false
+        let filtered = LinearAlgebra.mxm diag g.edges maskOp combineOp zero
         { g with edges = filtered }
 
-    /// Filter to keep only incoming edges to specified vertices.
-    /// Multiplies edges by diagonal(selectedVertices) in the Boolean semiring:
-    /// result[i,j] = OR_k (edges[i,k] AND diag[k,j]).
-    /// This preserves edges where the target vertex is in selectedVertices.
-    let filterIncoming (selectedVertices: Set<int>) (g: Graph<'v, bool>) : Graph<'v, bool> =
+    /// Generic filter: keep only incoming edges to specified vertices.
+    /// result = edges × diagonal(selectedVertices) using maskOp and combineOp.
+    let filterIncomingGeneric
+        (zero: 'e)
+        (maskOp: 'e -> bool -> 'e)
+        (combineOp: 'e -> 'e -> 'e)
+        (selectedVertices: Set<int>)
+        (g: Graph<'v, 'e>)
+        : Graph<'v, 'e> =
         let n = vertexCount g
         let diag = Matrix.diagonal n selectedVertices true false
-        let filtered = LinearAlgebra.mxm g.edges diag (&&) (||) false
+        let filtered = LinearAlgebra.mxm g.edges diag maskOp combineOp zero
         { g with edges = filtered }
+
+    /// Filter to keep only outgoing edges from specified vertices.
+    /// Multiplies diagonal(selectedVertices) by edges in the Boolean semiring.
+    let filterOutgoing (selectedVertices: Set<int>) (g: Graph<'v, bool>) : Graph<'v, bool> =
+        filterOutgoingGeneric false (&&) (||) selectedVertices g
+
+    /// Filter to keep only incoming edges to specified vertices.
+    /// Multiplies edges by diagonal(selectedVertices) in the Boolean semiring.
+    let filterIncoming (selectedVertices: Set<int>) (g: Graph<'v, bool>) : Graph<'v, bool> =
+        filterIncomingGeneric false (fun e k -> e && k) (||) selectedVertices g

@@ -61,6 +61,18 @@ module Matrix =
     let diagonal (size: int) (indices: Set<int>) (one: 'a) (zero: 'a) : Matrix<'a> =
         create size size (fun i j -> if i = j && Set.contains i indices then one else zero)
 
+    /// Reduce each column to a single value using the given operation.
+    /// Returns an array of length m.cols.
+    /// Column j accumulates: op(init, m.data[0,j]), op(result, m.data[1,j]), ...
+    let reduceByColumn (op: 'a -> 'a -> 'a) (init: 'a) (m: Matrix<'a>) : 'a[] =
+        Array.init m.cols (fun j ->
+            let mutable acc = init
+
+            for i in 0 .. m.rows - 1 do
+                acc <- op acc m.data.[i, j]
+
+            acc)
+
     type Highlight = { row: int; col: int; color: string }
 
     type SubmatrixBlock =

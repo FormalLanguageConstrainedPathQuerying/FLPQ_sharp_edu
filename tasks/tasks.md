@@ -484,7 +484,7 @@ let visualized = visualize trace
 But no I see that `visualizeSteps` calls, for example LR parser. That is bad idea because I cannot call LR parser once and that handle result and trace independantly.
 79. [done] Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and sored in map. Graph provides functions to operate with verties and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored.
 80. [done] Filtering of graph outgoing/incoming edges via matrices multiplications. To choose edges from/to vertices i, j, k you must multiply matrix on diagonal matrix where (i,i) (j,j) (k,k) are 1, all other 0.
-[done] 81. Implement automata acceptance algorithm (input: list of Terminals). Classical algorithm with working set of configurations. Introduce configuration type (state and input position). While working set is not empty, handle next configuration. Tests
+81. [done] Implement automata acceptance algorithm (input: list of Terminals). Classical algorithm with working set of configurations. Introduce configuration type (state and input position). While working set is not empty, handle next configuration. Tests
      1. re: a+  ; Accepts: a, aa, aaa. Rejects: <empty string>
      2. re: a*  ; Accepts: <empty string>, a, aa, aaa. Rejects: b
      3. re: (ab)*  ; Accepts: <empty string>, ab, abab, ababab. Rejects: ba, bab, aaa, bbb, b, a
@@ -497,7 +497,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
      10. NFA: 0 -[eps]-> 1; 1 -[eps]-> 0, state 0 start, state 1 final. Accepts: <empty string>. Rejects: a
      11. DFA: 0 -[a]-> 1; 1 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
      12. NFA: 0 -[a]-> 0; 0 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
-[done] 82. Implememt two automaton intercestion (this algo is applicable for NFA without epsilon-transitions). The algo:
+82. [done] Implememt two automaton intercestion (this algo is applicable for NFA without epsilon-transitions). The algo:
      1. Kronecker product of transition matrices
      2. MS-BFS (linear algebra) from start states to detect states reachable from start states
      3. MS-BFS (linear algebra) from final states (in graph with reversed edges) to detect states can reach final states.
