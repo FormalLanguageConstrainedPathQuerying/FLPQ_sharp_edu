@@ -1,11 +1,10 @@
 namespace FLPQ.Languages
 
 /// Visualization step shared by LL and LR parser visualizers.
+/// treeAndStack is a single combined DOT graph (tree with stack chain overlay).
+/// input is a TeX one-row pNiceMatrix with the current position underlined.
 [<Struct>]
-type VisualizationStep =
-    { tree: string
-      stack: string
-      input: string }
+type VisualizationStep = { treeAndStack: string; input: string }
 
 /// Input state for LL/LR parser step visualization.
 [<Struct>]

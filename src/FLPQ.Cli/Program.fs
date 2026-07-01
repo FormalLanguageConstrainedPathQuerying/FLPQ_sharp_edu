@@ -48,8 +48,7 @@ module Program =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            writeOutputFile (Path.Combine(stepDir, "tree.dot")) steps.[idx].tree
-            writeOutputFile (Path.Combine(stepDir, "stack.tex")) steps.[idx].stack
+            writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].treeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
 
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =

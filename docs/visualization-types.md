@@ -8,11 +8,10 @@ Shared types for LL and LR parser step visualization, plus a shared TeX renderin
 
 ### `VisualizationStep` (struct)
 
-Pre-rendered visualization output for a single parser step. Used by `LLVisualizer` and `LRVisualizer`.
+Pre-rendered visualization output for a single parser step. Used by `LLStepVisualizer` and `LRStepVisualizer`.
 
-- `tree: string` — Graphviz DOT representation of the derivation tree at this step
-- `stack: string` — TeX (one-row pNiceMatrix) representation of the parser stack
-- `input: string` — TeX (one-row pNiceMatrix) representation of the input with current position underlined
+- `treeAndStack: string` — Combined Graphviz DOT graph: the derivation tree with an overlay stack chain. Stack nodes are connected via dashed edges (top-to-bottom) and constrained to the same rank via `rank=same`.
+- `input: string` — TeX (one-row pNiceMatrix) representation of the input with the current position underlined
 
 ### `StepInput<'t, 'nt>` (struct)
 
@@ -58,18 +57,24 @@ The unified stack alternates between states and tree nodes: `[LRState(n), LRSymb
 
 ### `TeXRenderer`
 
-Shared TeX rendering helpers for parser visualization.
+Shared TeX rendering helper for parser visualization.
 
-- `oneRowMatrix: ('a -> string) -> 'a list -> string` — renders a list of items as a one-row `pNiceMatrix` with `margin=2pt`. Empty list renders as `\varepsilon`. Used for both LL symbol stack and LR state stack.
 - `inputRow: (Symbol<'t,'nt> -> string) -> Symbol<'t,'nt> list -> int -> string` — renders input tokens as a one-row `pNiceMatrix` with the token at the given position underlined via `\underbar`. Empty input renders as `\varepsilon`.
 
-### `LLVisualizer`
+### `DerivationTreeDot`
 
-- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> Map<...> -> int -> Symbol<'t,'nt> list -> VisualizationStep list` — runs `LLParser.parseWithSteps` and renders the collected data to `VisualizationStep` using `DerivationTreeVisualizer.toDot` and `TeXRenderer`.
+DOT rendering for derivation trees and combined stack+tree visualization.
 
-### `LRVisualizer`
+- `toDot: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> string` — renders a single derivation tree as a Graphviz DOT graph.
+- `toDotWithStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> DerivationTree<'t,'nt> list -> string` — renders a derivation tree with an overlay stack chain. `stackTrees` are the tree nodes from stack frames in top-to-bottom order. Matching tree nodes are connected via dashed edges and constrained to the same rank via `rank=same`. Non-matching stack nodes are rendered as standalone nodes.
 
-- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> LRTable<'t,'nt> -> Symbol<'t,'nt> list -> VisualizationStep list` — runs `LRParser.parseWithSteps` and renders the collected data to `VisualizationStep`.
+### `LLStepVisualizer`
+
+- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> Map<...> -> int -> Terminal<'t> list -> VisualizationStep list` — runs `LLParser.parseWithSteps` and renders the collected data to `VisualizationStep` using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
+
+### `LRStepVisualizer`
+
+- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> LRTable<'t,'nt> -> Terminal<'t> list -> VisualizationStep list` — runs `LRParser.parseWithSteps` and renders the collected data to `VisualizationStep` using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
 
 ## CYK Trace Step
 
@@ -91,7 +96,9 @@ Defined in `Valiant.fs`:
 ## Design Decisions
 
 - **Separation of data collection and rendering**: `parseWithSteps` in LLParser/LRParser collects raw F# data (`LLParsingStep`/`LRParsingStep`). Rendering to TeX/DOT strings happens in `LLVisualizer`/`LRVisualizer` using shared `TeXRenderer` functions. CYK and Valiant trace functions similarly return structured data (`CykTraceStep`/`ValiantTraceStep`); TeX conversion happens at call sites.
-- **`TeXRenderer` is shared**: `oneRowMatrix` handles both LL symbol stacks and LR state stacks (parametrized by item printer). `inputRow` is identical for both parsers.
+- **Single combined DOT for stack+tree**: The LL and LR visualizers produce a single combined DOT graph (`treeAndStack`) instead of separate `tree.dot` and `stack.tex` files. The combined DOT shows the derivation tree with an overlay stack chain (dashed edges, `rank=same` constraint on stack nodes). Input visualization remains as TeX.
+- **Common `toDotWithStack` function**: Shared `DerivationTreeDot.toDotWithStack` generates combined DOT for both LL and LR visualizers. Stack tree nodes are matched against the derivation tree via structural equality; non-matching nodes are rendered standalone.
+- **`TeXRenderer` is shared**: `inputRow` is identical for both parsers.
 - **Struct types** for stack allocation efficiency on steps data.
 - **Visualizers remain the public API** for consumers who want pre-rendered strings (CLI, tests). Consumers who need raw data can use `parseWithSteps`/`parseWithTrace` directly.
 - **Unified LL stack**: The LL parser uses a single unified stack (`LLStackFrame`) instead of two separate stacks (symbol + tree). Each frame carries both a symbol for parsing and a tree node representing the symbol in the derivation tree. The stack is the tree frontier.

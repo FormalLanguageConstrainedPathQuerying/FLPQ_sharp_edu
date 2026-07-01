@@ -8,7 +8,7 @@ open FLPQ.Printers
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
-let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
+let ``LL step visualization for grammar1 produces valid combined DOT and TeX`` () =
     let g =
         Grammar.parseGrammar
             "
@@ -23,10 +23,12 @@ let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
     Assert.NotEmpty(steps)
 
     for step in steps do
-        Assert.Contains(@"\begin{pNiceMatrix}", step.stack)
+        Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
-        let info = TestUtils.checkDotCompilesWithInfo step.tree
+        let info = TestUtils.checkDotCompilesWithInfo step.treeAndStack
         Assert.True(info.nodeCount > 0)
+
+    Assert.True(steps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
 
 [<Fact>]
 let ``LL step visualization includes input position marker`` () =
@@ -74,5 +76,5 @@ let ``LL step visualization for accepted string returns success steps`` () =
     Assert.NotEmpty(steps)
 
     for step in steps do
-        Assert.Contains(@"\begin{pNiceMatrix}", step.stack)
+        Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)

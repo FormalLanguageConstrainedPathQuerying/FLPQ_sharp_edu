@@ -35,7 +35,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``LL step stack and input TeX compile with pdflatex`` () =
+let ``LL step input TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -44,12 +44,11 @@ let ``LL step stack and input TeX compile with pdflatex`` () =
     Assert.NotEmpty(steps)
 
     for step in steps do
-        Assert.True(TestUtils.checkTexCompiles templatePath step.stack)
         Assert.True(TestUtils.checkTexCompiles templatePath step.input)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``LR step stack and input TeX compile with pdflatex`` () =
+let ``LR step input TeX compiles with pdflatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -59,7 +58,6 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
     let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     for step in steps do
-        Assert.True(TestUtils.checkTexCompiles templatePath step.stack)
         Assert.True(TestUtils.checkTexCompiles templatePath step.input)
 
 [<Fact>]
