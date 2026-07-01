@@ -4,24 +4,29 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
 /// Nondeterministic finite automaton with multiple start states and epsilon transitions.
+/// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type NFA<'t, 's when 't: comparison> =
-    { states: 's list
-      transitions: Matrix<Option<NonEmptySet<'t>>>
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
       epsTransitions: Set<int * int>
       startStates: Set<int>
       finalStates: Set<int> }
 
+    member this.states = this.graph |> Graph.vertices |> List.map snd
+    member this.transitions = this.graph.edges
+
 /// Deterministic finite automaton with exactly one start state and no epsilon transitions.
+/// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type DFA<'t, 's when 't: comparison> =
-    { states: 's list
-      transitions: Matrix<Option<NonEmptySet<'t>>>
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
       startState: int
       finalStates: Set<int> }
 
+    member this.states = this.graph |> Graph.vertices |> List.map snd
+    member this.transitions = this.graph.edges
+
 module Nfa =
 
-    let buildMatrix (states: 's list) (transitionsList: (int * 't * int) list) : Matrix<Option<NonEmptySet<'t>>> =
-        let n = states.Length
+    let buildMatrix (n: int) (transitionsList: (int * 't * int) list) : Matrix<Option<NonEmptySet<'t>>> =
         let matrix = Matrix.init n n None
 
         for (fromIdx, sym, toIdx) in transitionsList do
@@ -42,13 +47,12 @@ module Nfa =
         (startStates: Set<int>)
         (finalStates: Set<int>)
         : NFA<'t, 's> =
-        { states = states
-          transitions = buildMatrix states transitionsList
+        { graph = Graph.fromEdges states (buildMatrix states.Length transitionsList)
           epsTransitions = epsTransitions
           startStates = startStates
           finalStates = finalStates }
 
-    let stateCount (a: NFA<'t, 's>) = a.states.Length
+    let stateCount (a: NFA<'t, 's>) = Graph.vertexCount a.graph
 
     let alphabet (a: NFA<'t, 's>) : Set<'t> =
         let mutable result = Set.empty
@@ -87,12 +91,6 @@ module Nfa =
 
     let moveSet (a: NFA<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
         stateIndices |> Set.toSeq |> Seq.collect (fun i -> move a i symbol) |> Set.ofSeq
-
-    let private buildDfaMatrix
-        (states: 's list)
-        (transitionsList: (int * 't * int) list)
-        : Matrix<Option<NonEmptySet<'t>>> =
-        buildMatrix states transitionsList
 
     /// Subset construction: convert NFA to DFA.
     let toDfa (nfa: NFA<'t, 's>) : DFA<'t, Set<int>> =
@@ -136,19 +134,7 @@ module Nfa =
                     None)
             |> Set.ofList
 
-        let n = List.length dfaStates
-        let matrix = Matrix.init n n None
-
-        for (fromIdx, sym, toIdx) in transitions do
-            let current =
-                match matrix.data.[fromIdx, toIdx] with
-                | Some nes -> NonEmptySet.add sym nes
-                | None -> NonEmptySet.singleton sym
-
-            matrix.data.[fromIdx, toIdx] <- Some current
-
-        { states = dfaStates
-          transitions = matrix
+        { graph = Graph.fromEdges dfaStates (buildMatrix dfaStates.Length (List.rev transitions))
           startState = 0
           finalStates = dfaFinalStates }
 
@@ -161,17 +147,15 @@ module Dfa =
         (startState: int)
         (finalStates: Set<int>)
         : DFA<'t, 's> =
-        { states = states
-          transitions = Nfa.buildMatrix states transitionsList
+        { graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) transitionsList)
           startState = startState
           finalStates = finalStates }
 
-    let stateCount (a: DFA<'t, 's>) = a.states.Length
+    let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.graph
 
     let alphabet (a: DFA<'t, 's>) : Set<'t> =
         Nfa.alphabet
-            { states = a.states
-              transitions = a.transitions
+            { graph = a.graph
               epsTransitions = Set.empty
               startStates = set [ a.startState ]
               finalStates = a.finalStates }

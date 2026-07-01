@@ -56,6 +56,11 @@ module Matrix =
           cols = m.rows
           data = data }
 
+    /// Create a diagonal matrix of the given size.
+    /// Positions (i, i) for i in indices receive 'one', all other positions receive 'zero'.
+    let diagonal (size: int) (indices: Set<int>) (one: 'a) (zero: 'a) : Matrix<'a> =
+        create size size (fun i j -> if i = j && Set.contains i indices then one else zero)
+
     type Highlight = { row: int; col: int; color: string }
 
     type SubmatrixBlock =

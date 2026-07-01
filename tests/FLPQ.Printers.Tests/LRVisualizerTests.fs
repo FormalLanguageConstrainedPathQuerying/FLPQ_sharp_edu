@@ -20,17 +20,18 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
-    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps string steps
 
-    Assert.NotEmpty(steps)
+    Assert.NotEmpty(vizSteps)
 
-    for step in steps do
+    for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
         let info = TestUtils.checkDotCompilesWithInfo step.treeAndStack
         Assert.True(info.nodeCount > 0)
 
-    Assert.True(steps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
 
 [<Fact>]
 let ``LR step visualization includes input position marker`` () =
@@ -45,9 +46,10 @@ let ``LR step visualization includes input position marker`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
-    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps string steps
 
-    Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
 [<Fact>]
 let ``LR step visualization for accepted string returns success steps`` () =
@@ -66,10 +68,32 @@ let ``LR step visualization for accepted string returns success steps`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "x + x"
-    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps string steps
 
-    Assert.NotEmpty(steps)
+    Assert.NotEmpty(vizSteps)
 
-    for step in steps do
+    for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
+
+[<Fact>]
+let ``LR step visualization includes state frames with sN labels`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+        S -> a S
+        S -> a
+        "
+
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug
+    let tokens = Tokenizer.tokenizeTerminals "a a"
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps string steps
+
+    Assert.NotEmpty(vizSteps)
+    let firstStep = vizSteps.[0]
+    Assert.Contains("s0", firstStep.treeAndStack)
+    Assert.Contains("{rank=same", firstStep.treeAndStack)

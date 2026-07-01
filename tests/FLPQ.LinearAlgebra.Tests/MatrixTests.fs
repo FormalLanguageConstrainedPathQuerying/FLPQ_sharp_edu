@@ -111,3 +111,28 @@ module FactTests =
         Assert.Equal(m.data.[1, 0], t.data.[0, 1])
         Assert.Equal(m.data.[1, 1], t.data.[1, 1])
         Assert.Equal(m.data.[1, 2], t.data.[2, 1])
+
+[<Fact>]
+let ``diagonal matrix has ones on diagonal for selected indices`` () =
+    let d = Matrix.diagonal 5 (set [ 0; 2; 4 ]) 1 0
+    Assert.Equal(1, d.data.[0, 0])
+    Assert.Equal(0, d.data.[1, 1])
+    Assert.Equal(1, d.data.[2, 2])
+    Assert.Equal(0, d.data.[3, 3])
+    Assert.Equal(1, d.data.[4, 4])
+    Assert.Equal(0, d.data.[0, 1])
+
+[<Fact>]
+let ``diagonal matrix with empty set is zero matrix`` () =
+    let d = Matrix.diagonal 3 Set.empty 1 0
+    Assert.Equal(0, d.data.[0, 0])
+    Assert.Equal(0, d.data.[1, 1])
+    Assert.Equal(0, d.data.[2, 2])
+
+[<Fact>]
+let ``diagonal matrix with all indices is identity`` () =
+    let d = Matrix.diagonal 3 (set [ 0; 1; 2 ]) 1 0
+    Assert.Equal(1, d.data.[0, 0])
+    Assert.Equal(1, d.data.[1, 1])
+    Assert.Equal(1, d.data.[2, 2])
+    Assert.Equal(0, d.data.[0, 1])

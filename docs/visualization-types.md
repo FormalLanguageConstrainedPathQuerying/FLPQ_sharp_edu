@@ -67,14 +67,17 @@ DOT rendering for derivation trees and combined stack+tree visualization.
 
 - `toDot: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> string` — renders a single derivation tree as a Graphviz DOT graph.
 - `toDotWithStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> DerivationTree<'t,'nt> list -> string` — renders a derivation tree with an overlay stack chain. `stackTrees` are the tree nodes from stack frames in top-to-bottom order. Matching tree nodes are connected via dashed edges and constrained to the same rank via `rank=same`. Non-matching stack nodes are rendered as standalone nodes.
+- `toDotWithLRStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> LRStackFrame<'t,'nt> list -> string` — renders a derivation tree with an overlay LR stack chain including all stack frames. `LRSymbol` frames render as derivation tree nodes. `LRState` frames render as labeled "sN" nodes with gray fill. All frames are connected via dashed edges and constrained to the same rank.
 
 ### `LLStepVisualizer`
 
-- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> Map<...> -> int -> Terminal<'t> list -> VisualizationStep list` — runs `LLParser.parseWithSteps` and renders the collected data to `VisualizationStep` using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
+- `renderStep: (Symbol<'t,'nt> -> string) -> LLParsingStep<'t,'nt> -> VisualizationStep` — renders a single LL parsing step (raw F# data) to a `VisualizationStep` (DOT + TeX strings) using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
+- `renderSteps: (Symbol<'t,'nt> -> string) -> LLParsingStep<'t,'nt> list -> VisualizationStep list` — renders a list of LL parsing steps.
 
 ### `LRStepVisualizer`
 
-- `visualizeSteps: (Symbol<'t,'nt> -> string) -> Grammar<'t,'nt> -> LRTable<'t,'nt> -> Terminal<'t> list -> VisualizationStep list` — runs `LRParser.parseWithSteps` and renders the collected data to `VisualizationStep` using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
+- `renderStep: (Symbol<'t,'nt> -> string) -> LRParsingStep<'t,'nt> -> VisualizationStep` — renders a single LR parsing step (raw F# data) to a `VisualizationStep` using `DerivationTreeDot.toDotWithLRStack` (includes state frames) and `TeXRenderer.inputRow`.
+- `renderSteps: (Symbol<'t,'nt> -> string) -> LRParsingStep<'t,'nt> list -> VisualizationStep list` — renders a list of LR parsing steps.
 
 ## CYK Trace Step
 

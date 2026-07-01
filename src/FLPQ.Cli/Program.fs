@@ -98,9 +98,10 @@ module Program =
         let tokens = Tokenizer.tokenizeTerminals inputTokens
         let table = LLParser.buildTable grammar k
 
-        let steps = LLStepVisualizer.visualizeSteps string grammar table k tokens
-        writeStepsVisualization outputDir steps
-        printfn "LL(%d) trace: %d steps written to %s" k steps.Length outputDir
+        let _, steps = LLParser.parseWithSteps grammar table k tokens
+        let vizSteps = LLStepVisualizer.renderSteps string steps
+        writeStepsVisualization outputDir vizSteps
+        printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir
 
     let private runLR (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
@@ -112,9 +113,10 @@ module Program =
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let table = LRParser.buildSLR1Table aug
 
-        let steps = LRStepVisualizer.visualizeSteps string aug table tokens
-        writeStepsVisualization outputDir steps
-        printfn "LR trace: %d steps written to %s" steps.Length outputDir
+        let _, steps = LRParser.parseWithSteps aug table tokens
+        let vizSteps = LRStepVisualizer.renderSteps string steps
+        writeStepsVisualization outputDir vizSteps
+        printfn "LR trace: %d steps written to %s" vizSteps.Length outputDir
 
     [<EntryPoint>]
     let main argv =

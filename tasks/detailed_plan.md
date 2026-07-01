@@ -1,243 +1,263 @@
-# Detailed Plan: Task 74 — LL Unified Stack
+# Detailed Plan: Tasks 77--80
 
-## Goal
+## Task 78: Refactor visualization pattern
 
-Replace LL parser's dual stacks (separate `Symbol list` for grammar symbols and `DerivationTree list` for tree) with a single unified stack where tree nodes are also symbols, matching the approach used in LR parser (task 49).
+**Goal**: Separate data collection (parseWithSteps producing F# data) from rendering (pure functions converting data to TeX/DOT strings).
 
-## Current State
+**Current problem**: `LLStepVisualizer.visualizeSteps` and `LRStepVisualizer.visualizeSteps` both internally call the parser (`LLParser.parseWithSteps` / `LRParser.parseWithSteps`), then render. This means:
+- You cannot call parser once and handle result and trace independently
+- You cannot use the trace data for anything else without re-parsing
+
+**Target pattern** (already used by CYK/Valiant):
+```fsharp
+let result, trace = Parser.parseWithSteps ...
+let visualized = Visualizer.renderSteps trace   // or renderStep for each step
+```
+
+**Changes**:
+
+### 1. VisualizationTypes.fs — Add type for stack-rendered visualization step
+
+Add `StackTreeVisualizationStep` type that holds raw parse step data + rendering:
+Actually, the clean approach: keep `VisualizationStep` as the rendered output, but add functions that render from raw step data.
+
+Current:
+- `LLStepVisualizer.visualizeSteps` takes parser args + calls parser + renders → `VisualizationStep list`
+
+Target:
+- `LLStepVisualizer.renderSteps` takes `LLParsingStep list` → `VisualizationStep list`
+- `LRStepVisualizer.renderSteps` takes `LRParsingStep list` → `VisualizationStep list`
+
+### 2. LLStepVisualizer.fs — Replace visualizeSteps with renderSteps
 
 ```fsharp
-// Two separate stacks
-let rec parseLoop (stack: Symbol list) (pos: int) (treeStack: DerivationTree list)
+module LLStepVisualizer =
+    let renderStep (symbolVisualizer: Symbol<'t,'nt> -> string) (step: LLParsingStep<'t,'nt>) : VisualizationStep =
+        let stackTrees = step.stack |> List.map LLStackFrame.tree
+        { treeAndStack = DerivationTreeDot.toDotWithStack symbolVisualizer step.tree stackTrees
+          input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position }
 
-// LLParsingStep
-type LLParsingStep<'t,'nt> = {
-    tree: DerivationTree<'t,'nt>
-    stack: Symbol<'t,'nt> list          // separate symbol stack
-    input: StepInput<'t,'nt> }
+    let renderSteps symbolVisualizer steps =
+        steps |> List.map (renderStep symbolVisualizer)
 ```
 
-## Target State
+### 3. LRStepVisualizer.fs — Replace visualizeSteps with renderSteps
 
 ```fsharp
-// Single unified stack
-let rec parseLoop (stack: LLStackFrame list) (pos: int)
+module LRStepVisualizer =
+    let renderStep (symbolVisualizer: Symbol<'t,'nt> -> string) (step: LRParsingStep<'t,'nt>) : VisualizationStep =
+        let stackTrees = step.stack |> List.choose (function LRSymbol tree -> Some tree | _ -> None)
+        { treeAndStack = DerivationTreeDot.toDotWithStack symbolVisualizer step.tree stackTrees
+          input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position }
 
-// LLStackFrame — analogous to LR's LRSymbol
-type LLStackFrame<'t,'nt> = LLFrame of Symbol<'t,'nt> * DerivationTree<'t,'nt>
-
-// Updated step type
-type LLParsingStep<'t,'nt> = {
-    tree: DerivationTree<'t,'nt>
-    stack: LLStackFrame<'t,'nt> list    // unified symbol+tree stack
-    input: StepInput<'t,'nt> }
+    let renderSteps symbolVisualizer steps =
+        steps |> List.map (renderStep symbolVisualizer)
 ```
 
-## Key Design Decision
+### 4. Program.fs (CLI) — Update to new pattern
 
-The tree node IS the symbol. Each `LLFrame(sym, tree)` carries both a symbol (for parsing decisions) and a derivation tree node. Tree structure: flat `Node(start, allLeaves)` — same as current approach. The stack represents the tree frontier (current leaves of the partial tree).
+```fsharp
+// LL:
+let _, steps = LLParser.parseWithSteps grammar table k tokens
+let vizSteps = LLStepVisualizer.renderSteps string steps
+writeStepsVisualization outputDir vizSteps
 
-## Changes
-
-### 1. `VisualizationTypes.fs` — Add LLStackFrame, update LLParsingStep
-
-- Add `LLStackFrame` struct type: `LLFrame of Symbol * DerivationTree`
-- Add `LLStackFrame` active pattern helpers if needed:
-  - `LLStackFrame.symbol: LLStackFrame<'t,'nt> -> Symbol<'t,'nt>`
-  - `LLStackFrame.tree: LLStackFrame<'t,'nt> -> DerivationTree<'t,'nt>`
-  - `LLStackFrame.create: Symbol<'t,'nt> -> LLStackFrame<'t,'nt>` (creates with Leaf(sym))
-- Change `LLParsingStep.stack` from `Symbol list` to `LLStackFrame list`
-
-### 2. `LLParser.fs` — Rewrite parser to use unified stack
-
-Current algorithm (dual stack):
+// LR:
+let _, steps = LRParser.parseWithSteps aug table tokens
+let vizSteps = LRStepVisualizer.renderSteps string steps
+writeStepsVisualization outputDir vizSteps
 ```
-stack = [N(S)]
-treeStack = []
+
+### 5. Tests — Update to new pattern
+
+All tests currently calling `LLStepVisualizer.visualizeSteps` / `LRStepVisualizer.visualizeSteps` must be updated to:
+- Call parser first: `LLParser.parseWithSteps ...` / `LRParser.parseWithSteps ...`
+- Then render: `LLStepVisualizer.renderSteps ...` / `LRStepVisualizer.renderSteps ...`
+
 ---
-Terminal match: pop sym from stack, push Leaf(T(t)) to treeStack
-Epsilon: pop from stack, push Leaf(Eps) to treeStack
-Nonterminal: pop N(nt), push RHS symbols to stack (treeStack unchanged)
-Final tree: Node(start, treeStack)
+
+## Task 77: LR visualize all stack frames including state frames
+
+**Goal**: Currently `LRStepVisualizer.renderStep` discards `LRState` frames. The DOT visualization should include ALL frames, showing state numbers as labeled nodes in the stack chain.
+
+**Changes**:
+
+### 1. DerivationTreeDot.fs — Add `toDotWithLRStack`
+
+New function that accepts the full `LRStackFrame list` (not just filtered `DerivationTree list`):
+
+```fsharp
+let toDotWithLRStack
+    (symbolVisualizer: Symbol<'t,'nt> -> string)
+    (tree: DerivationTree<'t,'nt>)
+    (stack: LRStackFrame<'t,'nt> list)
+    : string =
 ```
 
-New algorithm (unified stack):
+For each frame:
+- `LRSymbol tree` → render as current (tree node, shape=box for Leaf, oval for Node)
+- `LRState n` → render as a special node labeled "sN" (e.g., "s0"), no shape=box
+
+All frames form the dashed chain. All frames are included in `rank=same`.
+
+### 2. LRStepVisualizer.fs — Use `toDotWithLRStack`
+
+```fsharp
+let renderStep symbolVisualizer (step: LRParsingStep<'t,'nt>) : VisualizationStep =
+    { treeAndStack = DerivationTreeDot.toDotWithLRStack symbolVisualizer step.tree step.stack
+      input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position }
 ```
-stack = [LLFrame(N(S), Node(S, []))]
+
+### 3. Tests — Verify state frames appear in DOT output
+
+- Verify DOT output contains "s0", "s1" etc. labels for state frames
+- Verify rank=same includes state frame nodes
+
 ---
-Terminal match T(t): match input, pop LLFrame(T(t), Leaf(T(t))) from stack
-Epsilon: pop LLFrame(Epsilon, Leaf(Epsilon)) from stack
-Nonterminal N(nt): pop LLFrame(N(nt), _), look up rule, push RHS as LLFrame(sym, Leaf(sym))
+
+## Task 79: Implement graph hierarchy
+
+**Goal**: Create `Graph<'v,'e>` type where vertices are in a map and edges in `Matrix<'e>`. Automaton wraps Graph.
+
+### 1. New file: `src/FLPQ.Languages/Graph.fs`
+
+```fsharp
+namespace FLPQ.Languages
+open FLPQ.LinearAlgebra
+
+type Graph<'v, 'e> =
+    { vertexMap: Map<int, 'v>
+      edges: Matrix<'e> }
+
+module Graph =
+    let vertexCount (g: Graph<'v,'e>) = g.vertexMap.Count
+    let vertices (g: Graph<'v,'e>) = g.vertexMap |> Map.toList |> List.sortBy fst
+    let tryGetVertex idx (g: Graph<'v,'e>) = Map.tryFind idx g.vertexMap
+    let getVertex idx (g: Graph<'v,'e>) = Map.find idx g.vertexMap
+    let edge (g: Graph<'v,'e>) (fromIdx: int) (toIdx: int) = g.edges.data.[fromIdx, toIdx]
+    let mapVertices f (g: Graph<'v,'e>) = { g with vertexMap = g.vertexMap |> Map.map (fun _ v -> f v) }
+    let mapEdges f (g: Graph<'v,'e>) = { g with edges = Matrix.map f g.edges }
+    let fromEdges vertices edges : Graph<'v,'e> = ...
+```
+
+### 2. Refactor Automaton.fs
+
+NFA and DFA wrap Graph:
+
+```fsharp
+type NFA<'t, 's when 't: comparison> =
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
+      epsTransitions: Set<int * int>
+      startStates: Set<int>
+      finalStates: Set<int> }
+
+type DFA<'t, 's when 't: comparison> =
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
+      startState: int
+      finalStates: Set<int> }
+```
+
+Keep backward-compatible accessors:
+- `Nfa.stateCount a = Graph.vertexCount a.graph`
+- `Dfa.stateCount a = Graph.vertexCount a.graph`
+- `a.states` → `Graph.vertices a.graph |> List.map snd`
+- `a.transitions` → `a.graph.edges`
+
+This means updating all references to `.states` and `.transitions` throughout the codebase.
+
+Wait — this is a big change. Let me think about whether backward compatibility is the right approach or whether we should just do a breaking change.
+
+The task says: "Graph provides functions to operate with vertices and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored."
+
+So the automaton wraps a graph. But to minimize changes across the codebase, I should provide accessors that give backward-compatible access to `.states` and `.transitions`.
+
+Actually, let me check: `.states` and `.transitions` are record fields. If I change the record definition, those field names won't work anymore. I need to either:
+1. Keep the old field names as computed properties via members
+2. Or update all usages
+
+Given the constraint of the task (clear code, book-aligned), I think the cleanest approach is:
+- Change the record definition
+- Add member accessors for backward compat
+- Or just update all usages
+
+Let me check how many places use `.states` and `.transitions` on NFA/DFA.
+
+Actually, let me reconsider. The task says clearly what needs to happen, but modifying all automaton-related code might be too much scope. Let me do the minimum: create `Graph` type and use it as the internal representation of NFA/DFA, with accessor members preserving backward compatibility.
+
+Actually, let me re-read: "Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and stored in map. Graph provides functions to operate with vertices and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored."
+
+I think the best approach:
+1. Create Graph.fs with Graph type + module
+2. Add backward-compatible member accessors to NFA/DFA for `.states` and `.transitions`
+3. All existing code continues to work
+4. New code can use Graph directly
+
+Let me check what the NFA/DFA record fields are: `states`, `transitions`, `epsTransitions`, `startStates`, `finalStates` (NFA) and `states`, `transitions`, `startState`, `finalStates` (DFA).
+
+These are used in many places. Let me use F# member properties to provide backward compat.
+
+```fsharp
+type NFA<'t, 's when 't: comparison> =
+    { graph: Graph<'s, Option<NonEmptySet<'t>>>
+      epsTransitions: Set<int * int>
+      startStates: Set<int>
+      finalStates: Set<int> }
+    member this.states = this.graph |> Graph.vertices |> List.map snd
+    member this.transitions = this.graph |> Graph.edges
+```
+
+Wait, F# record fields are accessed as properties, but you can also add members. However, `.states` would shadow the member if it's a record field. Since we're removing it as a record field, the member accessor should work.
+
+Actually, in F# you can have a member with the same name as a former record field. The issue is that `{ states = ... }` in construction won't work anymore. We'll need to change record construction.
+
+Let me check all the places that construct NFA/DFA records...
+
+This is going to be a significant refactoring. Let me approach it systematically.
+
 ---
 
-Wait, there's a subtlety. When we pop a terminal/epsilon from stack, it "disappears." The current code accumulates them in treeStack. Where do they go in the unified approach?
+## Task 80: Filter graph edges via diagonal matrix multiplication
 
-Option A: Keep a separate accumulator for completed tree nodes.
-Option B: The stack itself contains the completed nodes (they stay on stack).
+**Goal**: Select edges from/to specific vertices using matrix multiplication with diagonal matrices.
 
-Let's use Option A for minimal changes — keep a `completed: DerivationTree list` accumulator:
-
-```fsharp
-let rec parseLoop (stack: LLStackFrame list) (pos: int) (completed: DerivationTree list)
-```
-
-Terminal match: pop frame, add tree to completed
-Epsilon: pop frame, add tree to completed
-Nonterminal: pop frame, push RHS as LLFrame(sym, Leaf(sym))
-Final tree: Node(start, completed)
-
-For step recording, reconstruct `currentTree` from stack + completed:
-```fsharp
-let currentTree =
-    let stackTrees = stack |> List.map LLStackFrame.tree |> List.rev
-    Node(g.start, completed @ stackTrees)
-```
-
-Actually, the simpler approach: make LLStackFrame's tree field carry the DerivationTree. For symbols, it's always `Leaf(sym)`. The "current tree" for a step is reconstructed from the stack's tree nodes.
-
-For the current tree at each step:
-- The stack has LLFrame(sym, Leaf(sym)) frames
-- Completed subtrees are in the completed list
-- Current partial tree: Node(start, completed) if stack is empty, or Node(start, completed @ [trees on stack])
-
-Let me refine: for step recording:
+### 1. LinearAlgebra.fs — Add `diagonal` function
 
 ```fsharp
-let recordStep (stack: LLStackFrame<'t,'nt> list) (pos: int) =
-    let stackTrees = stack |> List.map (fun (LLFrame(_, tree)) -> tree) |> List.rev
-    let currentTree =
-        match stack with
-        | [] -> Leaf(Epsilon)  // shouldn't happen during parsing
-        | _ -> Node(g.start, stackTrees)  // stack IS the tree frontier
-    steps <- { tree = currentTree; stack = stack; input = ... } :: steps
+let diagonal (size: int) (indices: Set<int>) (one: 'a) (zero: 'a) : Matrix<'a> =
+    Matrix.create size size (fun i j ->
+        if i = j && Set.contains i indices then one else zero)
 ```
 
-The stack IS the tree frontiert. The tree nodes on the stack ARE the tree.
+This creates an `n × n` diagonal matrix where positions (i,i) for i∈indices are `one`, rest are `zero`.
 
-But wait: when we consume a terminal, it's removed from the stack. So the tree "should" show that terminal was consumed. But with the above approach, the tree at the next step wouldn't include the consumed terminal.
+For Boolean matrices: `diagonal n indices true false`
 
-In the current code:
-```fsharp
-let currentTree =
-    match treeStack with
-    | [t] -> t
-    | [] -> Leaf(Epsilon)
-    | _ -> Node(g.start, treeStack)
-```
+### 2. Graph.fs — Add edge filtering functions
 
-So the current tree is built from treeStack (completed subtrees) only. The stack symbols are NOT part of the tree. The tree represents "what has been built so far."
-
-With unified stack: the completed subtrees are no longer in a separate treeStack. Where do they go?
-
-After a terminal is matched, it's removed from the stack. We need to remember it was consumed. That's the purpose of `treeStack` in the current code.
-
-So we DO need an accumulator for completed subtrees in the unified approach. Let me refine:
+For the Boolean semiring `⟨{0,1}, ∨, ∧⟩`:
 
 ```fsharp
-let rec parseLoop (stack: LLStackFrame list) (pos: int) (completed: DerivationTree list)
+/// Filter to keep only outgoing edges from specified vertices.
+/// Equivalent to diagonal(selectedVertices) × edges in Boolean semiring.
+let filterOutgoing selectedVertices (g: Graph<'v, bool>) : Graph<'v, bool> =
+    let n = vertexCount g
+    let diag = Matrix.diagonal n selectedVertices true false
+    let filtered = LinearAlgebra.mxm (&&) (||) false diag g.edges
+    { g with edges = filtered }
+
+/// Filter to keep only incoming edges to specified vertices.
+/// Equivalent to edges × diagonal(selectedVertices) in Boolean semiring.
+let filterIncoming selectedVertices (g: Graph<'v, bool>) : Graph<'v, bool> =
+    let n = vertexCount g
+    let diag = Matrix.diagonal n selectedVertices true false
+    let filtered = LinearAlgebra.mxm (&&) (||) false g.edges diag
+    { g with edges = filtered }
 ```
 
-Terminal match: pop, add LLFrame's tree (Leaf(T(t))) to completed
-Epsilon: pop, add LLFrame's tree (Leaf(Epsilon)) to completed
+### 3. Tests
 
-Step recording:
-```fsharp
-let currentTree =
-    let stackTrees = stack |> List.map (fun (LLFrame(_, t)) -> t)
-    let allTrees = completed @ (List.rev stackTrees)
-    if List.isEmpty allTrees then Leaf(Epsilon)
-    elif allTrees.Length = 1 then allTrees.Head
-    else Node(g.start, allTrees)
-```
-
-Hmm wait, the current approach uses `allTrees` which is `treeStack`. That's exactly `completed` in our new scheme (the stack trees are the unprocessed frontiert, not completed subtrees).
-
-Actually let me re-examine the current code:
-```fsharp
-| (T _ as sym) :: restStack ->
-    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(sym) ])
-```
-
-So treeStack = all the Leaf nodes of matched terminals/epsilons so far. They are in left-to-right order (appended at end).
-
-Current tree = Node(g.start, treeStack). This is a flat tree of all matched leaves.
-
-With unified approach:
-```fsharp
-| LLFrame(T _ as sym, tree) :: restStack ->
-    parseLoop restStack (pos + 1) (completed @ [tree])
-```
-
-completed = all matched leaf trees so far.
-
-currentTree = Node(g.start, completed)
-
-This gives the same result. The stack on each step = LLFrame(sym, Leaf(sym)) for unprocessed symbols.
-
-### 3. `StepInput` token list type
-
-The input tokens are `Symbol list` but the parser takes `Terminal list`. In `parseWithSteps`, tokens are `Symbol list` (T(Terminal t)). This is unchanged.
-
-### 4. Rewriting `parseWithSteps` — detailed algorithm
-
-```fsharp
-let parseWithSteps g table k terminals =
-    let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
-    let mutable steps = []
-    let mutable stack: LLStackFrame list = [LLFrame(N g.start, Node(g.start, []))]
-    let mutable pos = 0
-    let mutable completed: DerivationTree list = []
-    
-    let recordStep () =
-        let currentTree = 
-            if List.isEmpty completed then Leaf(Epsilon)
-            elif completed.Length = 1 then completed.Head
-            else Node(g.start, completed)
-        steps <- { tree = currentTree; stack = stack; input = { tokens = tokens; position = pos } } :: steps
-    
-    let rec parseLoop (stack: LLStackFrame list) (pos: int) (completed: DerivationTree list) =
-        recordStep()
-        match stack with
-        | [] -> if pos = tokens.Length then Some(pos, completed) else None
-        | LLFrame(T _, tree) :: restStack ->
-            if pos < tokens.Length && tokens.[pos] = treeRootSymbol tree then
-                parseLoop restStack (pos + 1) (completed @ [tree])
-            else None
-        | LLFrame(Epsilon, tree) :: restStack ->
-            parseLoop restStack pos (completed @ [tree])
-        | LLFrame(N nt, _) :: restStack ->
-            let la = lookahead tokens pos k
-            match Map.tryFind (nt, la) table with
-            | Some ruleIdx ->
-                let rule = g.rules.[ruleIdx]
-                let rhsSymbols = Rhs.toList rule.rhs
-                let rhsFrames = rhsSymbols |> List.map (fun sym -> LLFrame(sym, Leaf(sym)))
-                parseLoop (rhsFrames @ restStack) pos completed
-            | None -> None
-        | _ -> None  // Node(nt, _) on stack shouldn't happen in this flat-tree approach
-    
-    match parseLoop ([LLFrame(N g.start, Node(g.start, []))]) 0 [] with
-    | Some(finalPos, leafTrees) when finalPos = tokens.Length ->
-        Some(Node(g.start, leafTrees)), List.rev steps
-    | _ -> None, List.rev steps
-```
-
-## Helper functions
-
-```fsharp
-module LLStackFrame =
-    let symbol (LLFrame(sym, _)) = sym
-    let tree (LLFrame(_, tree)) = tree
-    let create sym = LLFrame(sym, Leaf(sym))
-```
-
-## Test Updates
-
-1. `LLParserTests.fs` — Tests that access `step.stack` need updating (stack is now `LLStackFrame list`, not `Symbol list`). Most tests don't inspect the stack directly, but some visualization tests might.
-
-2. `LLVisualizerTests.fs` — The `LLStepVisualizer.visualizeSteps` will be updated in Task 76, but for now, make it compile with the new types (temporary compatibility).
-
-## Documentation Updates
-
-1. `docs/visualization-types.md` — Add LLStackFrame description
-2. `docs/ll-parser.md` — Update to describe unified stack
+- Simple graph with 3 vertices, edges 0→1, 0→2, 1→2
+- filterOutgoing {0}: 0→1, 0→2 remain, 1→2 is gone
+- filterIncoming {2}: 0→2, 1→2 remain, 0→1 is gone
+- Both filters with all vertices = identity
+- filter with empty set = zero matrix

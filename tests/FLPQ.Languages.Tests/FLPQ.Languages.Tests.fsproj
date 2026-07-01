@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="TestGrammars.fs" />
     <Compile Include="GrammarTests.fs" />
+    <Compile Include="GraphTests.fs" />
     <Compile Include="CykTests.fs" />
     <Compile Include="ValiantTests.fs" />
     <Compile Include="FirstFollowTests.fs" />

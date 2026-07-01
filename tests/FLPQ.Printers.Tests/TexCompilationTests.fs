@@ -40,10 +40,11 @@ let ``LL step input TeX compiles with pdflatex`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
 
-    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
-    Assert.NotEmpty(steps)
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps string steps
+    Assert.NotEmpty(vizSteps)
 
-    for step in steps do
+    for step in vizSteps do
         Assert.True(TestUtils.checkTexCompiles templatePath step.input)
 
 [<Fact>]
@@ -55,9 +56,10 @@ let ``LR step input TeX compiles with pdflatex`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
 
-    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps string steps
 
-    for step in steps do
+    for step in vizSteps do
         Assert.True(TestUtils.checkTexCompiles templatePath step.input)
 
 [<Fact>]

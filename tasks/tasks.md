@@ -455,9 +455,9 @@
     Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
     Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
     Strings same as for previous task. Reuse it.
-[done] 74. In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
-[done] 75. In LR. Use single one steck for symbols and tree. Tree nodes are symbols. So, roots of partial tree are plced in stack and can be used as symbolds.
-76. For visulization of updated LR and LL use the following structure. Visualize input as in previous version. Combined stack and trees visualize fully using dot. Stack is a linear graph. Edges goes form top to bottom. Some nodes of trees are in stack. Create as common functions and types to visualiza LL and LR as possible. Example (LL-like):
+74. [done] In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
+75. [done] In LR. Use single one steck for symbols and tree. Tree nodes are symbols. So, roots of partial tree are plced in stack and can be used as symbolds.
+76. [done] For visulization of updated LR and LL use the following structure. Visualize input as in previous version. Combined stack and trees visualize fully using dot. Stack is a linear graph. Edges goes form top to bottom. Some nodes of trees are in stack. Create as common functions and types to visualiza LL and LR as possible. Example (LL-like):
 ```
 digraph G {
     S1 -> b;
@@ -474,7 +474,16 @@ digraph G {
     {rank=same; a0; a1; S0; b; S1 }
 }
 ```
-77. Filtering of outgoing/incoming edges via matrices multiplications
-78. Intersection of automaton.
-79. Simplify Kronecker RPQ
-80.   GLL.
+[done] 77. For LR visualize all stack frames, including state frames.
+[done] 78. For visualization of all algorithms using pattern must be similar to follows
+```
+let _,trace = parseWithTrace
+let visualized = visualize trace
+(* write to files, check, etc*)
+```
+But no I see that `visualizeSteps` calls, for example LR parser. That is bad idea because I cannot call LR parser once and that handle result and trace independantly.
+[done] 79. Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and sored in map. Graph provides functions to operate with verties and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored.
+[done] 80. Filtering of graph outgoing/incoming edges via matrices multiplications. To choose edges from/to vertices i, j, k you must multiply matrix on diagonal matrix where (i,i) (j,j) (k,k) are 1, all other 0.
+81. Intersection of automaton.
+82. Simplify Kronecker RPQ
+83.   GLL.

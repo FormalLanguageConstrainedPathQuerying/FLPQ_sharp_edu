@@ -18,17 +18,18 @@ let ``LL step visualization for grammar1 produces valid combined DOT and TeX`` (
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
-    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps string steps
 
-    Assert.NotEmpty(steps)
+    Assert.NotEmpty(vizSteps)
 
-    for step in steps do
+    for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
         let info = TestUtils.checkDotCompilesWithInfo step.treeAndStack
         Assert.True(info.nodeCount > 0)
 
-    Assert.True(steps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
 
 [<Fact>]
 let ``LL step visualization includes input position marker`` () =
@@ -41,9 +42,10 @@ let ``LL step visualization includes input position marker`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b a b"
-    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps string steps
 
-    Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
 [<Fact>]
 let ``LL step visualization stack has bottom on left`` () =
@@ -56,9 +58,10 @@ let ``LL step visualization stack has bottom on left`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
-    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps string steps
 
-    Assert.NotEmpty(steps)
+    Assert.NotEmpty(vizSteps)
 
 [<Fact>]
 let ``LL step visualization for accepted string returns success steps`` () =
@@ -71,10 +74,11 @@ let ``LL step visualization for accepted string returns success steps`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
-    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps string steps
 
-    Assert.NotEmpty(steps)
+    Assert.NotEmpty(vizSteps)
 
-    for step in steps do
+    for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
