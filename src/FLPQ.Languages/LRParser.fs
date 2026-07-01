@@ -464,7 +464,7 @@ module LRParser =
             let trees =
                 stack
                 |> List.choose (function
-                    | LRSymbol(_, t) -> Some t
+                    | LRSymbol t -> Some t
                     | _ -> None)
 
             let currentTree =
@@ -485,7 +485,7 @@ module LRParser =
 
             for _ in 1..count do
                 match remaining with
-                | LRState _ :: LRSymbol(_, tree) :: rest ->
+                | LRState _ :: LRSymbol tree :: rest ->
                     children <- tree :: children
                     remaining <- rest
                 | _ -> failwith "Invalid LR stack frame"
@@ -503,7 +503,7 @@ module LRParser =
 
             match Map.tryFind (currentState, lookahead) table.action with
             | Some(Shift nextState) ->
-                stack <- LRSymbol(tokens.[pos], Leaf(tokens.[pos])) :: stack
+                stack <- LRSymbol(Leaf(tokens.[pos])) :: stack
                 stack <- LRState nextState :: stack
                 pos <- pos + 1
                 recordStep ()
@@ -519,7 +519,7 @@ module LRParser =
                     | Some gs -> gs
                     | None -> failwith "Goto not found"
 
-                stack <- LRSymbol(N rule.lhs, newNode) :: stack
+                stack <- LRSymbol(newNode) :: stack
                 stack <- LRState gotoState :: stack
                 recordStep ()
             | Some Accept ->
@@ -539,7 +539,7 @@ module LRParser =
             let trees =
                 stack
                 |> List.choose (function
-                    | LRSymbol(_, t) -> Some t
+                    | LRSymbol t -> Some t
                     | _ -> None)
 
             if accepted && trees.Length = 1 then

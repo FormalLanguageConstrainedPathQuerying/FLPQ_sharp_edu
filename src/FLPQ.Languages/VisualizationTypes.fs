@@ -35,10 +35,23 @@ type LLParsingStep<'t, 'nt> =
       input: StepInput<'t, 'nt> }
 
 /// Frame on the unified LR parser stack.
+/// Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols.
 [<Struct>]
 type LRStackFrame<'t, 'nt> =
-    | LRState of int
-    | LRSymbol of Symbol<'t, 'nt> * DerivationTree<'t, 'nt>
+    | LRState of state: int
+    | LRSymbol of tree: DerivationTree<'t, 'nt>
+
+module LRSymbol =
+
+    let symbol frame =
+        match frame with
+        | LRSymbol tree -> DerivationTree.rootSymbol tree
+        | LRState _ -> failwith "LRSymbol.symbol called on LRState"
+
+    let tree frame =
+        match frame with
+        | LRSymbol tree -> tree
+        | LRState _ -> failwith "LRSymbol.tree called on LRState"
 
 /// Data for a single LR parser visualization step.
 [<Struct>]

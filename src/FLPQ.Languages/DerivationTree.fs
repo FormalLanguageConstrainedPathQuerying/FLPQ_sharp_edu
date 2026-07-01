@@ -16,3 +16,9 @@ module DerivationTree =
         | Leaf(Epsilon) -> []
         | Leaf(N _) -> []
         | Node(_, children) -> children |> List.collect leaves
+
+    /// Extract the root symbol of a derivation tree.
+    let rootSymbol (tree: DerivationTree<'t, 'nt>) : Symbol<'t, 'nt> =
+        match tree with
+        | Leaf sym -> sym
+        | Node(nt, _) -> N nt

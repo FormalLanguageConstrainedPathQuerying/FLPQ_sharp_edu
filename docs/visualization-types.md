@@ -47,12 +47,12 @@ Data for a single LR parser visualization step. Collected during `LRParser.parse
 
 ### `LRStackFrame<'t, 'nt>` (struct)
 
-Frame on the unified LR parser stack. Replaces the previous dual-stack (separate state and tree stacks).
+Frame on the unified LR parser stack. Replaces the previous dual-stack (separate state and tree stacks). Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols.
 
-- `LRState of int` — an LR automaton state number
-- `LRSymbol of Symbol<'t,'nt> * DerivationTree<'t,'nt>` — a grammar symbol with its associated parse tree
+- `LRState of state: int` — an LR automaton state number
+- `LRSymbol of tree: DerivationTree<'t,'nt>` — a derivation tree node; its root symbol serves as the grammar symbol
 
-The unified stack alternates between states and symbols: `[LRState(n), LRSymbol(X_k, t_k), ..., LRState(1), LRSymbol(X_1, t_1), LRState(0)]` (cons-based, head = top). Shift pushes `LRSymbol` then `LRState`. Reduce pops 2·|β| frames, extracts child trees in RHS order.
+The unified stack alternates between states and tree nodes: `[LRState(n), LRSymbol(tree_k), ..., LRState(1), LRSymbol(tree_1), LRState(0)]` (cons-based, head = top). On shift: push `LRSymbol(Leaf(token))` then `LRState(nextState)`. On reduce: pop `2·|β|` frames, extract child trees from `LRSymbol` frames in RHS order, create `Node(lhs, children)`, push `LRSymbol(Node(...))` then `LRState(gotoState)`.
 
 ## Modules
 

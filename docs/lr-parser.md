@@ -101,12 +101,12 @@ attempting to add reduce actions only for unoccupied table slots.
 
 ### Parser (Task 19)
 
-The parser is a stack-based shift-reduce interpreter:
-- State stack tracks current parser state indices
-- Tree stack tracks derivation tree fragments
-- On shift: push state + leaf node, advance input
-- On reduce: pop  children, build nonterminal node, use goto to push new state
-- On accept: return the single remaining tree node
+The parser is a stack-based shift-reduce interpreter with a unified stack:
+- A single unified stack (`LRStackFrame`) holds both states and tree nodes
+- Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols
+- On shift: push `LRSymbol(Leaf(token))` then `LRState(nextState)`, advance input
+- On reduce: pop `2·|β|` frames (pairwise: state + tree), build `Node(lhs, children)`, push `LRSymbol(Node(...))` then `LRState(gotoState)`
+- On accept: return the single remaining tree node (from the last `LRSymbol` frame)
 
 A step limit of 10000 prevents infinite loops from epsilon-reduction cycles.
 

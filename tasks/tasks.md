@@ -455,7 +455,7 @@
     Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
     Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
     Strings same as for previous task. Reuse it.
-74. In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
+[done] 74. In LL. Use single one steck for symbols and tree. Tree nodes are symbols. So, current leafs of partial tree are plced in stack and can be used as symbolds. 
 75. In LR. Use single one steck for symbols and tree. Tree nodes are symbols. So, roots of partial tree are plced in stack and can be used as symbolds.
 76. For visulization of updated LR and LL use the following structure. Visualize input as in previous version. Combined stack and trees visualize fully using dot. Stack is a linear graph. Edges goes form top to bottom. Some nodes of trees are in stack. Create as common functions and types to visualiza LL and LR as possible. Example (LL-like):
 ```
