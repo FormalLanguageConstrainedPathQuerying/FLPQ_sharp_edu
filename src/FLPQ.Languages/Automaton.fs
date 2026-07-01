@@ -208,6 +208,22 @@ module Nfa =
 
         result
 
+    /// Element-wise set intersection of two optional non-empty sets of automaton labels.
+    /// Used as the multiplication operation for Kronecker products of automaton transition matrices.
+    let intersectEdgeSets
+        (optA: Option<NonEmptySet<AutomatonLabel<'t>>>)
+        (optB: Option<NonEmptySet<AutomatonLabel<'t>>>)
+        : Option<NonEmptySet<AutomatonLabel<'t>>> =
+        match optA, optB with
+        | Some nesA, Some nesB ->
+            let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
+
+            if Set.isEmpty common then
+                None
+            else
+                Some(NonEmptySet.ofSet common)
+        | _ -> None
+
     /// Intersect two NFAs without epsilon transitions using linear algebra.
     /// Algorithm:
     /// 1. Kronecker product of transition matrices with set intersection → productTransitions.
@@ -229,22 +245,8 @@ module Nfa =
 
             let idx iA iB = iA * nB + iB
 
-            let intersectedEdge
-                (optA: Option<NonEmptySet<AutomatonLabel<'t>>>)
-                (optB: Option<NonEmptySet<AutomatonLabel<'t>>>)
-                : Option<NonEmptySet<AutomatonLabel<'t>>> =
-                match optA, optB with
-                | Some nesA, Some nesB ->
-                    let common = Set.intersect (NonEmptySet.toSet nesA) (NonEmptySet.toSet nesB)
-
-                    if Set.isEmpty common then
-                        None
-                    else
-                        Some(NonEmptySet.ofSet common)
-                | _ -> None
-
             let productTransitions =
-                LinearAlgebra.kron a.transitions b.transitions intersectedEdge None
+                LinearAlgebra.kron a.transitions b.transitions intersectEdgeSets None
 
             let k = Matrix.map Option.isSome productTransitions
 

@@ -19,7 +19,6 @@ module KroneckerRPQ =
     /// Input: DFA query and graph NFA.
     /// Output: |sources| × |V| boolean reachability matrix.
     let evaluate (dfa: DFA<'t, int>) (graph: NFA<'t, int>) : Matrix<bool> =
-        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.transitions
         let sources = graph.startStates |> Set.toArray
         let qCount = Dfa.stateCount dfa
         let vCount = Nfa.stateCount graph
@@ -31,27 +30,10 @@ module KroneckerRPQ =
 
             let qvToIndex (q: int) (v: int) : int = q * vCount + v
 
-            let k = Matrix.init n n false
+            let product =
+                LinearAlgebra.kron dfa.transitions graph.transitions Nfa.intersectEdgeSets None
 
-            for KeyValue(label, gMat) in perLabel do
-                match label with
-                | AEpsilon -> ()
-                | ATerm t ->
-
-                    let nMat = Matrix.init qCount qCount false
-
-                    for i in 0 .. qCount - 1 do
-                        for j in 0 .. qCount - 1 do
-                            match dfa.transitions.data.[i, j] with
-                            | Some nes when NonEmptySet.contains (ATerm t) nes -> nMat.data.[i, j] <- true
-                            | _ -> ()
-
-                    let kronMat = LinearAlgebra.kron nMat gMat (&&) false
-
-                    for i in 0 .. n - 1 do
-                        for j in 0 .. n - 1 do
-                            if kronMat.data.[i, j] then
-                                k.data.[i, j] <- true
+            let k = Matrix.map Option.isSome product
 
             let startPairs = sources |> Array.map (fun v -> qvToIndex dfa.startState v)
 
