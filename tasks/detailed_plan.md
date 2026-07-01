@@ -1,36 +1,31 @@
-# Detailed Plan: Task 69 — Terminal list input for all parsing algorithms
+# Detailed Plan: Task 67 — Merge modified Valiant trace + table
 
 ## Goal
 
-Change all parsing algorithm inputs from `Symbol<'t,'nt> list` to `Terminal<'t> list`.
-Input must not contain nonterminals.
+Eliminate code duplication between `parseModifiedWithTable` and `parseModifiedWithTrace`.
+The trace version already produces a table at each step. Extract the final table from the last trace step.
 
 ## Changes
 
-### Source files
+### Modified Valiant
+1. Extract shared initialization into a private helper (already partially exists as `initValiant`)
+2. Create single private `parseModifiedInternal` that does computation and collects trace
+3. `parseModifiedWithTable` calls internal, extracts last step's table, computes acceptance from it
+4. `parseModified` calls `parseModifiedWithTable` and returns `snd`
+5. `parseModifiedWithTrace` calls internal and returns trace steps
 
-1. **`src/FLPQ.Languages/Grammar.fs`** (or Tokenizer.fs):
-   - Add `Terminal.toSymbols: Terminal<'t> list -> Symbol<'t,'nt> list` helper
+### Standard Valiant
+Apply the same pattern:
+1. `parseWithTable` calls trace version, extracts last step's table, computes acceptance
+2. `parse` calls `parseWithTable`
+3. Keep `parseWithTrace` as primary computation (it already has traces)
 
-2. **`src/FLPQ.Languages/Cyk.fs`**:
-   - Change `parse`/`parseWithTable`/`parseWithTrace`: `tokens: Symbol<'t,'nt> list` → `tokens: Terminal<'t> list`
-   - Convert to symbols internally
+Actually for standard Valiant the trace is via `ResizeArray` option, which is already a clean pattern.
+The main duplication is in modified Valiant. Let me focus there and also clean up standard Valiant.
 
-3. **`src/FLPQ.Languages/Valiant.fs`**:
-   - Change all public functions: `tokens: Symbol<'t,'nt> list` → `tokens: Terminal<'t> list`
-   - Remove `extractTerminals`, use direct list mapping
-   - Convert to symbols internally where needed
+## Acceptance computation from table
 
-4. **`src/FLPQ.Languages/LLParser.fs`**:
-   - Change `parseWithSteps`/`parse`: `tokens: Symbol<'t,'nt> list` → `tokens: Terminal<'t> list`
-   - Convert to symbols internally
+The final trace step contains `table: Matrix<Set<Nonterminal<'nt>>>` (n×n).
+Acceptance: `Set.contains cnfStart table.data.[0, n-1]`
 
-5. **`src/FLPQ.Languages/LRParser.fs`**:
-   - Change `parseWithSteps`/`parse`: `tokens: Symbol<'t,'nt> list` → `tokens: Terminal<'t> list`
-   - Convert to symbols internally
-
-### Test files
-Replace `Tokenizer.tokenize` with `Tokenizer.tokenizeTerminals` everywhere.
-
-### CLI
-Update `Program.fs` to use `Tokenizer.tokenizeTerminals`.
+For the empty string case: handle separately as before.
