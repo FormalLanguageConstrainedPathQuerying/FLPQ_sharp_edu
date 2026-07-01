@@ -484,7 +484,7 @@ let visualized = visualize trace
 But no I see that `visualizeSteps` calls, for example LR parser. That is bad idea because I cannot call LR parser once and that handle result and trace independantly.
 79. [done] Implement the following hierarchy. Graph is a generic structure. Edges are generic and stored in Matrix<'t>. Vertices are generic and sored in map. Graph provides functions to operate with verties and edges. Automaton are wrapper on graph: transitions and states is a graph, additional information about start and final states stored.
 80. [done] Filtering of graph outgoing/incoming edges via matrices multiplications. To choose edges from/to vertices i, j, k you must multiply matrix on diagonal matrix where (i,i) (j,j) (k,k) are 1, all other 0.
-81. Implement automata acceptance algorithm (input: list of Terminals). Classical algorithm with working set of configurations. Introduce configuration type (state and input position). While working set is not empty, handle next configuration. Tests
+[done] 81. Implement automata acceptance algorithm (input: list of Terminals). Classical algorithm with working set of configurations. Introduce configuration type (state and input position). While working set is not empty, handle next configuration. Tests
      1. re: a+  ; Accepts: a, aa, aaa. Rejects: <empty string>
      2. re: a*  ; Accepts: <empty string>, a, aa, aaa. Rejects: b
      3. re: (ab)*  ; Accepts: <empty string>, ab, abab, ababab. Rejects: ba, bab, aaa, bbb, b, a
