@@ -497,7 +497,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
      10. NFA: 0 -[eps]-> 1; 1 -[eps]-> 0, state 0 start, state 1 final. Accepts: <empty string>. Rejects: a
      11. DFA: 0 -[a]-> 1; 1 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
      12. NFA: 0 -[a]-> 0; 0 -[a]-> 1, state 0 start, state 1 final. Accepts: a, aa, aaa. Rejects: <empty string>
-82. Implememt two automaton intercestion (this algo is applicable for NFA without epsilon-transitions). The algo:
+[done] 82. Implememt two automaton intercestion (this algo is applicable for NFA without epsilon-transitions). The algo:
      1. Kronecker product of transition matrices
      2. MS-BFS (linear algebra) from start states to detect states reachable from start states
      3. MS-BFS (linear algebra) from final states (in graph with reversed edges) to detect states can reach final states.
