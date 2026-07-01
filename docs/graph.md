@@ -1,5 +1,7 @@
 # Graph Module
 
+Namespace: `FLPQ.GraphAnalysis`. Project: `FLPQ.GraphAnalysis`.
+
 ## Type Definition
 
 ### `Graph<'v, 'e>`

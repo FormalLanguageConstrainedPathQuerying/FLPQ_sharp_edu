@@ -3,6 +3,7 @@ module GraphTests
 open Xunit
 open FsCheck.Xunit
 open FLPQ.Languages
+open FLPQ.GraphAnalysis
 open FLPQ.LinearAlgebra
 
 [<Fact>]

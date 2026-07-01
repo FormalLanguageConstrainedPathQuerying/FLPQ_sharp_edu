@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="RandomGraphGenerators.fs" />
+    <Compile Include="GraphTests.fs" />
     <Compile Include="MsBfsTests.fs" />
   </ItemGroup>
 
@@ -22,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FLPQ.GraphAnalysis\FLPQ.GraphAnalysis.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
   </ItemGroup>
 
 </Project>

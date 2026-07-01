@@ -9,7 +9,6 @@
     <Compile Include="Grammar.fs" />
     <Compile Include="Tokenizer.fs" />
     <Compile Include="FirstFollow.fs" />
-    <Compile Include="Graph.fs" />
     <Compile Include="Automaton.fs" />
     <Compile Include="RSM.fs" />
     <Compile Include="EbnfParser.fs" />
@@ -24,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\FLPQ.GraphAnalysis\FLPQ.GraphAnalysis.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

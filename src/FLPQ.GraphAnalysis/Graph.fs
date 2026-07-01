@@ -1,4 +1,4 @@
-namespace FLPQ.Languages
+namespace FLPQ.GraphAnalysis
 
 open FLPQ.LinearAlgebra
 

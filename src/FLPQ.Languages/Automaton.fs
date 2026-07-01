@@ -2,6 +2,7 @@ namespace FLPQ.Languages
 
 open FSharpPlus.Data
 open FLPQ.LinearAlgebra
+open FLPQ.GraphAnalysis
 
 /// Nondeterministic finite automaton with multiple start states and epsilon transitions.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
