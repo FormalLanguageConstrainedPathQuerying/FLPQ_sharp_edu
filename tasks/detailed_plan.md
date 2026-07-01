@@ -1,31 +1,22 @@
-# Detailed Plan: Task 67 — Merge modified Valiant trace + table
+# Detailed Plan: Task 68 — Unify buildLR0/buildLR1
 
 ## Goal
 
-Eliminate code duplication between `parseModifiedWithTable` and `parseModifiedWithTrace`.
-The trace version already produces a table at each step. Extract the final table from the last trace step.
+Merge duplicated structure between buildLR0 and buildLR1 into a single parametrized function.
 
-## Changes
+## Shared structure
 
-### Modified Valiant
-1. Extract shared initialization into a private helper (already partially exists as `initValiant`)
-2. Create single private `parseModifiedInternal` that does computation and collects trace
-3. `parseModifiedWithTable` calls internal, extracts last step's table, computes acceptance from it
-4. `parseModified` calls `parseModifiedWithTable` and returns `snd`
-5. `parseModifiedWithTrace` calls internal and returns trace steps
+Both functions:
+1. Get augmentedRule = aug.rules.[0]  
+2. Create start item from augmented rule
+3. Compute startItems via closure
+4. Define `getSymbols` with identical pattern (iterate items, get symbol at dot position)
+5. Define `gotoFn`
+6. Create `isAcceptState` via Set.contains acceptItem
+7. Call buildAutomaton
 
-### Standard Valiant
-Apply the same pattern:
-1. `parseWithTable` calls trace version, extracts last step's table, computes acceptance
-2. `parse` calls `parseWithTable`
-3. Keep `parseWithTrace` as primary computation (it already has traces)
+## Approach
 
-Actually for standard Valiant the trace is via `ResizeArray` option, which is already a clean pattern.
-The main duplication is in modified Valiant. Let me focus there and also clean up standard Valiant.
-
-## Acceptance computation from table
-
-The final trace step contains `table: Matrix<Set<Nonterminal<'nt>>>` (n×n).
-Acceptance: `Set.contains cnfStart table.data.[0, n-1]`
-
-For the empty string case: handle separately as before.
+Extract `getSymbols` into a parameterized helper (takes `dotOf` and `rhsOf` accessors).
+Create `buildLR` that handles steps 1-7 given item constructors and closure/goto functions.
+`buildLR0` and `buildLR1` become 8-line wrappers.

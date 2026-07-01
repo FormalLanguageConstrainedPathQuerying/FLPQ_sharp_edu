@@ -184,41 +184,58 @@ module LRAutomaton =
 
         Dfa.fromTransitions states (List.rev transitions) 0 finalStates
 
+    let private getSymbolsOf
+        (dotOf: 'item -> int)
+        (rhsOf: 'item -> Symbol<'t, 'nt> list)
+        (state: Set<'item>)
+        : Symbol<'t, 'nt> list =
+        state
+        |> Set.toSeq
+        |> Seq.choose (fun item ->
+            if dotOf item < (rhsOf item).Length then
+                Some((rhsOf item).[dotOf item])
+            else
+                None)
+        |> Seq.distinct
+        |> Seq.toList
+
+    let private buildLR
+        (rules: Rule<'t, 'nt> list)
+        (firstRule: Rule<'t, 'nt>)
+        (mkStartItem: Rule<'t, 'nt> -> 'item)
+        (mkCompleteItem: Rule<'t, 'nt> -> 'item)
+        (dotOf: 'item -> int)
+        (rhsOf: 'item -> Symbol<'t, 'nt> list)
+        (closure: Set<'item> -> Set<'item>)
+        (gotoFn: Set<'item> -> Symbol<'t, 'nt> -> Set<'item>)
+        : DFA<Symbol<'t, 'nt>, Set<'item>> =
+        let startItem = mkStartItem firstRule
+        let acceptItem = mkCompleteItem firstRule
+        let startItems = closure (set [ startItem ])
+        let getSymbols = getSymbolsOf dotOf rhsOf
+        let isAcceptState state = Set.contains acceptItem state
+        buildAutomaton startItems getSymbols gotoFn isAcceptState
+
     /// Build the LR(0) automaton for an augmented grammar.
     /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
     let buildLR0 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
         let augmentedRule = aug.rules.[0]
 
-        let startItems =
-            closureLR0
-                aug.rules
-                (set
-                    [ { lhs = augmentedRule.lhs
-                        rhs = Rhs.toSymbols augmentedRule.rhs
-                        dot = 0 } ])
-
-        let getSymbols (state: Set<LR0Item<'t, 'nt>>) =
-            state
-            |> Set.toSeq
-            |> Seq.choose (fun item ->
-                if item.dot < item.rhs.Length then
-                    Some item.rhs.[item.dot]
-                else
-                    None)
-            |> Seq.distinct
-            |> Seq.toList
-
-        let gotoFn state sym = gotoLR0 aug.rules state sym
-
-        let isAcceptState (state: Set<LR0Item<'t, 'nt>>) =
-            let acceptItem =
-                { lhs = augmentedRule.lhs
-                  rhs = Rhs.toSymbols augmentedRule.rhs
-                  dot = Rhs.toSymbols augmentedRule.rhs |> List.length }
-
-            Set.contains acceptItem state
-
-        buildAutomaton startItems getSymbols gotoFn isAcceptState
+        buildLR
+            aug.rules
+            augmentedRule
+            (fun r ->
+                { lhs = r.lhs
+                  rhs = Rhs.toSymbols r.rhs
+                  dot = 0 })
+            (fun r ->
+                { lhs = r.lhs
+                  rhs = Rhs.toSymbols r.rhs
+                  dot = Rhs.toSymbols r.rhs |> List.length })
+            (fun i -> i.dot)
+            (fun i -> i.rhs)
+            (closureLR0 aug.rules)
+            (gotoLR0 aug.rules)
 
     /// Build the LR(1) automaton for an augmented grammar.
     /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
@@ -226,39 +243,23 @@ module LRAutomaton =
         let augmentedRule = aug.rules.[0]
         let firstMap = FirstFollow.firstK aug 1
 
-        let startItems =
-            closureLR1
-                aug.rules
-                (set
-                    [ { lhs = augmentedRule.lhs
-                        rhs = Rhs.toSymbols augmentedRule.rhs
-                        dot = 0
-                        lookahead = Epsilon } ])
-                firstMap
-
-        let getSymbols (state: Set<LR1Item<'t, 'nt>>) =
-            state
-            |> Set.toSeq
-            |> Seq.choose (fun item ->
-                if item.dot < item.rhs.Length then
-                    Some item.rhs.[item.dot]
-                else
-                    None)
-            |> Seq.distinct
-            |> Seq.toList
-
-        let gotoFn state sym = gotoLR1 aug.rules state sym firstMap
-
-        let isAcceptState (state: Set<LR1Item<'t, 'nt>>) =
-            let acceptItem =
-                { lhs = augmentedRule.lhs
-                  rhs = Rhs.toSymbols augmentedRule.rhs
-                  dot = Rhs.toSymbols augmentedRule.rhs |> List.length
-                  lookahead = Epsilon }
-
-            Set.contains acceptItem state
-
-        buildAutomaton startItems getSymbols gotoFn isAcceptState
+        buildLR
+            aug.rules
+            augmentedRule
+            (fun r ->
+                { lhs = r.lhs
+                  rhs = Rhs.toSymbols r.rhs
+                  dot = 0
+                  lookahead = Epsilon })
+            (fun r ->
+                { lhs = r.lhs
+                  rhs = Rhs.toSymbols r.rhs
+                  dot = Rhs.toSymbols r.rhs |> List.length
+                  lookahead = Epsilon })
+            (fun i -> i.dot)
+            (fun i -> i.rhs)
+            (fun items -> closureLR1 aug.rules items firstMap)
+            (fun items sym -> gotoLR1 aug.rules items sym firstMap)
 
 /// LR parsing table construction and parser.
 /// All table builders and parse take an already-augmented grammar.

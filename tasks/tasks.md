@@ -426,7 +426,7 @@
     6. `completeTrace` (lines 412–494) and `computeTrace` (lines 483–498) copy ~90% of `complete` (lines 124–195) and `compute` (lines 175–195). Tracing logic (BooleanDecomposition recompose per submatrix) is entangled with computation. We can have only instance with traceing. The algorithm collects trace data as F# data structures. At he final it may be converted to TeX or other formats if necessary.
     7. Valiant init block duplicated 4x. The ~40-line setup block (building `tByNt` dictionary, `pByPair` dictionary, terminal rule initialization via `BooleanDecomposition.decompose`, and the epsilon-acceptance early-exit) is copy-pasted identically 4 times in `Valiant.fs Remove code duplication.
 66. [done] Refactoring. Create separate project for printers (to dot and to TeX). Move all printing logic to it. Algortihms just collect data as F# data structures. When data collected, one can use respective printer to print it if necessary.
-67. For modified Valiant: merge parsing with trace and parsing with table. Resulting table is a table from the last step. So you can collect ctrace and ten extract resulting table form the last step.
+67. [done] For modified Valiant: merge parsing with trace and parsing with table. Resulting table is a table from the last step. So you can collect ctrace and ten extract resulting table form the last step.
 68. In `LRParser.fs`. `buildLR0` and `buildLR1` lloks pretty similar. Can these two function be converted to one parametrized function? Do it if yes.
 69. [done] Input for all parsing algorithms MUST ve a list of Terminals, not Symbols. Input MUST NOT contains Nonterminals.
 70. [done] nonterminalsOf/terminalsOf duplicated across modules. Make them public in `Grammar.fs` and use in all locations.
