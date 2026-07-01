@@ -103,6 +103,47 @@ module FactTests =
         Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
         Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
 
+    [<Fact>]
+    let ``LL(1) table for grammar10 detects conflict`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar10 1 |> ignore)
+
+    [<Fact>]
+    let ``LL(2) table for grammar10 also detects conflict`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar10 2 |> ignore)
+
+    [<Fact>]
+    let ``Valiant and CYK agree on grammar10 acceptance`` () =
+        for s in grammar10Accept do
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals s)
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals s)
+
+            if cykResult <> valResult then
+                Assert.True(false, userMessage = s)
+
+        for s in grammar10Reject do
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals s)
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals s)
+
+            if cykResult <> valResult then
+                Assert.True(false, userMessage = s)
+
+    [<Fact>]
+    let ``Valiant parseWithTable for grammar10 returns correct dimension`` () =
+        let input = "a b c"
+
+        let table, accepted =
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals input)
+
+        Assert.True(accepted)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
+
 
 module PropertyTests =
 

@@ -166,3 +166,19 @@ let grammar9Reject =
       "a x a b y" ]
 
 let augGrammar9 = augmentStringGrammar grammar9
+
+let grammar10 =
+    Grammar.parseGrammar
+        "
+    S -> S1
+    S -> S2
+    S1 -> a b S c
+    S -> eps
+    S2 -> a x S y
+    "
+
+let grammar10Accept = grammar9Accept
+
+let grammar10Reject = grammar9Reject
+
+let augGrammar10 = augmentStringGrammar grammar10
