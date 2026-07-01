@@ -13,11 +13,25 @@ type StepInput<'t, 'nt> =
     { tokens: Symbol<'t, 'nt> list
       position: int }
 
+/// Frame on the unified LL parser stack.
+/// Each frame carries a symbol for parsing decisions and its associated derivation tree node.
+/// Tree nodes are symbols: current leaves of the partial tree are placed in stack.
+[<Struct>]
+type LLStackFrame<'t, 'nt> = LLFrame of Symbol<'t, 'nt> * DerivationTree<'t, 'nt>
+
+module LLStackFrame =
+
+    let symbol (LLFrame(sym, _)) = sym
+
+    let tree (LLFrame(_, tree)) = tree
+
+    let create sym = LLFrame(sym, Leaf sym)
+
 /// Data for a single LL parser visualization step.
 [<Struct>]
 type LLParsingStep<'t, 'nt> =
     { tree: DerivationTree<'t, 'nt>
-      stack: Symbol<'t, 'nt> list
+      stack: LLStackFrame<'t, 'nt> list
       input: StepInput<'t, 'nt> }
 
 /// Frame on the unified LR parser stack.

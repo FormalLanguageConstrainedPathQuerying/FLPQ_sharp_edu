@@ -21,12 +21,20 @@ Input state for LL/LR parser step visualization.
 - `tokens: Symbol<'t, 'nt> list` — all input tokens
 - `position: int` — current position in the input
 
+### `LLStackFrame<'t, 'nt>` (struct)
+
+Frame on the unified LL parser stack. Replaces the previous dual-stack (separate symbol and tree stacks). Tree nodes are symbols: current leaves of the partial tree are placed in stack and used as symbols.
+
+- `LLFrame of Symbol<'t,'nt> * DerivationTree<'t,'nt>` — a grammar symbol with its associated tree node
+
+The unified stack represents the tree frontier: `[LLFrame(sym_k, tree_k), ..., LLFrame(sym_1, tree_1)]` (cons-based, head = top). Terminal match pops the frame and adds its tree to completed subtrees. Nonterminal expansion pops the frame and pushes RHS symbols as new `LLFrame` entries. The visualizer extracts symbols from each frame for stack display.
+
 ### `LLParsingStep<'t, 'nt>` (struct)
 
 Data for a single LL parser visualization step. Collected during `LLParser.parseWithSteps`.
 
 - `tree: DerivationTree<'t, 'nt>` — partial derivation tree built so far
-- `stack: Symbol<'t, 'nt> list` — grammar symbols remaining on the parser stack
+- `stack: LLStackFrame<'t, 'nt> list` — unified LL parser stack (symbols with tree nodes)
 - `input: StepInput<'t, 'nt>` — input state
 
 ### `LRParsingStep<'t, 'nt>` (struct)
@@ -86,4 +94,5 @@ Defined in `Valiant.fs`:
 - **`TeXRenderer` is shared**: `oneRowMatrix` handles both LL symbol stacks and LR state stacks (parametrized by item printer). `inputRow` is identical for both parsers.
 - **Struct types** for stack allocation efficiency on steps data.
 - **Visualizers remain the public API** for consumers who want pre-rendered strings (CLI, tests). Consumers who need raw data can use `parseWithSteps`/`parseWithTrace` directly.
+- **Unified LL stack**: The LL parser uses a single unified stack (`LLStackFrame`) instead of two separate stacks (symbol + tree). Each frame carries both a symbol for parsing and a tree node representing the symbol in the derivation tree. The stack is the tree frontier.
 - **Unified LR stack**: The LR parser uses a single unified stack (`LRStackFrame`) instead of two separate stacks (state + tree). The visualizer extracts state numbers from this unified stack for rendering.

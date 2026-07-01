@@ -38,20 +38,20 @@ Lookahead is a list of grammar symbols; end-of-input is `[Epsilon]`.
 ### `LLParser.parse`
 
 ```fsharp
-val parse: Grammar<string, string> -> table: Map<Nonterminal<string> * Symbol<string, string> list, int> -> k: int -> input: string -> Option<DerivationTree<string, string>>
+val parse: Grammar<string, string> -> table: Map<Nonterminal<string> * Symbol<string, string> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<string, string>>
 ```
 
-Table-driven LL(k) recursive descent parser that builds a derivation tree.
+Table-driven LL(k) recursive descent parser that builds a derivation tree using a unified stack.
 
 **Algorithm:**
 1. Tokenize the input using `Tokenizer.tokenize` (space-separated terminals).
-2. Maintain a stack of grammar symbols (initially `[N(start)]`).
+2. Maintain a single unified stack of `LLStackFrame` (initially `[LLFrame(N(start), Node(start, []))]`).
 3. While the stack is non-empty:
-   - Pop the top symbol.
-   - If it's a terminal, match against the current input symbol (advance if matched, fail otherwise).
-   - If it's `Epsilon`, push `Leaf(Epsilon)` and continue without consuming input.
-   - If it's a nonterminal, compute the lookahead (next `k` input symbols, or `[Epsilon]` for end-of-input), look up the table entry `(nt, la)`, and expand using the indicated rule.
-   - Build a derivation tree: push `Leaf` nodes for matched terminals and epsilon, and `Node` for nonterminal expansions (children populated after complete expansion).
+   - Pop the top frame.
+   - If it's a terminal: match against the current input symbol (advance if matched, fail otherwise). Add the frame's tree (`Leaf`) to completed subtrees.
+   - If it's `Epsilon`: add `Leaf(Epsilon)` to completed subtrees without consuming input.
+   - If it's a nonterminal: compute the lookahead (next `k` input symbols), look up the table entry, and expand using the indicated rule: push RHS symbols as new `LLFrame(sym, Leaf(sym))`.
+4. Build the final derivation tree: `Node(g.start, completedSubtrees)`.
 
 **Preconditions:**
 - The table must be constructed by `buildTable` for the same grammar and `k`.
@@ -71,6 +71,7 @@ Table-driven LL(k) recursive descent parser that builds a derivation tree.
 | Derivation tree in separate module | Shared by LL and LR parsers; avoids circular dependencies. |
 | Lookahead from first_k and follow_k | Standard LL(k) construction from the book. |
 | End-of-input lookahead is `[Epsilon]` | Consistent with explicit Epsilon symbol in first/follow sets. No string/symbol conversion needed. |
+| Unified stack (`LLStackFrame`) | Single stack replaces the previous dual-stack (symbol + tree). Each `LLFrame(sym, tree)` carries both a symbol and its tree node. The stack represents the tree frontier; current leaves of the partial tree are placed in stack and used as symbols. |
 
 ## Book Relationship
 

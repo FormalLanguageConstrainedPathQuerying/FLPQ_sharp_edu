@@ -53,6 +53,7 @@ module LLParser =
             tokens.[pos .. endIdx - 1]
 
     /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
+    /// Uses a single unified stack where tree nodes are symbols.
     /// Also collects visualization steps as structured data.
     let parseWithSteps
         (g: Grammar<'t, 'nt>)
@@ -64,12 +65,12 @@ module LLParser =
 
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
-        let recordStep (stack: Symbol<'t, 'nt> list) (pos: int) (treeStack: DerivationTree<'t, 'nt> list) =
+        let recordStep (stack: LLStackFrame<'t, 'nt> list) (pos: int) (completed: DerivationTree<'t, 'nt> list) =
             let currentTree =
-                match treeStack with
+                match completed with
                 | [ t ] -> t
                 | [] -> Leaf(Epsilon)
-                | _ -> Node(g.start, treeStack)
+                | _ -> Node(g.start, completed)
 
             steps <-
                 { tree = currentTree
@@ -78,33 +79,33 @@ module LLParser =
                 :: steps
 
         let rec parseLoop
-            (stack: Symbol<'t, 'nt> list)
+            (stack: LLStackFrame<'t, 'nt> list)
             (pos: int)
-            (treeStack: DerivationTree<'t, 'nt> list)
+            (completed: DerivationTree<'t, 'nt> list)
             : Option<int * DerivationTree<'t, 'nt> list> =
-            recordStep stack pos treeStack
+            recordStep stack pos completed
 
             match stack with
-            | [] -> if pos = tokens.Length then Some(pos, treeStack) else None
-            | (T _ as sym) :: restStack ->
+            | [] -> if pos = tokens.Length then Some(pos, completed) else None
+            | LLFrame(T _ as sym, tree) :: restStack ->
                 if pos < tokens.Length && tokens.[pos] = sym then
-                    parseLoop restStack (pos + 1) (treeStack @ [ Leaf(sym) ])
+                    parseLoop restStack (pos + 1) (completed @ [ tree ])
                 else
                     None
-            | Epsilon :: restStack -> parseLoop restStack pos (treeStack @ [ Leaf(Epsilon) ])
-            | N nt :: restStack ->
+            | LLFrame(Epsilon, tree) :: restStack -> parseLoop restStack pos (completed @ [ tree ])
+            | LLFrame(N nt, _) :: restStack ->
                 let la = lookahead tokens pos k
                 let key = (nt, la)
 
                 match Map.tryFind key table with
                 | Some ruleIdx ->
                     let rule = g.rules.[ruleIdx]
+                    let rhsFrames = Rhs.toList rule.rhs |> List.map (fun sym -> LLFrame(sym, Leaf sym))
 
-                    let newStack = Rhs.toList rule.rhs @ restStack
-                    parseLoop newStack pos treeStack
+                    parseLoop (rhsFrames @ restStack) pos completed
                 | None -> None
 
-        match parseLoop ([ N g.start ]) 0 [] with
+        match parseLoop ([ LLFrame(N g.start, Node(g.start, [])) ]) 0 [] with
         | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees)), List.rev steps
         | _ -> None, List.rev steps
 

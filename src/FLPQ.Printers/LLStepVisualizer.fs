@@ -17,6 +17,8 @@ module LLStepVisualizer =
 
         steps
         |> List.map (fun step ->
+            let symbols = step.stack |> List.map LLStackFrame.symbol
+
             { tree = DerivationTreeDot.toDot symbolVisualizer step.tree
-              stack = TeXRenderer.oneRowMatrix symbolVisualizer step.stack
+              stack = TeXRenderer.oneRowMatrix symbolVisualizer symbols
               input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position })
