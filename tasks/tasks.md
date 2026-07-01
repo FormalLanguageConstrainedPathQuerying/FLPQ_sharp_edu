@@ -443,7 +443,7 @@
     ```
     Accept: <empty string>, abc, axy, ababcc, axaxyy, axabcy, abaxyc
     Reject: a, x, y, c, axc, aby, axab, abaxy, axabc, axaby
-73. Add test on LL(2) parsing.
+73. [done] Add test on LL(2) parsing.
     Grammar: 
     ```
     S -> S1 
@@ -474,4 +474,7 @@ digraph G {
     {rank=same; a0; a1; S0; b; S1 }
 }
 ```
-1.  GLL.
+77. Filtering of outgoing/incoming edges via matrices multiplications
+78. Intersection of automaton.
+79. Simplify Kronecker RPQ
+80.   GLL.
