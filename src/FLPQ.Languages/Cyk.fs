@@ -66,15 +66,6 @@ module Cyk =
 
         table
 
-    let private cellToTeX (symbolPrinter: Symbol<'t, 'nt> -> string) (cell: CykCell<'t, 'nt>) : string =
-        match cell with
-        | None -> @"\cdot"
-        | Some symbols ->
-            symbols
-            |> Seq.map symbolPrinter
-            |> String.concat ", "
-            |> fun s -> "\\{" + s + "\\}"
-
     let private tableTrace (cnf: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : CykTraceStep<'t, 'nt> list =
         let n = tokens.Length
         let emptyCell: CykCell<'t, 'nt> = None
@@ -200,15 +191,3 @@ module Cyk =
         : CykTraceStep<'t, 'nt> list =
         let cnf = Grammar.toCnf freshNonterminal g
         tableTrace cnf tokens
-
-    /// Convert a CYK working table to TeX with highlighted cells.
-    let tableToTeXStyled
-        (symbolPrinter: Symbol<'t, 'nt> -> string)
-        (table: Matrix<CykCell<'t, 'nt>>)
-        (highlights: Matrix.Highlight list)
-        : string =
-        Matrix.toTeXStyled true true (cellToTeX symbolPrinter) table highlights []
-
-    /// Convert a CYK working table to TeX.
-    let tableToTeX (symbolPrinter: Symbol<'t, 'nt> -> string) (table: Matrix<CykCell<'t, 'nt>>) : string =
-        tableToTeXStyled symbolPrinter table []

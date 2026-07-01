@@ -9,6 +9,7 @@
 * [FLPQ.GraphAnalysis](FLPQ.GraphAnalysis.md) — MS-BFS and semiring operations
 * [FLPQ.Languages](FLPQ.Languages.md) — grammar, parsing, automata, visualization
 * [FLPQ.RPQ](FLPQ.RPQ.md) — regular path querying algorithms
+* [FLPQ.Printers](FLPQ.Printers.md) — TeX and Dot printers/visualizers
 * [FLPQ.Cli](FLPQ.Cli.md) — CLI console application
 
 ## Module Index

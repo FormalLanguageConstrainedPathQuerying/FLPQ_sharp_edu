@@ -1,7 +1,9 @@
-namespace FLPQ.Languages
+namespace FLPQ.Printers
+
+open FLPQ.Languages
 
 /// Graphviz dot visualization for derivation trees.
-module DerivationTreeVisualizer =
+module DerivationTreeDot =
 
     let private escapeLabel (s: string) = s.Replace("\"", "\\\"")
 

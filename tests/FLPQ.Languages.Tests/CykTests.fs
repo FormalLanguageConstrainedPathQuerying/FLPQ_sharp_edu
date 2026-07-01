@@ -84,25 +84,6 @@ module FactTests =
         Assert.NotEmpty(trace)
 
     [<Fact>]
-    let ``tableToTeX contains pNiceMatrix`` () =
-        let trace =
-            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenize "a b")
-
-        let step = trace.[0]
-        let tex = Cyk.tableToTeX (fun s -> string s) step.table
-        Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.Contains(@"\end{pNiceMatrix}", tex)
-
-    [<Fact>]
-    let ``tableToTeX prints empty cells as cdot`` () =
-        let trace =
-            Cyk.parseWithTrace Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenize "a a")
-
-        let step = trace.[0]
-        let tex = Cyk.tableToTeX (fun s -> string s) step.table
-        Assert.Contains(@"\cdot", tex)
-
-    [<Fact>]
     let ``parse handles single character`` () =
         let g =
             Grammar.parseGrammar

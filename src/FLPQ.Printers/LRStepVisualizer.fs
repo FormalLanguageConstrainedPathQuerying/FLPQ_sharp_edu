@@ -1,7 +1,9 @@
-namespace FLPQ.Languages
+namespace FLPQ.Printers
+
+open FLPQ.Languages
 
 /// LR parser step-by-step visualization.
-module LRVisualizer =
+module LRStepVisualizer =
 
     /// Run the LR parser and produce step-by-step visualization.
     let visualizeSteps
@@ -20,6 +22,6 @@ module LRVisualizer =
                     | LRState n -> Some n
                     | _ -> None)
 
-            { tree = DerivationTreeVisualizer.toDot symbolVisualizer step.tree
+            { tree = DerivationTreeDot.toDot symbolVisualizer step.tree
               stack = TeXRenderer.oneRowMatrix string stateNums
               input = TeXRenderer.inputRow symbolVisualizer step.input.tokens step.input.position })

@@ -4,6 +4,7 @@ open System.IO
 open Argu
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.Printers
 
 module Program =
 
@@ -65,9 +66,9 @@ module Program =
 
             let tex =
                 if step.highlights.IsEmpty then
-                    Cyk.tableToTeX string step.table
+                    CykTeX.tableToTeX string step.table
                 else
-                    Cyk.tableToTeXStyled string step.table step.highlights
+                    CykTeX.tableToTeXStyled string step.table step.highlights
 
             writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
@@ -86,7 +87,7 @@ module Program =
             Directory.CreateDirectory stepDir |> ignore
 
             let tex =
-                Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+                MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
 
             writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
@@ -98,7 +99,7 @@ module Program =
         let tokens = Tokenizer.tokenize inputTokens
         let table = LLParser.buildTable grammar k
 
-        let steps = LLVisualizer.visualizeSteps string grammar table k tokens
+        let steps = LLStepVisualizer.visualizeSteps string grammar table k tokens
         writeStepsVisualization outputDir steps
         printfn "LL(%d) trace: %d steps written to %s" k steps.Length outputDir
 
@@ -112,7 +113,7 @@ module Program =
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let table = LRParser.buildSLR1Table aug
 
-        let steps = LRVisualizer.visualizeSteps string aug table tokens
+        let steps = LRStepVisualizer.visualizeSteps string aug table tokens
         writeStepsVisualization outputDir steps
         printfn "LR trace: %d steps written to %s" steps.Length outputDir
 

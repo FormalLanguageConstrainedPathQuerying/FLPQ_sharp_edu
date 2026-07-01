@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\FLPQ.Printers\FLPQ.Printers.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

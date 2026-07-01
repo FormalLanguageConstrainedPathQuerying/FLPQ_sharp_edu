@@ -4,8 +4,7 @@ open System.IO
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
-
-open TestGrammars
+open FLPQ.Printers
 
 let private templatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_template.tex")
@@ -19,7 +18,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     let step = trace.[0]
-    let tex = Cyk.tableToTeX string step.table
+    let tex = CykTeX.tableToTeX string step.table
     Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -31,7 +30,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenize "a a")
 
     for step in trace do
-        let tex = Cyk.tableToTeX string step.table
+        let tex = CykTeX.tableToTeX string step.table
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -41,7 +40,7 @@ let ``LL step stack and input TeX compile with pdflatex`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b"
 
-    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
+    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
     Assert.NotEmpty(steps)
 
     for step in steps do
@@ -57,7 +56,7 @@ let ``LR step stack and input TeX compile with pdflatex`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenize "a a"
 
-    let steps = LRVisualizer.visualizeSteps string aug table tokens
+    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     for step in steps do
         Assert.True(TestUtils.checkTexCompiles templatePath step.stack)
@@ -75,7 +74,7 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
 
     for step in trace do
         let tex =
-            Matrix.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+            MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
@@ -94,13 +93,22 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = Valiant.stepToTeX cellPrinter step
+        let tex = ValiantTeX.stepToTeX cellPrinter step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``Modified Valiant trace TeX with expression grammar compiles`` () =
+    let grammar6 =
+        Grammar.parseGrammar
+            "
+S -> x
+S -> S + S
+S -> S * S
+S -> ( S )
+"
+
     let trace =
         Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenize "x + x")
 
@@ -110,7 +118,7 @@ let ``Modified Valiant trace TeX with expression grammar compiles`` () =
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = Valiant.stepToTeX cellPrinter step
+        let tex = ValiantTeX.stepToTeX cellPrinter step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
@@ -131,7 +139,7 @@ let ``LL table TeX compiles with pdflatex for grammar1`` () =
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLParser.tableToTeX symbolToStr g 1 firstMap followMap table
+    let tex = LLTableTeX.tableToTeX symbolToStr g 1 firstMap followMap table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -163,7 +171,7 @@ T -> c
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLParser.tableToTeX symbolToStr g 1 firstMap followMap table
+    let tex = LLTableTeX.tableToTeX symbolToStr g 1 firstMap followMap table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -183,7 +191,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRParser.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX symbolToStr aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -200,7 +208,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildLR0Table aug
 
-    let tex = LRParser.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX symbolToStr aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -214,7 +222,7 @@ let ``CLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildCLR1Table aug
 
-    let tex = LRParser.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX symbolToStr aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -236,7 +244,7 @@ F -> x
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRParser.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX symbolToStr aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 

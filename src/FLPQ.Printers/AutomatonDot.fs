@@ -1,10 +1,11 @@
-namespace FLPQ.Languages
+namespace FLPQ.Printers
 
 open FSharpPlus.Data
 open FLPQ.LinearAlgebra
+open FLPQ.Languages
 
 /// Graphviz dot visualization for finite automata.
-module AutomatonVisualizer =
+module AutomatonDot =
 
     let private stateDeclarations
         (stateCount: int)

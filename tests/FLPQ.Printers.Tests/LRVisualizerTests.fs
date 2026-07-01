@@ -3,6 +3,7 @@ module LRVisualizerTests
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.Printers
 
 
 [<Fact>]
@@ -19,7 +20,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid dot and TeX`` () 
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenize "a a"
-    let steps = LRVisualizer.visualizeSteps string aug table tokens
+    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.NotEmpty(steps)
 
@@ -42,7 +43,7 @@ let ``LR step visualization includes input position marker`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenize "a a b a b b"
-    let steps = LRVisualizer.visualizeSteps string aug table tokens
+    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
@@ -63,7 +64,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenize "x + x"
-    let steps = LRVisualizer.visualizeSteps string aug table tokens
+    let steps = LRStepVisualizer.visualizeSteps string aug table tokens
 
     Assert.NotEmpty(steps)
 

@@ -21,11 +21,21 @@ FLPQ.slnx
 │   │   ├── RsmToGrammar.fs         # RSM to BNF grammar conversion
 │   │   ├── DerivationTree.fs       # Derivation tree type and operations
 │   │   ├── VisualizationTypes.fs   # Shared visualization types
-│   │   ├── DerivationTreeVisualizer.fs
 │   │   ├── Cyk.fs                  # CYK parsing algorithm
 │   │   ├── Valiant.fs              # Valiant parsing algorithm
 │   │   ├── LLParser.fs             # LL(k) parsing table and parser
 │   │   └── LRParser.fs             # LR(0)/SLR(1)/CLR(1) automata, tables, and parser
+│   ├── FLPQ.Printers/          # Printers library (depends on FLPQ.LinearAlgebra, FLPQ.Languages)
+│   │   ├── MatrixTeX.fs            # TeX rendering for matrices using nicematrix
+│   │   ├── TeXRenderer.fs          # Shared TeX rendering for parser stacks/input
+│   │   ├── DerivationTreeDot.fs    # Dot rendering for derivation trees
+│   │   ├── AutomatonDot.fs         # Dot rendering for finite automata
+│   │   ├── CykTeX.fs               # TeX rendering for CYK tables
+│   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps
+│   │   ├── LLTableTeX.fs           # TeX rendering for LL parsing tables
+│   │   ├── LRTableTeX.fs           # TeX rendering for LR parsing tables
+│   │   ├── LLStepVisualizer.fs     # LL parser step-by-step visualization
+│   │   └── LRStepVisualizer.fs     # LR parser step-by-step visualization
 │   └── FLPQ.RPQ/               # RPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages)
 │       ├── GraphReader.fs          # Graph file reading, returns graph as NFA
 │       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
@@ -53,6 +63,14 @@ FLPQ.slnx
     │   └── LRParserTests.fs              # Tests for LR parser
     └── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
         └── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
+    └── FLPQ.Printers.Tests/       # Tests for printers
+        ├── TestUtils.fs                  # Shared test utilities (dot/TeX compilation)
+        ├── MatrixTeXTests.fs             # Tests for matrix TeX rendering
+        ├── AutomatonVisualizationTests.fs # Tests for automata dot rendering
+        ├── DerivationTreeVisualizationTests.fs # Tests for tree dot rendering
+        ├── LLVisualizerTests.fs          # Tests for LL step visualization
+        ├── LRVisualizerTests.fs          # Tests for LR step visualization
+        └── TexCompilationTests.fs        # TeX compilation tests for all printers
 ```
 
 ## Projects
@@ -61,10 +79,12 @@ FLPQ.slnx
 - **FLPQ.GraphAnalysis** — F# class library (net10.0). MS-BFS and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
 - **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
+- **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.
 - **FLPQ.GraphAnalysis.Tests** — xUnit test project for graph analysis. Uses FsCheck for property-based testing.
 - **FLPQ.Languages.Tests** — xUnit test project for languages. Uses FsCheck for property-based testing. Depends on `FLPQ.Languages` (and transitively on `FLPQ.LinearAlgebra`).
 - **FLPQ.RPQ.Tests** — xUnit test project for RPQ. Uses FsCheck for property-based testing. Depends on `FLPQ.RPQ`, `FLPQ.Languages`, `FLPQ.LinearAlgebra`, and `FLPQ.GraphAnalysis`.
+- **FLPQ.Printers.Tests** — xUnit test project for printers. Depends on `FLPQ.Printers`, `FLPQ.Languages`, and `FLPQ.LinearAlgebra`.
 
 ## Dependencies
 
@@ -83,6 +103,7 @@ Each project has a hub documentation file grouping its modules. Design and logic
 | FLPQ.GraphAnalysis | [FLPQ.GraphAnalysis.md](FLPQ.GraphAnalysis.md) |
 | FLPQ.Languages | [FLPQ.Languages.md](FLPQ.Languages.md) |
 | FLPQ.RPQ | [FLPQ.RPQ.md](FLPQ.RPQ.md) |
+| FLPQ.Printers | [FLPQ.Printers.md](FLPQ.Printers.md) |
 | FLPQ.Cli | [FLPQ.Cli.md](FLPQ.Cli.md) |
 
 See [main.md](main.md) for the full documentation index including the flat module listing.

@@ -3,6 +3,7 @@ module LLVisualizerTests
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.Printers
 
 
 [<Fact>]
@@ -17,7 +18,7 @@ let ``LL step visualization for grammar1 produces valid dot and TeX`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b"
-    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
+    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)
 
@@ -38,7 +39,7 @@ let ``LL step visualization includes input position marker`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b a b"
-    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
+    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.True(steps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
@@ -53,7 +54,7 @@ let ``LL step visualization stack has bottom on left`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b"
-    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
+    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)
 
@@ -68,7 +69,7 @@ let ``LL step visualization for accepted string returns success steps`` () =
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenize "a b"
-    let steps = LLVisualizer.visualizeSteps string g table 1 tokens
+    let steps = LLStepVisualizer.visualizeSteps string g table 1 tokens
 
     Assert.NotEmpty(steps)
 
