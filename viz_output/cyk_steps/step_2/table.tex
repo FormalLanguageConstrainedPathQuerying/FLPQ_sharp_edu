@@ -1,9 +1,13 @@
-\begin{pNiceMatrix}[first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
- &  &  &  &  &  &  \\
- & \{N_{3}\} & \cdot & \cdot & \cdot & \cdot & \cdot \\
- & \cdot & \{N_{3}\} & \{N_{2}, S\} & \cdot & \cdot & \cdot \\
- & \cdot & \cdot & \{N_{4}, N_{1}\} & \cdot & \cdot & \cdot \\
- & \cdot & \cdot & \cdot & \{N_{3}\} & \{N_{2}, S\} & \cellcolor{yellow}{\{N_{1}\}} \\
- & \cdot & \cdot & \cdot & \cdot & \{N_{4}, N_{1}\} & \cdot \\
- & \cdot & \cdot & \cdot & \cdot & \cdot & \{N_{4}, N_{1}\} \\
+\begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
+ \CodeBefore
+   \cellcolor{red!20}{1-1} % Colors row 1, column 1
+   \cellcolor{blue!20}{2-2} % Colors row 2, column 2
+\Body
+    &  &  &  &  &  &  \\
+ & \{N_{4}\} & \cdot & \cdot & \cdot & \cdot & \cdot \\
+ & \cdot & \{N_{4}\} & \{N_{3}, S\} & \cdot & \cdot & \cdot \\
+ & \cdot & \cdot & \{N_{5}, N_{1}, N_{2}\} & \cdot & \cellcolor{yellow}{\{N_{1}, N_{2}\}} & \cdot \\
+ & \cdot & \cdot & \cdot & \{N_{4}\} & \{N_{3}, S\} & \cellcolor{yellow}{\{N_{1}\}} \\
+ & \cdot & \cdot & \cdot & \cdot & \{N_{5}, N_{1}, N_{2}\} & \cdot \\
+ & \cdot & \cdot & \cdot & \cdot & \cdot & \{N_{5}, N_{1}, N_{2}\} \\
 \end{pNiceMatrix}

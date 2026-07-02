@@ -1,14 +1,10 @@
 namespace FLPQ.Printers
 
-open System.Text.RegularExpressions
 open FLPQ.LinearAlgebra
 open FLPQ.Languages
 
 /// TeX rendering for Valiant algorithm steps.
 module ValiantTeX =
-
-    let private shortNtName (Nonterminal n) =
-        Regex.Replace(string n, @"N_CNF_(\d+)", @"N_{$1}")
 
     let private ntSetToTeX (s: Set<Nonterminal<'nt>>) : string =
         if Set.isEmpty s then
@@ -16,7 +12,7 @@ module ValiantTeX =
         else
             s
             |> Set.toSeq
-            |> Seq.map shortNtName
+            |> Seq.map string
             |> String.concat ", "
             |> fun x -> @"\{" + x + @"\}"
 
@@ -63,7 +59,7 @@ module ValiantTeX =
 
     /// Render a boolean decomposition matrix for a single nonterminal.
     let boolDecompToTeX (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
-        @"\mathrm{" + shortNtName nt + "}\n" + MatrixTeX.toTeX true true boolToTeX mat
+        @"\mathrm{" + string nt + "}\n" + MatrixTeX.toTeX true true boolToTeX mat
 
     /// Convert a modified Valiant trace step to TeX with colored submatrix blocks.
     let modifiedStepToTeX (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =

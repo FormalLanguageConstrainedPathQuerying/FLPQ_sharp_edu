@@ -1,0 +1,12 @@
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="Epsilon", shape=box];
+  n2 [label="T (Terminal \"a\")", shape=box];
+  n3 [label="N (Nonterminal \"S\")", shape=box];
+  n4 [label="T (Terminal \"b\")", shape=box];
+  n5 [label="N (Nonterminal \"S\")", shape=box];
+  n2 -> n3 [style=dashed, constraint=false];
+  n3 -> n4 [style=dashed, constraint=false];
+  n4 -> n5 [style=dashed, constraint=false];
+  {rank=same; n2; n3; n4; n5}
+}

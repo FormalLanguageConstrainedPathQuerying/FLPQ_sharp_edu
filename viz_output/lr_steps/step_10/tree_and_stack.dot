@@ -1,0 +1,32 @@
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="N (Nonterminal \"S'\")"];
+  n2 [label="N (Nonterminal \"S\")"];
+  n3 [label="T (Terminal \"a\")", shape=box];
+  n2 -> n3;
+  n4 [label="N (Nonterminal \"S\")"];
+  n2 -> n4;
+  n5 [label="T (Terminal \"b\")", shape=box];
+  n2 -> n5;
+  n6 [label="N (Nonterminal \"S\")"];
+  n7 [label="T (Terminal \"a\")", shape=box];
+  n6 -> n7;
+  n8 [label="N (Nonterminal \"S\")"];
+  n6 -> n8;
+  n9 [label="T (Terminal \"b\")", shape=box];
+  n6 -> n9;
+  n10 [label="N (Nonterminal \"S\")"];
+  n6 -> n10;
+  n2 -> n6;
+  n1 -> n2;
+  n11 [label="T (Terminal \"a\")", shape=box];
+  n1 -> n11;
+  n12 [label="s3", shape=box, style=filled, fillcolor=lightgray];
+  n13 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n14 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n12 -> n2 [style=dashed, constraint=false];
+  n2 -> n13 [style=dashed, constraint=false];
+  n13 -> n11 [style=dashed, constraint=false];
+  n11 -> n14 [style=dashed, constraint=false];
+  {rank=same; n12; n2; n13; n11; n14}
+}

@@ -1,0 +1,36 @@
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="N (Nonterminal \"S'\")"];
+  n2 [label="N (Nonterminal \"S\")"];
+  n1 -> n2;
+  n3 [label="T (Terminal \"a\")", shape=box];
+  n1 -> n3;
+  n4 [label="T (Terminal \"b\")", shape=box];
+  n1 -> n4;
+  n5 [label="N (Nonterminal \"S\")"];
+  n1 -> n5;
+  n6 [label="T (Terminal \"a\")", shape=box];
+  n1 -> n6;
+  n7 [label="T (Terminal \"a\")", shape=box];
+  n1 -> n7;
+  n8 [label="s3", shape=box, style=filled, fillcolor=lightgray];
+  n9 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n10 [label="s4", shape=box, style=filled, fillcolor=lightgray];
+  n11 [label="s3", shape=box, style=filled, fillcolor=lightgray];
+  n12 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n13 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n14 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n8 -> n5 [style=dashed, constraint=false];
+  n5 -> n9 [style=dashed, constraint=false];
+  n9 -> n7 [style=dashed, constraint=false];
+  n7 -> n10 [style=dashed, constraint=false];
+  n10 -> n4 [style=dashed, constraint=false];
+  n4 -> n11 [style=dashed, constraint=false];
+  n11 -> n5 [style=dashed, constraint=false];
+  n5 -> n12 [style=dashed, constraint=false];
+  n12 -> n7 [style=dashed, constraint=false];
+  n7 -> n13 [style=dashed, constraint=false];
+  n13 -> n7 [style=dashed, constraint=false];
+  n7 -> n14 [style=dashed, constraint=false];
+  {rank=same; n8; n5; n9; n7; n10; n4; n11; n5; n12; n7; n13; n7; n14}
+}

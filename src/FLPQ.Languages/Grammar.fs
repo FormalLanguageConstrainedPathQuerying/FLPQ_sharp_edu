@@ -382,7 +382,7 @@ module Grammar =
 
     /// A convenience function: generate a fresh nonterminal name from an integer index
     /// for use with string-based grammars (Nonterminal<string>).
-    let freshStringNonterminal (i: int) : string = $"N_CNF_{i}"
+    let freshStringNonterminal (i: int) : string = $"N_{i}"
 
     /// Transform a grammar into Chomsky Normal Form.
     /// Resulting grammar has only rules of the form:
