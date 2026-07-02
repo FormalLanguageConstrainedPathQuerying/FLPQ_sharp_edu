@@ -515,7 +515,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
 86. [done] In run_vix.py script. If pdflatex returns not 0 it is not a warning. It is a problem. Generated TeX must be fully correct.
 87. [done] Add generation for LL and LR: grammar, table, automata for LR, parsing steps. Add examples. Grammar: S -> a S b S | eps. Input: aababb
 88. [done] Fix nonterminals rendering in TeX. Do not replace names to N_i by regexps in several places, update to CNF conversion to generate uniquie nonterminals with respective names.
-89. Fix input rendering for LL and LR. Render only Terminal contetnt, without type wrappers.
+89. [done] Fix input rendering for LL and LR. Render only Terminal contetnt, without type wrappers.
 90. Improve LL and LR stacks. Derivation tree nodes itself contains Symbols. Stack frame can contains only node, not pair of Symbol and Node.
 91. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:

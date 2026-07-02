@@ -1,22 +1,27 @@
-# Detailed Plan: Task 89 — Fix input rendering for LL and LR
+# Detailed Plan: Task 90 — Improve LL and LR stacks
 
 ## Goal
 
-Render Terminal content without F# type wrappers in LL and LR step visualization. Use a proper symbol print function instead of `string`.
+Remove symbol duplication from `LLStackFrame`. Derivation tree nodes already carry their symbol, so storing both Symbol and DerivationTree is redundant.
 
 ## Changes
 
-### 1. `src/FLPQ.Cli/Program.fs`
-- Line 160: Change `LLStepVisualizer.renderSteps string steps` to `LLStepVisualizer.renderSteps symbolPrinter steps`
-- Line 183: Change `LRStepVisualizer.renderSteps string steps` to `LRStepVisualizer.renderSteps symbolPrinter steps`
+### 1. `src/FLPQ.Languages/VisualizationTypes.fs`
+- Change `LLStackFrame` from `LLFrame of Symbol<'t,'nt> * DerivationTree<'t,'nt>` to `LLFrame of DerivationTree<'t,'nt>`
+- Update `LLStackFrame.symbol` to extract from tree: `DerivationTree.rootSymbol tree`
+- Update `LLStackFrame.tree` to just return the tree
+- Update `LLStackFrame.create` to `LLFrame(Leaf sym)`
 
-### 2. `tests/FLPQ.Printers.Tests/LLVisualizerTests.fs`
-- Add a `symbolPrinter` helper that unwraps Terminal/Nonterminal/Epsilon
-- Replace `string` with `symbolPrinter` in all calls to `LLStepVisualizer.renderSteps`
+### 2. `src/FLPQ.Languages/LLParser.fs`
+- Pattern matching: match on tree node pattern to extract symbol info
+- `LLFrame(T _ as sym, tree)` → `LLFrame(Leaf(T _ as sym) as tree)`
+- `LLFrame(Epsilon, tree)` → `LLFrame(Leaf(Epsilon) as tree)`  
+- `LLFrame(N nt, _)` → `LLFrame(Node(nt, _))`
+- Frame creation: `LLFrame(sym, Leaf sym)` → `LLFrame(Leaf sym)`
+- Init stack: `LLFrame(N g.start, Node(g.start, []))` → `LLFrame(Node(g.start, []))`
 
-### 3. `tests/FLPQ.Printers.Tests/LRVisualizerTests.fs`
-- Add a `symbolPrinter` helper that unwraps Terminal/Nonterminal/Epsilon
-- Replace `string` with `symbolPrinter` in all calls to `LRStepVisualizer.renderSteps`
+### 3. `src/FLPQ.Printers/LLStepVisualizer.fs`
+- No changes needed (already uses `LLStackFrame.tree` which returns the tree)
 
 ## Verification
 - All tests pass

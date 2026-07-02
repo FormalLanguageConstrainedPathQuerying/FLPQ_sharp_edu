@@ -87,25 +87,26 @@ module LLParser =
 
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, completed) else None
-            | LLFrame(T _ as sym, tree) :: restStack ->
+            | LLFrame(Leaf(T _ as sym) as tree) :: restStack ->
                 if pos < tokens.Length && tokens.[pos] = sym then
                     parseLoop restStack (pos + 1) (completed @ [ tree ])
                 else
                     None
-            | LLFrame(Epsilon, tree) :: restStack -> parseLoop restStack pos (completed @ [ tree ])
-            | LLFrame(N nt, _) :: restStack ->
+            | LLFrame(Leaf(Epsilon) as tree) :: restStack -> parseLoop restStack pos (completed @ [ tree ])
+            | LLFrame(Leaf(N nt)) :: restStack
+            | LLFrame(Node(nt, _)) :: restStack ->
                 let la = lookahead tokens pos k
                 let key = (nt, la)
 
                 match Map.tryFind key table with
                 | Some ruleIdx ->
                     let rule = g.rules.[ruleIdx]
-                    let rhsFrames = Rhs.toList rule.rhs |> List.map (fun sym -> LLFrame(sym, Leaf sym))
+                    let rhsFrames = Rhs.toList rule.rhs |> List.map (fun sym -> LLFrame(Leaf sym))
 
                     parseLoop (rhsFrames @ restStack) pos completed
                 | None -> None
 
-        match parseLoop ([ LLFrame(N g.start, Node(g.start, [])) ]) 0 [] with
+        match parseLoop ([ LLFrame(Node(g.start, [])) ]) 0 [] with
         | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees)), List.rev steps
         | _ -> None, List.rev steps
 
