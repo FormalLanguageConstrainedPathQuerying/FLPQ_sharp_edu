@@ -14,10 +14,27 @@ module MatrixTeX =
         (highlights: Matrix.Highlight list)
         (blocks: Matrix.SubmatrixBlock list)
         : string =
+        let pniceOptions = ResizeArray<string>()
+
+        if showColNumbers then
+            pniceOptions.Add("first-row")
+            pniceOptions.Add(@"code-for-first-row = \arabic{jCol}")
+
+        if showRowNumbers then
+            pniceOptions.Add("first-col")
+            pniceOptions.Add(@"code-for-first-col = \arabic{iRow}")
+
+        let options =
+            if pniceOptions.Count = 0 then
+                ""
+            else
+                "[" + String.concat "," pniceOptions + "]"
+
         let dataRowOffset = if showColNumbers then 1 else 0
         let dataColOffset = if showRowNumbers then 1 else 0
-        let totalRows = if showColNumbers then m.rows + 1 else m.rows
-        let totalCols = if showRowNumbers then m.cols + 1 else m.cols
+
+        let totalRows = m.rows + dataRowOffset
+        let totalCols = m.cols + dataColOffset
 
         let highlightSet =
             highlights
@@ -40,32 +57,28 @@ module MatrixTeX =
                 | Some fc -> opts.Add(sprintf "fill=%s" fc)
                 | None -> ()
 
-                let options =
+                let blockOptions =
                     if opts.Count = 0 then
                         ""
                     else
                         "[" + String.concat "," opts + "]"
 
-                (r, c), (options, b.rowCount, b.colCount))
+                (r, c), (blockOptions, b.rowCount, b.colCount))
             |> List.groupBy fst
             |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
             |> Map.ofList
 
         let sb = System.Text.StringBuilder()
-        sb.Append(@"\begin{pNiceMatrix}") |> ignore
-        sb.AppendLine() |> ignore
+        sb.Append(sprintf @"\begin{pNiceMatrix}%s" options).AppendLine() |> ignore
 
         for row in 0 .. totalRows - 1 do
             let cells =
                 [ for col in 0 .. totalCols - 1 do
                       let content =
-                          if showRowNumbers && col = 0 then
-                              if showColNumbers && row = 0 then
-                                  ""
-                              else
-                                  (row + 1).ToString()
-                          elif showColNumbers && row = 0 then
-                              (col + 1).ToString()
+                          if showColNumbers && row = 0 then
+                              ""
+                          elif showRowNumbers && col = 0 then
+                              ""
                           else
                               let dataRow = row - dataRowOffset
                               let dataCol = col - dataColOffset
@@ -89,8 +102,9 @@ module MatrixTeX =
                           | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
                           | None -> content ]
 
-            let line = String.Join(" & ", cells) + @" \\"
-            sb.Append(line).AppendLine() |> ignore
+            if not (List.isEmpty cells) then
+                let line = String.Join(" & ", cells) + @" \\"
+                sb.Append(line).AppendLine() |> ignore
 
         sb.Append(@"\end{pNiceMatrix}") |> ignore
         sb.ToString()

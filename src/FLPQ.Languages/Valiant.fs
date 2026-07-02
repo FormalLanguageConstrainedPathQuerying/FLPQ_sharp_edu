@@ -8,7 +8,10 @@ module Valiant =
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
-        { table: Matrix<Set<Nonterminal<'nt>>> }
+        { table: Matrix<Set<Nonterminal<'nt>>>
+          currentSubmatrix: Submatrix option
+          layerSize: int
+          submatrices: Submatrix list }
 
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
@@ -131,6 +134,9 @@ module Valiant =
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
         (tableSize: int)
         (n: int)
+        (currentSubmatrix: Submatrix option)
+        (layerSize: int)
+        (submatrices: Submatrix list)
         : ValiantTraceStep<'nt> =
         let decompMap =
             allNt
@@ -144,7 +150,10 @@ module Valiant =
 
         let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
-        { table = recomposed }
+        { table = recomposed
+          currentSubmatrix = currentSubmatrix
+          layerSize = layerSize
+          submatrices = submatrices }
 
     let rec private complete
         (init: InitData<'t, 'nt>)
@@ -180,7 +189,7 @@ module Valiant =
                                 | _ -> ()
 
             match traceAcc with
-            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n)
+            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n (Some m) 1 [])
             | None -> ()
         else
             let b = bottomSubmatrix m
@@ -198,7 +207,7 @@ module Valiant =
             complete init te traceAcc
 
             match traceAcc with
-            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n)
+            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n (Some m) m.Size [])
             | None -> ()
 
     and private compute

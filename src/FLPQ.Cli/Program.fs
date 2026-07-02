@@ -58,6 +58,8 @@ module Program =
         let trace =
             Cyk.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
+        writeOutputFile (Path.Combine(outputDir, "grammar.tex")) (GrammarTeX.grammarToTeX grammar)
+
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
@@ -65,9 +67,9 @@ module Program =
 
             let tex =
                 if step.highlights.IsEmpty then
-                    CykTeX.tableToTeX string step.table
+                    CykTeX.tableToTeX step.table
                 else
-                    CykTeX.tableToTeXStyled string step.table step.highlights
+                    CykTeX.tableToTeXStyled step.table step.highlights
 
             writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
@@ -80,15 +82,28 @@ module Program =
         let trace =
             Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
+        writeOutputFile (Path.Combine(outputDir, "grammar.tex")) (GrammarTeX.grammarToTeX grammar)
+
+        if trace.Length > 0 then
+            let initialStepDir = Path.Combine(outputDir, "step_0")
+            Directory.CreateDirectory initialStepDir |> ignore
+        else
+            ()
+
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
-            Directory.CreateDirectory stepDir |> ignore
 
-            let tex =
-                MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
-
+            let tex = ValiantTeX.stepToTeX step
             writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
+
+            if idx = trace.Length - 1 then
+                let decomp = BooleanDecomposition.decompose step.table
+
+                for (nt, mat) in decomp |> Map.toSeq |> Seq.sortBy (fun (nt, _) -> string nt) do
+                    let ntName = string nt
+                    let decompTex = ValiantTeX.boolDecompToTeX nt mat
+                    writeOutputFile (Path.Combine(stepDir, sprintf "bool_decomp_%s.tex" ntName)) decompTex
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 

@@ -18,7 +18,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     let step = trace.[0]
-    let tex = CykTeX.tableToTeX string step.table
+    let tex = CykTeX.tableToTeX step.table
     Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -30,7 +30,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     for step in trace do
-        let tex = CykTeX.tableToTeX string step.table
+        let tex = CykTeX.tableToTeX step.table
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
 [<Fact>]
@@ -93,7 +93,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = ValiantTeX.stepToTeX cellPrinter step
+        let tex = ValiantTeX.modifiedStepToTeX step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 
@@ -118,7 +118,7 @@ S -> ( S )
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = ValiantTeX.stepToTeX cellPrinter step
+        let tex = ValiantTeX.modifiedStepToTeX step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(TestUtils.checkTexCompiles templatePath tex)
 

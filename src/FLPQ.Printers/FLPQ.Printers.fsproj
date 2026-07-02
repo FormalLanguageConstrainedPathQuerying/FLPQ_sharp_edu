@@ -11,6 +11,7 @@
     <Compile Include="DerivationTreeDot.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="CykTeX.fs" />
+    <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />
     <Compile Include="LLTableTeX.fs" />
     <Compile Include="LRTableTeX.fs" />

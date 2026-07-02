@@ -16,16 +16,16 @@ let ``toTeX wraps in pNiceMatrix environment`` () =
 let ``toTeX with row numbers produces extra column`` () =
     let m = Matrix.init 2 2 1
     let tex = MatrixTeX.toTeX true false string m
-    let firstLine = tex.Split('\n').[1]
-    Assert.Contains("1 &", firstLine)
+    Assert.Contains("first-col", tex)
+    Assert.Contains(@"\begin{pNiceMatrix}", tex)
 
 [<Fact>]
 let ``toTeX with column numbers produces extra row`` () =
     let m = Matrix.init 2 2 42
     let tex = MatrixTeX.toTeX false true string m
-    let lines = tex.Split('\n') |> Array.filter (fun l -> l.TrimEnd().EndsWith(@"\\"))
-    Assert.Equal(3, lines.Length)
-    Assert.Contains("1 & 2", tex.ReplaceLineEndings().Trim())
+    Assert.Contains("first-row", tex)
+    Assert.Contains("code-for-first-row", tex)
+    Assert.Contains(@"\begin{pNiceMatrix}", tex)
 
 [<Fact>]
 let ``toTeX produces correct cell content`` () =
