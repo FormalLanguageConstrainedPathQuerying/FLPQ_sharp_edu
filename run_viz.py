@@ -171,6 +171,16 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
         tex_source.append(r"\end{center}")
         tex_source.append("")
 
+    input_tex = viz_path / "input.tex"
+    if input_tex.exists():
+        tex_source.append(r"\subsection*{Input String}")
+        tex_source.append(r"\begin{center}")
+        tex_source.append(r"\[")
+        tex_source.append(input_tex.read_text(encoding="utf-8").strip())
+        tex_source.append(r"\]")
+        tex_source.append(r"\end{center}")
+        tex_source.append("")
+
     for step_dir in step_dirs:
         step_name = step_dir.name
         step_num = step_name.split("_")[1]

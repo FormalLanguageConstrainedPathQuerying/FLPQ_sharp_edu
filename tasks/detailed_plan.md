@@ -1,28 +1,44 @@
-# Detailed Plan: Task 84 — Fix grammar rendering in TeX
+# Detailed Plan: Task 85 — Add input string generation for CYK and Valiant
 
 ## Goal
 
-Fix broken arrow (`\rightarrow`) in grammar TeX rendering. The `\r` in `\rightarrow` is interpreted as carriage return in non-verbatim F# string literals, producing corrupted output.
+Generate an input string visualization file (`input.tex`) for CYK and Valiant algorithms (currently only LL/LR generate input.tex). Also update `run_viz.py` to include the input string in the merged TeX document.
 
-## Root Cause
+## Changes
 
-File: `src/FLPQ.Printers/GrammarTeX.fs:32`
+### 1. `src/FLPQ.Cli/Program.fs`
+
+In `runCyk` (after line 63, before step loop):
 ```fsharp
-sb.AppendLine(sprintf "%s &\rightarrow %s \\\\" lhs rhs) |> ignore
+let inputTex = TeXRenderer.inputRow string (inputTokens |> List.map (fun t -> T t)) -1
+writeOutputFile (Path.Combine(outputDir, "input.tex")) inputTex
 ```
 
-In a regular (non-verbatim) F# string `""`, `\r` is the carriage return escape sequence. So `\rightarrow` becomes `<CR>ightarrow`.
-
-## Fix
-
-Change to verbatim string:
+In `runValiant` (after line 89, before step loop):
 ```fsharp
-sb.AppendLine(sprintf @"%s &\rightarrow %s \\" lhs rhs) |> ignore
+let inputTex = TeXRenderer.inputRow string (inputTokens |> List.map (fun t -> T t)) -1
+writeOutputFile (Path.Combine(outputDir, "input.tex")) inputTex
 ```
 
-Note: In verbatim strings `@""`, `\\` represents two literal backslashes. The original `\\\\` becomes `\\` (since `\\` in a non-verbatim string is one literal backslash, so `\\\\` is two literal backslashes = `\\` in TeX). In a verbatim string, `\\` is two literal backslashes, which is `\\` in TeX — which is the correct TeX line ending.
+Note: `inputTokens` is already available as `Token list = Terminal<string> list`. We convert to `Symbol<string, string> list` by mapping each `Terminal t` to `T(Terminal t)`. Position `-1` means no cell is underlined (just shows the full input string).
+
+### 2. `run_viz.py`
+
+In `process_algorithm`, after the grammar sections (~line 172), add input string section:
+```python
+input_tex = viz_path / "input.tex"
+if input_tex.exists():
+    tex_source.append(r"\subsection*{Input String}")
+    tex_source.append(r"\begin{center}")
+    tex_source.append(r"\[")
+    tex_source.append(input_tex.read_text(encoding="utf-8").strip())
+    tex_source.append(r"\]")
+    tex_source.append(r"\end{center}")
+    tex_source.append("")
+```
 
 ## Verification
 
-- The generated TeX should show `S &\rightarrow S\ S \\` instead of `S &` + `<CR>` + `ightarrow S\ S \\`
-- Run existing tests to ensure no regressions
+- Run CYK and Valiant via CLI, verify `input.tex` is generated in output dir
+- Run `run_viz.py --example`, verify input string appears in merged TeX
+- Check that `input.tex` contains a one-row `pNiceMatrix` with all input tokens
