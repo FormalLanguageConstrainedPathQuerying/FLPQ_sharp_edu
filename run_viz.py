@@ -149,6 +149,28 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
         r"\textit{Total steps: " + str(len(step_dirs)) + r"}\\"
     )
 
+    # Include grammars from the root viz directory
+    viz_path = Path(viz_dir)
+    grammar_original = viz_path / "grammar_original.tex"
+    if grammar_original.exists():
+        tex_source.append(r"\subsection*{Original Grammar}")
+        tex_source.append(r"\begin{center}")
+        tex_source.append(r"\[")
+        tex_source.append(grammar_original.read_text(encoding="utf-8").strip())
+        tex_source.append(r"\]")
+        tex_source.append(r"\end{center}")
+        tex_source.append("")
+
+    grammar_cnf = viz_path / "grammar_cnf.tex"
+    if grammar_cnf.exists():
+        tex_source.append(r"\subsection*{CNF Grammar (passed to algorithm)}")
+        tex_source.append(r"\begin{center}")
+        tex_source.append(r"\[")
+        tex_source.append(grammar_cnf.read_text(encoding="utf-8").strip())
+        tex_source.append(r"\]")
+        tex_source.append(r"\end{center}")
+        tex_source.append("")
+
     for step_dir in step_dirs:
         step_name = step_dir.name
         step_num = step_name.split("_")[1]
@@ -170,9 +192,12 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
                 )
                 tex_source.append("")
 
-        # Collect TeX files
+        # Collect TeX files (table.tex first, then bool_decomp files)
         tex_files = list(step_dir.glob("*.tex"))
-        for tex_file in sorted(tex_files):
+        tex_files = sorted(
+            tex_files, key=lambda f: (0 if f.stem == "table" else 1, f.name)
+        )
+        for tex_file in tex_files:
             content = tex_file.read_text(encoding="utf-8")
             tex_source.append(r"\begin{center}")
             tex_source.append(r"\[")

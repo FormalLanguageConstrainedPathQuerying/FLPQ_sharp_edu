@@ -8,7 +8,7 @@ open FLPQ.Languages
 module ValiantTeX =
 
     let private shortNtName (Nonterminal n) =
-        Regex.Replace(string n, @"N_CNF_", @"N\_")
+        Regex.Replace(string n, @"N_CNF_(\d+)", @"N_{$1}")
 
     let private ntSetToTeX (s: Set<Nonterminal<'nt>>) : string =
         if Set.isEmpty s then

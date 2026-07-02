@@ -54,11 +54,13 @@ module Program =
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
 
         let trace =
             Cyk.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
-        writeOutputFile (Path.Combine(outputDir, "grammar.tex")) (GrammarTeX.grammarToTeX grammar)
+        writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+        writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -78,11 +80,13 @@ module Program =
     let private runValiant (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
 
         let trace =
             Valiant.parseWithTrace Grammar.freshStringNonterminal grammar (Tokenizer.tokenizeTerminals inputTokens)
 
-        writeOutputFile (Path.Combine(outputDir, "grammar.tex")) (GrammarTeX.grammarToTeX grammar)
+        writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+        writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
 
         if trace.Length > 0 then
             let initialStepDir = Path.Combine(outputDir, "step_0")

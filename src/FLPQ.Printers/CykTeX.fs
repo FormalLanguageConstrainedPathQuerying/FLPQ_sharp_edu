@@ -9,7 +9,7 @@ open FLPQ.Languages
 module CykTeX =
 
     let private shortNtName (Nonterminal n) =
-        Regex.Replace(string n, @"N_CNF_", @"N\_")
+        Regex.Replace(string n, @"N_CNF_(\d+)", @"N_{$1}")
 
     let private shortSymbolPrinter (sym: Symbol<'t, 'nt>) : string =
         match sym with
