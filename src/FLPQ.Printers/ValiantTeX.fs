@@ -63,7 +63,7 @@ module ValiantTeX =
 
     /// Render a boolean decomposition matrix for a single nonterminal.
     let boolDecompToTeX (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
-        @"\text{" + shortNtName nt + "}\n" + MatrixTeX.toTeX true true boolToTeX mat
+        @"\mathrm{" + shortNtName nt + "}\n" + MatrixTeX.toTeX true true boolToTeX mat
 
     /// Convert a modified Valiant trace step to TeX with colored submatrix blocks.
     let modifiedStepToTeX (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =

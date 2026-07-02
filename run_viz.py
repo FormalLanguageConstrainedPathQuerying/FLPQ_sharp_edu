@@ -27,6 +27,7 @@ TEX_TEMPLATE = r"""\documentclass[12pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T2A]{fontenc}
 \usepackage[russian,english]{babel}
+\usepackage[table]{xcolor}
 \usepackage{nicematrix}
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -74,7 +75,7 @@ def run_command(cmd, cwd=None, check_stderr=True):
         )
         if result.returncode != 0:
             err = result.stderr[:500] if check_stderr else result.stdout[-1000:]
-            print(f"  WARNING: {' '.join(cmd)} returned {result.returncode}", file=sys.stderr)
+            print(f"  ERROR: {' '.join(cmd)} returned {result.returncode}", file=sys.stderr)
             if err:
                 print(f"  details: {err}", file=sys.stderr)
             return False
@@ -98,7 +99,9 @@ def run_algorithm(algorithm, grammar_file, input_file, output_dir, repo_root):
         "-o", output_dir,
     ]
     print(f"  {' '.join(cmd)}")
-    run_command(cmd, cwd=repo_root)
+    if not run_command(cmd, cwd=repo_root):
+        print(f"  ERROR: {algorithm} CLI failed", file=sys.stderr)
+        sys.exit(1)
 
 
 def compile_dot_to_pdf(dot_path, pdf_path):
@@ -155,9 +158,7 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
     if grammar_original.exists():
         tex_source.append(r"\subsection*{Original Grammar}")
         tex_source.append(r"\begin{center}")
-        tex_source.append(r"\[")
         tex_source.append(grammar_original.read_text(encoding="utf-8").strip())
-        tex_source.append(r"\]")
         tex_source.append(r"\end{center}")
         tex_source.append("")
 
@@ -165,9 +166,7 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
     if grammar_cnf.exists():
         tex_source.append(r"\subsection*{CNF Grammar (passed to algorithm)}")
         tex_source.append(r"\begin{center}")
-        tex_source.append(r"\[")
         tex_source.append(grammar_cnf.read_text(encoding="utf-8").strip())
-        tex_source.append(r"\]")
         tex_source.append(r"\end{center}")
         tex_source.append("")
 
@@ -231,7 +230,9 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
 
     build_tex = out_dir / f"{algorithm.lower()}_merged.tex"
     shutil.copy(merged_tex, build_tex)
-    compile_tex_to_pdf(build_tex, out_dir)
+    if not compile_tex_to_pdf(build_tex, out_dir):
+        print(f"  ERROR: pdflatex compilation failed for {algorithm}", file=sys.stderr)
+        sys.exit(1)
     compile_tex_to_pdf(build_tex, out_dir)  # Second pass for ToC and references
 
     merged_pdf = out_dir / f"{algorithm.lower()}_merged.pdf"
@@ -240,7 +241,7 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
         shutil.copy(merged_pdf, final_pdf)
         print(f"  Final PDF: {final_pdf}")
     else:
-        print(f"  WARNING: PDF compilation failed for {algorithm}")
+        print(f"  ERROR: PDF compilation failed for {algorithm}")
         log = out_dir / f"{algorithm.lower()}_merged.log"
         if log.exists():
             errors = [
@@ -319,10 +320,17 @@ def main():
     print(f"\nDone. Results in {result_dir}/")
 
     # Show summary
+    all_ok = True
     for algorithm in algorithms:
         pdf = result_dir / algorithm.lower() / f"{algorithm.lower()}_visualization.pdf"
         if pdf.exists():
             print(f"  {algorithm}: {pdf}")
+        else:
+            print(f"  {algorithm}: MISSING", file=sys.stderr)
+            all_ok = False
+
+    if not all_ok:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

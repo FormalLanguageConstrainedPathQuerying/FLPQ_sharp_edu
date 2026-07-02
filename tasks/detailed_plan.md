@@ -1,44 +1,24 @@
-# Detailed Plan: Task 85 — Add input string generation for CYK and Valiant
+# Detailed Plan: Task 86 — Fix run_viz.py pdflatex error handling
 
 ## Goal
 
-Generate an input string visualization file (`input.tex`) for CYK and Valiant algorithms (currently only LL/LR generate input.tex). Also update `run_viz.py` to include the input string in the merged TeX document.
+Treat non-zero pdflatex return codes as hard errors (not warnings). The script must exit with code 1 when TeX compilation fails.
 
-## Changes
+## Changes to `run_viz.py`
 
-### 1. `src/FLPQ.Cli/Program.fs`
+### 1. `run_command` (line 69)
+- Change "WARNING" to "ERROR" in the print message
 
-In `runCyk` (after line 63, before step loop):
-```fsharp
-let inputTex = TeXRenderer.inputRow string (inputTokens |> List.map (fun t -> T t)) -1
-writeOutputFile (Path.Combine(outputDir, "input.tex")) inputTex
-```
+### 2. `run_algorithm` (line 87) 
+- Check return value of `run_command`, if False, print error and exit with code 1
 
-In `runValiant` (after line 89, before step loop):
-```fsharp
-let inputTex = TeXRenderer.inputRow string (inputTokens |> List.map (fun t -> T t)) -1
-writeOutputFile (Path.Combine(outputDir, "input.tex")) inputTex
-```
+### 3. `compile_tex_to_pdf` callers in `process_algorithm` (lines 224-225)
+- Check return value of `compile_tex_to_pdf`, if False, print error and exit with code 1
 
-Note: `inputTokens` is already available as `Token list = Terminal<string> list`. We convert to `Symbol<string, string> list` by mapping each `Terminal t` to `T(Terminal t)`. Position `-1` means no cell is underlined (just shows the full input string).
-
-### 2. `run_viz.py`
-
-In `process_algorithm`, after the grammar sections (~line 172), add input string section:
-```python
-input_tex = viz_path / "input.tex"
-if input_tex.exists():
-    tex_source.append(r"\subsection*{Input String}")
-    tex_source.append(r"\begin{center}")
-    tex_source.append(r"\[")
-    tex_source.append(input_tex.read_text(encoding="utf-8").strip())
-    tex_source.append(r"\]")
-    tex_source.append(r"\end{center}")
-    tex_source.append("")
-```
+### 4. `main` function
+- After algorithms loop, if `merged_pdf` doesn't exist for any algorithm, print error and exit with code 1
 
 ## Verification
 
-- Run CYK and Valiant via CLI, verify `input.tex` is generated in output dir
-- Run `run_viz.py --example`, verify input string appears in merged TeX
-- Check that `input.tex` contains a one-row `pNiceMatrix` with all input tokens
+- Run `run_viz.py --example`, verify it completes successfully with pdflatex
+- (Harder to test failure case without breaking TeX, but the logic change is straightforward)

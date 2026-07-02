@@ -60,7 +60,17 @@ module Program =
         let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
         let inputSymbols = tokenList |> List.map (fun (Terminal t) -> T(Terminal t))
 
-        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow (fun sym -> match sym with T(Terminal t) -> string t | N n -> string n | Epsilon -> "\\varepsilon") inputSymbols -1)
+        writeOutputFile
+            (Path.Combine(outputDir, "input.tex"))
+            (TeXRenderer.inputRow
+                (fun sym ->
+                    match sym with
+                    | T(Terminal t) -> string t
+                    | N n -> string n
+                    | Epsilon -> "\\varepsilon")
+                inputSymbols
+                -1)
+
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
 
@@ -88,7 +98,17 @@ module Program =
         let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
         let inputSymbols = tokenList |> List.map (fun (Terminal t) -> T(Terminal t))
 
-        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow (fun sym -> match sym with T(Terminal t) -> string t | N n -> string n | Epsilon -> "\\varepsilon") inputSymbols -1)
+        writeOutputFile
+            (Path.Combine(outputDir, "input.tex"))
+            (TeXRenderer.inputRow
+                (fun sym ->
+                    match sym with
+                    | T(Terminal t) -> string t
+                    | N n -> string n
+                    | Epsilon -> "\\varepsilon")
+                inputSymbols
+                -1)
+
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
 

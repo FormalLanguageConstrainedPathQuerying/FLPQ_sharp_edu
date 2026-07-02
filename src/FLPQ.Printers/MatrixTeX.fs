@@ -16,6 +16,9 @@ module MatrixTeX =
         : string =
         let pniceOptions = ResizeArray<string>()
 
+        if not (List.isEmpty highlights) then
+            pniceOptions.Add("color-inside")
+
         if showColNumbers then
             pniceOptions.Add("first-row")
             pniceOptions.Add(@"code-for-first-row = \arabic{jCol}")
