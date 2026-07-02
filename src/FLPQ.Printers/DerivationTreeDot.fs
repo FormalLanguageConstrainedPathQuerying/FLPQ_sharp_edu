@@ -43,15 +43,10 @@ module DerivationTreeDot =
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
-    /// Render a derivation tree with an overlay stack chain as a Graphviz dot graph.
-    /// stackTrees are the tree nodes from stack frames, in top-to-bottom order.
-    /// Tree nodes that match stack trees are connected via a dashed chain and
-    /// constrained to the same rank via rank=same.
-    let toDotWithStack
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
-        (tree: DerivationTree<'t, 'nt>)
-        (stackTrees: DerivationTree<'t, 'nt> list)
-        : string =
+    /// Render LL parser stack frames as a combined stack-tree Graphviz dot graph.
+    /// Each LLFrame contains a derivation tree node (Leaf or Node).
+    /// Stack frames are connected via a dashed chain and constrained to the same rank.
+    let toDotWithLLStack (symbolVisualizer: Symbol<'t, 'nt> -> string) (stack: LLStackFrame<'t, 'nt> list) : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph StackTree {") |> ignore
@@ -63,11 +58,8 @@ module DerivationTreeDot =
             nodeId <- nodeId + 1
             nodeId
 
-        let mutable nodeIds: (int * DerivationTree<'t, 'nt>) list = []
-
-        let rec traverse (node: DerivationTree<'t, 'nt>) : int =
+        let rec renderTree (node: DerivationTree<'t, 'nt>) : int =
             let nid = nextId ()
-            nodeIds <- (nid, node) :: nodeIds
 
             match node with
             | Leaf sym ->
@@ -79,56 +71,33 @@ module DerivationTreeDot =
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
                 for child in children do
-                    let childId = traverse child
+                    let childId = renderTree child
                     sb.AppendLine(sprintf "  n%d -> n%d;" nid childId) |> ignore
 
             nid
 
-        traverse tree |> ignore
+        let stackIds =
+            stack
+            |> List.map (fun frame -> renderTree (LLStackFrame.tree frame))
+            |> List.rev
 
-        let mutable orderedStackIds = []
-
-        for st in stackTrees do
-            match nodeIds |> List.tryFind (fun (_, n) -> n = st) with
-            | Some(id, _) -> orderedStackIds <- id :: orderedStackIds
-            | None ->
-                let nid = nextId ()
-
-                match st with
-                | Leaf sym ->
-                    let label = escapeLabel (symbolVisualizer sym)
-                    sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
-                | Node(nt, _) ->
-                    let label = escapeLabel (symbolVisualizer (N nt))
-                    sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
-
-                orderedStackIds <- nid :: orderedStackIds
-
-        orderedStackIds <- List.rev orderedStackIds
-
-        for i in 0 .. orderedStackIds.Length - 2 do
-            sb.AppendLine(
-                sprintf "  n%d -> n%d [style=dashed, constraint=false];" orderedStackIds.[i] orderedStackIds.[i + 1]
-            )
+        for i in 0 .. stackIds.Length - 2 do
+            sb.AppendLine(sprintf "  n%d -> n%d [style=dashed, constraint=false];" stackIds.[i] stackIds.[i + 1])
             |> ignore
 
-        if not (List.isEmpty orderedStackIds) then
-            let idList = orderedStackIds |> List.map (sprintf "n%d") |> String.concat "; "
+        if not (List.isEmpty stackIds) then
+            let idList = stackIds |> List.map (sprintf "n%d") |> String.concat "; "
 
             sb.AppendLine(sprintf "  {rank=same; %s}" idList) |> ignore
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
-    /// Render a derivation tree with an overlay LR stack chain as a Graphviz dot graph.
-    /// stack is the full LR stack frame list (top-to-bottom order), including LRState frames.
-    /// LRSymbol frames render as derivation tree nodes. LRState frames render as labeled "sN" nodes.
+    /// Render LR parser stack frames as a combined stack-tree Graphviz dot graph.
+    /// LRSymbol frames render as derivation tree nodes (subtrees fully expanded).
+    /// LRState frames render as labeled "sN" boxes.
     /// All frames are connected via dashed edges and constrained to the same rank.
-    let toDotWithLRStack
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
-        (tree: DerivationTree<'t, 'nt>)
-        (stack: LRStackFrame<'t, 'nt> list)
-        : string =
+    let toDotWithLRStack (symbolVisualizer: Symbol<'t, 'nt> -> string) (stack: LRStackFrame<'t, 'nt> list) : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph StackTree {") |> ignore
@@ -140,11 +109,8 @@ module DerivationTreeDot =
             nodeId <- nodeId + 1
             nodeId
 
-        let mutable nodeIds: (int * DerivationTree<'t, 'nt>) list = []
-
-        let rec traverse (node: DerivationTree<'t, 'nt>) : int =
+        let rec renderTree (node: DerivationTree<'t, 'nt>) : int =
             let nid = nextId ()
-            nodeIds <- (nid, node) :: nodeIds
 
             match node with
             | Leaf sym ->
@@ -156,50 +122,35 @@ module DerivationTreeDot =
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
                 for child in children do
-                    let childId = traverse child
+                    let childId = renderTree child
                     sb.AppendLine(sprintf "  n%d -> n%d;" nid childId) |> ignore
 
             nid
 
-        traverse tree |> ignore
-
-        let mutable orderedStackIds: int list = []
+        let mutable stackIds: int list = []
 
         for frame in stack do
-            match frame with
-            | LRSymbol st ->
-                match nodeIds |> List.tryFind (fun (_, n) -> n = st) with
-                | Some(id, _) -> orderedStackIds <- (id :: orderedStackIds)
-                | None ->
+            let nid =
+                match frame with
+                | LRSymbol st -> renderTree st
+                | LRState s ->
                     let nid = nextId ()
 
-                    match st with
-                    | Leaf sym ->
-                        let label = escapeLabel (symbolVisualizer sym)
-                        sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
-                    | Node(nt, _) ->
-                        let label = escapeLabel (symbolVisualizer (N nt))
-                        sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
+                    sb.AppendLine(sprintf "  n%d [label=\"s%d\", shape=box, style=filled, fillcolor=lightgray];" nid s)
+                    |> ignore
 
-                    orderedStackIds <- (nid :: orderedStackIds)
-            | LRState s ->
-                let nid = nextId ()
+                    nid
 
-                sb.AppendLine(sprintf "  n%d [label=\"s%d\", shape=box, style=filled, fillcolor=lightgray];" nid s)
-                |> ignore
+            stackIds <- nid :: stackIds
 
-                orderedStackIds <- (nid :: orderedStackIds)
+        stackIds <- List.rev stackIds
 
-        orderedStackIds <- List.rev orderedStackIds
-
-        for i in 0 .. orderedStackIds.Length - 2 do
-            sb.AppendLine(
-                sprintf "  n%d -> n%d [style=dashed, constraint=false];" orderedStackIds.[i] orderedStackIds.[i + 1]
-            )
+        for i in 0 .. stackIds.Length - 2 do
+            sb.AppendLine(sprintf "  n%d -> n%d [style=dashed, constraint=false];" stackIds.[i] stackIds.[i + 1])
             |> ignore
 
-        if not (List.isEmpty orderedStackIds) then
-            let idList = orderedStackIds |> List.map (sprintf "n%d") |> String.concat "; "
+        if not (List.isEmpty stackIds) then
+            let idList = stackIds |> List.map (sprintf "n%d") |> String.concat "; "
 
             sb.AppendLine(sprintf "  {rank=same; %s}" idList) |> ignore
 

@@ -28,8 +28,7 @@ module LLStackFrame =
 /// Data for a single LL parser visualization step.
 [<Struct>]
 type LLParsingStep<'t, 'nt> =
-    { tree: DerivationTree<'t, 'nt>
-      stack: LLStackFrame<'t, 'nt> list
+    { stack: LLStackFrame<'t, 'nt> list
       input: StepInput<'t, 'nt> }
 
 /// Frame on the unified LR parser stack.
@@ -54,6 +53,5 @@ module LRSymbol =
 /// Data for a single LR parser visualization step.
 [<Struct>]
 type LRParsingStep<'t, 'nt> =
-    { tree: DerivationTree<'t, 'nt>
-      stack: LRStackFrame<'t, 'nt> list
+    { stack: LRStackFrame<'t, 'nt> list
       input: StepInput<'t, 'nt> }

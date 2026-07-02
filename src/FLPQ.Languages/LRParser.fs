@@ -461,21 +461,8 @@ module LRParser =
             | _ -> failwith "Expected state on top of LR stack"
 
         let recordStep () =
-            let trees =
-                stack
-                |> List.choose (function
-                    | LRSymbol t -> Some t
-                    | _ -> None)
-
-            let currentTree =
-                match trees with
-                | [ t ] -> t
-                | [] -> Leaf(Epsilon)
-                | _ -> Node(aug.start, trees)
-
             steps <-
-                { tree = currentTree
-                  stack = stack
+                { stack = stack
                   input = { tokens = tokens; position = pos } }
                 :: steps
 

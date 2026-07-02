@@ -65,25 +65,19 @@ module LLParser =
 
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
-        let recordStep (stack: LLStackFrame<'t, 'nt> list) (pos: int) (completed: DerivationTree<'t, 'nt> list) =
-            let currentTree =
-                match completed with
-                | [ t ] -> t
-                | [] -> Leaf(Epsilon)
-                | _ -> Node(g.start, completed)
-
-            steps <-
-                { tree = currentTree
-                  stack = stack
-                  input = { tokens = tokens; position = pos } }
-                :: steps
+        let recordStep (stack: LLStackFrame<'t, 'nt> list) (pos: int) =
+            if not (List.isEmpty stack) then
+                steps <-
+                    { stack = stack
+                      input = { tokens = tokens; position = pos } }
+                    :: steps
 
         let rec parseLoop
             (stack: LLStackFrame<'t, 'nt> list)
             (pos: int)
             (completed: DerivationTree<'t, 'nt> list)
             : Option<int * DerivationTree<'t, 'nt> list> =
-            recordStep stack pos completed
+            recordStep stack pos
 
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, completed) else None
