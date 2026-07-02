@@ -29,7 +29,7 @@ module GrammarTeX =
                 | [] -> @"\varepsilon"
                 | syms -> syms |> List.map symToTeX |> String.concat "\\ "
 
-            sb.AppendLine(sprintf "%s &\rightarrow %s \\\\" lhs rhs) |> ignore
+            sb.AppendLine(sprintf @"%s &\rightarrow %s \\" lhs rhs) |> ignore
 
         sb.Append(@"\end{align*}") |> ignore
         sb.ToString()
