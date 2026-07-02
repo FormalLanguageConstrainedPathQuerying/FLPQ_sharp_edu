@@ -512,6 +512,6 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     5.  For Valiant render both set-based matrix and boolean decomposition.
 [done] 84. Fix grammar rendering in TeX. Arrow is broken.
 [done] 85. Add generation of input string for CYK and Valiant.
-86. In run_vix.py script. If pdflatex returns not 0 it is not a warning. It is a problem. Generated TeX must be fully correct.
+[done] 86. In run_vix.py script. If pdflatex returns not 0 it is not a warning. It is a problem. Generated TeX must be fully correct.
 87. Add generation for LL and LR: grammar, table, automata for LR, parsing steps. Add examples. Grammar: S -> a S b S | eps. Input: aababb
 88. GLL.
