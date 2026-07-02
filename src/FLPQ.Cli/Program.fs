@@ -51,6 +51,12 @@ module Program =
             writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].treeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
 
+    let private symbolPrinter (sym: Symbol<string, string>) =
+        match sym with
+        | T(Terminal t) -> string t
+        | N(Nonterminal n) -> string n
+        | Epsilon -> "\\varepsilon"
+
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
@@ -141,6 +147,15 @@ module Program =
         let tokens = Tokenizer.tokenizeTerminals inputTokens
         let table = LLParser.buildTable grammar k
 
+        let firstMap = FirstFollow.firstK grammar k
+        let followMap = FirstFollow.followK grammar k
+
+        writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+
+        writeOutputFile
+            (Path.Combine(outputDir, "ll_table.tex"))
+            (LLTableTeX.tableToTeX symbolPrinter grammar k firstMap followMap table)
+
         let _, steps = LLParser.parseWithSteps grammar table k tokens
         let vizSteps = LLStepVisualizer.renderSteps string steps
         writeStepsVisualization outputDir vizSteps
@@ -155,6 +170,14 @@ module Program =
 
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let table = LRParser.buildSLR1Table aug
+        let automaton = LRAutomaton.buildLR0 aug
+
+        writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+        writeOutputFile (Path.Combine(outputDir, "lr_table.tex")) (LRTableTeX.tableToTeX symbolPrinter aug table)
+
+        writeOutputFile
+            (Path.Combine(outputDir, "lr_automaton.dot"))
+            (AutomatonDot.dfaToDot (fun idx _ -> sprintf "State %d" idx) automaton)
 
         let _, steps = LRParser.parseWithSteps aug table tokens
         let vizSteps = LRStepVisualizer.renderSteps string steps

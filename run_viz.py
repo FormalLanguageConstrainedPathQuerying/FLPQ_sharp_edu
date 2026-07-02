@@ -48,9 +48,8 @@ __CONTENT__
 \end{document}
 """
 
-EXAMPLE_GRAMMAR = r"""S -> S S
-S -> eps
-S -> a S b"""
+EXAMPLE_GRAMMAR = r"""S -> a S b S
+S -> eps"""
 
 EXAMPLE_INPUT = "a a b a b b"
 
@@ -180,6 +179,36 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
         tex_source.append(r"\end{center}")
         tex_source.append("")
 
+    ll_table = viz_path / "ll_table.tex"
+    if ll_table.exists():
+        tex_source.append(r"\subsection*{LL Parsing Table}")
+        tex_source.append(r"\begin{center}")
+        tex_source.append(ll_table.read_text(encoding="utf-8").strip())
+        tex_source.append(r"\end{center}")
+        tex_source.append("")
+
+    lr_table = viz_path / "lr_table.tex"
+    if lr_table.exists():
+        tex_source.append(r"\subsection*{LR Parsing Table}")
+        tex_source.append(r"\begin{center}")
+        tex_source.append(lr_table.read_text(encoding="utf-8").strip())
+        tex_source.append(r"\end{center}")
+        tex_source.append("")
+
+    lr_automaton = viz_path / "lr_automaton.dot"
+    if lr_automaton.exists():
+        pdf_path = dot_pdf_dir / "lr_automaton.pdf"
+        if compile_dot_to_pdf(lr_automaton, pdf_path):
+            tex_source.append(r"\subsection*{LR Automaton}")
+            tex_source.append(
+                r"\begin{center}"
+                r"\includegraphics[width=0.9\textwidth,keepaspectratio]{{"
+                + "../" + str(pdf_path.relative_to(algo_dir).as_posix())
+                + r"}}"
+                r"\end{center}"
+            )
+            tex_source.append("")
+
     for step_dir in step_dirs:
         step_name = step_dir.name
         step_num = step_name.split("_")[1]
@@ -195,7 +224,7 @@ def process_algorithm(algorithm, viz_dir, result_dir, repo_root):
                 tex_source.append(
                     r"\begin{center}"
                     r"\includegraphics[width=0.9\textwidth,keepaspectratio]{{"
-                    + str(pdf_path.relative_to(algo_dir).as_posix())
+                    + "../" + str(pdf_path.relative_to(algo_dir).as_posix())
                     + r"}}"
                     r"\end{center}"
                 )
@@ -291,10 +320,11 @@ def main():
         input_file = os.path.join(tmpdir, "input.txt")
         Path(grammar_file).write_text(EXAMPLE_GRAMMAR)
         Path(input_file).write_text(EXAMPLE_INPUT)
-        algorithms = ["CYK", "Valiant"]
+        algorithms = ["CYK", "Valiant", "LL", "LR"]
         output_dir = args.output
-        print(f"Grammar: S -> S S | eps | a S b")
+        print(f"Grammar: S -> a S b S | eps")
         print(f"Input:   a a b a b b")
+        print(f"Algorithms: CYK, Valiant, LL, LR")
     else:
         if not args.grammar or not args.input:
             parser.error("--grammar and --input required unless --example is used")
