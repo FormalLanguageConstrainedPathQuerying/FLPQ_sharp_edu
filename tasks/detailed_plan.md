@@ -1,31 +1,23 @@
-# Detailed Plan: Task 88 — Fix nonterminals rendering in TeX
+# Detailed Plan: Task 89 — Fix input rendering for LL and LR
 
 ## Goal
 
-Generate unique `N_i`-style names directly during CNF conversion instead of using regex to reformat `N_CNF_{i}` names in three separate printer modules.
+Render Terminal content without F# type wrappers in LL and LR step visualization. Use a proper symbol print function instead of `string`.
 
 ## Changes
 
-### 1. `src/FLPQ.Languages/Grammar.fs` (line 385)
-- Change `freshStringNonterminal` from `$"N_CNF_{i}"` to `$"N_{i}"`
-- The index `i` is already unique (counter increments per call in `toCnf`)
+### 1. `src/FLPQ.Cli/Program.fs`
+- Line 160: Change `LLStepVisualizer.renderSteps string steps` to `LLStepVisualizer.renderSteps symbolPrinter steps`
+- Line 183: Change `LRStepVisualizer.renderSteps string steps` to `LRStepVisualizer.renderSteps symbolPrinter steps`
 
-### 2. `src/FLPQ.Printers/ValiantTeX.fs` (lines 10–11)
-- Remove `shortNtName` function with regex
-- Replace uses with `string n` directly
-- Remove `System.Text.RegularExpressions` import (if no longer used)
+### 2. `tests/FLPQ.Printers.Tests/LLVisualizerTests.fs`
+- Add a `symbolPrinter` helper that unwraps Terminal/Nonterminal/Epsilon
+- Replace `string` with `symbolPrinter` in all calls to `LLStepVisualizer.renderSteps`
 
-### 3. `src/FLPQ.Printers/GrammarTeX.fs` (lines 10–11)
-- Remove `shortNtName` function with regex
-- Replace uses with `string n` directly  
-- Remove `System.Text.RegularExpressions` import
-
-### 4. `src/FLPQ.Printers/CykTeX.fs` (lines 11–12)
-- Remove `shortNtName` function with regex
-- Replace `shortNtName nt` with `string nt` in `shortSymbolPrinter`
-- Remove `System.Text.RegularExpressions` import
+### 3. `tests/FLPQ.Printers.Tests/LRVisualizerTests.fs`
+- Add a `symbolPrinter` helper that unwraps Terminal/Nonterminal/Epsilon
+- Replace `string` with `symbolPrinter` in all calls to `LRStepVisualizer.renderSteps`
 
 ## Verification
-- No remaining regex `N_CNF_` patterns in source
 - All tests pass
 - Check formatting

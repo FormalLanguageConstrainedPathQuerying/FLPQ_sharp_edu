@@ -5,6 +5,12 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
+let private symbolPrinter (sym: Symbol<string, string>) =
+    match sym with
+    | T(Terminal t) -> t
+    | N(Nonterminal n) -> n
+    | Epsilon -> "\\varepsilon"
+
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -19,7 +25,7 @@ let ``LL step visualization for grammar1 produces valid combined DOT and TeX`` (
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps string steps
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
 
@@ -43,7 +49,7 @@ let ``LL step visualization includes input position marker`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b a b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps string steps
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.True(vizSteps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
@@ -59,7 +65,7 @@ let ``LL step visualization stack has bottom on left`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps string steps
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
 
@@ -75,7 +81,7 @@ let ``LL step visualization for accepted string returns success steps`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps string steps
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
 

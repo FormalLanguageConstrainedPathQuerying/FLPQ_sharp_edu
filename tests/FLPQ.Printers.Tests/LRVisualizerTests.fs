@@ -5,6 +5,12 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
+let private symbolPrinter (sym: Symbol<string, string>) =
+    match sym with
+    | T(Terminal t) -> t
+    | N(Nonterminal n) -> n
+    | Epsilon -> "\\varepsilon"
+
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -21,7 +27,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps string steps
+    let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
 
@@ -47,7 +53,7 @@ let ``LR step visualization includes input position marker`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps string steps
+    let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.True(vizSteps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
 
@@ -69,7 +75,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "x + x"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps string steps
+    let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
 
@@ -91,7 +97,7 @@ let ``LR step visualization includes state frames with sN labels`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps string steps
+    let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
     let firstStep = vizSteps.[0]

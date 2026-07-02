@@ -157,7 +157,7 @@ module Program =
             (LLTableTeX.tableToTeX symbolPrinter grammar k firstMap followMap table)
 
         let _, steps = LLParser.parseWithSteps grammar table k tokens
-        let vizSteps = LLStepVisualizer.renderSteps string steps
+        let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
         writeStepsVisualization outputDir vizSteps
         printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir
 
@@ -180,7 +180,7 @@ module Program =
             (AutomatonDot.dfaToDot (fun idx _ -> sprintf "State %d" idx) automaton)
 
         let _, steps = LRParser.parseWithSteps aug table tokens
-        let vizSteps = LRStepVisualizer.renderSteps string steps
+        let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
         writeStepsVisualization outputDir vizSteps
         printfn "LR trace: %d steps written to %s" vizSteps.Length outputDir
 
