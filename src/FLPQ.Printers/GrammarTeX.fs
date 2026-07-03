@@ -17,7 +17,7 @@ module GrammarTeX =
 
         for idx in 0 .. orderedRules.Length - 1 do
             let rule = orderedRules.[idx]
-            let lhs = string rule.lhs
+            let lhs = SymbolTeX.nonterminalContent rule.lhs
 
             let rhs =
                 match rule.rhs with

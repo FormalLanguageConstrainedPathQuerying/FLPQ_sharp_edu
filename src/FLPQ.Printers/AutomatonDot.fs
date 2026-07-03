@@ -36,6 +36,7 @@ module AutomatonDot =
             sb.AppendLine(sprintf "  s%d [%s];" idx attrs) |> ignore
 
     let private transitionEdges
+        (labelPrinter: 't -> string)
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
         (sb: System.Text.StringBuilder)
         : unit =
@@ -48,7 +49,7 @@ module AutomatonDot =
                         |> NonEmptySet.toSeq
                         |> Seq.choose (fun l ->
                             match l with
-                            | ATerm t -> Some(string t)
+                            | ATerm t -> Some(labelPrinter t)
                             | AEpsilon -> None)
                         |> List.ofSeq
 
@@ -72,28 +73,28 @@ module AutomatonDot =
                 | _ -> ()
 
     /// Render an NFA as a Graphviz dot graph.
-    let nfaToDot (stateVisualizer: int -> 's -> string) (nfa: NFA<'t, 's>) : string =
+    let nfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (nfa: NFA<'t, 's>) : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
         stateDeclarations nfa.states.Length stateVisualizer nfa.states nfa.startStates nfa.finalStates sb
-        transitionEdges nfa.transitions sb
+        transitionEdges labelPrinter nfa.transitions sb
         epsEdges nfa.transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
     /// Render a DFA as a Graphviz dot graph.
-    let dfaToDot (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
+    let dfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
         stateDeclarations dfa.states.Length stateVisualizer dfa.states (set [ dfa.startState ]) dfa.finalStates sb
-        transitionEdges dfa.transitions sb
+        transitionEdges labelPrinter dfa.transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()

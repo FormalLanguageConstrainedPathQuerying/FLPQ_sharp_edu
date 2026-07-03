@@ -48,7 +48,7 @@ module ValiantTeX =
     /// Render a boolean decomposition matrix for a single nonterminal.
     let boolDecompToTeX (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
         @"\mathrm{"
-        + string nt
+        + SymbolTeX.nonterminalContent nt
         + "}\n"
         + MatrixTeX.toTeX true true ParsingTableTeX.boolToTeX mat
 

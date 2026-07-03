@@ -63,9 +63,9 @@ module Program =
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
         let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
 
-        let termPrinter (Terminal t) = t
-
-        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow termPrinter tokenList -1)
+        writeOutputFile
+            (Path.Combine(outputDir, "input.tex"))
+            (TeXRenderer.inputRow SymbolTeX.terminalContent tokenList -1)
 
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
@@ -93,9 +93,9 @@ module Program =
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
         let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
 
-        let termPrinter (Terminal t) = t
-
-        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow termPrinter tokenList -1)
+        writeOutputFile
+            (Path.Combine(outputDir, "input.tex"))
+            (TeXRenderer.inputRow SymbolTeX.terminalContent tokenList -1)
 
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
@@ -159,7 +159,7 @@ module Program =
 
         writeOutputFile
             (Path.Combine(outputDir, "lr_automaton.dot"))
-            (AutomatonDot.dfaToDot (fun idx _ -> sprintf "State %d" idx) automaton)
+            (AutomatonDot.dfaToDot SymbolTeX.toLaTeX (fun idx _ -> sprintf "State %d" idx) automaton)
 
         let _, steps = LRParser.parseWithSteps aug table tokens
         let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps

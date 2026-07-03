@@ -12,7 +12,7 @@ let ``simple automaton dot compiles`` () =
     let aut =
         Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-    let dot = AutomatonDot.nfaToDot (fun i s -> s) aut
+    let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
     Assert.Contains("digraph Automaton", dot)
     Assert.Contains("rankdir=LR", dot)
     Assert.Contains("fillcolor=green", dot)
@@ -38,6 +38,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
 
     let dot =
         AutomatonDot.dfaToDot
+            string
             (fun idx items ->
                 let itemStrs =
                     items
@@ -71,7 +72,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
 let ``automaton with no transitions compiles`` () =
     let aut = Nfa.fromTransitions [ "s0" ] [] Set.empty (set [ 0 ]) (set [ 0 ])
 
-    let dot = AutomatonDot.nfaToDot (fun i s -> s) aut
+    let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
 
     let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(1, info.nodeCount)
@@ -83,7 +84,7 @@ let ``multiple start and final states`` () =
     let aut =
         Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] Set.empty (set [ 0; 1 ]) (set [ 1; 2 ])
 
-    let dot = AutomatonDot.nfaToDot (fun i s -> s) aut
+    let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
 
