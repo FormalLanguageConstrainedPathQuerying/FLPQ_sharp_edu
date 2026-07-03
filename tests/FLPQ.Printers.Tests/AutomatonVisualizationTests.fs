@@ -18,7 +18,7 @@ let ``simple automaton dot compiles`` () =
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
 
-    let info = TestUtils.checkDotCompilesWithInfo dot
+    let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(2, info.nodeCount)
     Assert.Equal(3, info.edgeCount)
 
@@ -62,7 +62,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
 
     Assert.Contains("digraph Automaton", dot)
 
-    let info = TestUtils.checkDotCompilesWithInfo dot
+    let info = ExternalTools.compileDotStringToInfo dot
     Assert.True(info.nodeCount > 0)
     Assert.True(info.edgeCount > 0)
 
@@ -73,7 +73,7 @@ let ``automaton with no transitions compiles`` () =
 
     let dot = AutomatonDot.nfaToDot (fun i s -> s) aut
 
-    let info = TestUtils.checkDotCompilesWithInfo dot
+    let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(1, info.nodeCount)
     Assert.Equal(0, info.edgeCount)
 
@@ -87,6 +87,6 @@ let ``multiple start and final states`` () =
     Assert.Contains("fillcolor=green", dot)
     Assert.Contains("peripheries=2", dot)
 
-    let info = TestUtils.checkDotCompilesWithInfo dot
+    let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(3, info.nodeCount)
     Assert.Equal(2, info.edgeCount)

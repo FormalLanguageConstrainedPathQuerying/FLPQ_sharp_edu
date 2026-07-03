@@ -6,13 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TestUtils.fs" />
+    <Compile Include="ExternalToolsTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
     <Compile Include="DerivationTreeVisualizationTests.fs" />
     <Compile Include="LLVisualizerTests.fs" />
     <Compile Include="LRVisualizerTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
+    <Compile Include="CliSummaryTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,6 +23,18 @@
     </Content>
     <Content Include="..\..\data\tex_tabular_template.tex">
       <Link>tex_tabular_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\tex_summary_template.tex">
+      <Link>tex_summary_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_grammar.bnf">
+      <Link>example_grammar.bnf</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_input.txt">
+      <Link>example_input.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -38,6 +51,7 @@
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
   </ItemGroup>
 
 </Project>

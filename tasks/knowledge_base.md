@@ -213,3 +213,26 @@ When searching for usages of a removed field or renamed function, prefer `grep` 
 - **Explicit `bool` parameter**: accept the flag as a required parameter. Callers always pass the flag.
 - **`Option<'T>` parameter**: accept `Option<bool>` explicitly. Callers pass `None` or `Some true`.
 
+## pdflatex Exit Code 0 Despite Errors
+
+**Problem**: `pdflatex -interaction=nonstopmode` can exit with code 0 even when the TeX source contains undefined control sequences or other errors. Relying solely on the exit code misses compilation failures.
+
+**Solution**: Always check three things together:
+1. Exit code is 0.
+2. No line in stdout starts with `!` (TeX error marker) or contains `Fatal error` or `Error:`.
+3. The output PDF exists and is non-empty (size > 0).
+
+This triple check is implemented in `FLPQ.Printers.ExternalTools.pdflatexSucceeded`. See `src/FLPQ.Printers/ExternalTools.fs`.
+
+## F# Pattern Type Annotation Syntax
+
+`let f (Terminal t: string) = t` is parsed as `let f ((Terminal t): string) = t` — the annotation applies to the whole pattern, not the inner binding. To annotate the inner binding of a constructor pattern, use explicit parentheses: `let f (Terminal (t: string)) = t`. The simpler form `let f (Terminal t) = t` lets type inference figure out the inner type from context.
+
+## Argu Flag (No-Payload) Union Cases in `IArgParserTemplate`
+
+For a flag union case like `| Summary`, the `Usage` property match must use `| Summary` (not `| Summary _`). Using `Summary _` produces warning FS3548: "Pattern discard is not allowed for union case that takes no data."
+
+## Testable CLI Entry Points
+
+An `[<EntryPoint>]` function should delegate to a separate `runCli : string[] -> int` function. Calling `System.Environment.Exit` directly inside the entry point terminates the test runner when the CLI is invoked from tests. The wrapper pattern (`runCli` returns int, `main` delegates) lets `CliSummaryTests` call `Program.runCli args` and assert on the return code without killing the process.
+

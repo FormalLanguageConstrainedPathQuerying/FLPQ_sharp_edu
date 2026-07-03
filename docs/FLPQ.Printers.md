@@ -30,6 +30,7 @@ or Dot (for graph/tree visualization).
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |
 | [LRStepVisualizer](lr-step-visualizer.md) | LR parser step-by-step visualization |
+| [ExternalTools](external-tools.md) | Graphviz and pdflatex wrappers (shared by CLI and tests) |
 
 ## Design
 

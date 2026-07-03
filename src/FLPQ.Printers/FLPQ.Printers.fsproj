@@ -19,6 +19,7 @@
     <Compile Include="LRTableTeX.fs" />
     <Compile Include="LLStepVisualizer.fs" />
     <Compile Include="LRStepVisualizer.fs" />
+    <Compile Include="ExternalTools.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -529,7 +529,16 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     2. Valiant (with modified version) uses boolean decomposition of this type.
     3. Refactor both algorithms and visualisation to use this type.
     4. tokens are terminals, not Symbols. Terminals do not contain nonterminals.
-94. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+94. [done] Move run_viz.py to F#.
+    1.  Locate examples (grammars and inputs) in data forlder.
+    2.  Add to existing CLI option that indicates that not only steps must be generated, but summary (current result of run_viz.py) document also must be generated.
+    3.  Reuse existing functions to run dot and tex, that used in tests.
+    4.  Split logic into functions that perform algortithm-specific actions to combine final documents.
+    5.  Final generated tex must be compiled twice.
+    6.  No errors in tex and dot compilation. Fail if any problems detected. Generated tex and dot must be correct.
+    7.  Remove run_viz.py
+    8.  Check that examples generates and compiles successfully. 
+95. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {

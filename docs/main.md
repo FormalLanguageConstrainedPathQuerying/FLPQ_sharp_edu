@@ -38,4 +38,5 @@
 * [AutomatonDot module](automaton-viz.md)
 * [DerivationTreeDot module](derivation-tree-viz.md)
 * [LL and LR steps visualization](visualization-types.md)
+* [ExternalTools module](external-tools.md)
 * [CLI console application](cli.md)

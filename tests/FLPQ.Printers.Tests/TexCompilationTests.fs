@@ -19,7 +19,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
 
     let step = trace.[0]
     let tex = CykTeX.tableToTeX step.table
-    Assert.True(TestUtils.checkTexCompiles templatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -31,7 +31,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
 
     for step in trace do
         let tex = CykTeX.tableToTeX step.table
-        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -45,7 +45,7 @@ let ``LL step input TeX compiles with pdflatex`` () =
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
-        Assert.True(TestUtils.checkTexCompiles templatePath step.input)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.input)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -60,7 +60,7 @@ let ``LR step input TeX compiles with pdflatex`` () =
     let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
 
     for step in vizSteps do
-        Assert.True(TestUtils.checkTexCompiles templatePath step.input)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.input)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -77,7 +77,7 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
             MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -95,7 +95,7 @@ let ``Modified Valiant trace TeX compiles with pdflatex`` () =
     for step in trace do
         let tex = ValiantTeX.modifiedStepToTeX step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -120,7 +120,7 @@ S -> ( S )
     for step in trace do
         let tex = ValiantTeX.modifiedStepToTeX step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(TestUtils.checkTexCompiles templatePath tex)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 let private tabularTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_tabular_template.tex")
@@ -135,7 +135,7 @@ let ``LL table TeX compiles with pdflatex for grammar1`` () =
 
     let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
     Assert.Contains(@"r || c | c || c | c | c", tex)
     Assert.Contains(@"\operatorname{First}", tex)
@@ -167,7 +167,7 @@ T -> c
 
     let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
     Assert.Contains(@"$E$", tex)
     Assert.Contains(@"$T$", tex)
@@ -187,7 +187,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
 
     let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
     Assert.Contains(@"$s_", tex)
     Assert.Contains(@"$r_", tex)
@@ -204,7 +204,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
 
     let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
     Assert.True(table.conflicts.Length > 0)
 
@@ -218,7 +218,7 @@ let ``CLR(1) table TeX compiles for grammar1`` () =
 
     let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -240,7 +240,7 @@ F -> x
 
     let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
-    Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
     Assert.Contains(@"E", tex)
     Assert.Contains(@"T", tex)

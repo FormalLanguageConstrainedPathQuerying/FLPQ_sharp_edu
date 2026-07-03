@@ -29,7 +29,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
     for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
-        let info = TestUtils.checkDotCompilesWithInfo step.treeAndStack
+        let info = ExternalTools.compileDotStringToInfo step.treeAndStack
         Assert.True(info.nodeCount > 0)
 
     Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))

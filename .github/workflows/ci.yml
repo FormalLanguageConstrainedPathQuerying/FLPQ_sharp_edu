@@ -35,8 +35,8 @@ jobs:
       - name: Build
         run: dotnet build -c ${{ matrix.config }} --no-restore
 
-      - name: Test (excluding Graphviz)
-        run: dotnet test -c ${{ matrix.config }} --no-build --filter "Category!=Graphviz&Category!=TeX"
+      - name: Test (excluding Graphviz/TeX/Summary)
+        run: dotnet test -c ${{ matrix.config }} --no-build --filter "Category!=Graphviz&Category!=TeX&Category!=Summary"
 
   graphviz-tests:
     needs: build-and-test

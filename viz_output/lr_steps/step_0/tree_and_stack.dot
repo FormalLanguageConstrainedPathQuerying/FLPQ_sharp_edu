@@ -1,6 +1,0 @@
-digraph StackTree {
-  rankdir=TB;
-  n1 [label="Epsilon", shape=box];
-  n2 [label="s0", shape=box, style=filled, fillcolor=lightgray];
-  {rank=same; n2}
-}

@@ -1,9 +1,0 @@
-digraph StackTree {
-  rankdir=TB;
-  n1 [label="T (Terminal \"a\")", shape=box];
-  n2 [label="s1", shape=box, style=filled, fillcolor=lightgray];
-  n3 [label="s0", shape=box, style=filled, fillcolor=lightgray];
-  n2 -> n1 [style=dashed, constraint=false];
-  n1 -> n3 [style=dashed, constraint=false];
-  {rank=same; n2; n1; n3}
-}
