@@ -53,7 +53,7 @@ module LLParser =
             tokens.[pos .. endIdx - 1]
 
     /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.
-    /// Uses a single unified stack where tree nodes are symbols.
+    /// Uses a unified stack with markers to track nonterminal boundaries and build properly nested trees.
     /// Also collects visualization steps as structured data.
     let parseWithSteps
         (g: Grammar<'t, 'nt>)
@@ -65,43 +65,67 @@ module LLParser =
 
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
-        let recordStep (stack: LLStackFrame<'t, 'nt> list) (pos: int) =
+        let recordStep (stack: LLStackFrame<'t, 'nt> list) (pos: int) (completed: DerivationTree<'t, 'nt> list) =
             if not (List.isEmpty stack) then
                 steps <-
                     { stack = stack
+                      completed = completed
                       input = { tokens = terminals; position = pos } }
                     :: steps
+
+        let expandNonterminal
+            (nt: Nonterminal<'nt>)
+            (restStack: LLStackFrame<'t, 'nt> list)
+            (la: Symbol<'t, 'nt> list)
+            : Option<LLStackFrame<'t, 'nt> list> =
+            let key = (nt, la)
+
+            match Map.tryFind key table with
+            | Some ruleIdx ->
+                let rule = g.rules.[ruleIdx]
+                let rhsSyms = Rhs.toList rule.rhs
+                let rhsFrames = rhsSyms |> List.map (fun sym -> LLTree(Leaf sym))
+                let marker = LLMarker(nt, rhsSyms.Length)
+                Some(rhsFrames @ (marker :: restStack))
+            | None -> None
 
         let rec parseLoop
             (stack: LLStackFrame<'t, 'nt> list)
             (pos: int)
             (completed: DerivationTree<'t, 'nt> list)
             : Option<int * DerivationTree<'t, 'nt> list> =
-            recordStep stack pos
+            recordStep stack pos completed
 
             match stack with
             | [] -> if pos = tokens.Length then Some(pos, completed) else None
-            | LLFrame(Leaf(T _ as sym) as tree) :: restStack ->
+
+            | LLTree(Leaf(T _ as sym) as tree) :: restStack ->
                 if pos < tokens.Length && tokens.[pos] = sym then
                     parseLoop restStack (pos + 1) (completed @ [ tree ])
                 else
                     None
-            | LLFrame(Leaf(Epsilon) as tree) :: restStack -> parseLoop restStack pos (completed @ [ tree ])
-            | LLFrame(Leaf(N nt)) :: restStack
-            | LLFrame(Node(nt, _)) :: restStack ->
+
+            | LLTree(Leaf(Epsilon) as tree) :: restStack -> parseLoop restStack pos (completed @ [ tree ])
+
+            | LLTree(Leaf(N nt)) :: restStack
+            | LLTree(Node(nt, _)) :: restStack ->
                 let la = lookahead tokens pos k
-                let key = (nt, la)
 
-                match Map.tryFind key table with
-                | Some ruleIdx ->
-                    let rule = g.rules.[ruleIdx]
-                    let rhsFrames = Rhs.toList rule.rhs |> List.map (fun sym -> LLFrame(Leaf sym))
-
-                    parseLoop (rhsFrames @ restStack) pos completed
+                match expandNonterminal nt restStack la with
+                | Some newStack -> parseLoop newStack pos completed
                 | None -> None
 
-        match parseLoop ([ LLFrame(Node(g.start, [])) ]) 0 [] with
-        | Some(finalPos, leafTrees) when finalPos = tokens.Length -> Some(Node(g.start, leafTrees)), List.rev steps
+            | LLMarker(nt, n) :: restStack ->
+                let revCompleted = List.rev completed
+                let children = revCompleted |> List.take n |> List.rev
+                let restCompleted = revCompleted |> List.skip n |> List.rev
+                let newNode = Node(nt, children)
+                parseLoop restStack pos (restCompleted @ [ newNode ])
+
+        match parseLoop ([ LLTree(Leaf(N g.start)) ]) 0 [] with
+        | Some(finalPos, completedTrees) when finalPos = tokens.Length ->
+            let tree = List.tryLast completedTrees
+            tree, List.rev steps
         | _ -> None, List.rev steps
 
     /// Parse pre-tokenized input using an LL(k) parsing table, building a derivation tree.

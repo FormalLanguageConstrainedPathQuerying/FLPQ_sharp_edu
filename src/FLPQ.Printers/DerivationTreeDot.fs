@@ -43,10 +43,15 @@ module DerivationTreeDot =
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
-    /// Render LL parser stack frames as a combined stack-tree Graphviz dot graph.
-    /// Each LLFrame contains a derivation tree node (Leaf or Node).
-    /// Stack frames are connected via a dashed chain and constrained to the same rank.
-    let toDotWithLLStack (symbolVisualizer: Symbol<'t, 'nt> -> string) (stack: LLStackFrame<'t, 'nt> list) : string =
+    /// Render LL parser stack frames and completed subtrees as a combined DOT graph.
+    /// Completed subtrees are rendered as full trees on the left.
+    /// Stack frames are rendered on the right with a dashed chain and same-rank constraint.
+    /// LLMarker frames are rendered as gray boxes.
+    let toDotWithLLStack
+        (symbolVisualizer: Symbol<'t, 'nt> -> string)
+        (stack: LLStackFrame<'t, 'nt> list)
+        (completed: DerivationTree<'t, 'nt> list)
+        : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph StackTree {") |> ignore
@@ -76,9 +81,31 @@ module DerivationTreeDot =
 
             nid
 
+        if not (List.isEmpty completed) then
+            sb.AppendLine("  subgraph cluster_completed {") |> ignore
+            sb.AppendLine("    label=\"Completed subtrees\";") |> ignore
+            sb.AppendLine("    style=dashed;") |> ignore
+
+            for tree in completed do
+                renderTree tree |> ignore
+
+            sb.AppendLine("  }") |> ignore
+
         let stackIds =
             stack
-            |> List.map (fun frame -> renderTree (LLStackFrame.tree frame))
+            |> List.map (fun frame ->
+                match frame with
+                | LLTree tree -> renderTree tree
+                | LLMarker(nt, _) ->
+                    let nid = nextId ()
+                    let label = escapeLabel (symbolVisualizer (N nt))
+
+                    sb.AppendLine(
+                        sprintf "  n%d [label=\"%s\", shape=box, style=filled, fillcolor=lightgray];" nid label
+                    )
+                    |> ignore
+
+                    nid)
             |> List.rev
 
         for i in 0 .. stackIds.Length - 2 do

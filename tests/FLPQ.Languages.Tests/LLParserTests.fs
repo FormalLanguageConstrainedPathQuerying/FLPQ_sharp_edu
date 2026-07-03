@@ -54,8 +54,23 @@ module FactTests =
         match LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals "a b") with
         | Some tree ->
             match tree with
-            | Node(Nonterminal "S", _) -> ()
-            | _ -> Assert.Fail("Expected root S")
+            | Node(Nonterminal "S", children) -> Assert.Equal(4, children.Length)
+            | _ -> Assert.Fail("Expected root S with children")
+        | None -> Assert.Fail("Failed to parse a b")
+
+    [<Fact>]
+    let ``LL(1) tree is properly nested with intermediate nonterminals`` () =
+        let table = LLParser.buildTable grammar1 1
+
+        match LLParser.parse grammar1 table 1 (Tokenizer.tokenizeTerminals "a b") with
+        | Some tree ->
+            match tree with
+            | Node(Nonterminal "S",
+                   [ Leaf(T(Terminal "a"))
+                     Node(Nonterminal "S", [ Leaf(Epsilon) ])
+                     Leaf(T(Terminal "b"))
+                     Node(Nonterminal "S", [ Leaf(Epsilon) ]) ]) -> ()
+            | _ -> Assert.Fail(sprintf "Unexpected tree structure: %A" tree)
         | None -> Assert.Fail("Failed to parse a b")
 
     [<Fact>]

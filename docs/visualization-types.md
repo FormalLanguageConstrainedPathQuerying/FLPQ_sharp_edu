@@ -20,21 +20,22 @@ Input state for LL/LR parser step visualization.
 - `tokens: Symbol<'t, 'nt> list` — all input tokens
 - `position: int` — current position in the input
 
-### `LLStackFrame<'t, 'nt>` (struct)
+### `LLStackFrame<'t, 'nt>`
 
-Frame on the unified LL parser stack. Replaces the previous dual-stack (separate symbol and tree stacks). Tree nodes are symbols: current leaves of the partial tree are placed in stack and used as symbols.
+Frame on the unified LL parser stack. Two variants:
 
-- `LLFrame of Symbol<'t,'nt> * DerivationTree<'t,'nt>` — a grammar symbol with its associated tree node
+- `LLTree of DerivationTree<'t, 'nt>` — a tree node carrying the current frontier symbol (terminal, epsilon, or nonterminal leaf).
+- `LLMarker of Nonterminal<'nt> * int` — marks the boundary of a nonterminal expansion with the expected number of children. When the marker reaches the top of the stack, `n` trees are popped from `completed` and combined into `Node(nt, children)`.
 
-The unified stack represents the tree frontier: `[LLFrame(sym_k, tree_k), ..., LLFrame(sym_1, tree_1)]` (cons-based, head = top). Terminal match pops the frame and adds its tree to completed subtrees. Nonterminal expansion pops the frame and pushes RHS symbols as new `LLFrame` entries. The visualizer extracts symbols from each frame for stack display.
+The unified stack represents the tree frontier with markers for nonterminal boundaries. During nonterminal expansion, RHS symbols are pushed as `LLTree(Leaf sym)` followed by `LLMarker(nt, rhsLength)`. When a marker reaches the top, the completed children are combined into a properly nested `Node`.
 
 ### `LLParsingStep<'t, 'nt>` (struct)
 
 Data for a single LL parser visualization step. Collected during `LLParser.parseWithSteps`.
 
-- `tree: DerivationTree<'t, 'nt>` — partial derivation tree built so far
-- `stack: LLStackFrame<'t, 'nt> list` — unified LL parser stack (symbols with tree nodes)
-- `input: StepInput<'t, 'nt>` — input state
+- `stack: LLStackFrame<'t, 'nt> list` — unified LL parser stack (tree frames + markers)
+- `completed: DerivationTree<'t, 'nt> list` — roots of fully-built subtrees that have been removed from the stack
+- `input: StepInput<'t>` — input state
 
 ### `LRParsingStep<'t, 'nt>` (struct)
 
@@ -66,12 +67,12 @@ Shared TeX rendering helper for parser visualization.
 DOT rendering for derivation trees and combined stack+tree visualization.
 
 - `toDot: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> string` — renders a single derivation tree as a Graphviz DOT graph.
-- `toDotWithStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> DerivationTree<'t,'nt> list -> string` — renders a derivation tree with an overlay stack chain. `stackTrees` are the tree nodes from stack frames in top-to-bottom order. Matching tree nodes are connected via dashed edges and constrained to the same rank via `rank=same`. Non-matching stack nodes are rendered as standalone nodes.
-- `toDotWithLRStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> LRStackFrame<'t,'nt> list -> string` — renders a derivation tree with an overlay LR stack chain including all stack frames. `LRSymbol` frames render as derivation tree nodes. `LRState` frames render as labeled "sN" nodes with gray fill. All frames are connected via dashed edges and constrained to the same rank.
+- `toDotWithLLStack: (Symbol<'t,'nt> -> string) -> LLStackFrame<'t,'nt> list -> DerivationTree<'t,'nt> list -> string` — renders a combined DOT graph showing both completed subtrees and the current LL stack. Completed subtrees are rendered as full trees inside a `cluster_completed` subgraph. Stack `LLTree` frames and `LLMarker` frames (rendered as gray boxes) are connected via dashed edges and constrained to the same rank via `rank=same`.
+- `toDotWithLRStack: (Symbol<'t,'nt> -> string) -> LRStackFrame<'t,'nt> list -> string` — renders a derivation tree with an overlay LR stack chain including all stack frames. `LRSymbol` frames render as derivation tree nodes. `LRState` frames render as labeled "sN" nodes with gray fill. All frames are connected via dashed edges and constrained to the same rank.
 
 ### `LLStepVisualizer`
 
-- `renderStep: (Symbol<'t,'nt> -> string) -> LLParsingStep<'t,'nt> -> VisualizationStep` — renders a single LL parsing step (raw F# data) to a `VisualizationStep` (DOT + TeX strings) using `DerivationTreeDot.toDotWithStack` and `TeXRenderer.inputRow`.
+- `renderStep: (Symbol<'t,'nt> -> string) -> LLParsingStep<'t,'nt> -> VisualizationStep` — renders a single LL parsing step (raw F# data) to a `VisualizationStep` (DOT + TeX strings) using `DerivationTreeDot.toDotWithLLStack` and `TeXRenderer.inputRow`.
 - `renderSteps: (Symbol<'t,'nt> -> string) -> LLParsingStep<'t,'nt> list -> VisualizationStep list` — renders a list of LL parsing steps.
 
 ### `LRStepVisualizer`
@@ -100,9 +101,9 @@ Defined in `Valiant.fs`:
 
 - **Separation of data collection and rendering**: `parseWithSteps` in LLParser/LRParser collects raw F# data (`LLParsingStep`/`LRParsingStep`). Rendering to TeX/DOT strings happens in `LLStepVisualizer`/`LRStepVisualizer` using shared `TeXRenderer` functions. CYK and Valiant trace functions similarly return structured data (`CykTraceStep`/`ValiantTraceStep`); TeX conversion happens at call sites.
 - **Single combined DOT for stack+tree**: The LL and LR visualizers produce a single combined DOT graph (`treeAndStack`) instead of separate `tree.dot` and `stack.tex` files. The combined DOT shows the derivation tree with an overlay stack chain (dashed edges, `rank=same` constraint on stack nodes). Input visualization remains as TeX.
-- **LL uses `toDotWithStack`**, **LR uses `toDotWithLRStack`**: LL visualizer uses `DerivationTreeDot.toDotWithStack` (stack trees only). LR visualizer uses `DerivationTreeDot.toDotWithLRStack` which renders all `LRStackFrame` frames including `LRState` frames (labeled "sN" nodes with gray fill).
+- **LL uses `toDotWithLLStack`**, **LR uses `toDotWithLRStack`**: LL visualizer renders both completed subtrees (inside a cluster) and the stack frontier (tree frames with dashed chain, markers as gray boxes). LR visualizer uses `DerivationTreeDot.toDotWithLRStack` which renders all `LRStackFrame` frames including `LRState` frames (labeled "sN" nodes with gray fill).
 - **`TeXRenderer` is shared**: `inputRow` is identical for both parsers.
 - **Struct types** for stack allocation efficiency on steps data.
 - **Visualizers remain the public API** for consumers who want pre-rendered strings (CLI, tests). Consumers who need raw data can use `parseWithSteps`/`parseWithTrace` directly.
-- **Unified LL stack**: The LL parser uses a single unified stack (`LLStackFrame`) instead of two separate stacks (symbol + tree). Each frame carries both a symbol for parsing and a tree node representing the symbol in the derivation tree. The stack is the tree frontier.
+- **Unified LL stack with markers**: The LL parser uses a unified stack (`LLStackFrame`) with two variants: `LLTree` for frontier symbols and `LLMarker` for nonterminal boundaries. Markers enable proper hierarchical tree construction and track when subtrees are complete. Completed subtrees are captured in the step data and rendered alongside the stack.
 - **Unified LR stack**: The LR parser uses a single unified stack (`LRStackFrame`) instead of two separate stacks (state + tree). The visualizer extracts state numbers from this unified stack for rendering.

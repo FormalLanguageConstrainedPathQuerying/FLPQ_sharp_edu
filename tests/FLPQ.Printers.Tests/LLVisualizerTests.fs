@@ -83,3 +83,69 @@ let ``LL step visualization for accepted string returns success steps`` () =
     for step in vizSteps do
         Assert.Contains("digraph StackTree", step.treeAndStack)
         Assert.Contains(@"\begin{pNiceMatrix}", step.input)
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
+let ``LL step visualization includes completed subtrees`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+        S -> a S b S
+        S -> eps
+        "
+
+    let table = LLParser.buildTable g 1
+    let tokens = Tokenizer.tokenizeTerminals "a b"
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
+
+    Assert.NotEmpty(vizSteps)
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("Completed subtrees")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("cluster_completed")))
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
+let ``LL step visualization stack includes LLMarker boxes`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+        S -> a S b S
+        S -> eps
+        "
+
+    let table = LLParser.buildTable g 1
+    let tokens = Tokenizer.tokenizeTerminals "a b"
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
+
+    Assert.NotEmpty(vizSteps)
+
+    for step in vizSteps do
+        let info = ExternalTools.compileDotStringToInfo step.treeAndStack
+        Assert.True(info.nodeCount > 0)
+
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("lightgray")))
+
+[<Fact>]
+let ``LL step visualization tree is properly nested`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+        S -> a S b S
+        S -> eps
+        "
+
+    let table = LLParser.buildTable g 1
+    let tokens = Tokenizer.tokenizeTerminals "a b"
+    let treeOpt, steps = LLParser.parseWithSteps g table 1 tokens
+
+    match treeOpt with
+    | Some tree ->
+        match tree with
+        | DerivationTree.Node(Nonterminal "S",
+                              [ DerivationTree.Leaf(T(Terminal "a"))
+                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Epsilon) ])
+                                DerivationTree.Leaf(T(Terminal "b"))
+                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Epsilon) ]) ]) -> ()
+        | _ -> Assert.Fail(sprintf "Unexpected tree structure: %A" tree)
+    | None -> Assert.Fail("Failed to parse a b")
