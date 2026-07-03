@@ -553,7 +553,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
 98. [done] Improve LR table rendering. 
     1.  Rows: only header row must be separated by two hlines. One hline for other rows
     2.  Columns: goto and action parts must be separated by two lines, not three.
-99. Improve generation for LR family.
+99. [done] Improve generation for LR family.
     1.   User must be able to specify precisely the algorithm to run. Not just LR, but LR(0), SLR(1), CLR(1)
     2.   Precise name of the algorithm must be included into merged summary.
     3.   Add example grammars and inputs that can be used for these algorithms.

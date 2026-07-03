@@ -73,7 +73,7 @@ module SummaryTeX =
     let stackStepSection (stepDir: string) (stepNum: int) (stepName: string) : string list =
         let mutable lines = [ section (sprintf "Step %d" stepNum) ]
 
-        let rel = sprintf "../dot_pdfs/%s_tree_and_stack.pdf" stepName
+        let rel = sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName
         lines <- lines @ [ includePdf rel; "" ]
 
         match readIfExists (Path.Combine(stepDir, "input.tex")) with

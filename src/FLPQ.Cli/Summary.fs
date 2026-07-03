@@ -85,7 +85,7 @@ module Summary =
                     let autoDot = Path.Combine(vizDir, "lr_automaton.dot")
 
                     if File.Exists autoDot then
-                        Some "../dot_pdfs/lr_automaton.pdf"
+                        Some "dot_pdfs/lr_automaton.pdf"
                     else
                         None
                 | _ -> None
