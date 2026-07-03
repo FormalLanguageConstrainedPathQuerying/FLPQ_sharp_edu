@@ -523,8 +523,8 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     3. inputRow is for tokens printing. It must accets list of terminals, not symbols. Input must not contains nonterminals.
     4. For grammarToTeX add na option to print production numbers (start form zero). By default no production numbers pronted.
     5. grammarToTeX must print production in the following order: productions for start nonterminal first, othe in arbitrary order rest.
-    6. 
-92. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+92. [done] TeX rendering of CYK table and Valiant table is similar. But now implemented independantly. Implement comon set of functions to render tables for these algorithms: to render set of symbols, to render table itself. Note that in CYK you mut highlight only modified cells, but for Valiant entire submatrices.
+93. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {

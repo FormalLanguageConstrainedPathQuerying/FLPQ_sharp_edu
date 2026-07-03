@@ -7,13 +7,7 @@ open FLPQ.Languages
 module CykTeX =
 
     let private cellToTeX (cell: Cyk.CykCell<'t, 'nt>) : string =
-        match cell with
-        | None -> @"\cdot"
-        | Some symbols ->
-            symbols
-            |> Seq.map SymbolTeX.toLaTeX
-            |> String.concat ", "
-            |> fun s -> "\\{" + s + "\\}"
+        ParsingTableTeX.optionSetToTeX SymbolTeX.toLaTeX (cell |> Option.map (fun hs -> hs :> seq<_>))
 
     /// Convert a CYK working table to TeX with highlighted cells.
     let tableToTeXStyled (table: Matrix<Cyk.CykCell<'t, 'nt>>) (highlights: Matrix.Highlight list) : string =

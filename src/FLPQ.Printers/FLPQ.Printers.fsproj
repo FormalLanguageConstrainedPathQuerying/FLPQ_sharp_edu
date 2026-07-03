@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="SymbolTeX.fs" />
+    <Compile Include="ParsingTableTeX.fs" />
     <Compile Include="MatrixTeX.fs" />
     <Compile Include="TeXRenderer.fs" />
     <Compile Include="DerivationTreeDot.fs" />

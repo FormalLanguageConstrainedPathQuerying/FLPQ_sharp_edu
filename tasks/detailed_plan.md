@@ -1,45 +1,21 @@
-# Task 91: Refactoring — Symbol Printing, Rhs, inputRow, grammarToTeX
+# Task 92: Common table TeX rendering for CYK and Valiant
 
-## 91.1: Create single symbol-to-TeX printing function
+## Analysis
 
-Create new module `SymbolTeX` in `FLPQ.Printers` with a public function:
-- `toLaTeX: Symbol<'t, 'nt> -> string`
-  - Implements: `T(Terminal t) -> string t`, `N nt -> string nt`, `Epsilon -> @"\varepsilon"`
-  - This is the single source of truth for rendering any symbol to TeX
+CYK and Valiant both render tables containing sets of symbols:
+- CYK cells: `Option<HashSet<Symbol<'t,'nt>>>` — `None` = empty, `Some set` = `\{...\}`
+- Valiant cells: `Set<Nonterminal<'nt>>` — empty = `\cdot`, non-empty = `\{...\}`
 
-Files to update:
-- **NEW**: `src/FLPQ.Printers/SymbolTeX.fs` — add before `MatrixTeX.fs` in fsproj
-- `src/FLPQ.Printers/GrammarTeX.fs` — remove private `symToTeX`, use `SymbolTeX.toLaTeX`
-- `src/FLPQ.Printers/CykTeX.fs` — remove private `shortSymbolPrinter`, use `SymbolTeX.toLaTeX`
-- `src/FLPQ.Cli/Program.fs` — remove private `symbolPrinter` and inline lambdas, use `SymbolTeX.toLaTeX`
-- `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — remove `symbolToStr`, use `SymbolTeX.toLaTeX`
-- `tests/FLPQ.Printers.Tests/LLVisualizerTests.fs` — remove `symbolPrinter`, use `SymbolTeX.toLaTeX`
-- `tests/FLPQ.Printers.Tests/LRVisualizerTests.fs` — remove `symbolPrinter`, use `SymbolTeX.toLaTeX`
+The `\cdot` for empty / `\{...\}` for non-empty pattern is duplicated.
 
-## 91.2: Remove `| [] -> @"\varepsilon"` pattern in grammarToTeX
+## Plan
 
-Since `Rhs` already has `EpsilonRhs` case and `Rhs.toSymbols` returns `[]` for epsilon:
-- Change `grammarToTeX` to match on `rule.rhs` directly:
-  - `EpsilonRhs` → `@"\varepsilon"`
-  - `Symbols nel` → map with `SymbolTeX.toLaTeX` and join
+1. Create `ParsingTableTeX` module in FLPQ.Printers with:
+   - `setToTeX: ('a -> string) -> 'a seq -> string` — renders collection as `\{...\}` or `\cdot`
+   - `optionSetToTeX: ('a -> string) -> ('a seq) option -> string` — renders optional collection
 
-## 91.3: inputRow accepts list of terminals
+2. Update `CykTeX.fs` to use `ParsingTableTeX.optionSetToTeX`
 
-- Change `StepInput<'t, 'nt>` → `StepInput<'t>` with `tokens: Terminal<'t> list`
-- Update `LLParsingStep<'t, 'nt>` and `LRParsingStep<'t, 'nt>` to use `StepInput<'t>`
-- Change `inputRow` signature: `(Terminal<'t> -> string) -> Terminal<'t> list -> int -> string`
-- Simplify `inputRow` internals (no need for Symbol match since tokens are always terminals)
-- Update `LLStepVisualizer.renderStep` and `LRStepVisualizer.renderStep`:
-  - Derive terminal printer from symbol visualizer for inputRow
-- Update `LLParser.parseWithSteps`: store terminals directly (no conversion to Symbol)
-- Update `LRParser.parseWithSteps`: store terminals directly (no conversion to Symbol)
-- Update `Program.fs` callers of `inputRow` (CYK, Valiant)
+3. Update `ValiantTeX.fs` to use `ParsingTableTeX.setToTeX`
 
-## 91.4: Add production numbers option to grammarToTeX
-
-- Add `?showNumbers: bool` parameter (default false)
-- When true, prepend `[0]`, `[1]`, etc. before each rule
-
-## 91.5: Print start nonterminal productions first
-
-- Sort rules: start nonterminal rules first, rest in original order
+4. Update fsproj, format, build, test

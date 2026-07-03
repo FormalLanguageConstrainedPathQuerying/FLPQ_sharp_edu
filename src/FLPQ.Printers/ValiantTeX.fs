@@ -7,14 +7,7 @@ open FLPQ.Languages
 module ValiantTeX =
 
     let private ntSetToTeX (s: Set<Nonterminal<'nt>>) : string =
-        if Set.isEmpty s then
-            @"\cdot"
-        else
-            s
-            |> Set.toSeq
-            |> Seq.map string
-            |> String.concat ", "
-            |> fun x -> @"\{" + x + @"\}"
+        ParsingTableTeX.setToTeX (fun (Nonterminal n) -> string n) s
 
     let private boolToTeX (b: bool) : string = if b then "1" else @"\cdot"
 

@@ -18,6 +18,7 @@ or Dot (for graph/tree visualization).
 | Module | Description |
 |--------|-------------|
 | [SymbolTeX](symbol-tex.md) | Unified TeX rendering for grammar symbols |
+| [ParsingTableTeX](parsing-table-tex.md) | Common TeX rendering for parsing algorithm tables (CYK, Valiant) |
 | [MatrixTeX](matrix-tex.md) | TeX rendering for matrices using nicematrix |
 | [TeXRenderer](tex-renderer.md) | Shared TeX rendering for parser stacks and input |
 | [GrammarTeX](grammar-tex.md) | TeX rendering for grammar rules |
