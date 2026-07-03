@@ -16,7 +16,9 @@ module Summary =
         | AlgorithmTypes.CYK
         | AlgorithmTypes.Valiant -> TablePerStep
         | AlgorithmTypes.LL
-        | AlgorithmTypes.LR -> StackPerStep
+        | AlgorithmTypes.LR0
+        | AlgorithmTypes.SLR1
+        | AlgorithmTypes.CLR1 -> StackPerStep
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
@@ -70,14 +72,16 @@ module Summary =
         let (dotOk, _) = compileDotArtifacts vizDir dotPdfDir
 
         if not dotOk then
-            eprintfn "Summary: Dot compilation failed for %s" (algo.ToString())
+            eprintfn "Summary: Dot compilation failed for %s" (AlgorithmTypes.displayName algo)
             false
         else
             let steps = Helpers.collectSteps vizDir
 
             let lrAutomatonPdf =
                 match algo with
-                | AlgorithmTypes.LR ->
+                | AlgorithmTypes.LR0
+                | AlgorithmTypes.SLR1
+                | AlgorithmTypes.CLR1 ->
                     let autoDot = Path.Combine(vizDir, "lr_automaton.dot")
 
                     if File.Exists autoDot then
@@ -87,13 +91,13 @@ module Summary =
                 | _ -> None
 
             let content =
-                SummaryTeX.buildContent (algo.ToString()) vizDir steps.Length lrAutomatonPdf
+                SummaryTeX.buildContent (AlgorithmTypes.displayName algo) vizDir steps.Length lrAutomatonPdf
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath
 
             let fullTex =
-                template.Replace("__ALGORITHM__", algo.ToString()).Replace("__CONTENT__", content)
+                template.Replace("__ALGORITHM__", AlgorithmTypes.displayName algo).Replace("__CONTENT__", content)
 
             let mergedTexPath = Path.Combine(algoDir, sprintf "%s_merged.tex" algoLower)
             Helpers.writeOutputFile mergedTexPath fullTex

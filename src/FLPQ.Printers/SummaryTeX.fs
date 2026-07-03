@@ -89,12 +89,10 @@ module SummaryTeX =
               "" ]
 
         let algoKind =
-            match algo with
-            | "CYK"
-            | "Valiant" -> "table"
-            | "LL" -> "ll"
-            | "LR" -> "lr"
-            | _ -> "unknown"
+            if algo.StartsWith("LR") then "lr"
+            elif algo = "CYK" || algo = "Valiant" then "table"
+            elif algo = "LL" then "ll"
+            else "unknown"
 
         lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf
 

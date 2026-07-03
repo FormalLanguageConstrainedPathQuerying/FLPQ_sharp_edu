@@ -57,6 +57,6 @@ let ``LL summary produces merged TeX`` () =
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
-let ``LR summary produces merged TeX`` () =
-    let outDir = runWithSummary "LR"
-    assertMergedTexExists outDir "LR"
+let ``SLR(1) summary produces merged TeX`` () =
+    let outDir = runWithSummary "SLR1"
+    assertMergedTexExists outDir "SLR1"

@@ -1,21 +1,39 @@
-# Detailed Plan: Task 98 — Improve LR Table Rendering
+# Detailed Plan: Task 99 — Improve Generation for LR Family
 
 ## Changes
 
-### File: `src/FLPQ.Printers/LRTableTeX.fs`
+### 1. `src/FLPQ.Cli/AlgorithmTypes.fs`
+- Replace `LR` with `LR0 | SLR1 | CLR1` in the `Algorithm` DU
+- Add `displayName` helper: maps each case to its precise display name (e.g., `LR0 -> "LR(0)"`)
+- Update usage message to list all LR variants
 
-**Issue 1: Column separator — three bars between ACTION and GOTO should be two**
-- Current: `actionCols = String.replicate (terminals.Length + 1) "c | "` produces trailing ` | ` which combines with `||` to create `|||` (three bars).
-- Fix: Build ACTION and GOTO column specs without trailing ` | `, join explicitly with ` || `.
+### 2. `src/FLPQ.Cli/Program.fs`
+- Replace `| AlgorithmTypes.LR -> LRRunner.runLR grammar input output`
+  with three cases dispatching to `LRRunner.runLR` with the algorithm variant
 
-**Issue 2: Row hlines — data rows currently produce double hlines between them**
-- Current: Data rows both start with `\hline` and end with `\\ \hline`, producing two hlines between every data row.
-- Fix: Remove `\hline` from the end of data rows. Header row keeps `\\ \hline`, data rows start with `\hline`, but data rows end with just `\\` (or `\\ [1ex]` for the last row). Result: 2 hlines between header and first data row, 1 hline between data rows.
+### 3. `src/FLPQ.Cli/LRRunner.fs`
+- Add `AlgorithmTypes.Algorithm` parameter to `runLR`
+- Dispatch table builder and automaton builder based on variant:
+  - LR0: `buildLR0Table` + `buildLR0` automaton
+  - SLR1: `buildSLR1Table` + `buildLR0` automaton
+  - CLR1: `buildCLR1Table` + `buildLR1` automaton
 
-## Tests to Update
-- Tests in `TexCompilationTests.fs` already check structural elements but don't check hline count. After the fix, the generated TeX should still compile. The structural assertions (contains `$s_`, `$r_`, `acc`, `S`, `E`, `T`, `F`) remain valid.
+### 4. `src/FLPQ.Cli/Summary.fs`
+- Update `algorithmKind`: all three LR variants map to `StackPerStep`
+- Replace `algo.ToString()` with `AlgorithmTypes.displayName algo` for display
+- `algorithmLower` still works via `.ToString().ToLower()` — produces "lr0", "slr1", "clr1"
+- Update LR automaton check: match on all three LR variants
+
+### 5. `src/FLPQ.Printers/SummaryTeX.fs`
+- Update `buildContent` to accept display name (already receives string)
+- Update match in `algoKind` to detect LR variants via prefix or explicit check
+- The "LR Automaton" header and "LR Parsing Table" header are shared across LR variants — adjust headers as needed
+
+### 6. `data/`
+- Add `example_lr_grammar.bnf`: arithmetic expression grammar (grammar2 from task 11)
+- Add `example_lr_input.txt`: `x + x * x`
 
 ## Verification
-- Run `dotnet build FLPQ.slnx -c Debug`
-- Run `dotnet test` (TeX tests with "TeX" trait will run locally if TeX is installed)
-- Run `dotnet fantomas . --check`
+- `dotnet build FLPQ.slnx -c Debug`
+- `dotnet test`
+- `dotnet fantomas . --check`

@@ -22,7 +22,9 @@ module Program =
             | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output
             | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output
             | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k
-            | AlgorithmTypes.LR -> LRRunner.runLR grammar input output
+            | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm
+            | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm
+            | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm
 
             if summary then
                 let templatePath = Helpers.findSummaryTemplate ()

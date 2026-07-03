@@ -550,7 +550,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     1.  Move TeX-render-specific functions to printers project.
     2.  Remove merged file compilation. Just generate merged tex file.
     3.  Split Parogram.fs into modules (and files). Separate algorithm-specific functions, helpers to create and handle output folders structures, etc.
-98. Improve LR table rendering. 
+98. [done] Improve LR table rendering. 
     1.  Rows: only header row must be separated by two hlines. One hline for other rows
     2.  Columns: goto and action parts must be separated by two lines, not three.
 99. Improve generation for LR family.
