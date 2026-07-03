@@ -82,14 +82,15 @@ module LRTableTeX =
         let nStates = stateCount table
 
         let colSpec =
-            let actionCols = String.replicate (terminals.Length + 1) "c | "
-            let gotoCols = String.replicate nonterminals.Length "c | "
+            let actionCols = String.replicate terminals.Length "c | " + "c"
 
-            @"\begin{tabular}{ c || "
-            + actionCols
-            + @"|| "
-            + gotoCols.TrimEnd(' ', '|')
-            + @" }"
+            let gotoCols =
+                if nonterminals.Length > 0 then
+                    String.replicate (nonterminals.Length - 1) "c | " + "c"
+                else
+                    ""
+
+            @"\begin{tabular}{ c || " + actionCols + @" || " + gotoCols + @" }"
 
         sb.AppendLine(@"\begin{center}") |> ignore
         sb.AppendLine(colSpec) |> ignore
@@ -124,7 +125,7 @@ module LRTableTeX =
                 let cell = gotoCell table state nt
                 sb.Append(@" & " + cell) |> ignore
 
-            let rowEnd = if state = nStates - 1 then @" \\ [1ex]" else @" \\ \hline"
+            let rowEnd = if state = nStates - 1 then @" \\ [1ex]" else @" \\"
             sb.AppendLine(rowEnd) |> ignore
 
         sb.AppendLine(@"\end{tabular}") |> ignore
