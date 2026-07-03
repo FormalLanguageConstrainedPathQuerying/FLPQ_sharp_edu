@@ -537,8 +537,15 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     5.  Final generated tex must be compiled twice.
     6.  No errors in tex and dot compilation. Fail if any problems detected. Generated tex and dot must be correct.
     7.  Remove run_viz.py
-    8.  Check that examples generates and compiles successfully. 
-95. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+    8.  Check that examples generates and compiles successfully.
+ 95. [done] Crete more fine-grained functions to print symbols. Locate in SymbolTex.fs
+    1.  Create finction to print Terminal as its content
+    2.  Create finction to print Nonterminal as its content
+    3.  Use these functions in function that print Symdol (toLaTeX)
+    4.  Use these functions to print transitions in LR automata
+    5.  Use these functions to print lhs of productions in Grammar.tex
+    6.  Use these functions in CLI program.fs instead of termPrinter and other similar.
+96. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {
