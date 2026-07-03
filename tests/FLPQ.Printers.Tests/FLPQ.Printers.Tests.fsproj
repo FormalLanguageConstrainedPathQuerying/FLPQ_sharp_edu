@@ -13,6 +13,7 @@
     <Compile Include="LLVisualizerTests.fs" />
     <Compile Include="LRVisualizerTests.fs" />
     <Compile Include="GrammarTeXGoldenTests.fs" />
+    <Compile Include="LRTableTeXGoldenTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
     <Compile Include="CliSummaryTests.fs" />
   </ItemGroup>
