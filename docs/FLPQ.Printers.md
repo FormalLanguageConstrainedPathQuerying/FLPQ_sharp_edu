@@ -31,6 +31,7 @@ or Dot (for graph/tree visualization).
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |
 | [LRStepVisualizer](lr-step-visualizer.md) | LR parser step-by-step visualization |
 | [ExternalTools](external-tools.md) | Graphviz and pdflatex wrappers (shared by CLI and tests) |
+| [SummaryTeX](summary-tex.md) | TeX content generation for merged summary documents |
 
 ## Design
 

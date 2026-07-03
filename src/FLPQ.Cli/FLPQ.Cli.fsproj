@@ -6,6 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AlgorithmTypes.fs" />
+    <Compile Include="Helpers.fs" />
+    <Compile Include="CykRunner.fs" />
+    <Compile Include="ValiantRunner.fs" />
+    <Compile Include="LLRunner.fs" />
+    <Compile Include="LRRunner.fs" />
+    <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

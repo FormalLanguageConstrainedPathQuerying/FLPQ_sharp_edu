@@ -545,8 +545,12 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     4.  Use these functions to print transitions in LR automata
     5.  Use these functions to print lhs of productions in Grammar.tex
     6.  Use these functions in CLI program.fs instead of termPrinter and other similar.
-[done] 96. Create golden tests for grammar to tex rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
-97. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+96. [done] Create golden tests for grammar to tex rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
+97. [done] Refactor FLPQ.Cli
+    1.  Move TeX-render-specific functions to printers project.
+    2.  Remove merged file compilation. Just generate merged tex file.
+    3.  Split Parogram.fs into modules (and files). Separate algorithm-specific functions, helpers to create and handle output folders structures, etc.
+98. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {

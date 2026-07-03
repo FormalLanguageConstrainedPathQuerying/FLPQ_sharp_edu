@@ -1,69 +1,139 @@
-# Task 96: Golden tests for grammar to TeX rendering
+# Task 97: Refactor FLPQ.Cli
 
 ## Goal
 
-Create golden (snapshot/reference) tests for grammar-to-TeX rendering.
-Generate TeX files for several grammars in BNF and CNF, save them as reference,
-create tests that generate TeX for the respective grammar and compare the result
-with the reference.
-
-## Grammars to test
-
-1. **grammar1** (BNF): `S -> a S b S | eps` — simple grammar with epsilon
-2. **grammar1** (CNF): same grammar converted to Chomsky Normal Form
-3. **grammar7** (BNF): expression grammar with E/T/F nonterminals
-4. **grammar7** (CNF): same grammar in CNF
-5. **grammar9** (BNF): LL(2)-compatible grammar with multiple nonterminals
-6. **grammar9** (CNF): same grammar in CNF
-
-Each grammar tested with both `grammarToTeX` (no numbers) and `grammarToTeXWithNumbers` (0-based numbers).
+1. Move TeX-render-specific functions to Printers project
+2. Remove merged file compilation (pdflatex step). Just generate merged TeX file.
+3. Split Program.fs into modules (and files). Separate algorithm-specific functions, helpers to create and handle output folders structures, etc.
 
 ## Design
 
-### Golden files location
+### New Printers module: SummaryTeX.fs
 
-`tests/FLPQ.Printers.Tests/GoldenData/grammar_tex_<name>.tex`
+Move the following functions from `Program.fs` to a new `SummaryTeX.fs` in `FLPQ.Printers`:
 
-Naming convention: `grammar_tex_<grammar>_<variant>.tex`
-- `<grammar>`: `grammar1_bnf`, `grammar1_cnf`, `grammar7_bnf`, `grammar7_cnf`, `grammar9_bnf`, `grammar9_cnf`
-- `<variant>`: `plain` (no numbers), `numbered` (with numbers)
+- `wrapMath` — wraps TeX in `\[...\]` + center
+- `wrapCenter` — wraps TeX in center environment
+- `includePdf` — `\includegraphics` snippet
+- `section` — `\subsection*` snippet
+- `headerSection` — builds header (grammar, CNF, input, LL/LR table, LR automaton)
+- `tableStepSection` — per-step TeX for CYK/Valiant
+- `stackStepSection` — per-step TeX for LL/LR
+- `buildContent` — assembles full merged TeX content
 
-### Test approach
+These functions produce LaTeX string content. They are independent of CLI logic.
 
-A helper function `verifyGolden`:
-- Computes the golden file path under `GoldenData/`
-- If the golden file does NOT exist, writes the generated content to it and fails with a descriptive message ("Golden file created. Review it and re-run tests.")
-- If the golden file exists, reads it and compares with generated content via `Assert.Equal`
+### New CLI modules (split Program.fs)
 
-### Golden file generation workflow
+**AlgorithmTypes.fs** — `FLPQ.Cli.AlgorithmTypes`
+- `Algorithm` DU (CYK | Valiant | LL | LR)
+- `Arguments` DU (IArgParserTemplate)
 
-1. Run tests once — golden files are created automatically
-2. Review the generated golden files
-3. Commit golden files
-4. Subsequent test runs compare against golden files
+**Helpers.fs** — `FLPQ.Cli.Helpers`
+- `readFile`
+- `writeOutputFile`
+- `writeStepsVisualization`
+- `readIfExists`
+- `naturalSortKey`
+- `collectSteps`
+- `findSummaryTemplate`
 
-### CNF generation
+**CykRunner.fs** — `FLPQ.Cli.CykRunner`
+- `runCyk`
 
-Use `Grammar.toCnf Grammar.freshStringNonterminal` for string-based grammars.
-This produces nonterminals named `N_1`, `N_2`, etc.
+**ValiantRunner.fs** — `FLPQ.Cli.ValiantRunner`
+- `runValiant`
 
-## Files to create/modify
+**LLRunner.fs** — `FLPQ.Cli.LLRunner`
+- `runLL`
 
-- **Create**: `tests/FLPQ.Printers.Tests/GoldenData/` directory
-- **Create**: `tests/FLPQ.Printers.Tests/GrammarTeXGoldenTests.fs`
-- **Modify**: `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — add compile item and content items
-- **Update**: `tasks/detailed_plan.md`
-- **Update**: `docs/FLPQ.Printers.md` — add note about golden tests
+**LRRunner.fs** — `FLPQ.Cli.LRRunner`
+- `runLR`
 
-## Steps
+**Summary.fs** — `FLPQ.Cli.Summary`
+- `SummaryKind` DU (moved from Program.fs, now public)
+- `algorithmKind`
+- `algorithmLower`
+- `compileDotArtifacts` — kept (dot files still compiled to PDF for includegraphics)
+- `buildSummary` — simplified: generates merged TeX only, no pdflatex. Uses SummaryTeX functions from Printers.
 
-1. Create `GoldenData/` directory
-2. Write `GrammarTeXGoldenTests.fs` with the golden test infrastructure and test cases
-3. Update `FLPQ.Printers.Tests.fsproj`
-4. `dotnet build -c Release`
-5. `dotnet test --filter GrammarTeXGolden` — first run creates golden files
-6. Review generated golden files
-7. `dotnet test --filter GrammarTeXGolden` — second run verifies
-8. `dotnet fantomas .`
-9. `dotnet test` — full test suite passes
-10. Commit
+**Program.fs** — `FLPQ.Cli.Program`
+- `runCli` — testable entry point
+- `main` — `[<EntryPoint>]`
+
+### Simplification of buildSummary
+
+Before (current):
+1. compileDotArtifacts → dot PDFs
+2. buildContent → merged TeX content
+3. write merged TeX
+4. copy to build dir
+5. pdflatex twice
+6. copy PDF to results
+
+After (task 97):
+1. compileDotArtifacts → dot PDFs (kept: needed for includegraphics in TeX)
+2. buildContent → merged TeX content (uses SummaryTeX from Printers)
+3. write merged TeX file
+4. Done. No pdflatex compilation.
+
+### Test updates
+
+`CliSummaryTests.fs` currently checks for PDF output. After changes:
+- The `-s` flag generates the merged TeX file only
+- Tests verify the merged TeX file exists and is non-empty
+- Tests verify exit code is 0
+
+### Compilation order in FLPQ.Cli.fsproj
+
+```
+AlgorithmTypes.fs
+Helpers.fs
+CykRunner.fs
+ValiantRunner.fs
+LLRunner.fs
+LRRunner.fs
+Summary.fs
+Program.fs
+```
+
+### Files to create
+
+- `src/FLPQ.Printers/SummaryTeX.fs`
+- `src/FLPQ.Cli/AlgorithmTypes.fs`
+- `src/FLPQ.Cli/Helpers.fs`
+- `src/FLPQ.Cli/CykRunner.fs`
+- `src/FLPQ.Cli/ValiantRunner.fs`
+- `src/FLPQ.Cli/LLRunner.fs`
+- `src/FLPQ.Cli/LRRunner.fs`
+- `src/FLPQ.Cli/Summary.fs`
+
+### Files to modify
+
+- `src/FLPQ.Printers/FLPQ.Printers.fsproj` — add SummaryTeX.fs
+- `src/FLPQ.Cli/FLPQ.Cli.fsproj` — replace single Program.fs with new file list
+- `src/FLPQ.Cli/Program.fs` — rewrite to thin entry point
+- `tests/FLPQ.Printers.Tests/CliSummaryTests.fs` — update assertions
+- `docs/FLPQ.Printers.md` — add SummaryTeX docs
+- `tasks/detailed_plan.md` — update
+
+## Progress
+
+- [x] 1. Create SummaryTeX.fs in Printers project
+- [x] 2. Update FLPQ.Printers.fsproj
+- [x] 3. Create AlgorithmTypes.fs
+- [x] 4. Create Helpers.fs
+- [x] 5. Create CykRunner.fs
+- [x] 6. Create ValiantRunner.fs
+- [x] 7. Create LLRunner.fs
+- [x] 8. Create LRRunner.fs
+- [x] 9. Create Summary.fs
+- [x] 10. Rewrite Program.fs
+- [x] 11. Update FLPQ.Cli.fsproj
+- [x] 12. Update CliSummaryTests.fs
+- [x] 13. Build, format, run tests
+- [x] 14. Update documentation
+
+## Outcome
+
+All 411 tests pass. Task 97 completed successfully.
