@@ -5,12 +5,7 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
-let private symbolPrinter (sym: Symbol<string, string>) =
-    match sym with
-    | T(Terminal t) -> t
-    | N(Nonterminal n) -> n
-    | Epsilon -> "\\varepsilon"
-
+let private symbolPrinter = SymbolTeX.toLaTeX
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]

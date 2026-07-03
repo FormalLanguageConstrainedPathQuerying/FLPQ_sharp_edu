@@ -463,7 +463,7 @@ module LRParser =
         let recordStep () =
             steps <-
                 { stack = stack
-                  input = { tokens = tokens; position = pos } }
+                  input = { tokens = terminals; position = pos } }
                 :: steps
 
         let popFrames count =

@@ -41,7 +41,7 @@ let ``LL step input TeX compiles with pdflatex`` () =
     let tokens = Tokenizer.tokenizeTerminals "a b"
 
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps string steps
+    let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
@@ -57,7 +57,7 @@ let ``LR step input TeX compiles with pdflatex`` () =
     let tokens = Tokenizer.tokenizeTerminals "a a"
 
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps string steps
+    let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
 
     for step in vizSteps do
         Assert.True(TestUtils.checkTexCompiles templatePath step.input)
@@ -125,12 +125,6 @@ S -> ( S )
 let private tabularTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_tabular_template.tex")
 
-let private symbolToStr (sym: Symbol<string, string>) =
-    match sym with
-    | T(Terminal t) -> t
-    | N(Nonterminal nt) -> nt
-    | Epsilon -> "\\varepsilon"
-
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LL table TeX compiles with pdflatex for grammar1`` () =
@@ -139,7 +133,7 @@ let ``LL table TeX compiles with pdflatex for grammar1`` () =
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLTableTeX.tableToTeX symbolToStr g 1 firstMap followMap table
+    let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -171,7 +165,7 @@ T -> c
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLTableTeX.tableToTeX symbolToStr g 1 firstMap followMap table
+    let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -191,7 +185,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -208,7 +202,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildLR0Table aug
 
-    let tex = LRTableTeX.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -222,7 +216,7 @@ let ``CLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildCLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 
@@ -244,7 +238,7 @@ F -> x
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX symbolToStr aug table
+    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
 
     Assert.True(TestUtils.checkTexCompiles tabularTemplatePath tex)
 

@@ -17,8 +17,10 @@ or Dot (for graph/tree visualization).
 
 | Module | Description |
 |--------|-------------|
+| [SymbolTeX](symbol-tex.md) | Unified TeX rendering for grammar symbols |
 | [MatrixTeX](matrix-tex.md) | TeX rendering for matrices using nicematrix |
 | [TeXRenderer](tex-renderer.md) | Shared TeX rendering for parser stacks and input |
+| [GrammarTeX](grammar-tex.md) | TeX rendering for grammar rules |
 | [DerivationTreeDot](derivation-tree-dot.md) | Dot rendering for derivation trees |
 | [AutomatonDot](automaton-dot.md) | Dot rendering for finite automata |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |

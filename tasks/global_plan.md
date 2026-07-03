@@ -4,10 +4,10 @@
 
 | ID | Description | Type | Status |
 |----|-------------|------|--------|
-| 88 | Fix nonterminals rendering in TeX. Generate N_i names in CNF, remove regex from renderers. | Refactoring | Pending |
-| 89 | Fix input rendering for LL and LR. Render Terminal content without type wrappers. | Bug fix | Pending |
-| 90 | Improve LL and LR stacks. Stack frame contains only derivation tree node, not Symbol+Node pair. | Refactoring | Pending |
-| 91 | Improve LL and LR steps visualization. Render combined stack-tree structure directly without splitting. | Refactoring | Pending |
+| 88 | Fix nonterminals rendering in TeX. Generate N_i names in CNF, remove regex from renderers. | Refactoring | Done |
+| 89 | Fix input rendering for LL and LR. Render Terminal content without type wrappers. | Bug fix | Done |
+| 90 | Improve LL and LR stacks. Stack frame contains only derivation tree node, not Symbol+Node pair. | Refactoring | Done |
+| 91 | Refactoring: unify symbol-to-TeX printing, Rhs cleanup, inputRow to accept Terminal[], grammarToTeX improvements. | Refactoring | Done |
 
 ## Dependencies
 

@@ -51,12 +51,6 @@ module Program =
             writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].treeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
 
-    let private symbolPrinter (sym: Symbol<string, string>) =
-        match sym with
-        | T(Terminal t) -> string t
-        | N(Nonterminal n) -> string n
-        | Epsilon -> "\\varepsilon"
-
     let private runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = readFile inputFile
@@ -64,18 +58,10 @@ module Program =
 
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
         let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
-        let inputSymbols = tokenList |> List.map (fun (Terminal t) -> T(Terminal t))
 
-        writeOutputFile
-            (Path.Combine(outputDir, "input.tex"))
-            (TeXRenderer.inputRow
-                (fun sym ->
-                    match sym with
-                    | T(Terminal t) -> string t
-                    | N n -> string n
-                    | Epsilon -> "\\varepsilon")
-                inputSymbols
-                -1)
+        let termPrinter (Terminal t: string) = t
+
+        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow termPrinter tokenList -1)
 
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
@@ -102,18 +88,10 @@ module Program =
 
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
         let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
-        let inputSymbols = tokenList |> List.map (fun (Terminal t) -> T(Terminal t))
 
-        writeOutputFile
-            (Path.Combine(outputDir, "input.tex"))
-            (TeXRenderer.inputRow
-                (fun sym ->
-                    match sym with
-                    | T(Terminal t) -> string t
-                    | N n -> string n
-                    | Epsilon -> "\\varepsilon")
-                inputSymbols
-                -1)
+        let termPrinter (Terminal t: string) = t
+
+        writeOutputFile (Path.Combine(outputDir, "input.tex")) (TeXRenderer.inputRow termPrinter tokenList -1)
 
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
         writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
@@ -154,10 +132,10 @@ module Program =
 
         writeOutputFile
             (Path.Combine(outputDir, "ll_table.tex"))
-            (LLTableTeX.tableToTeX symbolPrinter grammar k firstMap followMap table)
+            (LLTableTeX.tableToTeX SymbolTeX.toLaTeX grammar k firstMap followMap table)
 
         let _, steps = LLParser.parseWithSteps grammar table k tokens
-        let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
+        let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
         writeStepsVisualization outputDir vizSteps
         printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir
 
@@ -173,14 +151,14 @@ module Program =
         let automaton = LRAutomaton.buildLR0 aug
 
         writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
-        writeOutputFile (Path.Combine(outputDir, "lr_table.tex")) (LRTableTeX.tableToTeX symbolPrinter aug table)
+        writeOutputFile (Path.Combine(outputDir, "lr_table.tex")) (LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table)
 
         writeOutputFile
             (Path.Combine(outputDir, "lr_automaton.dot"))
             (AutomatonDot.dfaToDot (fun idx _ -> sprintf "State %d" idx) automaton)
 
         let _, steps = LRParser.parseWithSteps aug table tokens
-        let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
+        let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
         writeStepsVisualization outputDir vizSteps
         printfn "LR trace: %d steps written to %s" vizSteps.Length outputDir
 

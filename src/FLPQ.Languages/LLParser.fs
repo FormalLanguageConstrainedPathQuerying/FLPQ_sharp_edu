@@ -69,7 +69,7 @@ module LLParser =
             if not (List.isEmpty stack) then
                 steps <-
                     { stack = stack
-                      input = { tokens = tokens; position = pos } }
+                      input = { tokens = terminals; position = pos } }
                     :: steps
 
         let rec parseLoop

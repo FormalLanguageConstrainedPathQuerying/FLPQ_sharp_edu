@@ -199,3 +199,17 @@ Despite what some FSharpPlus documentation suggests, in v1.9.1 `NonEmptySet.ofSe
 
 When searching for usages of a removed field or renamed function, prefer `grep` with narrow patterns over glob-based file reading. Example: to find all direct field accesses of `epsTransitions`, use `grep "\.epsTransitions"` — this catches property accesses while excluding `Set.empty` passed as a parameter.
 
+## F# Module-Level Optional Parameters — Not Allowed (FS0718)
+
+**Problem**: Optional parameters with `?` syntax (e.g., `let f (?x: int) = ...`) work only on type members (methods), not on module-level `let` bindings. Using them produces error FS0718: "Optional arguments are only permitted on type members."
+
+**Solution**: Use one of these approaches for module-level functions:
+- **Two overloaded functions** (recommended): one with the flag, one without (delegating to a private implementation):
+  ```fsharp
+  let grammerToTeX (g: Grammar<'t, 'nt>) = renderGrammar false g
+  let grammarToTeXWithNumbers (g: Grammar<'t, 'nt>) = renderGrammar true g
+  let private renderGrammar (showNumbers: bool) (g: Grammar<'t, 'nt>) = ...
+  ```
+- **Explicit `bool` parameter**: accept the flag as a required parameter. Callers always pass the flag.
+- **`Option<'T>` parameter**: accept `Option<bool>` explicitly. Callers pass `None` or `Some true`.
+

@@ -6,18 +6,12 @@ open FLPQ.Languages
 /// TeX rendering for CYK algorithm tables.
 module CykTeX =
 
-    let private shortSymbolPrinter (sym: Symbol<'t, 'nt>) : string =
-        match sym with
-        | T(Terminal t) -> string t
-        | N nt -> string nt
-        | Epsilon -> @"\varepsilon"
-
     let private cellToTeX (cell: Cyk.CykCell<'t, 'nt>) : string =
         match cell with
         | None -> @"\cdot"
         | Some symbols ->
             symbols
-            |> Seq.map shortSymbolPrinter
+            |> Seq.map SymbolTeX.toLaTeX
             |> String.concat ", "
             |> fun s -> "\\{" + s + "\\}"
 

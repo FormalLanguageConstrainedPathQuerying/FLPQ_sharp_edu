@@ -517,7 +517,14 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
 88. [done] Fix nonterminals rendering in TeX. Do not replace names to N_i by regexps in several places, update to CNF conversion to generate uniquie nonterminals with respective names.
 89. [done] Fix input rendering for LL and LR. Render only Terminal contetnt, without type wrappers.
 90. [done] Improve LL and LR stacks. Derivation tree nodes itself contains Symbols. Stack frame can contains only node, not pair of Symbol and Node.
-91. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+91. [done] Refactoring.
+    1. Create single one set of functions to print symbols fo TeX. Only contenet must be printed. No Nonterminal, Termintal, T and other wrappers. Use it wverywhere instead functions like symToTeX, shortSymbolPrinter, etc. In CYK and Valiant tables, grammar printing, LL and LR tables, etc (find all places). Everywhere you need to render symbols.
+    2. Rhs of any rule must be NonEmptyList. Why grammarToTeX contains `| [] -> @"\varepsilon"` pattren for Rhs? Remove it.
+    3. inputRow is for tokens printing. It must accets list of terminals, not symbols. Input must not contains nonterminals.
+    4. For grammarToTeX add na option to print production numbers (start form zero). By default no production numbers pronted.
+    5. grammarToTeX must print production in the following order: productions for start nonterminal first, othe in arbitrary order rest.
+    6. 
+92. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {
@@ -536,4 +543,4 @@ digraph G {
 }
 ```
 
-92. GLL.
+1.  GLL.

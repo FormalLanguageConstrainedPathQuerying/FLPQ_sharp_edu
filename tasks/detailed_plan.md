@@ -1,38 +1,45 @@
-# Detailed Plan: Task 91 — Improve LL and LR steps visualization
+# Task 91: Refactoring — Symbol Printing, Rhs, inputRow, grammarToTeX
 
-## Goal
+## 91.1: Create single symbol-to-TeX printing function
 
-Do not split trees and stack. Render combined stack-tree structure directly as returned from parsing algorithm.
+Create new module `SymbolTeX` in `FLPQ.Printers` with a public function:
+- `toLaTeX: Symbol<'t, 'nt> -> string`
+  - Implements: `T(Terminal t) -> string t`, `N nt -> string nt`, `Epsilon -> @"\varepsilon"`
+  - This is the single source of truth for rendering any symbol to TeX
 
-## Changes
+Files to update:
+- **NEW**: `src/FLPQ.Printers/SymbolTeX.fs` — add before `MatrixTeX.fs` in fsproj
+- `src/FLPQ.Printers/GrammarTeX.fs` — remove private `symToTeX`, use `SymbolTeX.toLaTeX`
+- `src/FLPQ.Printers/CykTeX.fs` — remove private `shortSymbolPrinter`, use `SymbolTeX.toLaTeX`
+- `src/FLPQ.Cli/Program.fs` — remove private `symbolPrinter` and inline lambdas, use `SymbolTeX.toLaTeX`
+- `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — remove `symbolToStr`, use `SymbolTeX.toLaTeX`
+- `tests/FLPQ.Printers.Tests/LLVisualizerTests.fs` — remove `symbolPrinter`, use `SymbolTeX.toLaTeX`
+- `tests/FLPQ.Printers.Tests/LRVisualizerTests.fs` — remove `symbolPrinter`, use `SymbolTeX.toLaTeX`
 
-### 1. `src/FLPQ.Languages/VisualizationTypes.fs`
-- Remove `tree` field from `LLParsingStep` — it now has only `stack` and `input`
-- Remove `tree` field from `LRParsingStep` — it now has only `stack` and `input`
+## 91.2: Remove `| [] -> @"\varepsilon"` pattern in grammarToTeX
 
-### 2. `src/FLPQ.Languages/LLParser.fs`
-- Simplify `recordStep` — no longer compute `currentTree` from `completed`
-- Step record: `{ stack = stack; input = { tokens = tokens; position = pos } }`
+Since `Rhs` already has `EpsilonRhs` case and `Rhs.toSymbols` returns `[]` for epsilon:
+- Change `grammarToTeX` to match on `rule.rhs` directly:
+  - `EpsilonRhs` → `@"\varepsilon"`
+  - `Symbols nel` → map with `SymbolTeX.toLaTeX` and join
 
-### 3. `src/FLPQ.Languages/LRParser.fs`
-- Simplify `recordStep` — no longer extract trees from LRSymbol and build synthetic `currentTree`
-- Step record: `{ stack = stack; input = { tokens = tokens; position = pos } }`
+## 91.3: inputRow accepts list of terminals
 
-### 4. `src/FLPQ.Printers/DerivationTreeDot.fs`
-- Replace `toDotWithStack` with `toDotWithLLStack` that takes only `LLStackFrame list` (no separate tree param)
-  - For each LLFrame, render its tree node (Leaf or Node with children)
-  - Connect frames via dashed chain, set rank=same
-- Replace `toDotWithLRStack` signature: remove `tree` param, take only `LRStackFrame list`
-  - For each LRSymbol, render its full subtree
-  - For each LRState, render labeled box
-  - Connect all frames via dashed chain, set rank=same
+- Change `StepInput<'t, 'nt>` → `StepInput<'t>` with `tokens: Terminal<'t> list`
+- Update `LLParsingStep<'t, 'nt>` and `LRParsingStep<'t, 'nt>` to use `StepInput<'t>`
+- Change `inputRow` signature: `(Terminal<'t> -> string) -> Terminal<'t> list -> int -> string`
+- Simplify `inputRow` internals (no need for Symbol match since tokens are always terminals)
+- Update `LLStepVisualizer.renderStep` and `LRStepVisualizer.renderStep`:
+  - Derive terminal printer from symbol visualizer for inputRow
+- Update `LLParser.parseWithSteps`: store terminals directly (no conversion to Symbol)
+- Update `LRParser.parseWithSteps`: store terminals directly (no conversion to Symbol)
+- Update `Program.fs` callers of `inputRow` (CYK, Valiant)
 
-### 5. `src/FLPQ.Printers/LLStepVisualizer.fs`
-- Update to use `toDotWithLLStack` with just the stack
+## 91.4: Add production numbers option to grammarToTeX
 
-### 6. `src/FLPQ.Printers/LRStepVisualizer.fs`
-- Update to use updated `toDotWithLRStack` with just the stack
+- Add `?showNumbers: bool` parameter (default false)
+- When true, prepend `[0]`, `[1]`, etc. before each rule
 
-## Verification
-- All tests pass
-- Check formatting
+## 91.5: Print start nonterminal productions first
+
+- Sort rules: start nonterminal rules first, rest in original order

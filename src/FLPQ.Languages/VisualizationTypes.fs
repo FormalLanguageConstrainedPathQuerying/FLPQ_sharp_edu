@@ -8,8 +8,8 @@ type VisualizationStep = { treeAndStack: string; input: string }
 
 /// Input state for LL/LR parser step visualization.
 [<Struct>]
-type StepInput<'t, 'nt> =
-    { tokens: Symbol<'t, 'nt> list
+type StepInput<'t> =
+    { tokens: Terminal<'t> list
       position: int }
 
 /// Frame on the unified LL parser stack.
@@ -29,7 +29,7 @@ module LLStackFrame =
 [<Struct>]
 type LLParsingStep<'t, 'nt> =
     { stack: LLStackFrame<'t, 'nt> list
-      input: StepInput<'t, 'nt> }
+      input: StepInput<'t> }
 
 /// Frame on the unified LR parser stack.
 /// Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols.
@@ -54,4 +54,4 @@ module LRSymbol =
 [<Struct>]
 type LRParsingStep<'t, 'nt> =
     { stack: LRStackFrame<'t, 'nt> list
-      input: StepInput<'t, 'nt> }
+      input: StepInput<'t> }
