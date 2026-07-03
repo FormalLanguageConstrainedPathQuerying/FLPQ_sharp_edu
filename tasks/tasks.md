@@ -557,7 +557,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     1.   User must be able to specify precisely the algorithm to run. Not just LR, but LR(0), SLR(1), CLR(1)
     2.   Precise name of the algorithm must be included into merged summary.
     3.   Add example grammars and inputs that can be used for these algorithms.
-100. Add golden tests for LR0 and LR1 tables rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
+100. [done] Add golden tests for LR0 and LR1 tables rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
 101. Imptove visualization of automata: do it parametrizable. By default use current styles. For LR automata create specific style:
     1.  Use rectangles for all states.
     2.  Highlight start state by green
