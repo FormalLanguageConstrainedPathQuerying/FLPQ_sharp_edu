@@ -1,5 +1,7 @@
 namespace FLPQ.Printers
 
+open FLPQ.Languages
+
 /// Common TeX rendering helpers for parsing algorithm tables (CYK, Valiant).
 module ParsingTableTeX =
 
@@ -21,3 +23,10 @@ module ParsingTableTeX =
         match opt with
         | None -> @"\cdot"
         | Some items -> setToTeX itemPrinter items
+
+    /// Render a set of nonterminals as a TeX cell: \cdot for empty, \{...\} otherwise.
+    let ntCellToTeX (s: Set<Nonterminal<'nt>>) : string =
+        setToTeX (fun (Nonterminal n) -> string n) s
+
+    /// Render a boolean as TeX: 1 for true, \cdot for false.
+    let boolToTeX (b: bool) : string = if b then "1" else @"\cdot"

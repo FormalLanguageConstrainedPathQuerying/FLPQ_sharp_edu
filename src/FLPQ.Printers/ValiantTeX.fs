@@ -6,11 +6,6 @@ open FLPQ.Languages
 /// TeX rendering for Valiant algorithm steps.
 module ValiantTeX =
 
-    let private ntSetToTeX (s: Set<Nonterminal<'nt>>) : string =
-        ParsingTableTeX.setToTeX (fun (Nonterminal n) -> string n) s
-
-    let private boolToTeX (b: bool) : string = if b then "1" else @"\cdot"
-
     /// Convert a Valiant trace step to TeX with highlighted current submatrix.
     let stepToTeX (step: Valiant.ValiantTraceStep<'nt>) : string =
         let highlights =
@@ -48,11 +43,14 @@ module ValiantTeX =
                     []
             | None -> []
 
-        MatrixTeX.toTeXStyled true true ntSetToTeX step.table highlights blocks
+        MatrixTeX.toTeXStyled true true ParsingTableTeX.ntCellToTeX step.table highlights blocks
 
     /// Render a boolean decomposition matrix for a single nonterminal.
     let boolDecompToTeX (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
-        @"\mathrm{" + string nt + "}\n" + MatrixTeX.toTeX true true boolToTeX mat
+        @"\mathrm{"
+        + string nt
+        + "}\n"
+        + MatrixTeX.toTeX true true ParsingTableTeX.boolToTeX mat
 
     /// Convert a modified Valiant trace step to TeX with colored submatrix blocks.
     let modifiedStepToTeX (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
@@ -100,4 +98,4 @@ module ValiantTeX =
                     None)
             |> List.choose id
 
-        MatrixTeX.toTeXStyled false false ntSetToTeX step.table [] blocks
+        MatrixTeX.toTeXStyled false false ParsingTableTeX.ntCellToTeX step.table [] blocks
