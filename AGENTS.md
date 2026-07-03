@@ -32,6 +32,9 @@ This project is supplementary materials for the book on formal language constrai
 * Use `[<Trait("Category", <category_name>)>]` and respective filters to create and run groups of tests.
 * For visualization: create tests that check that generated output is correct. E.g. generated dot-file can by compiled using graphviz dot, generated TeX output wrapped to appropriate file can be compiled by pdflatex or lualatex. 
 * When a task specification states that certain constructs "can be used for property-based tests", implement `[<Property>]` tests with FsCheck-generated random inputs. Do not substitute `[<Fact>]` tests enumerating hardcoded examples in place of property-based testing.
+* Property-based tests MUST use FsCheck `Arbitrary`/`Gen` types with `[<Property>]`. Never use `System.Random.Shared` in manual `for`-loops to drive randomized test inputs.
+* FsCheck generators for shared project types (matrices, graphs, grammars, regexes) must live in a common `Generators.fs` module. Do not duplicate random generation logic across test projects.
+* Every new algorithm variant must include property-based equivalence tests proving it returns identical results to at least one existing reference implementation. Example: "standard Valiant ≡ modified Valiant", "Belyanin ≡ Arroyuelo ≡ Kronecker+MS-BFS".
 
 ## Format
 * To format all F# sources: `dotnet fantomas .`
@@ -51,6 +54,38 @@ dotnet fsi Script.fsx
 * Use units of measure
 * Prefer functional style: types + functions. Eg type Automata and module Automata at the same level with functions like intersect or accept. If necessary, types may be classes, not only immutable types like DU or structs.
 * Use structs with explicit names of fields, not tuples.
+
+### Genericity and type safety
+
+All code must be as generic as possible. Never hardcode a concrete type when a generic type parameter would work. Examples (not exhaustive):
+
+* **Algorithms over symbols**: all parsing algorithms (CYK, Valiant, LL, LR), automata operations, and RPQ algorithms must be generic over terminal and nonterminal types (`'t`, `'nt`). Do not hardcode `string`-based `Symbol`, `Terminal`, or `Nonterminal`.
+* **Matrix operations**: all linear algebra functions (`mxm`, `kron`, `map2`, `transpose`, etc.) must be generic over element type (`'a`, `'b`, `'c`). Do not assume `bool` or `int`.
+* **Graphs and automata**: vertex and edge label types must be generic. A graph over `string`-labeled edges is just one instantiation.
+* **Visualization and printing**: rendering functions must be parametrized by symbol-printer functions (`'a -> string`). Never embed `sprintf "%A"` or type-specific formatting inside rendering logic.
+
+Concrete rules:
+
+* When writing a function `f : 'a -> 'b`, ask: can `'a` or `'b` be more general? If a function only needs `map` on `'a`, it should accept any functor, not just `list` or `Matrix`.
+* Use `NonEmptyList<'t>` and `NonEmptySet<'t>` from FSharpPlus for any collection that semantically must not be empty (e.g., right-hand side of a production, transition-label set). Never use empty lists/sets with runtime checks when the type can enforce the invariant.
+* Unit tests may instantiate generic types at `string` for readability, but the implementation must not depend on it.
+
+### Avoiding code duplication
+
+* Before writing a helper function, check existing code for reusable abstractions. If you find yourself copy-pasting more than 3 non-trivial lines, extract a shared function.
+* When implementing a variant of an existing algorithm (e.g., modified Valiant), maximize reuse of shared infrastructure. Write the variant as a thin layer over common functions, not a full rewrite.
+* After finishing a module, scan the codebase for duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
+
+### Separation of concerns
+
+* Algorithms collect trace, result, and intermediate data **exclusively as F# data structures** (records, DUs, matrices). They must never call rendering/printing functions.
+* All conversion to output formats (TeX, dot, plain text) lives in dedicated printer modules (`src/FLPQ.Printers`). An algorithm returns data; a printer converts data to a string.
+* The pattern for visualization is:
+  ```fsharp
+  let result, trace = algorithm.run input
+  let texOutput    = TraceVisualizer.toTex trace
+  ```
+  Never embed `writeOutputFile` or TeX/dot string generation inside algorithm modules.
 
 
 # Project structure
@@ -87,6 +122,8 @@ dotnet fsi Script.fsx
   - Identify dependencies between tasks (which must be done before which).
   - Identify potential conflicts or overlapping changes (e.g., two tasks modifying the same file).
   - Identify shared infrastructure (types, helpers, utilities) that multiple tasks need. Create shared modules to avoid duplication across tasks.
+  - Identify existing reusable abstractions (types, helper functions, generators) that new tasks should use rather than reinvent.
+  - For each task that involves rendering/visualization, note that rendering and algorithm logic must be in separate projects/modules from the start.
   - Propose an execution order that minimizes rework and avoids conflicts.
   - Align tasks with the project architecture.
 * After the global plan is created, proceed with the normal working loop: one task at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md` for each.
@@ -108,11 +145,25 @@ dotnet fsi Script.fsx
   * Check formatting and compilation
   * Check tests  
   * Repeat until all tests pass
+  * **Duplication check**: before considering a module done, scan the codebase for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
+  * **Genericity check**: verify that new types use generic parameters (`'t`, `'nt`) where applicable and that non-empty collections use `NonEmptyList`/`NonEmptySet`.
+  * **Equivalence test check**: if the module is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
+  * **Separation check**: verify that algorithm modules do not contain TeX/dot string generation or file I/O.
 * If a book error is found, it must be recorded in `fixes_for_book.md` with a clear description and suggested correction, and the user should be notified.
 * If additional information, that not presented in the book was required for implementation, it must be recorded in `fixes_for_book.md` with a clear description and suggested improvements, and the user should be notified.
 * Move changes to `dev`
 * Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description. The task text in `tasks.md` is user-authored and immutable.**
 * Go to first step
+
+## Task authoring guidelines
+
+When writing a new task for `tasks.md`, follow these rules to minimize rework:
+
+* **Specify output format upfront**. If the task involves TeX or dot visualization, include the exact column layout, math mode conventions, and formatting rules in the task description (see tasks 50 and 51 for examples).
+* **Keep tasks single-responsibility**. A task should do one thing. If it requires more than 5 sub-items or spans multiple unrelated concerns, split it into multiple tasks.
+* **Specify equivalence requirements**. For any new algorithm variant, explicitly state "must produce results identical to X" so equivalence tests are built from the start.
+* **Specify type genericity**. If a module must handle arbitrary symbol types, state it explicitly (e.g., "generic over terminal and nonterminal types").
+* **Specify reuse expectations**. If the task builds on existing infrastructure (e.g., "reuse matrix from task 2", "reuse DFA from task 14"), name the dependencies. This prevents reinvention.
 
 ## Git
 
