@@ -232,6 +232,49 @@ This triple check is implemented in `FLPQ.Printers.ExternalTools.pdflatexSucceed
 
 For a flag union case like `| Summary`, the `Usage` property match must use `| Summary` (not `| Summary _`). Using `Summary _` produces warning FS3548: "Pattern discard is not allowed for union case that takes no data."
 
+## Golden (Snapshot) Tests in .NET xUnit
+
+### Pattern
+Golden tests compare generated output against committed reference files. If the output changes intentionally, update the reference files. If it changes unintentionally, the test catches the regression.
+
+### Approach Used in This Project
+
+1. Reference files stored in a `GoldenData/` subdirectory of the test project.
+2. In `.fsproj`, golden files are included as `<Content>` with `CopyToOutputDirectory="PreserveNewest"`.
+3. At runtime, tests access golden files relative to the current working directory (the output directory).
+4. **Auto-generation on first run**: if the golden file does not exist in the output directory, the test writes the generated content and fails with an error message instructing the developer to copy it to the source tree. This bootstraps the golden files without requiring manual computation.
+
+```fsharp
+let private goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
+
+let private verifyGolden (goldenFileName: string) (actualContent: string) =
+    let goldenPath = Path.Combine(goldenDataDir, goldenFileName)
+    if File.Exists goldenPath then
+        let expected = File.ReadAllText goldenPath
+        Assert.Equal(expected, actualContent)
+    else
+        Directory.CreateDirectory goldenDataDir |> ignore
+        File.WriteAllText(goldenPath, actualContent)
+        Assert.True(false, $"Golden file '{goldenFileName}' was created. Copy it to the source GoldenData/ and re-run.")
+```
+
+### .fsproj Content Entry (Glob)
+
+```xml
+<Content Include="GoldenData\*.tex">
+  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+</Content>
+```
+
+The glob `*.tex` automatically picks up all golden files in the directory without listing each one individually.
+
+### Workflow
+
+1. Run tests. Golden files are created in `bin/.../GoldenData/`.
+2. Copy them to `tests/<Project>/GoldenData/` in the source tree.
+3. Commit the golden files.
+4. Subsequent test runs compare against the committed files (copied to output by msbuild).
+
 ## Testable CLI Entry Points
 
 An `[<EntryPoint>]` function should delegate to a separate `runCli : string[] -> int` function. Calling `System.Environment.Exit` directly inside the entry point terminates the test runner when the CLI is invoked from tests. The wrapper pattern (`runCli` returns int, `main` delegates) lets `CliSummaryTests` call `Program.runCli args` and assert on the return code without killing the process.
