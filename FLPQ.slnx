@@ -5,6 +5,7 @@
     <Project Path="src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj" />
     <Project Path="src/FLPQ.Printers/FLPQ.Printers.fsproj" />
     <Project Path="src/FLPQ.RPQ/FLPQ.RPQ.fsproj" />
+    <Project Path="src/FLPQ.Cli/FLPQ.Cli.fsproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj" />

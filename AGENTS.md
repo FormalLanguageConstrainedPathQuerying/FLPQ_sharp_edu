@@ -11,7 +11,7 @@ This project is supplementary materials for the book on formal language constrai
 # dotnet CLI
 * Use dotnet CLI for all manipulations with project
 * Dotnet CLI documentation entry point: https://learn.microsoft.com/en-us/dotnet/core/tools/
-  * For manipulation with sln file: https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-sln
+  * For manipulation with .slnx file: https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-sln
   * To create new projects or solutions: https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-new
 
 ## Dependencies
@@ -20,8 +20,8 @@ This project is supplementary materials for the book on formal language constrai
 * Use dotnet CLI for management. Documentation: https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-dotnet-cli
 
 ## Build
-* Release mode: `dotnet build -c Release`
-* debug mode: `dotnet build -c Debug`
+* Release mode: `dotnet build FLPQ.slnx -c Release`
+* debug mode: `dotnet build FLPQ.slnx -c Debug`
 
 ## Clear
 * `dotnet clean` 
@@ -104,6 +104,7 @@ dotnet fsi Script.fsx
   * After implementing a module, create or update `docs/<module>.md` describing its design and logic (type definitions, function signatures, design decisions).
   * Update `tasks/knowledge_base.md` with any non-obvious knowledge gained about libraries, frameworks, or tooling (API quirks, workarounds, best practices discovered during implementation).
   * Write code
+  * When creating a new project, add it to `FLPQ.slnx`.
   * Check formatting and compilation
   * Check tests  
   * Repeat until all tests pass
