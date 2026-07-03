@@ -15,6 +15,7 @@
     <Compile Include="RsmToGrammar.fs" />
     <Compile Include="DerivationTree.fs" />
     <Compile Include="VisualizationTypes.fs" />
+    <Compile Include="ParsingTable.fs" />
     <Compile Include="Cyk.fs" />
     <Compile Include="Valiant.fs" />
     <Compile Include="LLParser.fs" />

@@ -8,14 +8,14 @@ module Valiant =
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
-        { table: Matrix<Set<Nonterminal<'nt>>>
+        { table: ParsingTable<'nt>
           currentSubmatrix: Submatrix option
           layerSize: int
           submatrices: Submatrix list }
 
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
-        { table: Matrix<Set<Nonterminal<'nt>>>
+        { table: ParsingTable<'nt>
           layerSize: int
           submatrices: Submatrix list }
 
@@ -381,7 +381,7 @@ module Valiant =
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
         (terminals: Terminal<'t> list)
-        : Matrix<Set<Nonterminal<'nt>>> * bool =
+        : ParsingTable<'nt> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
         let steps = parseWithTrace freshNonterminal g terminals
 
@@ -486,7 +486,7 @@ module Valiant =
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
         (terminals: Terminal<'t> list)
-        : Matrix<Set<Nonterminal<'nt>>> * bool =
+        : ParsingTable<'nt> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
         let steps = parseModifiedWithTrace freshNonterminal g terminals
 

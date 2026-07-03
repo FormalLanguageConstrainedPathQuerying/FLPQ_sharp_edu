@@ -524,7 +524,12 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     4. For grammarToTeX add na option to print production numbers (start form zero). By default no production numbers pronted.
     5. grammarToTeX must print production in the following order: productions for start nonterminal first, othe in arbitrary order rest.
 92. [done] TeX rendering of CYK table and Valiant table is similar. But now implemented independantly. Implement comon set of functions to render tables for these algorithms: to render set of symbols, to render table itself. Note that in CYK you mut highlight only modified cells, but for Valiant entire submatrices.
-93. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
+93. [done] CYK and Valiant tables unification.
+    1. Create common type for CYK and vakiant table: Matrix where cell is a set of nonterminals.
+    2. Valiant (with modified version) uses boolean decomposition of this type.
+    3. Refactor both algorithms and visualisation to use this type.
+    4. tokens are terminals, not Symbols. Terminals do not contain nonterminals.
+94. Improve LL and LR steps visualization. Do not split trees and stack. Render combined stack-trees stricture as it rerurned from parsinf algorithm. For LR: roots of pertial trees are stack frames. For LL: Leaves of partial trees are stack frames.
     Example for LL:
     ```
 digraph G {

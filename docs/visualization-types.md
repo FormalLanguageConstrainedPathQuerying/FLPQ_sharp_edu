@@ -83,9 +83,9 @@ DOT rendering for derivation trees and combined stack+tree visualization.
 
 Defined in `Cyk.fs`:
 
-### `CykTraceStep<'t, 'nt>` (struct)
+### `CykTraceStep<'nt>` (struct)
 
-- `table: Matrix<CykCell<'t,'nt>>` — snapshot of the working table at this step
+- `table: ParsingTable<'nt>` — snapshot of the working table at this step, where `ParsingTable<'nt> = Matrix<Set<Nonterminal<'nt>>>`
 - `highlights: Matrix.Highlight list` — cells modified at this step (for yellow highlighting)
 
 ## Valiant Trace Step
@@ -94,7 +94,7 @@ Defined in `Valiant.fs`:
 
 ### `ValiantTraceStep<'nt>` (struct)
 
-- `table: Matrix<Set<Nonterminal<'nt>>>` — recomposed matrix snapshot at this step
+- `table: ParsingTable<'nt>` — recomposed matrix snapshot at this step, shared type with CYK
 
 ## Design Decisions
 

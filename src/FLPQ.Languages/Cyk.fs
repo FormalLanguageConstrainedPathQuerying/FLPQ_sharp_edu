@@ -1,88 +1,87 @@
 namespace FLPQ.Languages
 
 open System.Collections.Generic
+open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 
 module Cyk =
 
-    type CykCell<'t, 'nt> = Option<HashSet<Symbol<'t, 'nt>>>
-
     /// Data for a single CYK algorithm trace step.
     [<Struct>]
-    type CykTraceStep<'t, 'nt> =
-        { table: Matrix<CykCell<'t, 'nt>>
+    type CykTraceStep<'nt when 'nt: comparison> =
+        { table: ParsingTable<'nt>
           highlights: Matrix.Highlight list }
 
-    let private findProducingRules (rules: Rule<'t, 'nt> list) (target: Symbol<'t, 'nt>) : Nonterminal<'nt> list =
+    let private findTerminalRules (rules: Rule<'t, 'nt> list) (t: Terminal<'t>) : Nonterminal<'nt> list =
         rules
-        |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ target ])
-        |> List.map (fun r -> r.lhs)
+        |> List.choose (fun rule ->
+            match rule.rhs with
+            | Symbols nel when NonEmptyList.length nel = 1 ->
+                match NonEmptyList.head nel with
+                | T t' when t' = t -> Some rule.lhs
+                | _ -> None
+            | _ -> None)
 
     let private findBinaryProductions
         (rules: Rule<'t, 'nt> list)
-        (left: Symbol<'t, 'nt>)
-        (right: Symbol<'t, 'nt>)
+        (left: Nonterminal<'nt>)
+        (right: Nonterminal<'nt>)
         : Nonterminal<'nt> list =
         rules
-        |> List.filter (fun r -> Rhs.toSymbols r.rhs = [ left; right ])
-        |> List.map (fun r -> r.lhs)
+        |> List.choose (fun rule ->
+            match rule.rhs with
+            | Symbols nel when NonEmptyList.length nel = 2 ->
+                let syms = NonEmptyList.toList nel
 
-    let private cykTable (cnf: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : Matrix<CykCell<'t, 'nt>> =
-        let n = tokens.Length
-        let emptyCell: CykCell<'t, 'nt> = None
-        let table = Matrix.init n n emptyCell
+                match syms.[0], syms.[1] with
+                | N l, N r when l = left && r = right -> Some rule.lhs
+                | _ -> None
+            | _ -> None)
+
+    let private cykTable (cnf: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : ParsingTable<'nt> =
+        let n = terminals.Length
+        let table = Matrix.init n n Set.empty
 
         for i in 0 .. n - 1 do
-            let token = tokens.[i]
-            let producing = findProducingRules cnf.rules token
+            let producing = findTerminalRules cnf.rules terminals.[i]
 
-            match producing with
-            | [] -> ()
-            | nts ->
-                let cell = nts |> List.map (fun nt -> N nt) |> HashSet |> Some
-                table.data.[i, i] <- cell
+            if not (List.isEmpty producing) then
+                table.data.[i, i] <- Set.ofList producing
 
         for len in 2..n do
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let mutable accumulated = HashSet<Symbol<'t, 'nt>>()
+                let mutable accumulated = HashSet<Nonterminal<'nt>>()
 
                 for k in i .. j - 1 do
-                    let leftCell = table.data.[i, k]
-                    let rightCell = table.data.[k + 1, j]
+                    let leftSet = table.data.[i, k]
+                    let rightSet = table.data.[k + 1, j]
 
-                    match leftCell, rightCell with
-                    | Some leftSet, Some rightSet ->
-                        for leftSym in leftSet do
-                            for rightSym in rightSet do
-                                let producers = findBinaryProductions cnf.rules leftSym rightSym
+                    if not (Set.isEmpty leftSet) && not (Set.isEmpty rightSet) then
+                        for leftNt in leftSet do
+                            for rightNt in rightSet do
+                                let producers = findBinaryProductions cnf.rules leftNt rightNt
 
                                 for nt in producers do
-                                    accumulated.Add(N nt) |> ignore
-                    | _ -> ()
+                                    accumulated.Add(nt) |> ignore
 
                 if accumulated.Count > 0 then
-                    table.data.[i, j] <- Some accumulated
+                    table.data.[i, j] <- Set.ofSeq accumulated
 
         table
 
-    let private tableTrace (cnf: Grammar<'t, 'nt>) (tokens: Symbol<'t, 'nt> list) : CykTraceStep<'t, 'nt> list =
-        let n = tokens.Length
-        let emptyCell: CykCell<'t, 'nt> = None
-        let table = Matrix.init n n emptyCell
-        let steps = ResizeArray<CykTraceStep<'t, 'nt>>()
+    let private tableTrace (cnf: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : CykTraceStep<'nt> list =
+        let n = terminals.Length
+        let table = Matrix.init n n Set.empty
+        let steps = ResizeArray<CykTraceStep<'nt>>()
 
         let mutable stepHighlights = []
 
         for i in 0 .. n - 1 do
-            let token = tokens.[i]
-            let producing = findProducingRules cnf.rules token
+            let producing = findTerminalRules cnf.rules terminals.[i]
 
-            match producing with
-            | [] -> ()
-            | nts ->
-                let cell = nts |> List.map (fun nt -> N nt) |> HashSet |> Some
-                table.data.[i, i] <- cell
+            if not (List.isEmpty producing) then
+                table.data.[i, i] <- Set.ofList producing
                 let h: Matrix.Highlight = { row = i; col = i; color = "yellow" }
                 stepHighlights <- h :: stepHighlights
 
@@ -99,24 +98,22 @@ module Cyk =
 
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let mutable accumulated = HashSet<Symbol<'t, 'nt>>()
+                let mutable accumulated = HashSet<Nonterminal<'nt>>()
 
                 for k in i .. j - 1 do
-                    let leftCell = table.data.[i, k]
-                    let rightCell = table.data.[k + 1, j]
+                    let leftSet = table.data.[i, k]
+                    let rightSet = table.data.[k + 1, j]
 
-                    match leftCell, rightCell with
-                    | Some leftSet, Some rightSet ->
-                        for leftSym in leftSet do
-                            for rightSym in rightSet do
-                                let producers = findBinaryProductions cnf.rules leftSym rightSym
+                    if not (Set.isEmpty leftSet) && not (Set.isEmpty rightSet) then
+                        for leftNt in leftSet do
+                            for rightNt in rightSet do
+                                let producers = findBinaryProductions cnf.rules leftNt rightNt
 
                                 for nt in producers do
-                                    accumulated.Add(N nt) |> ignore
-                    | _ -> ()
+                                    accumulated.Add(nt) |> ignore
 
                 if accumulated.Count > 0 then
-                    table.data.[i, j] <- Some accumulated
+                    table.data.[i, j] <- Set.ofSeq accumulated
                     let h: Matrix.Highlight = { row = i; col = j; color = "yellow" }
                     stepHighlights <- h :: stepHighlights
 
@@ -130,25 +127,22 @@ module Cyk =
 
         steps |> List.ofSeq
 
-    let private isAccepted (cnf: Grammar<'t, 'nt>) (table: Matrix<CykCell<'t, 'nt>>) : bool =
+    let private isAccepted (cnf: Grammar<'t, 'nt>) (table: ParsingTable<'nt>) : bool =
         let n = table.rows
 
         if n = 0 then
             false
         else
-            match table.data.[0, n - 1] with
-            | Some cell -> cell.Contains(N cnf.start)
-            | None -> false
+            Set.contains cnf.start table.data.[0, n - 1]
 
     /// Parse pre-tokenized input using CYK algorithm.
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
-        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
         let cnf = Grammar.toCnf freshNonterminal g
 
-        if tokens.IsEmpty then
+        if terminals.IsEmpty then
             cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
         else
-            let table = cykTable cnf tokens
+            let table = cykTable cnf terminals
             isAccepted cnf table
 
     /// Run CYK and return the final table and acceptance status.
@@ -156,41 +150,26 @@ module Cyk =
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
         (terminals: Terminal<'t> list)
-        : Matrix<Set<Nonterminal<'nt>>> * bool =
-        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
+        : ParsingTable<'nt> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
 
-        if tokens.IsEmpty then
+        if terminals.IsEmpty then
             let epsAccepted =
                 cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
 
-            let emptyResult = Matrix.init 0 0 Set.empty
+            let emptyResult: ParsingTable<'nt> = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
-            let n = tokens.Length
-            let table = cykTable cnf tokens
-
-            let result =
-                Matrix.create n n (fun i j ->
-                    match table.data.[i, j] with
-                    | Some symbols ->
-                        symbols
-                        |> Seq.choose (fun s ->
-                            match s with
-                            | N nt -> Some nt
-                            | _ -> None)
-                        |> Set.ofSeq
-                    | None -> Set.empty)
+            let table = cykTable cnf terminals
 
             let accepted = isAccepted cnf table
-            (result, accepted)
+            (table, accepted)
 
     /// Run CYK and return the sequence of working table states with highlights.
     let parseWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
         (terminals: Terminal<'t> list)
-        : CykTraceStep<'t, 'nt> list =
-        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
+        : CykTraceStep<'nt> list =
         let cnf = Grammar.toCnf freshNonterminal g
-        tableTrace cnf tokens
+        tableTrace cnf terminals

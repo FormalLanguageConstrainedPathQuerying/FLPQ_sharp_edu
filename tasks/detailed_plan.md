@@ -1,21 +1,28 @@
-# Task 92: Common table TeX rendering for CYK and Valiant
-
-## Analysis
-
-CYK and Valiant both render tables containing sets of symbols:
-- CYK cells: `Option<HashSet<Symbol<'t,'nt>>>` — `None` = empty, `Some set` = `\{...\}`
-- Valiant cells: `Set<Nonterminal<'nt>>` — empty = `\cdot`, non-empty = `\{...\}`
-
-The `\cdot` for empty / `\{...\}` for non-empty pattern is duplicated.
+# Task 93: CYK and Valiant tables unification
 
 ## Plan
 
-1. Create `ParsingTableTeX` module in FLPQ.Printers with:
-   - `setToTeX: ('a -> string) -> 'a seq -> string` — renders collection as `\{...\}` or `\cdot`
-   - `optionSetToTeX: ('a -> string) -> ('a seq) option -> string` — renders optional collection
+### 93.1: Create `ParsingTable<'nt>` type alias
+- New file `src/FLPQ.Languages/ParsingTable.fs`
+- `type ParsingTable<'nt when 'nt: comparison> = Matrix<Set<Nonterminal<'nt>>>`
+- Add to fsproj before `Cyk.fs`
 
-2. Update `CykTeX.fs` to use `ParsingTableTeX.optionSetToTeX`
+### 93.3: Refactor CYK
+- Remove `CykCell` type alias
+- Change `CykTraceStep` to `CykTraceStep<'nt when 'nt: comparison>` with `table: ParsingTable<'nt>`
+- Change `findProducingRules` → `findTerminalRules` accepting `Terminal<'t>`
+- Change `findBinaryProductions` to accept `Nonterminal<'nt>` directly
+- `cykTable`/`tableTrace`: work with `Terminal<'t> list` and `Matrix<Set<Nonterminal<'nt>>>`
+- `isAccepted` works with `ParsingTable<'nt>`
+- Remove `Symbol` wrapping (`N nt`) from cell construction
 
-3. Update `ValiantTeX.fs` to use `ParsingTableTeX.setToTeX`
+### 93.3: Update Valiant
+- Use `ParsingTable<'nt>` in `ValiantTraceStep`, `ModifiedValiantTraceStep`, return types
 
-4. Update fsproj, format, build, test
+### 93.3: Update visualization
+- `CykTeX.cellToTeX` renders `Set<Nonterminal<'nt>>` via `ParsingTableTeX.setToTeX`
+- `CykTeX.tableToTeX`/`tableToTeXStyled` accept `ParsingTable<'nt>`
+
+### 93.4: Tokens are terminals
+- CYK: remove `terminals → Symbol` conversion, pass `Terminal<'t> list` directly
+- Valiant: already uses raw `'t[]` internally
