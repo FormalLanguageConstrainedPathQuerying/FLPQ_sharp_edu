@@ -90,8 +90,17 @@ module Summary =
                         None
                 | _ -> None
 
+            let algoKind =
+                match algo with
+                | AlgorithmTypes.CYK
+                | AlgorithmTypes.Valiant -> "table"
+                | AlgorithmTypes.LL -> "ll"
+                | AlgorithmTypes.LR0
+                | AlgorithmTypes.SLR1
+                | AlgorithmTypes.CLR1 -> "lr"
+
             let content =
-                SummaryTeX.buildContent (AlgorithmTypes.displayName algo) vizDir steps.Length lrAutomatonPdf
+                SummaryTeX.buildContent (AlgorithmTypes.displayName algo) algoKind vizDir steps.Length lrAutomatonPdf
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

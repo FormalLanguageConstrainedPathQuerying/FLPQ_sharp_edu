@@ -82,17 +82,17 @@ module SummaryTeX =
 
         lines
 
-    let buildContent (algo: string) (vizDir: string) (stepCount: int) (lrAutomatonPdf: string option) : string list =
+    let buildContent
+        (algo: string)
+        (algoKind: string)
+        (vizDir: string)
+        (stepCount: int)
+        (lrAutomatonPdf: string option)
+        : string list =
         let mutable lines =
             [ section ("Algorithm: " + algo)
               sprintf "\\textit{Total steps: %d}\\\\" stepCount
               "" ]
-
-        let algoKind =
-            if algo.StartsWith("LR") then "lr"
-            elif algo = "CYK" || algo = "Valiant" then "table"
-            elif algo = "LL" then "ll"
-            else "unknown"
 
         lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf
 
