@@ -13,7 +13,7 @@ module GrammarTeX =
             startRules @ otherRules
 
         let sb = StringBuilder()
-        sb.Append(@"\begin{align*}") |> ignore
+        sb.AppendLine(@"\begin{align*}") |> ignore
 
         for idx in 0 .. orderedRules.Length - 1 do
             let rule = orderedRules.[idx]
