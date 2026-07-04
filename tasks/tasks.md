@@ -627,5 +627,5 @@ S &\rightarrow \varepsilon \\
 \end{tikzpicture}
 
     ```
-106. Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
+[done] 106. Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
 107. LL
