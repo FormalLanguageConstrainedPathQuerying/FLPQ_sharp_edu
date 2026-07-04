@@ -41,6 +41,7 @@ val headerSection: vizDir:string -> algoKind:string -> lrAutomatonPdf:string opt
 Builds the header portion of the merged document: original grammar, CNF grammar
 (for table-based algorithms), input string, LL/LR parsing table, and LR automaton PDF.
 The `algoKind` parameter is `"table"` (CYK/Valiant), `"ll"`, or `"lr"`.
+The LR automaton PDF is produced from either a Tikz standalone document (default) or a Graphviz dot file (`--use-dot` flag) — both produce `lr_automaton.pdf` at the same relative path.
 
 ### `tableStepSection`
 ```fsharp

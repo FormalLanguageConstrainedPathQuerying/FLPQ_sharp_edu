@@ -35,7 +35,7 @@
 * [DerivationTree module](derivation-tree.md)
 * [LL parser module](ll-parser.md)
 * [LR parser module](lr-parser.md)
-* [AutomatonDot module](automaton-viz.md)
+* [Automaton visualization: Dot, Tikz, LR automata Tikz](automaton-viz.md)
 * [DerivationTreeDot module](derivation-tree-viz.md)
 * [LL and LR steps visualization](visualization-types.md)
 * [ExternalTools module](external-tools.md)

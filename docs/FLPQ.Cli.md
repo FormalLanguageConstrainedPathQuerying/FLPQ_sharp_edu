@@ -16,4 +16,4 @@ Console application for running parsing algorithms with visualization output, in
 
 ## Role
 
-Command-line interface using Argu for argument parsing. Allows running CYK, Valiant, LL, LR algorithms with file-based I/O and step-by-step visualization output. With the `--summary` (`-s`) flag it also builds a merged TeX document per algorithm, compiles all Dot files to PDF via Graphviz and the merged TeX to PDF via lualatex, replacing the former `run_viz.py` script.
+Command-line interface using Argu for argument parsing. Allows running CYK, Valiant, LL, LR0, SLR1, CLR1 algorithms with file-based I/O and step-by-step visualization output. With the `--summary` (`-s`) flag it also builds a merged TeX document per algorithm, compiles all Dot files to PDF via Graphviz and the merged TeX to PDF via lualatex, replacing the former `run_viz.py` script. The `--use-dot` flag switches LR automaton rendering from the default Tikz back to Graphviz dot.

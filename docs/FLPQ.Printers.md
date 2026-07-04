@@ -23,14 +23,14 @@ or Dot (for graph/tree visualization).
 | [TeXRenderer](tex-renderer.md) | Shared TeX rendering for parser stacks and input |
 | [GrammarTeX](grammar-tex.md) | TeX rendering for grammar rules |
 | [DerivationTreeDot](derivation-tree-dot.md) | Dot rendering for derivation trees |
-| [AutomatonDot](automaton-dot.md) | Dot rendering for finite automata |
+| [AutomatonDot / AutomatonTikz / LRAutomatonTikz](automaton-viz.md) | Dot and Tikz rendering for finite automata; specialized Tikz renderer for LR automata |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
 | [LLTableTeX](ll-table-tex.md) | TeX rendering for LL parsing tables |
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |
 | [LRStepVisualizer](lr-step-visualizer.md) | LR parser step-by-step visualization |
-| [ExternalTools](external-tools.md) | Graphviz and pdflatex wrappers (shared by CLI and tests) |
+| [ExternalTools](external-tools.md) | Graphviz and lualatex wrappers (shared by CLI and tests) |
 | [SummaryTeX](summary-tex.md) | TeX content generation for merged summary documents |
 
 ## Design

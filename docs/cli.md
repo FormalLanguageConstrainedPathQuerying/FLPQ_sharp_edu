@@ -10,7 +10,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 
 ## Types
 
-- `Algorithm` — DU: `CYK | Valiant | LL | LR`
+- `Algorithm` — DU: `CYK | Valiant | LL | LR0 | SLR1 | CLR1`
 - `Arguments` — Argu argument type with `IArgParserTemplate`
 
 ## Command-line flags
@@ -22,7 +22,8 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | `-i` / `--input` | Input string file | (required) |
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
-| `-s` / `--summary` | Build summary PDF (compiles Dot via Graphviz and TeX via lualatex) | off |
+| `-s` / `--summary` | Build merged TeX summary document | off |
+| `--use-dot` | Use Graphviz dot for LR automaton rendering (default: Tikz) | off |
 
 ## Output structure
 
@@ -44,7 +45,7 @@ Root-level artifacts per algorithm:
 | **CYK** | `grammar_original.tex`, `grammar_cnf.tex`, `input.tex` |
 | **Valiant** | `grammar_original.tex`, `grammar_cnf.tex`, `input.tex` |
 | **LL** | `grammar_original.tex`, `ll_table.tex` |
-| **LR** | `grammar_original.tex`, `lr_table.tex`, `lr_automaton.dot` |
+| **LR** | `grammar_original.tex`, `lr_table.tex`, `lr_automaton.tikz.tex` (default, Tikz standalone) or `lr_automaton.dot` (with `--use-dot`) |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 
@@ -52,10 +53,11 @@ DOT files are rendered via Graphviz (dashed edges for stack chain, green fill fo
 
 When `-s` is passed, after writing the step artifacts the CLI also:
 
-1. Compiles every `*.dot` file (per-step + `lr_automaton.dot` for LR) to PDF via Graphviz.
-2. Builds a merged TeX document per algorithm by substituting `__ALGORITHM__` and `__CONTENT__` in `data/tex_summary_template.tex`.
-3. Compiles the merged TeX **twice** with lualatex (for table-of-contents and cross-references).
-4. Fails with exit code 1 if any Dot or TeX compilation produces errors (exit code, stdout markers, or empty PDF).
+1. Compiles every `*.dot` file (per-step + `lr_automaton.dot` for LR `--use-dot` mode) to PDF via Graphviz.
+2. For LR in default Tikz mode: compiles `lr_automaton.tikz.tex` (standalone Tikz document) to PDF via lualatex, producing `dot_pdfs/lr_automaton.pdf` (same path as dot mode).
+3. Builds a merged TeX document per algorithm by substituting `__ALGORITHM__` and `__CONTENT__` in `data/tex_summary_template.tex`.
+4. Compiles the merged TeX **twice** with lualatex (for table-of-contents and cross-references).
+5. Fails with exit code 1 if any Dot or TeX compilation produces errors (exit code, stdout markers, or empty PDF).
 
 Layout under `<output>/results/<algorithm-lower>/`:
 
@@ -89,10 +91,11 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 
 ## Design decisions
 
-- LR mode uses SLR(1) table.
+- LR algorithm variants (LR0, SLR1, CLR1) are all served by `LRRunner`.
+- The specific variant name (e.g., "SLR(1)") is included in the merged summary via `AlgorithmTypes.displayName`.
+- LR automaton is rendered as Tikz by default (standalone document compiled to PDF). The `--use-dot` flag switches to Graphviz dot.
 - TeX step files contain only visualization code (no document headers).
 - Grammar file reading reuses `Grammar.parseGrammarFromFile`.
 - Summary uses `landscape` layout to accommodate wide matrices without overflow.
 - `lualatex` is run twice for correct table-of-contents and cross-references.
-- DOT files are compiled to PDFs separately and included as `\includegraphics` in the merged TeX (not converted to TikZ).
 - External tool invocations (Dot, lualatex) are wrapped by `FLPQ.Printers.ExternalTools`, shared between the CLI and the test suite.

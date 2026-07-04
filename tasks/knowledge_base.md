@@ -222,7 +222,7 @@ When searching for usages of a removed field or renamed function, prefer `grep` 
 2. No line in stdout starts with `!` (TeX error marker) or contains `Fatal error` or `Error:`.
 3. The output PDF exists and is non-empty (size > 0).
 
-This triple check is implemented in `FLPQ.Printers.ExternalTools.lualatexSucceeded`. See `src/FLPQ.Printers/ExternalTools.fs`.
+This triple check is implemented in `FLPQ.Printers.ExternalTools.latexSucceeded`. See `src/FLPQ.Printers/ExternalTools.fs`.
 
 ## F# Pattern Type Annotation Syntax
 
@@ -278,4 +278,47 @@ The glob `*.tex` automatically picks up all golden files in the directory withou
 ## Testable CLI Entry Points
 
 An `[<EntryPoint>]` function should delegate to a separate `runCli : string[] -> int` function. Calling `System.Environment.Exit` directly inside the entry point terminates the test runner when the CLI is invoked from tests. The wrapper pattern (`runCli` returns int, `main` delegates) lets `CliSummaryTests` call `Program.runCli args` and assert on the return code without killing the process.
+
+## Tikz `\graph` with `graphdrawing` Library
+
+### `quotes` Library for Edge Labels
+
+Edge labels in Tikz `\graph` syntax (`s0 ->["label"] s1`) require the `quotes` Tikz library:
+```latex
+\usetikzlibrary{graphs, graphdrawing, quotes}
+```
+Without it, Tikz interprets the quoted string as an unknown key (`/tikz/"{a}"`) and fails.
+
+### `amsmath` Required for `aligned` Environment
+
+When state content uses `\begin{aligned}...\end{aligned}` (e.g., for LR item rendering), the template preamble must include `\usepackage{amsmath}`. Without it, lualatex produces "Environment aligned undefined" errors.
+
+### `as` Key Escaping
+
+The `as={...}` key in Tikz `\graph` nodes takes raw text. When the content is LaTeX math (`$...$`), it must **not** be escaped — backslashes, underscores, etc., are interpreted by LaTeX. Escaping (e.g., `\` → `\textbackslash`) would break LaTeX commands.
+
+Only plain-text edge labels (not in math mode) should be escaped for LaTeX special characters.
+
+### `standalone` Document Class for Tikz Compilation
+
+```latex
+\documentclass{standalone}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usetikzlibrary{graphs, graphdrawing, quotes}
+\usegdlibrary{layered}
+\begin{document}
+__CONTENT__  % \begin{tikzpicture}...\end{tikzpicture}
+\end{document}
+```
+
+The `standalone` class crops the PDF to the content bounding box, making it suitable for `\includegraphics` inclusion in larger documents.
+
+### lualatex Required for `graphdrawing`
+
+The `graphdrawing` library with `layered` algorithm requires lualatex (Lua-based graph layout engine). pdflatex cannot use `\usegdlibrary{layered}`.
+
+### Multiple Edges with `graphdrawing` + `layered layout`
+
+The `layered layout` algorithm in `graphdrawing` works well with simple `string` state identifiers (`s0`, `s1`, ...). Using complex identifiers (containing dots, commas, or special characters) in node names (before the `as` key) may cause parsing issues. Always use simple alphanumeric identifiers and put content in `as={...}`.
 
