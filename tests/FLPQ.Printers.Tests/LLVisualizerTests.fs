@@ -86,7 +86,7 @@ let ``LL step visualization for accepted string returns success steps`` () =
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
-let ``LL step visualization includes completed subtrees`` () =
+let ``LL step visualization combined tree includes dashed stack chain`` () =
     let g =
         Grammar.parseGrammar
             "
@@ -100,12 +100,12 @@ let ``LL step visualization includes completed subtrees`` () =
     let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
 
     Assert.NotEmpty(vizSteps)
-    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("Completed subtrees")))
-    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("cluster_completed")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("style=dashed")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("shape=box")))
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
-let ``LL step visualization stack includes LLMarker boxes`` () =
+let ``LL step visualization stack leaves are connected by dashed edges and same rank`` () =
     let g =
         Grammar.parseGrammar
             "
@@ -124,7 +124,7 @@ let ``LL step visualization stack includes LLMarker boxes`` () =
         let info = ExternalTools.compileDotStringToInfo step.treeAndStack
         Assert.True(info.nodeCount > 0)
 
-    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("lightgray")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("digraph StackTree")))
 
 [<Fact>]
 let ``LL step visualization tree is properly nested`` () =

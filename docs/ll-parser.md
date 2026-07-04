@@ -4,27 +4,27 @@ Implementation of LL(k) parsing: table construction and table-driven recursive d
 
 ## Type Definitions
 
-The derivation tree type is defined in the [DerivationTree module](derivation-tree.md) and shared by LL and LR parsers.
+The derivation tree type (`DerivationTree<'t,'nt>`) and the mutable tree type (`MutableTree<'t,'nt>`) are defined in the [DerivationTree module](derivation-tree.md).
 
-## LL Stack Frame Types
+## LL Stack Leaf Type
 
-The `LLStackFrame` type (`VisualizationTypes.fs`) has two variants:
+The `LLStackLeaf` type (`VisualizationTypes.fs`) identifies a leaf node currently on the stack by its immutable snapshot and its path from the tree root:
 
 ```fsharp
-type LLStackFrame<'t, 'nt> =
-    | LLTree of DerivationTree<'t, 'nt>
-    | LLMarker of Nonterminal<'nt> * int
+[<Struct>]
+type LLStackLeaf<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      path: int list }
 ```
 
-- `LLTree` carries a tree node (a frontier symbol – terminal, epsilon, or nonterminal leaf).
-- `LLMarker(nt, n)` marks the boundary of a nonterminal expansion with `n` expected children. When the marker reaches the top of the stack, `n` trees are popped from `completed` and combined into `Node(nt, children)`.
+The `path` is a list of child indices from the root to the leaf (e.g., `[0; 1]` means root → child[0] → child[1]). This enables the DOT renderer to locate stack nodes in the full tree.
 
 ## Function Signatures
 
 ### `LLParser.buildTable`
 
 ```fsharp
-val buildTable: Grammar<string, string> -> k: int -> Map<Nonterminal<string> * Symbol<string, string> list, int>
+val buildTable: Grammar<'t, 'nt> -> k: int -> Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>
 ```
 
 Constructs an LL(k) parsing table for a given grammar and lookahead length `k`.
@@ -54,18 +54,17 @@ Lookahead is a list of grammar symbols; end-of-input is `[Epsilon]`.
 val parseWithSteps: Grammar<'t, 'nt> -> table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list
 ```
 
-Table-driven LL(k) recursive descent parser that builds a properly nested derivation tree using a unified stack with markers. Also collects visualization steps.
+Table-driven LL(k) recursive descent parser that builds a derivation tree using mutable tree nodes on a unified stack. Also collects visualization steps.
 
 **Algorithm:**
-1. Tokenize the input using `Tokenizer.tokenize` (space-separated terminals).
-2. Maintain a unified stack of `LLStackFrame` (initially `[LLTree(Leaf(N start))]`).
-3. Also maintain a `completed` list of fully-built subtree roots.
-4. While the stack is non-empty:
-   - **Terminal** (`LLTree(Leaf(T(t)))`): match against current input symbol. If matched, advance input position and add `Leaf(T(Terminal t))` to `completed`. If not matched, fail.
-   - **Epsilon** (`LLTree(Leaf(Epsilon))`): add `Leaf(Epsilon)` to `completed` without consuming input.
-   - **Nonterminal** (`LLTree(Leaf(N nt))` or `LLTree(Node(nt, _))`): compute lookahead, look up the table, and expand: push RHS symbols as `LLTree(Leaf sym)`, followed by `LLMarker(nt, childrenCount)`.
-   - **Marker** (`LLMarker(nt, n)`): pop `n` trees from the end of `completed`, reverse, build `Node(nt, children)`, add to `completed`.
-5. When stack is empty and all input consumed, the last item in `completed` is the result tree.
+1. Tokenize the input: convert terminals to symbol list.
+2. Create root `MutableTree(N g.start)` and a single-element stack `[root]`.
+3. At each iteration:
+   - **Record step**: snapshot the root tree to immutable, snapshot each stack node to `LLStackLeaf`.
+   - **Top is Terminal**: if matches input symbol, pop and advance position.
+   - **Top is Epsilon**: pop without consuming input.
+   - **Top is Nonterminal**: compute lookahead, look up table, set the node's `Children` to new `MutableTree` nodes for RHS symbols (with parent pointers set), push RHS nodes onto stack (first on top). If no table entry, fail.
+4. When stack is empty and all input consumed, convert root to immutable via `ToImmutable()`.
 
 **Preconditions:**
 - The table must be constructed by `buildTable` for the same grammar and `k`.
@@ -73,14 +72,13 @@ Table-driven LL(k) recursive descent parser that builds a properly nested deriva
 **Postconditions:**
 - `Some(tree)` if the input is accepted, `None` otherwise.
 - On acceptance, `DerivationTree.leaves tree` joined by spaces equals the input string (modulo epsilon leaves).
-- The tree is properly nested: intermediate nonterminals are preserved as `Node` in the tree, not flattened.
-- The root of the tree is `Node(g.start, children)`.
-- Each `LLParsingStep` contains the current stack, the current `completed` list (roots of fully-built subtrees), and the input state.
+- The root of the tree is a `Node(g.start, children)`.
+- Each `LLParsingStep` contains the full immutable tree snapshot, the stack leaf list, and the input state.
 
 ### `LLParser.parse`
 
 ```fsharp
-val parse: Grammar<string, string> -> table: Map<Nonterminal<string> * Symbol<string, string> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<string, string>>
+val parse: Grammar<'t, 'nt> -> table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<'t, 'nt>>
 ```
 
 Same as `parseWithSteps` but returns only the tree (no steps).
@@ -95,8 +93,9 @@ Same as `parseWithSteps` but returns only the tree (no steps).
 | Derivation tree in separate module | Shared by LL and LR parsers; avoids circular dependencies. |
 | Lookahead from first_k and follow_k | Standard LL(k) construction from the book. |
 | End-of-input lookahead is `[Epsilon]` | Consistent with explicit Epsilon symbol in first/follow sets. No string/symbol conversion needed. |
-| Unified stack with markers (`LLStackFrame`) | `LLTree` frames carry tree nodes for the current frontier. `LLMarker` frames track nonterminal boundaries, enabling properly nested tree construction. When a marker reaches the top of the stack, completed children are combined into a `Node`. This eliminates the flat-tree problem of the previous approach. |
-| `completed` list in step data | Each step captures the roots of fully-built subtrees. The DOT visualizer renders both the stack frontier and the completed subtrees, giving a complete picture of the parse progress. |
+| Mutable tree nodes on stack | When a nonterminal leaf is expanded, the existing mutable node gets its children set in-place, and the children become the new stack. No separate marker frames or completed list needed. The tree is built top-down by mutating node children. |
+| Immutable snapshot per step | At each step, the root tree is snapshotted to `DerivationTree` and each stack node is snapshotted to `LLStackLeaf` with its path. This captures the exact state at that moment, preserving correctness even though nodes are mutated later. |
+| Parent pointers in `MutableTree` | Enable `GetPath()` for computing each stack node's path from root. Used by the DOT renderer to locate stack leaves in the full tree for dashed-edge connections. |
 
 ## Book Relationship
 

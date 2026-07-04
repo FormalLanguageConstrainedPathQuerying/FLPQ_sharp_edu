@@ -635,7 +635,7 @@ S &\rightarrow \varepsilon \\
      4.   Increase arrow heads: `\tikzset{>={Latex[width=3mm,length=3mm]}}`
      5.   For embedding into merged summary wrap tikzpicture into resizebox: `\resizebox{0.98\textwidth}{!}{...}` Generate standelone tikzpicture without resizebox.
      6.   Increase spacing  between nodes. Add `, level sep=2cm, sibling sep=1.5cm` to \graph options. Example: `\graph [layered layout, nodes={draw, rectangle}, grow'=right, level sep=2cm, sibling sep=1.5cm] `
-108. Rework LL tree building and rendering. 
+[done] 108. Rework LL tree building and rendering. 
      1.   Make derivation tree mutable. It allows to store leafs in stack frames. When nonterminal leaf pops from stack and replaced with rhs, it will be possible to add childs to popped node. 
      2.   Rework steps rendering. Draw combined stack-tree ctructure where some leafs of some partial trees are stack frames.
      3.   Resulting tree for LL must be converted to current immutable version.

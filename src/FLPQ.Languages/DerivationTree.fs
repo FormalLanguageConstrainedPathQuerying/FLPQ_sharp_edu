@@ -6,6 +6,30 @@ type DerivationTree<'t, 'nt> =
     | Leaf of Symbol<'t, 'nt>
     | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
 
+/// Mutable derivation tree node for in-place construction during LL parsing.
+/// Children can be added after node creation (when a nonterminal leaf is expanded).
+/// Parent pointers enable path computation for visualization.
+type MutableTree<'t, 'nt>(sym: Symbol<'t, 'nt>) =
+    member val Symbol = sym with get, set
+    member val Children: MutableTree<'t, 'nt> list = [] with get, set
+    member val Parent: MutableTree<'t, 'nt> option = None with get, set
+
+    member this.ToImmutable() : DerivationTree<'t, 'nt> =
+        match this.Symbol with
+        | N nt when not (List.isEmpty this.Children) -> Node(nt, this.Children |> List.map (fun c -> c.ToImmutable()))
+        | _ -> Leaf this.Symbol
+
+    member this.GetPath() : int list =
+        let rec go (n: MutableTree<'t, 'nt>) acc =
+            match n.Parent with
+            | None -> acc
+            | Some parent ->
+                let idx = parent.Children |> List.findIndex (fun c -> obj.ReferenceEquals(c, n))
+
+                go parent (idx :: acc)
+
+        go this []
+
 module DerivationTree =
 
     /// Collect all leaf terminal values from a derivation tree (left-to-right).

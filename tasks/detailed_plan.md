@@ -1,66 +1,141 @@
-# Detailed Plan: Task 107 — Improve Tikz-based Automata Visualization
+# Detailed Plan: Task 108 — Rework LL Tree Building and Rendering
 
 ## Problem
 
-The Tikz-based automata visualization introduced in tasks 104-106 has several issues:
-1. Edge labels in the Tikz `graph` syntax via `s0 ->["label"] s1` may not compile correctly without the `babel` library.
-2. Loop edges (i → i) render as curved edges but should use `loop above` for clarity.
-3. Templates are missing `babel` and `arrows.meta` libraries.
-4. Arrow heads are too small.
-5. When embedding tikzpicture into the merged summary, it should be wrapped in `\resizebox`.
-6. Node spacing needs to be increased for better readability.
+Currently the LL parser uses an immutable `DerivationTree` type with `LLMarker` frames and a separate `completed` list to build trees bottom-up. This is complex and involves two separate data structures.
 
-## Changes
+The task requires:
+1. Make derivation tree mutable — leafs stored in stack frames can be updated (children added when nonterminal leaf is popped and RHS pushed)
+2. Rework steps rendering — draw combined stack-tree structure where some leaves of partial trees are stack frames
+3. Resulting tree must be converted to current immutable version
 
-### 1. `data/tex_tikz_template.tex` — Update template preamble
+## Design
 
-- Add `babel` and `arrows.meta` to `\usetikzlibrary`
-- Add `\tikzset{>={Latex[width=3mm,length=3mm]}}` for larger arrow heads
-- Keep standalone documentclass (no resizebox)
+### 1. MutableTree type (`DerivationTree.fs`)
 
-### 2. `data/tex_summary_template.tex` — Update template preamble
+```fsharp
+type MutableTree<'t, 'nt>(sym: Symbol<'t, 'nt>) =
+    member val Symbol = sym with get, set
+    member val Children: MutableTree<'t, 'nt> list = [] with get, set
+    member val Parent: MutableTree<'t, 'nt> option = None with get, set
 
-- Add `babel` and `arrows.meta` to `\usetikzlibrary`
-- Add `\tikzset{>={Latex[width=3mm,length=3mm]}}` for larger arrow heads
+    member this.ToImmutable() =
+        match this.Symbol with
+        | N nt when not (List.isEmpty this.Children) ->
+            Node(nt, this.Children |> List.map (_.ToImmutable()))
+        | _ -> Leaf this.Symbol
 
-### 3. `src/FLPQ.Printers/AutomatonTikz.fs` — Improve Tikz generation
+    member this.GetPath() : int list =
+        let rec go (n: MutableTree<'t,'nt>) acc =
+            match n.Parent with
+            | None -> acc
+            | Some parent ->
+                let idx =
+                    parent.Children
+                    |> List.findIndex (fun c -> obj.ReferenceEquals(c, n))
+                go parent (idx :: acc)
+        go this []
+```
 
-- **Loop edges**: In `transitionEdges`, when `i == j`, generate `s{i} ->["label",loop above] s{i};`
-- **Loop edges for epsilon**: In `epsEdges`, when `i == j`, generate `s{i} ->[dotted, "\\varepsilon",loop above] s{i};`
-- **Spacing**: In `tikzHeader`, add `level sep=2cm, sibling sep=1.5cm` to `\graph` options
+Design rationale:
+- Class with mutable properties — allows in-place tree construction
+- `Parent` pointer enables computing the path from root to leaf (needed for rendering)
+- `ToImmutable()` converts to standard `DerivationTree` once construction is complete
+- Unexpanded nonterminal leaves have `Children = []`
 
-### 4. `src/FLPQ.Printers/SummaryTeX.fs` — Wrap Tikz in resizebox
+### 2. Simplified LL Parser (`LLParser.fs`)
 
-- Add `wrapTikz` function that wraps Tikz content in `\resizebox{0.98\textwidth}{!}{...}`
-- Use this when embedding tikz in the summary header section
+No more `LLMarker`, no more `completed` list. Stack is `MutableTree<'t,'nt> list`.
 
-### 5. `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` — Fix tests
+Algorithm:
+```
+root = MutableTree(N startSymbol)
+stack = [root]
 
-- Update test expectations to include loop edges check
-- Add test for loop edges rendering with `loop above`
-- Verify all tikz compilation tests still pass with updated template
+While stack not empty:
+    record step
+    top = stack.Head
+    match top.Symbol:
+        Terminal t: if matches input[pos], pop, advance pos
+        Epsilon: pop (no input consumed)
+        Nonterminal nt: look up table, set top.Children to RHS nodes, push RHS nodes (in order) onto stack
 
-### 6. Documentation
+If stack empty and pos == input.Length: success
+```
 
-- Update `docs/automaton-viz.md` with new tikz options
-- Update `tasks/knowledge_base.md` if needed
+Tree building: when a nonterminal expands, the existing mutable node (top) gets its children set, and those children become the new stack frontier. No separate "completed" mechanism needed.
+
+### 3. Step Data (`VisualizationTypes.fs`)
+
+Replace `LLStackFrame` (with `LLTree`/`LLMarker`) and `LLParsingStep` (with `completed`) with:
+
+```fsharp
+[<Struct>]
+type LLStackLeaf<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      path: int list }
+
+[<Struct>]
+type LLParsingStep<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      stack: LLStackLeaf<'t, 'nt> list
+      input: StepInput<'t> }
+```
+
+- `tree`: immutable snapshot of the root MutableTree at this step moment
+- `stack`: immutable snapshots of each stack MutableTree node, with its path in the tree
+
+For step recording (each iteration), snapshot root + each stack node:
+```fsharp
+let recordStep stack pos =
+    let tree = root.ToImmutable()
+    let stackLeaves = stack |> List.map (fun n -> { tree = n.ToImmutable(); path = n.GetPath() })
+    steps <- { tree = tree; stack = stackLeaves; input = { tokens = terminals; position = pos } } :: steps
+```
+
+### 4. Combined Tree+Stack Rendering (`DerivationTreeDot.fs`)
+
+`toDotWithLLStack` receives:
+- The immutable `tree` (full derivation tree snapshot)
+- The `stack` list (LLStackLeaf list identifying stack frontier)
+
+Rendering algorithm:
+1. Render the full tree recursively, assigning DOT IDs
+2. Track node IDs by path (during tree rendering, record (path → nodeId) mappings)
+3. After tree rendering, for consecutive stack leaves, add dashed edges (using path → nodeId lookup)
+4. Add same-rank constraint for stack leaves
+
+Since we render by path, we always get the correct node IDs even with duplicate leaf values.
+
+### 5. Step Visualizer Update (`LLStepVisualizer.fs`)
+
+Simplified: passes `step.tree` and `step.stack` directly to `DerivationTreeDot.toDotWithLLStack`.
+
+No more `completed` list.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `data/tex_tikz_template.tex` | Add babel, arrows.meta, tikzset |
-| `data/tex_summary_template.tex` | Add babel, arrows.meta, tikzset |
-| `src/FLPQ.Printers/AutomatonTikz.fs` | Loop edges, spacing |
-| `src/FLPQ.Printers/SummaryTeX.fs` | Resizebox wrapping |
-| `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` | Test updates |
-| `docs/automaton-viz.md` | Documentation updates |
+| `src/FLPQ.Languages/DerivationTree.fs` | Add MutableTree class |
+| `src/FLPQ.Languages/VisualizationTypes.fs` | Replace LLStackFrame/LLMarker with LLStackLeaf, simplify LLParsingStep |
+| `src/FLPQ.Languages/LLParser.fs` | Rewrite to use MutableTree, remove LLMarker + completed |
+| `src/FLPQ.Printers/DerivationTreeDot.fs` | Rewrite toDotWithLLStack for combined tree+stack |
+| `src/FLPQ.Printers/LLStepVisualizer.fs` | Update for new step data |
+| `tests/FLPQ.Languages.Tests/LLParserTests.fs` | Tree structure tests unchanged (same final output) |
+| `tests/FLPQ.Printers.Tests/LLVisualizerTests.fs` | Update rendering expectations (remove completed subtree checks, update stack checks) |
+| `docs/ll-parser.md` | Update algorithm description |
+| `docs/derivation-tree.md` | Add MutableTree documentation |
+| `docs/visualization-types.md` | Update type descriptions |
+| `docs/derivation-tree-viz.md` | Update toDotWithLLStack description |
 
 ## Order of Implementation
 
-1. Update templates
-2. Update AutomatonTikz.fs
-3. Update SummaryTeX.fs
-4. Update tests
-5. Update documentation
-6. Format, build, test
+1. Add MutableTree type to DerivationTree.fs
+2. Update VisualizationTypes.fs (new LLStackLeaf, simplified LLParsingStep)
+3. Rewrite LLParser.fs
+4. Rewrite DerivationTreeDot.fs (toDotWithLLStack)
+5. Update LLStepVisualizer.fs
+6. Update tests
+7. Update documentation
+8. Format, build, test

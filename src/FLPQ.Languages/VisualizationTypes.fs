@@ -12,32 +12,18 @@ type StepInput<'t> =
     { tokens: Terminal<'t> list
       position: int }
 
-/// Frame on the unified LL parser stack.
-/// LLTree carries a tree node (frontier symbol).
-/// LLMarker marks the boundary of a nonterminal expansion with expected child count.
-type LLStackFrame<'t, 'nt> =
-    | LLTree of DerivationTree<'t, 'nt>
-    | LLMarker of Nonterminal<'nt> * int
-
-module LLStackFrame =
-
-    let symbol (frame: LLStackFrame<'t, 'nt>) : Symbol<'t, 'nt> =
-        match frame with
-        | LLTree tree -> DerivationTree.rootSymbol tree
-        | LLMarker(nt, _) -> N nt
-
-    let tree (frame: LLStackFrame<'t, 'nt>) : DerivationTree<'t, 'nt> =
-        match frame with
-        | LLTree tree -> tree
-        | LLMarker(nt, _) -> Node(nt, [])
-
-    let create sym = LLTree(Leaf sym)
+/// A stack leaf node in an LL parsing step.
+/// Contains the immutable snapshot of the leaf and its path from the tree root.
+[<Struct>]
+type LLStackLeaf<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      path: int list }
 
 /// Data for a single LL parser visualization step.
 [<Struct>]
 type LLParsingStep<'t, 'nt> =
-    { stack: LLStackFrame<'t, 'nt> list
-      completed: DerivationTree<'t, 'nt> list
+    { tree: DerivationTree<'t, 'nt>
+      stack: LLStackLeaf<'t, 'nt> list
       input: StepInput<'t> }
 
 /// Frame on the unified LR parser stack.

@@ -43,14 +43,13 @@ module DerivationTreeDot =
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
-    /// Render LL parser stack frames and completed subtrees as a combined DOT graph.
-    /// Completed subtrees are rendered as full trees on the left.
-    /// Stack frames are rendered on the right with a dashed chain and same-rank constraint.
-    /// LLMarker frames are rendered as gray boxes.
+    /// Render LL parser derivation tree with stack chain overlay.
+    /// The full partial derivation tree is rendered, and the stack frontier leaves
+    /// are marked with a dashed chain and same-rank constraint.
     let toDotWithLLStack
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
-        (stack: LLStackFrame<'t, 'nt> list)
-        (completed: DerivationTree<'t, 'nt> list)
+        (tree: DerivationTree<'t, 'nt>)
+        (stack: LLStackLeaf<'t, 'nt> list)
         : string =
         let sb = System.Text.StringBuilder()
 
@@ -63,49 +62,37 @@ module DerivationTreeDot =
             nodeId <- nodeId + 1
             nodeId
 
-        let rec renderTree (node: DerivationTree<'t, 'nt>) : int =
+        let pathToId = System.Collections.Generic.Dictionary<int list, int>()
+
+        let rec renderTree (node: DerivationTree<'t, 'nt>) (path: int list) : int =
             let nid = nextId ()
+            pathToId.[path] <- nid
 
             match node with
             | Leaf sym ->
                 let label = escapeLabel (symbolVisualizer sym)
+
                 sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
 
             | Node(nt, children) ->
                 let label = escapeLabel (symbolVisualizer (N nt))
+
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
-                for child in children do
-                    let childId = renderTree child
+                for i, child in List.indexed children do
+                    let childId = renderTree child (path @ [ i ])
                     sb.AppendLine(sprintf "  n%d -> n%d;" nid childId) |> ignore
 
             nid
 
-        if not (List.isEmpty completed) then
-            sb.AppendLine("  subgraph cluster_completed {") |> ignore
-            sb.AppendLine("    label=\"Completed subtrees\";") |> ignore
-            sb.AppendLine("    style=dashed;") |> ignore
-
-            for tree in completed do
-                renderTree tree |> ignore
-
-            sb.AppendLine("  }") |> ignore
+        renderTree tree [] |> ignore
 
         let stackIds =
             stack
-            |> List.map (fun frame ->
-                match frame with
-                | LLTree tree -> renderTree tree
-                | LLMarker(nt, _) ->
-                    let nid = nextId ()
-                    let label = escapeLabel (symbolVisualizer (N nt))
-
-                    sb.AppendLine(
-                        sprintf "  n%d [label=\"%s\", shape=box, style=filled, fillcolor=lightgray];" nid label
-                    )
-                    |> ignore
-
-                    nid)
+            |> List.choose (fun leaf ->
+                match pathToId.TryGetValue(leaf.path) with
+                | true, id -> Some id
+                | false, _ -> None)
             |> List.rev
 
         for i in 0 .. stackIds.Length - 2 do
