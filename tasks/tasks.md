@@ -628,7 +628,7 @@ S &\rightarrow \varepsilon \\
 
     ```
 106. [done] Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
-107. Improve Tikz-based automata visualization
+107. [done] Improve Tikz-based automata visualization
      1.   Recheck tikz-based automata compilation tests. Current verson of tikzpicture does not compile, but tests passed. It is a bug in tests. It caused by edge labels. Fix is below (babel library).
      2.   For loop edges generate `loop above` attribute. Example: `s3 ->["a",loop above] s3;`
      3.   Add babel and arrows.meta libraries: `\usetikzlibrary{graphs, graphdrawing, quotes, babel, arrows.meta}`
