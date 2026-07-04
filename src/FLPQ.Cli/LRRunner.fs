@@ -47,9 +47,6 @@ module LRRunner =
                         (LRAutomaton.buildLR1 aug))
             | _ -> ()
         else
-            let tikzTemplatePath = Helpers.findTikzTemplate ()
-            let tikzTemplate = File.ReadAllText tikzTemplatePath
-
             match algo with
             | AlgorithmTypes.LR0
             | AlgorithmTypes.SLR1 ->
@@ -57,13 +54,13 @@ module LRRunner =
 
                 Helpers.writeOutputFile
                     (Path.Combine(outputDir, "lr_automaton.tikz.tex"))
-                    (tikzTemplate.Replace("__CONTENT__", tikzContent))
+                    tikzContent
             | AlgorithmTypes.CLR1 ->
                 let tikzContent = LRAutomatonTikz.lr1AutomatontoTikz aug (LRAutomaton.buildLR1 aug)
 
                 Helpers.writeOutputFile
                     (Path.Combine(outputDir, "lr_automaton.tikz.tex"))
-                    (tikzTemplate.Replace("__CONTENT__", tikzContent))
+                    tikzContent
             | _ -> ()
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)

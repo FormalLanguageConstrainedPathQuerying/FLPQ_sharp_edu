@@ -77,7 +77,7 @@ module Summary =
         else
             let steps = Helpers.collectSteps vizDir
 
-            let lrAutomatonPdf =
+            let lrAutomatonPdf, lrAutomatonTikz =
                 match algo with
                 | AlgorithmTypes.LR0
                 | AlgorithmTypes.SLR1
@@ -86,15 +86,13 @@ module Summary =
                     let autoTikzTex = Path.Combine(vizDir, "lr_automaton.tikz.tex")
 
                     if File.Exists autoTikzTex then
-                        if ExternalTools.compileTexFile autoTikzTex dotPdfDir then
-                            Some "dot_pdfs/lr_automaton.pdf"
-                        else
-                            None
+                        let tikzContent = File.ReadAllText autoTikzTex
+                        (None, Some tikzContent)
                     elif File.Exists autoDot then
-                        Some "dot_pdfs/lr_automaton.pdf"
+                        (Some "dot_pdfs/lr_automaton.pdf", None)
                     else
-                        None
-                | _ -> None
+                        (None, None)
+                | _ -> (None, None)
 
             let algoKind =
                 match algo with
@@ -106,7 +104,13 @@ module Summary =
                 | AlgorithmTypes.CLR1 -> "lr"
 
             let content =
-                SummaryTeX.buildContent (AlgorithmTypes.displayName algo) algoKind vizDir steps.Length lrAutomatonPdf
+                SummaryTeX.buildContent
+                    (AlgorithmTypes.displayName algo)
+                    algoKind
+                    vizDir
+                    steps.Length
+                    lrAutomatonPdf
+                    lrAutomatonTikz
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

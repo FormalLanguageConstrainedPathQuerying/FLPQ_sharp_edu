@@ -22,7 +22,12 @@ module SummaryTeX =
         else
             None
 
-    let headerSection (vizDir: string) (algoKind: string) (lrAutomatonPdf: string option) : string list =
+    let headerSection
+        (vizDir: string)
+        (algoKind: string)
+        (lrAutomatonPdf: string option)
+        (lrAutomatonTikz: string option)
+        : string list =
         let mutable lines = []
 
         match readIfExists (Path.Combine(vizDir, "grammar_original.tex")) with
@@ -49,6 +54,10 @@ module SummaryTeX =
 
             match lrAutomatonPdf with
             | Some rel -> lines <- lines @ [ section "LR Automaton"; includePdf rel; "" ]
+            | None -> ()
+
+            match lrAutomatonTikz with
+            | Some tikz -> lines <- lines @ [ section "LR Automaton"; wrapCenter tikz; "" ]
             | None -> ()
         | _ -> ()
 
@@ -88,13 +97,14 @@ module SummaryTeX =
         (vizDir: string)
         (stepCount: int)
         (lrAutomatonPdf: string option)
+        (lrAutomatonTikz: string option)
         : string list =
         let mutable lines =
             [ section ("Algorithm: " + algo)
               sprintf "\\textit{Total steps: %d}\\\\" stepCount
               "" ]
 
-        lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf
+        lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz
 
         let stepDirs =
             if not (Directory.Exists vizDir) then
