@@ -28,6 +28,7 @@ module AlgorithmTypes =
         | [<AltCommandLine("-o")>] Output of string
         | [<AltCommandLine("-k")>] Lookahead of int
         | [<AltCommandLine("-s")>] Summary
+        | [<AltCommandLine("--use-dot")>] UseDot
 
         interface IArgParserTemplate with
             member this.Usage =
@@ -38,3 +39,4 @@ module AlgorithmTypes =
                 | Output _ -> "Output directory for step-by-step visualization"
                 | Lookahead _ -> "Lookahead k for LL parser (default: 1)"
                 | Summary -> "Generate merged TeX summary file"
+                | UseDot -> "Use Graphviz dot for LR automaton rendering (default: Tikz)"

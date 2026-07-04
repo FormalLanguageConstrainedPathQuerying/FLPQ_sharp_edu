@@ -3,8 +3,7 @@ module GoldenHelpers
 open System.IO
 open Xunit
 
-let goldenDataDir =
-    Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
+let goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
 
 let verifyGolden (goldenFileName: string) (actualContent: string) =
     let goldenPath = Path.Combine(goldenDataDir, goldenFileName)

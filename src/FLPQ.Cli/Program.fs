@@ -17,14 +17,15 @@ module Program =
             let output = results.GetResult(AlgorithmTypes.Output, defaultValue = "output")
             let k = results.GetResult(AlgorithmTypes.Lookahead, defaultValue = 1)
             let summary = results.Contains AlgorithmTypes.Summary
+            let useDot = results.Contains AlgorithmTypes.UseDot
 
             match algorithm with
             | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output
             | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output
             | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k
-            | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm
-            | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm
-            | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm
+            | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
+            | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
+            | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
 
             if summary then
                 let templatePath = Helpers.findSummaryTemplate ()

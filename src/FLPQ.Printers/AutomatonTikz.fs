@@ -9,7 +9,8 @@ open FLPQ.Languages
 module AutomatonTikz =
 
     let private escapeLatex (s: string) : string =
-        s.Replace(@"\", @"\textbackslash ")
+        s
+            .Replace(@"\", @"\textbackslash ")
             .Replace("_", @"\_")
             .Replace("{", @"\{")
             .Replace("}", @"\}")
@@ -20,13 +21,7 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
-    let private nodeOptions
-        (idx: int)
-        (stateContent: string)
-        (isStart: bool)
-        (isFinal: bool)
-        (shape: string)
-        : string =
+    let private nodeOptions (idx: int) (stateContent: string) (isStart: bool) (isFinal: bool) (shape: string) : string =
         let parts = ResizeArray<string>()
 
         parts.Add(sprintf "as={%s}" stateContent)
@@ -86,10 +81,7 @@ module AutomatonTikz =
                             sb.AppendLine(sprintf "    s%d ->[\"%s\"] s%d;" i label j) |> ignore
                 | None -> ()
 
-    let private epsEdges
-        (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
-        (sb: StringBuilder)
-        : unit =
+    let private epsEdges (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) (sb: StringBuilder) : unit =
         for i in 0 .. transitions.rows - 1 do
             for j in 0 .. transitions.cols - 1 do
                 match transitions.data.[i, j] with
@@ -100,12 +92,7 @@ module AutomatonTikz =
     let private tikzHeader (shape: string) (sb: StringBuilder) : unit =
         sb.AppendLine(@"\begin{tikzpicture}") |> ignore
 
-        sb
-            .AppendLine(
-                sprintf
-                    @"  \graph [layered layout, nodes={draw, %s}, grow'=right] {"
-                    shape
-            )
+        sb.AppendLine(sprintf @"  \graph [layered layout, nodes={draw, %s}, grow'=right] {" shape)
         |> ignore
 
     let private tikzFooter (sb: StringBuilder) : unit =

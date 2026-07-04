@@ -83,8 +83,14 @@ module Summary =
                 | AlgorithmTypes.SLR1
                 | AlgorithmTypes.CLR1 ->
                     let autoDot = Path.Combine(vizDir, "lr_automaton.dot")
+                    let autoTikzTex = Path.Combine(vizDir, "lr_automaton.tikz.tex")
 
-                    if File.Exists autoDot then
+                    if File.Exists autoTikzTex then
+                        if ExternalTools.compileTexFile autoTikzTex dotPdfDir then
+                            Some "dot_pdfs/lr_automaton.pdf"
+                        else
+                            None
+                    elif File.Exists autoDot then
                         Some "dot_pdfs/lr_automaton.pdf"
                     else
                         None
