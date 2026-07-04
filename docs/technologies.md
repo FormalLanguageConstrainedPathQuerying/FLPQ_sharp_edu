@@ -5,4 +5,4 @@
 * [fantomas](https://fsprojects.github.io/fantomas/) for code formatting.
 * [nicematrix](https://ctan.org/pkg/nicematrix) — LaTeX package for matrix rendering.
 * [Graphviz](https://graphviz.org/) — dot for graph visualization.
-* [pdflatex](https://www.tug.org/applications/pdftex/) — LaTeX compiler for TeX output verification.
+* [lualatex](https://www.tug.org/applications/pdftex/) — LaTeX compiler for TeX output verification.

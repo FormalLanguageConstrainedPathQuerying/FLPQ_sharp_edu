@@ -1,100 +1,68 @@
-# Detailed Plan: Task 101 — LL Trees Visualization
+# Detailed Plan: Task 103 — Switch TeX compilation to lualatex
 
 ## Problem
 
-LL parser visualization currently shows only the stack frontier. Completed subtrees (parts of the tree that have already been matched and popped from the stack) are not visualized. The final derivation tree is flat (`Node(start, leafChildren)`), not properly nested.
+All TeX compilation currently uses `pdflatex`. The project needs to switch to `lualatex` for better Unicode handling and compatibility with Tikz graphdrawing (tasks 104-106). 
+
+Also note: AGENTS.md line 33 still references `pdflatex` as an example tool.
 
 ## Goal
 
-1. Build properly nested hierarchical derivation trees in the LL parser (not flat `Node` with leaf children)
-2. Track completed subtrees in visualization step data
-3. Render both stack frames AND completed subtrees in the DOT visualization
+Replace all `pdflatex` usage with `lualatex` throughout the codebase. Update templates to be lualatex-compatible.
 
 ## Design Decisions
 
-### Unified Stack with Markers
+### Decision 1: Template changes
 
-Introduce a marker variant in `LLStackFrame` to track nonterminal boundaries on the stack:
+Current templates use `[utf8]{inputenc}` and `[T2A]{fontenc}` — these are pdflatex-specific packages. For lualatex, do NOT use `fontspec` (which adds complexity). Instead, simply remove `inputenc` and `fontenc` packages. lualatex natively handles UTF-8 without them. Also remove `russian` from `babel` options since we don't need Cyrillic support (leave `english`).
 
-```fsharp
-type LLStackFrame<'t, 'nt> =
-    | LLTree of DerivationTree<'t, 'nt>
-    | LLMarker of Nonterminal<'nt> * int  // nonterminal, expected child count
-```
+### Decision 2: Error detection
 
-When expanding `A -> α1 α2 ... αm`:
-- Push `LLTree(Leaf αi)` for each αi
-- Push `LLMarker(A, m)` below them
+The `pdflatexSucceeded` function checks for `!`, `Fatal error`, and `Error:` in stdout. lualatex produces similar error patterns, so the detection logic should remain the same. Rename to `latexSucceeded`.
 
-When `LLMarker(nt, n)` is at the top of the stack:
-- Pop it from stack
-- Pop `n` trees from completed
-- Build `Node(nt, reversed_popped_trees)`
-- Add to completed
+### Decision 3: compileTexFileTwice
 
-### Completed List Tracking
+The function calls `compileTexFile` twice. For summaries with TOC and cross-references, lualatex also requires double compilation. No change needed.
 
-The `LLParsingStep` type gains a `completed` field containing roots of fully-built subtrees.
+### Decision 4: Test coverage
 
-### DOT Visualization
+All TeX-related tests:
+- `TexCompilationTests.fs` — 7 tests compile snippets with `compileTexStringWithTemplate`
+- `ExternalToolsTests.fs` — tests the core compilation functions
+- `CliSummaryTests.fs` — tests full pipeline (PDLaTeX tests would be handled by CLI; run via `runCli` — currently marked `[<Trait("Category", "Summary")>]`, not TexCompilation)
 
-The DOT renderer will show:
-- Completed subtrees rendered as full trees (all children included) in a `cluster_completed` subgraph
-- Stack frames rendered as before (dashed chain, same rank)
-- Markers rendered as gray boxes
+We need to verify that lualatex is available in the test environment first. If `lualatex` is not in PATH, we need to handle gracefully (or add skip logic). Let's check.
 
 ## Implementation Checklist
 
-### 1. `VisualizationTypes.fs` — Type Changes
-- [x] Change `LLStackFrame` from single-case DU to two-case DU with `LLTree` and `LLMarker`
-- [x] Update `LLStackFrame` module helpers (symbol, tree, create)
-- [x] Add `completed` field to `LLParsingStep`
+### 1. Check lualatex availability
+- [ ] Run `which lualatex`
 
-### 2. `LLParser.fs` — Parser Logic
-- [x] Modify `parseLoop` to push markers when expanding nonterminals
-- [x] Handle `LLMarker` at top of stack: pop from completed, build Node
-- [x] Handle terminal match: add `Leaf` to completed
-- [x] Handle epsilon: add `Leaf(Epsilon)` to completed
-- [x] Record `completed` in step data
-- [x] Final result: completed.Head (properly nested tree)
-- [x] Extract `expandNonterminal` helper
+### 2. `src/FLPQ.Printers/ExternalTools.fs` — Core changes
+- [ ] Rename `pdflatexSucceeded` to `latexSucceeded` (internal function)
+- [ ] Replace `"pdflatex"` with `"lualatex"` in `compileTexStringWithTemplate` (line 168)
+- [ ] Replace `"pdflatex"` with `"lualatex"` in `compileTexFile` (line 189)
+- [ ] Update error messages (lines 197, 206)
 
-### 3. `DerivationTreeDot.fs` — DOT Rendering
-- [x] Update `toDotWithLLStack` signature to accept `completed` list
-- [x] Render each completed tree root as a full recursive tree inside `cluster_completed`
-- [x] Render stack frames with chain and same-rank constraint
-- [x] Render markers as gray boxes
+### 3. Template files
+- [ ] `data/tex_template.tex` — remove `inputenc`, remove `fontenc` (not needed for lualatex)
+- [ ] `data/tex_tabular_template.tex` — same as above (but this file only has `amsmath`, `preview`, no `inputenc`)
+- [ ] `data/tex_summary_template.tex` — remove `inputenc`/`fontenc`, switch babel to english only
 
-### 4. `LLStepVisualizer.fs` — Visualizer Update
-- [x] Pass `completed` from step data to DOT renderer
+### 4. Tests — Rename and verify
+- [ ] `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update test names (cosmetic, rename "pdflatex" to "lualatex")
+- [ ] `tests/FLPQ.Printers.Tests/ExternalToolsTests.fs` — update test names if needed
 
-### 5. `LLRunner.fs` — CLI
-- [x] No changes needed (uses `LLStepVisualizer.renderSteps` which now passes `completed` automatically)
+### 5. Documentation
+- [ ] `docs/technologies.md` — update pdflatex → lualatex
+- [ ] `docs/architecture.md` — update references
+- [ ] `docs/external-tools.md` — update references, mention lualatex
+- [ ] `docs/FLPQ.Cli.md` — update references
+- [ ] `docs/cli.md` — update references
+- [ ] `tasks/knowledge_base.md` — update references
 
-### 6. Tests — `LLParserTests.fs`
-- [x] Update `LL(1) tree structure for simple parse` to verify 4 children
-- [x] Add `LL(1) tree is properly nested with intermediate nonterminals` test
-
-### 7. Tests — `LLVisualizerTests.fs`
-- [x] Add `LL step visualization includes completed subtrees` test (checks for cluster_completed)
-- [x] Add `LL step visualization stack includes LLMarker boxes` test (checks for lightgray/compile)
-- [x] Add `LL step visualization tree is properly nested` test
-
-### 8. Documentation
-- [x] Update `docs/ll-parser.md`
-- [x] Update `docs/visualization-types.md`
-
-### 9. Final Checks
-- [x] Format: `dotnet fantomas . --check` - PASSED
-- [x] Build: `dotnet build FLPQ.slnx -c Release` - PASSED
-- [x] Tests: `dotnet test` - ALL 421 PASSED
-- [x] Duplication check - clean
-- [x] Generics check - all generic over `'t, 'nt`
-- [x] Separation check - algorithm logic in Languages, rendering in Printers
-- [x] Equivalence test - LL vs Valiant equivalence test still passes
-
-## Verification
-
-- Grammar `S -> a S b S | eps`, input `a b`: tree is `Node(S, [Leaf(T("a")), Node(S, [Leaf(Epsilon)]), Leaf(T("b")), Node(S, [Leaf(Epsilon)])])` — properly nested
-- DOT output contains `cluster_completed` with completed subtrees, and `lightgray` marker boxes
-- All existing tests pass (283 Languages, 66 Printers, +4 new tests)
+### 6. Final Checks
+- [ ] Format: `dotnet fantomas . --check`
+- [ ] Build: `dotnet build FLPQ.slnx -c Release`
+- [ ] Tests: `dotnet test`
+- [ ] All existing TexCompilation tests pass with lualatex

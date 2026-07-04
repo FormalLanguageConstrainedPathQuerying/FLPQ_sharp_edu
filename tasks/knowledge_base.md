@@ -213,16 +213,16 @@ When searching for usages of a removed field or renamed function, prefer `grep` 
 - **Explicit `bool` parameter**: accept the flag as a required parameter. Callers always pass the flag.
 - **`Option<'T>` parameter**: accept `Option<bool>` explicitly. Callers pass `None` or `Some true`.
 
-## pdflatex Exit Code 0 Despite Errors
+## lualatex Exit Code 0 Despite Errors
 
-**Problem**: `pdflatex -interaction=nonstopmode` can exit with code 0 even when the TeX source contains undefined control sequences or other errors. Relying solely on the exit code misses compilation failures.
+**Problem**: `lualatex -interaction=nonstopmode` can exit with code 0 even when the TeX source contains undefined control sequences or other errors. Relying solely on the exit code misses compilation failures.
 
 **Solution**: Always check three things together:
 1. Exit code is 0.
 2. No line in stdout starts with `!` (TeX error marker) or contains `Fatal error` or `Error:`.
 3. The output PDF exists and is non-empty (size > 0).
 
-This triple check is implemented in `FLPQ.Printers.ExternalTools.pdflatexSucceeded`. See `src/FLPQ.Printers/ExternalTools.fs`.
+This triple check is implemented in `FLPQ.Printers.ExternalTools.lualatexSucceeded`. See `src/FLPQ.Printers/ExternalTools.fs`.
 
 ## F# Pattern Type Annotation Syntax
 

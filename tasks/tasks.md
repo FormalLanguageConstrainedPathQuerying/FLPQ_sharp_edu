@@ -559,8 +559,73 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
     3.   Add example grammars and inputs that can be used for these algorithms.
 100. [done] Add golden tests for LR0 and LR1 tables rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
 101. [done] Add trees visualization for LL. Currently LL visualize only stack frames, but parts of trees out of stack missed. Add these parts visualization.
-102. Imptove visualization of automata: do it parametrizable. By default use current styles. For LR automata create specific style:
-    1.  Use rectangles for all states.
-    2.  Highlight start state by green
-    3.  Do not highlight final states
-    4.  Render content of states fully: render LR items. Reuse functions that used for grammar rendering. Create parametrizable if necessary. 
+102. Add golden tests for CYK merged summary generation. Generate merged tex file for CYK for several examples. Save result TeX files as reference (final combined tex only. not intermediate parts), cretae tests that generates tex for respective grammar and compare result with reference.
+[done] 103. Switch compilation of all TeX stuff to lualatex
+104. Add Tikz-based visualization for automata.
+     1.   Use Tikz. Documentation: https://tikz.dev/gd-usage-tikz. Minimal example with two graphs: top-bottom and left-right layout.
+     ```
+\documentclass{standalone}
+
+\usepackage{tikz}
+\usetikzlibrary{graphs, graphdrawing}
+\usegdlibrary{layered} % Required layout library
+
+\begin{document}
+
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}] {
+    a -> {b, c, d};
+    b -> {e, f};
+    c -> f;
+    d -> g;
+    {e, f, g} -> h;
+  };
+\end{tikzpicture}
+
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}, grow'=right] {
+    a -> {b, c, d};
+    b -> {e, f};
+    c -> f;
+    d -> g;
+    {e, f, g} -> h;
+  };
+\end{tikzpicture}
+
+
+\end{document}
+     ```
+     2. Make it parametrizable by vertex content rendering, vertex shapes. Default shape is circle.
+     3. Default layout: left to right.
+     4. Start node has lable above Start, fill green!30
+     5. Final node has style double, double distance=1.5pt, fill red!30. 
+     6. Example 
+     ```
+     \begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}] {
+    a [label=above:Start, fill=green!30] -> c [double, double distance=1.5pt,fill=red!30];
+  };
+\end{tikzpicture}
+     ```
+105.   Add Tikz based vizualization for LR automata. Special style for automata tikz renderer.
+     1.  Use rectangles for all states.
+     2.  Render content of states fully: render LR items similar to grammar. Reuse functions that used for grammar rendering. Create parametrizable if necessary.
+     3.  Add state number to vertex content.
+     4.  Use aligned environment to align vertex content.
+     5.  Example:
+    ```
+    \begin{tikzpicture}
+  \graph [layered layout, nodes={draw, rectangle}, grow'=right] {
+    a [as=$\begin{aligned}
+S &\rightarrow a\ S\ b\ S \\
+S &\rightarrow \varepsilon \\
+\end{aligned}$, label=above:Start, fill=green!30] -> c [as=$\begin{aligned}
+S &\rightarrow a\ S\ b\ S \\
+S &\rightarrow \varepsilon \\
+\end{aligned}$, double, double distance=1.5pt,fill=red!30];
+  };
+\end{tikzpicture}
+
+    ```
+106. Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
+107. LL

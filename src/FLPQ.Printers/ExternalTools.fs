@@ -137,12 +137,12 @@ module ExternalTools =
             eprintfn "dot invocation failed for %s: %s" dotPath ex.Message
             false
 
-    /// Strict check for pdflatex errors in the captured stdout.
+    /// Strict check for lualatex errors in the captured stdout.
     /// A run is considered successful only when:
     ///   - exit code is 0
     ///   - no stdout line starts with '!' or contains "Fatal error" / "Error:"
     ///   - the output PDF exists and is non-empty.
-    let private pdflatexSucceeded (exitCode: int) (stdout: string) (pdfPath: string) : bool =
+    let private latexSucceeded (exitCode: int) (stdout: string) (pdfPath: string) : bool =
         let hasErrors =
             stdout.Split('\n')
             |> Array.exists (fun line ->
@@ -165,12 +165,12 @@ module ExternalTools =
 
             let (code, out, _err) =
                 runProcess
-                    "pdflatex"
+                    "lualatex"
                     (sprintf "-interaction=nonstopmode -output-directory=\"%s\" \"%s\"" tempDir texFile)
                     (Some tempDir)
 
             let pdfPath = Path.Combine(tempDir, "test.pdf")
-            pdflatexSucceeded code out pdfPath
+            latexSucceeded code out pdfPath
         finally
             try
                 Directory.Delete(tempDir, true)
@@ -186,15 +186,15 @@ module ExternalTools =
 
             let (code, out, err) =
                 runProcess
-                    "pdflatex"
+                    "lualatex"
                     (sprintf "-interaction=nonstopmode -output-directory=\"%s\" \"%s\"" outputDir texPath)
                     (Some outputDir)
 
             let pdfName = Path.GetFileNameWithoutExtension(texPath) + ".pdf"
             let pdfPath = Path.Combine(outputDir, pdfName)
 
-            if not (pdflatexSucceeded code out pdfPath) then
-                eprintfn "pdflatex failed for %s (exit %d)" texPath code
+            if not (latexSucceeded code out pdfPath) then
+                eprintfn "lualatex failed for %s (exit %d)" texPath code
 
                 if not (String.IsNullOrEmpty err) then
                     eprintfn "%s" err
@@ -203,7 +203,7 @@ module ExternalTools =
             else
                 true
         with ex ->
-            eprintfn "pdflatex invocation failed for %s: %s" texPath ex.Message
+            eprintfn "lualatex invocation failed for %s: %s" texPath ex.Message
             false
 
     /// Compile a TeX file twice (for table-of-contents and cross-references).

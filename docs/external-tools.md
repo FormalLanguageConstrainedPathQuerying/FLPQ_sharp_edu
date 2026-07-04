@@ -7,7 +7,7 @@ Part of [`FLPQ.Printers`](FLPQ.Printers.md).
 Wraps external command-line tools used to verify and assemble visualization output:
 
 - **Graphviz `dot`** — compiles Dot source files into PDFs and parses `-Tplain` output for tests.
-- **`pdflatex`** — compiles TeX source into PDFs with strict error detection.
+- **`lualatex`** — compiles TeX source into PDFs with strict error detection.
 
 The module is shared between the test suite (strict compilation checks for generated Dot/TeX strings) and the CLI summary generator (batch Dot→PDF and TeX→PDF compilation to produce the final visualization PDF).
 
@@ -52,16 +52,16 @@ Compiles a Dot file to PDF via `dot -Tpdf -o pdfPath dotPath`.
 
 ### `compileTexStringWithTemplate : templatePath:string -> tex:string -> bool`
 
-Compiles a TeX fragment using a template file. The template must contain the placeholder `__CONTENT__`, which is replaced by `tex`. The combined document is written to a temporary directory and compiled with `pdflatex`.
+Compiles a TeX fragment using a template file. The template must contain the placeholder `__CONTENT__`, which is replaced by `tex`. The combined document is written to a temporary directory and compiled with `lualatex`.
 
-- Returns `true` iff the compilation succeeds according to `pdflatexSucceeded`.
+- Returns `true` iff the compilation succeeds according to `lualatexSucceeded`.
 - Used by tests: the template at `data/tex_template.tex` wraps content in `\[...\]` for standalone math, `data/tex_tabular_template.tex` wraps it for standalone tabular.
 
 ### `compileTexFile : texPath:string -> outputDir:string -> bool`
 
-Compiles a TeX file to PDF in the given output directory (single pass) via `pdflatex -interaction=nonstopmode -output-directory=outputDir texPath`.
+Compiles a TeX file to PDF in the given output directory (single pass) via `lualatex -interaction=nonstopmode -output-directory=outputDir texPath`.
 
-- Returns `true` iff the compilation succeeds according to `pdflatexSucceeded`.
+- Returns `true` iff the compilation succeeds according to `lualatexSucceeded`.
 - The output PDF is named `<texBasename>.pdf` and is left in `outputDir`.
 - Writes diagnostics to `stderr` on failure.
 
@@ -69,15 +69,15 @@ Compiles a TeX file to PDF in the given output directory (single pass) via `pdfl
 
 Compiles a TeX file **twice** (for table-of-contents and cross-references). Returns `true` iff both passes succeed. Used by the CLI summary generator.
 
-## Strict error detection (`pdflatexSucceeded`)
+## Strict error detection (`lualatexSucceeded`)
 
-A pdflatex run is considered successful only when **all** of the following hold:
+A lualatex run is considered successful only when **all** of the following hold:
 
 1. Exit code is 0.
 2. No stdout line starts with `!` (TeX error marker) or contains `Fatal error` or `Error:`.
 3. The output PDF exists and is non-empty.
 
-Relying on exit code alone is insufficient because pdflatex may exit 0 even when errors occur. The line-based check matches the behavior previously hardcoded in the test utilities.
+Relying on exit code alone is insufficient because lualatex may exit 0 even when errors occur. The line-based check matches the behavior previously hardcoded in the test utilities.
 
 ## Process invocation
 

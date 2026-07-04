@@ -4,7 +4,7 @@
 
 Command-line interface for running parsing algorithms with visualization output.
 With the `--summary` (`-s`) flag, the CLI additionally compiles all Dot and TeX
-artifacts via Graphviz and pdflatex, merges them into a single TeX document per
+artifacts via Graphviz and lualatex, merges them into a single TeX document per
 algorithm, and produces a final visualization PDF. This replaces the former
 `run_viz.py` script.
 
@@ -22,7 +22,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | `-i` / `--input` | Input string file | (required) |
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
-| `-s` / `--summary` | Build summary PDF (compiles Dot via Graphviz and TeX via pdflatex) | off |
+| `-s` / `--summary` | Build summary PDF (compiles Dot via Graphviz and TeX via lualatex) | off |
 
 ## Output structure
 
@@ -54,7 +54,7 @@ When `-s` is passed, after writing the step artifacts the CLI also:
 
 1. Compiles every `*.dot` file (per-step + `lr_automaton.dot` for LR) to PDF via Graphviz.
 2. Builds a merged TeX document per algorithm by substituting `__ALGORITHM__` and `__CONTENT__` in `data/tex_summary_template.tex`.
-3. Compiles the merged TeX **twice** with pdflatex (for table-of-contents and cross-references).
+3. Compiles the merged TeX **twice** with lualatex (for table-of-contents and cross-references).
 4. Fails with exit code 1 if any Dot or TeX compilation produces errors (exit code, stdout markers, or empty PDF).
 
 Layout under `<output>/results/<algorithm-lower>/`:
@@ -63,7 +63,7 @@ Layout under `<output>/results/<algorithm-lower>/`:
 <output>/results/cyk/
   dot_pdfs/                         # Per-step Dot→PDF files (LL/LR)
   cyk_merged.tex                    # Merged TeX source
-  merged_tex_build/                 # pdflatex working directory (aux/log/pdf)
+  merged_tex_build/                 # lualatex working directory (aux/log/pdf)
   cyk_visualization.pdf             # Final compiled PDF
 ```
 
@@ -85,7 +85,7 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 
 - .NET 10.0 SDK
 - Graphviz (`dot` command) — required for `--summary`
-- LaTeX (`pdflatex`) — required for `--summary`
+- LaTeX (`lualatex`) — required for `--summary`
 
 ## Design decisions
 
@@ -93,6 +93,6 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 - TeX step files contain only visualization code (no document headers).
 - Grammar file reading reuses `Grammar.parseGrammarFromFile`.
 - Summary uses `landscape` layout to accommodate wide matrices without overflow.
-- `pdflatex` is run twice for correct table-of-contents and cross-references.
+- `lualatex` is run twice for correct table-of-contents and cross-references.
 - DOT files are compiled to PDFs separately and included as `\includegraphics` in the merged TeX (not converted to TikZ).
-- External tool invocations (Dot, pdflatex) are wrapped by `FLPQ.Printers.ExternalTools`, shared between the CLI and the test suite.
+- External tool invocations (Dot, lualatex) are wrapped by `FLPQ.Printers.ExternalTools`, shared between the CLI and the test suite.

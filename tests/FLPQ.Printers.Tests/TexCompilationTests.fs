@@ -11,7 +11,7 @@ let private templatePath =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``CYK table TeX compiles with pdflatex`` () =
+let ``CYK table TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
@@ -23,7 +23,7 @@ let ``CYK table TeX compiles with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``CYK all steps TeX compile with pdflatex`` () =
+let ``CYK all steps TeX compile with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
@@ -35,7 +35,7 @@ let ``CYK all steps TeX compile with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``LL step input TeX compiles with pdflatex`` () =
+let ``LL step input TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -49,7 +49,7 @@ let ``LL step input TeX compiles with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``LR step input TeX compiles with pdflatex`` () =
+let ``LR step input TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
     let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -64,7 +64,7 @@ let ``LR step input TeX compiles with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``Valiant trace TeX compiles with pdflatex`` () =
+let ``Valiant trace TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
@@ -81,7 +81,7 @@ let ``Valiant trace TeX compiles with pdflatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``Modified Valiant trace TeX compiles with pdflatex`` () =
+let ``Modified Valiant trace TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
 
     let trace =
@@ -127,7 +127,7 @@ let private tabularTemplatePath =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``LL table TeX compiles with pdflatex for grammar1`` () =
+let ``LL table TeX compiles with lualatex for grammar1`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let firstMap = FirstFollow.firstK g 1
     let followMap = FirstFollow.followK g 1

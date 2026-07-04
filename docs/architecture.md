@@ -37,7 +37,7 @@ FLPQ.slnx
 │   │   ├── LRTableTeX.fs           # TeX rendering for LR parsing tables
 │   │   ├── LLStepVisualizer.fs     # LL parser step-by-step visualization
 │   │   ├── LRStepVisualizer.fs     # LR parser step-by-step visualization
-│   │   └── ExternalTools.fs        # Graphviz and pdflatex wrappers (shared by CLI and tests)
+│   │   └── ExternalTools.fs        # Graphviz and lualatex wrappers (shared by CLI and tests)
 │   └── FLPQ.RPQ/               # RPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages)
 │       ├── GraphReader.fs          # Graph file reading, returns graph as NFA
 │       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
@@ -68,7 +68,7 @@ FLPQ.slnx
     └── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
         └── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
     └── FLPQ.Printers.Tests/       # Tests for printers
-        ├── ExternalToolsTests.fs        # Tests for Graphviz/pdflatex wrappers
+        ├── ExternalToolsTests.fs        # Tests for Graphviz/lualatex wrappers
         ├── MatrixTeXTests.fs             # Tests for matrix TeX rendering
         ├── AutomatonVisualizationTests.fs # Tests for automata dot rendering
         ├── DerivationTreeVisualizationTests.fs # Tests for tree dot rendering
@@ -84,7 +84,7 @@ FLPQ.slnx
 - **FLPQ.GraphAnalysis** — F# class library (net10.0). Generic graph type, MS-BFS, and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
 - **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
-- **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `pdflatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
+- **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `lualatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
 - **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms with optional summary PDF generation (`--summary`). Depends on `FLPQ.Languages` and `FLPQ.Printers`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.
 - **FLPQ.GraphAnalysis.Tests** — xUnit test project for graph analysis. Uses FsCheck for property-based testing.
