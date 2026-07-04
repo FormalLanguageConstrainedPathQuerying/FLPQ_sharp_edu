@@ -5,24 +5,7 @@ open FLPQ.Languages
 open FLPQ.Printers
 open Xunit
 
-let private goldenDataDir =
-    Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
-
-let private verifyGolden (goldenFileName: string) (actualContent: string) =
-    let goldenPath = Path.Combine(goldenDataDir, goldenFileName)
-
-    if File.Exists goldenPath then
-        let expected = File.ReadAllText goldenPath
-        Assert.Equal(expected, actualContent)
-    else
-        Directory.CreateDirectory goldenDataDir |> ignore
-        File.WriteAllText(goldenPath, actualContent)
-
-        Assert.True(
-            false,
-            $"Golden file '{goldenFileName}' was created in output/GoldenData/.\n"
-            + "Copy it to tests/FLPQ.Printers.Tests/GoldenData/ and re-run tests."
-        )
+open GoldenHelpers
 
 module private Grammars =
     let grammar1Bnf = Grammar.parseGrammar "S -> a S b S\nS -> eps"

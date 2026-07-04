@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="GoldenHelpers.fs" />
     <Compile Include="ExternalToolsTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
@@ -14,6 +15,7 @@
     <Compile Include="LRVisualizerTests.fs" />
     <Compile Include="GrammarTeXGoldenTests.fs" />
     <Compile Include="LRTableTeXGoldenTests.fs" />
+    <Compile Include="CykSummaryGoldenTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
     <Compile Include="CliSummaryTests.fs" />
   </ItemGroup>

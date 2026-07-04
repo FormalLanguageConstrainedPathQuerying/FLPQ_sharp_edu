@@ -1,0 +1,87 @@
+module CykSummaryGoldenTests
+
+open System.IO
+open FLPQ.Languages
+open FLPQ.Printers
+open Xunit
+
+open GoldenHelpers
+
+let private templatePath =
+    Path.Combine(
+        System.AppContext.BaseDirectory,
+        "tex_summary_template.tex"
+    )
+
+let private generateCykSummaryTex (grammarStr: string) (input: string) : string =
+    let grammar = Grammar.parseGrammar grammarStr
+    let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+    let tokens = Tokenizer.tokenizeTerminals input
+    let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokens
+
+    let tmpDir =
+        Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    Directory.CreateDirectory tmpDir |> ignore
+
+    try
+        File.WriteAllText(
+            Path.Combine(tmpDir, "input.tex"),
+            TeXRenderer.inputRow SymbolTeX.terminalContent tokens -1
+        )
+
+        File.WriteAllText(
+            Path.Combine(tmpDir, "grammar_original.tex"),
+            GrammarTeX.grammarToTeX grammar
+        )
+
+        File.WriteAllText(
+            Path.Combine(tmpDir, "grammar_cnf.tex"),
+            GrammarTeX.grammarToTeX cnf
+        )
+
+        for idx in 0 .. trace.Length - 1 do
+            let step = trace.[idx]
+            let stepDir = Path.Combine(tmpDir, sprintf "step_%d" idx)
+            Directory.CreateDirectory stepDir |> ignore
+
+            let tex =
+                if step.highlights.IsEmpty then
+                    CykTeX.tableToTeX step.table
+                else
+                    CykTeX.tableToTeXStyled step.table step.highlights
+
+            File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
+
+        let content =
+            SummaryTeX.buildContent "CYK" "table" tmpDir trace.Length None
+            |> String.concat "\n"
+
+        let template = File.ReadAllText templatePath
+
+        template
+            .Replace("__ALGORITHM__", "CYK")
+            .Replace("__CONTENT__", content)
+    finally
+        try
+            Directory.Delete(tmpDir, true)
+        with _ ->
+            ()
+
+type ``CYK summary golden tests``() =
+
+    [<Fact>]
+    member _.``CYK summary grammar1 aababb``() =
+        let tex =
+            generateCykSummaryTex "S -> a S b S\nS -> eps" "aababb"
+
+        verifyGolden "cyk_grammar1_aababb_summary.tex" tex
+
+    [<Fact>]
+    member _.``CYK summary grammar7 x+x``() =
+        let tex =
+            generateCykSummaryTex
+                "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x"
+                "x + x"
+
+        verifyGolden "cyk_grammar7_xplusx_summary.tex" tex

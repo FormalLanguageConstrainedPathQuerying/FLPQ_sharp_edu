@@ -1,68 +1,70 @@
-# Detailed Plan: Task 103 — Switch TeX compilation to lualatex
+# Detailed Plan: Task 102 — CYK Merged Summary Golden Tests
 
 ## Problem
 
-All TeX compilation currently uses `pdflatex`. The project needs to switch to `lualatex` for better Unicode handling and compatibility with Tikz graphdrawing (tasks 104-106). 
+No golden tests exist for CYK merged summary TeX generation. We need to generate reference TeX files and tests that verify future changes don't accidentally break the output.
 
-Also note: AGENTS.md line 33 still references `pdflatex` as an example tool.
+The existing golden tests (`GrammarTeXGoldenTests.fs`, `LRTableTeXGoldenTests.fs`) each have a duplicated `verifyGolden` helper. We should extract this before creating new tests.
 
 ## Goal
 
-Replace all `pdflatex` usage with `lualatex` throughout the codebase. Update templates to be lualatex-compatible.
+1. Extract shared `verifyGolden` helper from existing golden test files into `GoldenHelpers.fs`
+2. Create CYK golden tests that generate merged summary TeX for multiple examples and compare with reference files
+3. Generate initial golden reference files
 
 ## Design Decisions
 
-### Decision 1: Template changes
+### Decision 1: Extracting shared verifyGolden
 
-Current templates use `[utf8]{inputenc}` and `[T2A]{fontenc}` — these are pdflatex-specific packages. For lualatex, do NOT use `fontspec` (which adds complexity). Instead, simply remove `inputenc` and `fontenc` packages. lualatex natively handles UTF-8 without them. Also remove `russian` from `babel` options since we don't need Cyrillic support (leave `english`).
+Move `verifyGolden` into a new `GoldenHelpers.fs` module that provides:
+```fsharp
+let verifyGolden (goldenFileName: string) (actualContent: string) = ...
+```
 
-### Decision 2: Error detection
+Both `GrammarTeXGoldenTests.fs` and `LRTableTeXGoldenTests.fs` will call `GoldenHelpers.verifyGolden`.
 
-The `pdflatexSucceeded` function checks for `!`, `Fatal error`, and `Error:` in stdout. lualatex produces similar error patterns, so the detection logic should remain the same. Rename to `latexSucceeded`.
+### Decision 2: How to generate merged TeX for golden tests
 
-### Decision 3: compileTexFileTwice
+The merged summary pipeline involves:
+1. Parsing grammar + converting to CNF
+2. Tokenizing input
+3. Running CYK (parseWithTrace)
+4. Writing grammar_original.tex, grammar_cnf.tex, input.tex, and step table.tex files
+5. Calling SummaryTeX.buildContent + template wrapping
 
-The function calls `compileTexFile` twice. For summaries with TOC and cross-references, lualatex also requires double compilation. No change needed.
+We create a helper function `generateCykSummaryTex(grammarStr, inputTokens) -> string` that does all of this in a temp directory and returns the final merged TeX.
 
-### Decision 4: Test coverage
+### Decision 3: Test data
 
-All TeX-related tests:
-- `TexCompilationTests.fs` — 7 tests compile snippets with `compileTexStringWithTemplate`
-- `ExternalToolsTests.fs` — tests the core compilation functions
-- `CliSummaryTests.fs` — tests full pipeline (PDLaTeX tests would be handled by CLI; run via `runCli` — currently marked `[<Trait("Category", "Summary")>]`, not TexCompilation)
-
-We need to verify that lualatex is available in the test environment first. If `lualatex` is not in PATH, we need to handle gracefully (or add skip logic). Let's check.
+Use two examples:
+- grammar1 (`S -> a S b S | eps`) with input `aababb` → produces several CYK steps with non-trivial table
+- grammar7 (expression grammar) with input `x + x` → produces larger table with more nonterminals in CNF
 
 ## Implementation Checklist
 
-### 1. Check lualatex availability
-- [ ] Run `which lualatex`
+### 1. `tests/FLPQ.Printers.Tests/GoldenHelpers.fs` — Shared helper
+- [ ] Create module with `verifyGolden` function
+- [ ] Use `goldenDataDir` path from existing pattern
 
-### 2. `src/FLPQ.Printers/ExternalTools.fs` — Core changes
-- [ ] Rename `pdflatexSucceeded` to `latexSucceeded` (internal function)
-- [ ] Replace `"pdflatex"` with `"lualatex"` in `compileTexStringWithTemplate` (line 168)
-- [ ] Replace `"pdflatex"` with `"lualatex"` in `compileTexFile` (line 189)
-- [ ] Update error messages (lines 197, 206)
+### 2. Refactor existing golden tests
+- [ ] `GrammarTeXGoldenTests.fs` — use `GoldenHelpers.verifyGolden` instead of local copy
+- [ ] `LRTableTeXGoldenTests.fs` — use `GoldenHelpers.verifyGolden` instead of local copy
 
-### 3. Template files
-- [ ] `data/tex_template.tex` — remove `inputenc`, remove `fontenc` (not needed for lualatex)
-- [ ] `data/tex_tabular_template.tex` — same as above (but this file only has `amsmath`, `preview`, no `inputenc`)
-- [ ] `data/tex_summary_template.tex` — remove `inputenc`/`fontenc`, switch babel to english only
+### 3. `tests/FLPQ.Printers.Tests/CykSummaryGoldenTests.fs` — New golden tests
+- [ ] Helper to generate CYK summary TeX from grammar string and input tokens
+- [ ] Test: grammar1, input `aababb`
+- [ ] Test: grammar7, input `x + x`
+- [ ] Each test generates merged TeX and calls `verifyGolden`
 
-### 4. Tests — Rename and verify
-- [ ] `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update test names (cosmetic, rename "pdflatex" to "lualatex")
-- [ ] `tests/FLPQ.Printers.Tests/ExternalToolsTests.fs` — update test names if needed
+### 4. `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — Project file
+- [ ] Add `GoldenHelpers.fs` before golden test files in compilation order
+- [ ] Add `CykSummaryGoldenTests.fs` in compilation order
 
-### 5. Documentation
-- [ ] `docs/technologies.md` — update pdflatex → lualatex
-- [ ] `docs/architecture.md` — update references
-- [ ] `docs/external-tools.md` — update references, mention lualatex
-- [ ] `docs/FLPQ.Cli.md` — update references
-- [ ] `docs/cli.md` — update references
-- [ ] `tasks/knowledge_base.md` — update references
+### 5. Generate golden reference files
+- [ ] Run tests (they will fail and create golden files)
+- [ ] Copy golden files to `GoldenData/`
 
 ### 6. Final Checks
 - [ ] Format: `dotnet fantomas . --check`
 - [ ] Build: `dotnet build FLPQ.slnx -c Release`
 - [ ] Tests: `dotnet test`
-- [ ] All existing TexCompilation tests pass with lualatex
