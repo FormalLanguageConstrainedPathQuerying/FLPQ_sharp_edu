@@ -156,3 +156,61 @@ let ``DFA tikz with rectangle shape compiles`` () =
     Assert.Contains("rectangle", tikz)
     Assert.Contains("double", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LR(0) automaton Tikz compiles`` () =
+    let g =
+        Grammar.parseGrammar
+            "
+        S -> a S
+        S -> a
+        "
+
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let aut = LRAutomaton.buildLR0 aug
+
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+
+    Assert.Contains(@"\begin{tikzpicture}", tikz)
+    Assert.Contains(@"rectangle", tikz)
+    Assert.Contains(@"State 0", tikz)
+    Assert.Contains(@"\begin{aligned}", tikz)
+    Assert.Contains(@"\cdot", tikz)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let aut = LRAutomaton.buildLR0 aug
+
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+
+    Assert.Contains(@"State 0", tikz)
+    Assert.Contains(@"label=above:Start", tikz)
+    Assert.Contains(@"fill=green!30", tikz)
+    Assert.Contains("double", tikz)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LR(0) automaton Tikz has correct number of states`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+
+    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let aut = LRAutomaton.buildLR0 aug
+
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+
+    for i in 0 .. aut.states.Length - 1 do
+        Assert.Contains(sprintf "State %d" i, tikz)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)

@@ -29,7 +29,7 @@ module AutomatonTikz =
         : string =
         let parts = ResizeArray<string>()
 
-        parts.Add(sprintf "as={%s}" (escapeLatex stateContent))
+        parts.Add(sprintf "as={%s}" stateContent)
 
         if isStart then
             parts.Add("label=above:Start")

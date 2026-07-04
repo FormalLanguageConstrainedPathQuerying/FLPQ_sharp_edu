@@ -13,6 +13,7 @@
     <Compile Include="DerivationTreeDot.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />
+    <Compile Include="LRAutomatonTikz.fs" />
     <Compile Include="CykTeX.fs" />
     <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />
