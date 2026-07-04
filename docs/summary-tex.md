@@ -21,6 +21,15 @@ val wrapCenter: string -> string
 ```
 Wraps content in a `\begin{center}...\end{center}` environment.
 
+### `wrapTikzCenter`
+```fsharp
+val wrapTikzCenter: string -> string
+```
+Wraps a `\begin{tikzpicture}...\end{tikzpicture}` block in a
+`\resizebox{0.98\textwidth}{!}{...}` inside a `\begin{center}` environment.
+This ensures the Tikz diagram fits the page width in the merged summary.
+Standalone tikzpicture blocks (e.g., for the Tikz template) are generated without resizebox.
+
 ### `includePdf`
 ```fsharp
 val includePdf: string -> string
@@ -36,12 +45,13 @@ Generates a `\subsection*{...}` heading.
 
 ### `headerSection`
 ```fsharp
-val headerSection: vizDir:string -> algoKind:string -> lrAutomatonPdf:string option -> string list
+val headerSection: vizDir:string -> algoKind:string -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 ```
 Builds the header portion of the merged document: original grammar, CNF grammar
-(for table-based algorithms), input string, LL/LR parsing table, and LR automaton PDF.
+(for table-based algorithms), input string, LL/LR parsing table, and LR automaton.
 The `algoKind` parameter is `"table"` (CYK/Valiant), `"ll"`, or `"lr"`.
-The LR automaton PDF is produced from either a Tikz standalone document (default) or a Graphviz dot file (`--use-dot` flag) — both produce `lr_automaton.pdf` at the same relative path.
+The `lrAutomatonPdf` is a relative path to a pre-compiled PDF (dot-based rendering).
+The `lrAutomatonTikz` is inline Tikz code; it is wrapped with `wrapTikzCenter` for page fitting.
 
 ### `tableStepSection`
 ```fsharp
@@ -59,7 +69,7 @@ the compiled tree-and-stack PDF and the input TeX.
 
 ### `buildContent`
 ```fsharp
-val buildContent: algo:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> string list
+val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 ```
 Assembles the complete merged TeX content for one algorithm: algorithm header,
 header section, and all per-step sections in sorted order.

@@ -289,6 +289,29 @@ Edge labels in Tikz `\graph` syntax (`s0 ->["label"] s1`) require the `quotes` T
 ```
 Without it, Tikz interprets the quoted string as an unknown key (`/tikz/"{a}"`) and fails.
 
+Additionally, the `babel` library is required for proper handling of the `"` characters when the document uses `babel` (which is needed for multi-language support, e.g., Russian):
+```latex
+\usetikzlibrary{graphs, graphdrawing, quotes, babel}
+```
+Without `babel` in the tikzlibrary list, `"` within `[...]` in the `\graph` environment can be misinterpreted by the active `"` character, causing silent compilation failures (exit code 0 but incorrect rendering). Always include `babel` when using `quotes` in a document that loads the `babel` package.
+
+### Loop Edges with `loop above`
+
+Self-loops (transitions from a state to itself) should use the `loop above` edge attribute for proper visual placement:
+```tikz
+s3 ->["a",loop above] s3;
+```
+Without `loop above`, self-loops are drawn as small curves that may overlap with the node label.
+
+### Arrow Head Size
+
+Enlarged arrow heads require the `arrows.meta` library:
+```latex
+\usetikzlibrary{arrows.meta}
+\tikzset{>={Latex[width=3mm,length=3mm]}}
+```
+This produces visibly larger arrow heads that are easier to read in printed output.
+
 ### `amsmath` Required for `aligned` Environment
 
 When state content uses `\begin{aligned}...\end{aligned}` (e.g., for LR item rendering), the template preamble must include `\usepackage{amsmath}`. Without it, lualatex produces "Environment aligned undefined" errors.
@@ -305,8 +328,9 @@ Only plain-text edge labels (not in math mode) should be escaped for LaTeX speci
 \documentclass{standalone}
 \usepackage{amsmath}
 \usepackage{tikz}
-\usetikzlibrary{graphs, graphdrawing, quotes}
+\usetikzlibrary{graphs, graphdrawing, quotes, babel, arrows.meta}
 \usegdlibrary{layered}
+\tikzset{>={Latex[width=3mm,length=3mm]}}
 \begin{document}
 __CONTENT__  % \begin{tikzpicture}...\end{tikzpicture}
 \end{document}

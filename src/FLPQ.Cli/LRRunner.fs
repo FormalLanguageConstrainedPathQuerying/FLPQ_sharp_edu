@@ -52,15 +52,11 @@ module LRRunner =
             | AlgorithmTypes.SLR1 ->
                 let tikzContent = LRAutomatonTikz.lr0AutomatontoTikz aug (LRAutomaton.buildLR0 aug)
 
-                Helpers.writeOutputFile
-                    (Path.Combine(outputDir, "lr_automaton.tikz.tex"))
-                    tikzContent
+                Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
             | AlgorithmTypes.CLR1 ->
                 let tikzContent = LRAutomatonTikz.lr1AutomatontoTikz aug (LRAutomaton.buildLR1 aug)
 
-                Helpers.writeOutputFile
-                    (Path.Combine(outputDir, "lr_automaton.tikz.tex"))
-                    tikzContent
+                Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
             | _ -> ()
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)

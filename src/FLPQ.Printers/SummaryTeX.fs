@@ -11,6 +11,14 @@ module SummaryTeX =
     let wrapCenter (tex: string) : string =
         [ @"\begin{center}"; tex; @"\end{center}" ] |> String.concat "\n"
 
+    let wrapTikzCenter (tikz: string) : string =
+        [ @"\begin{center}"
+          @"\resizebox{0.98\textwidth}{!}{%%"
+          tikz
+          "}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
     let includePdf (relPath: string) : string =
         sprintf @"\begin{center}\includegraphics[width=0.9\textwidth,keepaspectratio]{{%s}}\end{center}" relPath
 
@@ -57,7 +65,7 @@ module SummaryTeX =
             | None -> ()
 
             match lrAutomatonTikz with
-            | Some tikz -> lines <- lines @ [ section "LR Automaton"; wrapCenter tikz; "" ]
+            | Some tikz -> lines <- lines @ [ section "LR Automaton"; wrapTikzCenter tikz; "" ]
             | None -> ()
         | _ -> ()
 

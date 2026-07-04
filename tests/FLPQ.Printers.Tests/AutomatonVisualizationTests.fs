@@ -98,6 +98,34 @@ let private tikzTemplatePath =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
+let ``automaton with loop edges tikz compiles`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 0); (0, 'b', 1); (1, 'c', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("loop above", tikz)
+    Assert.Contains("fill=green!30", tikz)
+    Assert.Contains("double", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``automaton with epsilon loop tikz compiles`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0" ] [] (Set.ofList [ (0, 0) ]) (set [ 0 ]) (set [ 0 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains(@"\varepsilon", tikz)
+    Assert.Contains("dotted", tikz)
+    Assert.Contains("loop above", tikz)
+    Assert.Contains("fill=green!30", tikz)
+    Assert.Contains("double", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
 let ``simple automaton tikz compiles`` () =
     let aut =
         Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])

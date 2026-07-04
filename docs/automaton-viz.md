@@ -41,13 +41,15 @@ Generates `\begin{tikzpicture}...\end{tikzpicture}` blocks (no document preamble
 ### Design decisions
 
 - Default shape: `circle` (parametrizable — `rectangle` for LR automata)
-- Layout: `layered layout, grow'=right` (left-to-right)
+- Layout: `layered layout, grow'=right, level sep=2cm, sibling sep=1.5cm` (left-to-right, enhanced spacing)
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
+- Loop edges (self-loops): `s%d ->["label",loop above] s%d` for both terminal and epsilon transitions
 - Epsilon transitions: `dotted` edges with `\varepsilon` label
 - Edge labels use the `quotes` library (`s%d ->["label"] s%d` syntax)
 - State content rendered via `as={...}` key — the caller provides LaTeX-ready content (not escaped)
 - Retains `escapeLatex` helper for edge labels only (LaTeX special characters)
+- Arrow heads enlarged via `\tikzset{>={Latex[width=3mm,length=3mm]}}`
 
 ### Template
 
@@ -56,9 +58,13 @@ Compiled via `data/tex_tikz_template.tex`:
 \documentclass{standalone}
 \usepackage{amsmath}
 \usepackage{tikz}
-\usetikzlibrary{graphs, graphdrawing, quotes}
+\usetikzlibrary{graphs, graphdrawing, quotes, babel, arrows.meta}
 \usegdlibrary{layered}
+\tikzset{>={Latex[width=3mm,length=3mm]}}
 ```
+
+`babel` is required for proper handling of edge label quotes in the Tikz graph syntax.
+When embedded in a merged summary, the tikzpicture is wrapped in `\resizebox{0.98\textwidth}{!}{...}` for page fitting.
 
 ---
 

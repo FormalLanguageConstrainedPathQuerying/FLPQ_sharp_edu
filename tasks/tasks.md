@@ -560,8 +560,8 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
 100. [done] Add golden tests for LR0 and LR1 tables rendering. Generate tex files for several grammars in bnf and cnf, save them as reference, cretae tests that generates tex for respective grammar ang compare result with reference.
 101. [done] Add trees visualization for LL. Currently LL visualize only stack frames, but parts of trees out of stack missed. Add these parts visualization.
 102. Add golden tests for CYK merged summary generation. Generate merged tex file for CYK for several examples. Save result TeX files as reference (final combined tex only. not intermediate parts), cretae tests that generates tex for respective grammar and compare result with reference.
-[done] 103. Switch compilation of all TeX stuff to lualatex
-104. Add Tikz-based visualization for automata.
+103. [done] Switch compilation of all TeX stuff to lualatex
+104. [done] Add Tikz-based visualization for automata.
      1.   Use Tikz. Documentation: https://tikz.dev/gd-usage-tikz. Minimal example with two graphs: top-bottom and left-right layout.
      ```
 \documentclass{standalone}
@@ -607,7 +607,7 @@ But no I see that `visualizeSteps` calls, for example LR parser. That is bad ide
   };
 \end{tikzpicture}
      ```
-105.   Add Tikz based vizualization for LR automata. Special style for automata tikz renderer.
+105. [done] Add Tikz based vizualization for LR automata. Special style for automata tikz renderer.
      1.  Use rectangles for all states.
      2.  Render content of states fully: render LR items similar to grammar. Reuse functions that used for grammar rendering. Create parametrizable if necessary.
      3.  Add state number to vertex content.
@@ -627,5 +627,15 @@ S &\rightarrow \varepsilon \\
 \end{tikzpicture}
 
     ```
-[done] 106. Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
-107. LL
+106. [done] Use tikz rendering in LR steps visualization by default. Add CLI opton that allows user to swithch LR automata rendering to dot. 
+107. Improve Tikz-based automata visualization
+     1.   Recheck tikz-based automata compilation tests. Current verson of tikzpicture does not compile, but tests passed. It is a bug in tests. It caused by edge labels. Fix is below (babel library).
+     2.   For loop edges generate `loop above` attribute. Example: `s3 ->["a",loop above] s3;`
+     3.   Add babel and arrows.meta libraries: `\usetikzlibrary{graphs, graphdrawing, quotes, babel, arrows.meta}`
+     4.   Increase arrow heads: `\tikzset{>={Latex[width=3mm,length=3mm]}}`
+     5.   For embedding into merged summary wrap tikzpicture into resizebox: `\resizebox{0.98\textwidth}{!}{...}` Generate standelone tikzpicture without resizebox.
+     6.   Increase spacing  between nodes. Add `, level sep=2cm, sibling sep=1.5cm` to \graph options. Example: `\graph [layered layout, nodes={draw, rectangle}, grow'=right, level sep=2cm, sibling sep=1.5cm] `
+108. Rework LL tree building and rendering. 
+     1.   Make derivation tree mutable. It allows to store leafs in stack frames. When nonterminal leaf pops from stack and replaced with rhs, it will be possible to add childs to popped node. 
+     2.   Rework steps rendering. Draw combined stack-tree ctructure where some leafs of some partial trees are stack frames.
+     3.   Resulting tree for LL must be converted to current immutable version.

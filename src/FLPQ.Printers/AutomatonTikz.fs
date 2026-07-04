@@ -74,11 +74,15 @@ module AutomatonTikz =
 
                     if not (List.isEmpty termLabels) then
                         let label = termLabels |> String.concat ", " |> escapeLatex
+                        let loopAttr = if i = j then ",loop above" else ""
 
                         if label = "" then
-                            sb.AppendLine(sprintf "    s%d -> s%d;" i j) |> ignore
+                            if i = j then
+                                sb.AppendLine(sprintf "    s%d ->[loop above] s%d;" i j) |> ignore
+                            else
+                                sb.AppendLine(sprintf "    s%d -> s%d;" i j) |> ignore
                         else
-                            sb.AppendLine(sprintf "    s%d ->[\"%s\"] s%d;" i label j) |> ignore
+                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s] s%d;" i label loopAttr j) |> ignore
                 | None -> ()
 
     let private epsEdges (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) (sb: StringBuilder) : unit =
@@ -86,13 +90,20 @@ module AutomatonTikz =
             for j in 0 .. transitions.cols - 1 do
                 match transitions.data.[i, j] with
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
-                    sb.AppendLine(sprintf "    s%d ->[dotted, \"\\varepsilon\"] s%d;" i j) |> ignore
+                    let loopAttr = if i = j then ",loop above" else ""
+
+                    sb.AppendLine(sprintf "    s%d ->[dotted, \"\\varepsilon\"%s] s%d;" i loopAttr j)
+                    |> ignore
                 | _ -> ()
 
     let private tikzHeader (shape: string) (sb: StringBuilder) : unit =
         sb.AppendLine(@"\begin{tikzpicture}") |> ignore
 
-        sb.AppendLine(sprintf @"  \graph [layered layout, nodes={draw, %s}, grow'=right] {" shape)
+        sb.AppendLine(
+            sprintf
+                @"  \graph [layered layout, nodes={draw, %s}, grow'=right, level sep=2cm, sibling sep=1.5cm] {"
+                shape
+        )
         |> ignore
 
     let private tikzFooter (sb: StringBuilder) : unit =

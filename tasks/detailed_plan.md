@@ -1,76 +1,66 @@
-# Detailed Plan: Task 104 — Tikz-based Visualization for Automata
+# Detailed Plan: Task 107 — Improve Tikz-based Automata Visualization
 
 ## Problem
 
-Automata are currently visualized only via Graphviz dot (`AutomatonDot.fs`). We need Tikz-based visualization for better integration with lualatex documents and to support rendering that dot cannot easily produce (e.g., LR items in aligned environments).
+The Tikz-based automata visualization introduced in tasks 104-106 has several issues:
+1. Edge labels in the Tikz `graph` syntax via `s0 ->["label"] s1` may not compile correctly without the `babel` library.
+2. Loop edges (i → i) render as curved edges but should use `loop above` for clarity.
+3. Templates are missing `babel` and `arrows.meta` libraries.
+4. Arrow heads are too small.
+5. When embedding tikzpicture into the merged summary, it should be wrapped in `\resizebox`.
+6. Node spacing needs to be increased for better readability.
 
-## Goal
+## Changes
 
-Create `AutomatonTikz.fs` module with `nfaToTikz` and `dfaToTikz` functions that generate Tikz `\begin{tikzpicture}...\end{tikzpicture}` blocks using the `graphdrawing` library with layered layout.
+### 1. `data/tex_tikz_template.tex` — Update template preamble
 
-## Design Decisions
+- Add `babel` and `arrows.meta` to `\usetikzlibrary`
+- Add `\tikzset{>={Latex[width=3mm,length=3mm]}}` for larger arrow heads
+- Keep standalone documentclass (no resizebox)
 
-### Decision 1: Return tikzpicture block only (not full document)
+### 2. `data/tex_summary_template.tex` — Update template preamble
 
-The module returns just the `\begin{tikzpicture}...\end{tikzpicture}` content. A template wraps it with the necessary preamble for standalone compilation. This allows the Tikz code to be inline in larger documents (e.g., summary).
+- Add `babel` and `arrows.meta` to `\usetikzlibrary`
+- Add `\tikzset{>={Latex[width=3mm,length=3mm]}}` for larger arrow heads
 
-### Decision 2: Interface follows AutomatonDot pattern
+### 3. `src/FLPQ.Printers/AutomatonTikz.fs` — Improve Tikz generation
 
-Same parameter pattern:
-```fsharp
-nfaToTikz (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (nfa: NFA<'t, 's>) : string
-dfaToTikz (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string
-```
+- **Loop edges**: In `transitionEdges`, when `i == j`, generate `s{i} ->["label",loop above] s{i};`
+- **Loop edges for epsilon**: In `epsEdges`, when `i == j`, generate `s{i} ->[dotted, "\\varepsilon",loop above] s{i};`
+- **Spacing**: In `tikzHeader`, add `level sep=2cm, sibling sep=1.5cm` to `\graph` options
 
-Additional optional parameter for node shape (default: `circle`).
+### 4. `src/FLPQ.Printers/SummaryTeX.fs` — Wrap Tikz in resizebox
 
-### Decision 3: Node rendering
+- Add `wrapTikz` function that wraps Tikz content in `\resizebox{0.98\textwidth}{!}{...}`
+- Use this when embedding tikz in the summary header section
 
-- Node identifiers: `s0`, `s1`, ... (safe for Tikz)
-- Node content: via `as={...}` key with stateVisualizer output (escaped for LaTeX)
-- Start states: `fill=green!30, label=above:Start`
-- Final states: `double, double distance=1.5pt, fill=red!30`
-- Default nodes: `draw, circle` (shape parametrizable)
+### 5. `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` — Fix tests
 
-### Decision 4: Edge rendering
+- Update test expectations to include loop edges check
+- Add test for loop edges rendering with `loop above`
+- Verify all tikz compilation tests still pass with updated template
 
-- Terminal transitions: `s{i} ->["label"] s{j}` (with label from labelPrinter)
-- Multiple labels on same edge: comma-separated
-- Epsilon transitions: `s{i} ->[dotted, "ε"] s{j}`
+### 6. Documentation
 
-### Decision 5: LaTeX escaping
+- Update `docs/automaton-viz.md` with new tikz options
+- Update `tasks/knowledge_base.md` if needed
 
-The `as` key content needs escaping: `_` → `\_`, `{` → `\{`, `}` → `\}`, `$` → `\$`, `%` → `\%`, `#` → `\#`, `&` → `\&`, `\` → `\\`
+## Files Modified
 
-### Decision 6: Shape parametrizability
+| File | Change |
+|------|--------|
+| `data/tex_tikz_template.tex` | Add babel, arrows.meta, tikzset |
+| `data/tex_summary_template.tex` | Add babel, arrows.meta, tikzset |
+| `src/FLPQ.Printers/AutomatonTikz.fs` | Loop edges, spacing |
+| `src/FLPQ.Printers/SummaryTeX.fs` | Resizebox wrapping |
+| `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` | Test updates |
+| `docs/automaton-viz.md` | Documentation updates |
 
-Add a `?shape: string` parameter defaulting to `"circle"`. For basic automata: circle. For LR automata (task 105): rectangle.
+## Order of Implementation
 
-## Implementation Checklist
-
-### 1. `src/FLPQ.Printers/AutomatonTikz.fs` — New module
-- [ ] Latex escape helper: `escapeLatex`
-- [ ] `nodeOptions`: build node attribute string
-- [ ] `transitionEdges`: build transition edges with labels
-- [ ] `epsEdges`: build epsilon edges (dotted)
-- [ ] `nfaToTikz`: render NFA as tikzpicture
-- [ ] `dfaToTikz`: render DFA as tikzpicture
-- [ ] Default shape `circle`; make shape parametrizable
-
-### 2. `src/FLPQ.Printers/FLPQ.Printers.fsproj` — Add compilation entry
-- [ ] Add `AutomatonTikz.fs` after `AutomatonDot.fs`
-
-### 3. `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` — Add Tikz tests
-- [ ] Add Tikz compilation template (`data/tex_tikz_template.tex`)
-- [ ] Test: simple automaton Tikz compiles with lualatex
-- [ ] Test: automaton with epsilon Tikz compiles
-- [ ] Test: DFA from LR(0) automaton Tikz compiles
-- [ ] Test: multiple start/final states Tikz compiles
-
-### 4. `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — Add template content
-- [ ] Add `tex_tikz_template.tex` to Content items
-
-### 5. Final Checks
-- [ ] Format: `dotnet fantomas . --check`
-- [ ] Build: `dotnet build FLPQ.slnx -c Release`
-- [ ] Tests: `dotnet test`
+1. Update templates
+2. Update AutomatonTikz.fs
+3. Update SummaryTeX.fs
+4. Update tests
+5. Update documentation
+6. Format, build, test
