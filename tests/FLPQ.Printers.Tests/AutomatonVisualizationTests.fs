@@ -1,5 +1,6 @@
 module AutomatonVisualizationTests
 
+open System.IO
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
@@ -91,3 +92,67 @@ let ``multiple start and final states`` () =
     let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(3, info.nodeCount)
     Assert.Equal(2, info.edgeCount)
+
+let private tikzTemplatePath =
+    System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``simple automaton tikz compiles`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains(@"\begin{tikzpicture}", tikz)
+    Assert.Contains(@"\graph", tikz)
+    Assert.Contains("layered layout", tikz)
+    Assert.Contains("grow'=right", tikz)
+    Assert.Contains("fill=green!30", tikz)
+    Assert.Contains("double", tikz)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``automaton with no transitions tikz compiles`` () =
+    let aut = Nfa.fromTransitions [ "s0" ] [] Set.empty (set [ 0 ]) (set [ 0 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``multiple start and final states tikz compiles`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] Set.empty (set [ 0; 1 ]) (set [ 1; 2 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("fill=green!30", tikz)
+    Assert.Contains("double", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``automaton with epsilon tikz compiles`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] (Set.ofList [ (0, 1) ]) (set [ 0 ]) (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains(@"\varepsilon", tikz)
+    Assert.Contains("dotted", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``DFA tikz with rectangle shape compiles`` () =
+    let aut = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+
+    let tikz = AutomatonTikz.dfaToTikz string (fun _i s -> s) "rectangle" aut
+
+    Assert.Contains("rectangle", tikz)
+    Assert.Contains("double", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)

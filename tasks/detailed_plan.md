@@ -1,70 +1,76 @@
-# Detailed Plan: Task 102 — CYK Merged Summary Golden Tests
+# Detailed Plan: Task 104 — Tikz-based Visualization for Automata
 
 ## Problem
 
-No golden tests exist for CYK merged summary TeX generation. We need to generate reference TeX files and tests that verify future changes don't accidentally break the output.
-
-The existing golden tests (`GrammarTeXGoldenTests.fs`, `LRTableTeXGoldenTests.fs`) each have a duplicated `verifyGolden` helper. We should extract this before creating new tests.
+Automata are currently visualized only via Graphviz dot (`AutomatonDot.fs`). We need Tikz-based visualization for better integration with lualatex documents and to support rendering that dot cannot easily produce (e.g., LR items in aligned environments).
 
 ## Goal
 
-1. Extract shared `verifyGolden` helper from existing golden test files into `GoldenHelpers.fs`
-2. Create CYK golden tests that generate merged summary TeX for multiple examples and compare with reference files
-3. Generate initial golden reference files
+Create `AutomatonTikz.fs` module with `nfaToTikz` and `dfaToTikz` functions that generate Tikz `\begin{tikzpicture}...\end{tikzpicture}` blocks using the `graphdrawing` library with layered layout.
 
 ## Design Decisions
 
-### Decision 1: Extracting shared verifyGolden
+### Decision 1: Return tikzpicture block only (not full document)
 
-Move `verifyGolden` into a new `GoldenHelpers.fs` module that provides:
+The module returns just the `\begin{tikzpicture}...\end{tikzpicture}` content. A template wraps it with the necessary preamble for standalone compilation. This allows the Tikz code to be inline in larger documents (e.g., summary).
+
+### Decision 2: Interface follows AutomatonDot pattern
+
+Same parameter pattern:
 ```fsharp
-let verifyGolden (goldenFileName: string) (actualContent: string) = ...
+nfaToTikz (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (nfa: NFA<'t, 's>) : string
+dfaToTikz (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string
 ```
 
-Both `GrammarTeXGoldenTests.fs` and `LRTableTeXGoldenTests.fs` will call `GoldenHelpers.verifyGolden`.
+Additional optional parameter for node shape (default: `circle`).
 
-### Decision 2: How to generate merged TeX for golden tests
+### Decision 3: Node rendering
 
-The merged summary pipeline involves:
-1. Parsing grammar + converting to CNF
-2. Tokenizing input
-3. Running CYK (parseWithTrace)
-4. Writing grammar_original.tex, grammar_cnf.tex, input.tex, and step table.tex files
-5. Calling SummaryTeX.buildContent + template wrapping
+- Node identifiers: `s0`, `s1`, ... (safe for Tikz)
+- Node content: via `as={...}` key with stateVisualizer output (escaped for LaTeX)
+- Start states: `fill=green!30, label=above:Start`
+- Final states: `double, double distance=1.5pt, fill=red!30`
+- Default nodes: `draw, circle` (shape parametrizable)
 
-We create a helper function `generateCykSummaryTex(grammarStr, inputTokens) -> string` that does all of this in a temp directory and returns the final merged TeX.
+### Decision 4: Edge rendering
 
-### Decision 3: Test data
+- Terminal transitions: `s{i} ->["label"] s{j}` (with label from labelPrinter)
+- Multiple labels on same edge: comma-separated
+- Epsilon transitions: `s{i} ->[dotted, "ε"] s{j}`
 
-Use two examples:
-- grammar1 (`S -> a S b S | eps`) with input `aababb` → produces several CYK steps with non-trivial table
-- grammar7 (expression grammar) with input `x + x` → produces larger table with more nonterminals in CNF
+### Decision 5: LaTeX escaping
+
+The `as` key content needs escaping: `_` → `\_`, `{` → `\{`, `}` → `\}`, `$` → `\$`, `%` → `\%`, `#` → `\#`, `&` → `\&`, `\` → `\\`
+
+### Decision 6: Shape parametrizability
+
+Add a `?shape: string` parameter defaulting to `"circle"`. For basic automata: circle. For LR automata (task 105): rectangle.
 
 ## Implementation Checklist
 
-### 1. `tests/FLPQ.Printers.Tests/GoldenHelpers.fs` — Shared helper
-- [ ] Create module with `verifyGolden` function
-- [ ] Use `goldenDataDir` path from existing pattern
+### 1. `src/FLPQ.Printers/AutomatonTikz.fs` — New module
+- [ ] Latex escape helper: `escapeLatex`
+- [ ] `nodeOptions`: build node attribute string
+- [ ] `transitionEdges`: build transition edges with labels
+- [ ] `epsEdges`: build epsilon edges (dotted)
+- [ ] `nfaToTikz`: render NFA as tikzpicture
+- [ ] `dfaToTikz`: render DFA as tikzpicture
+- [ ] Default shape `circle`; make shape parametrizable
 
-### 2. Refactor existing golden tests
-- [ ] `GrammarTeXGoldenTests.fs` — use `GoldenHelpers.verifyGolden` instead of local copy
-- [ ] `LRTableTeXGoldenTests.fs` — use `GoldenHelpers.verifyGolden` instead of local copy
+### 2. `src/FLPQ.Printers/FLPQ.Printers.fsproj` — Add compilation entry
+- [ ] Add `AutomatonTikz.fs` after `AutomatonDot.fs`
 
-### 3. `tests/FLPQ.Printers.Tests/CykSummaryGoldenTests.fs` — New golden tests
-- [ ] Helper to generate CYK summary TeX from grammar string and input tokens
-- [ ] Test: grammar1, input `aababb`
-- [ ] Test: grammar7, input `x + x`
-- [ ] Each test generates merged TeX and calls `verifyGolden`
+### 3. `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` — Add Tikz tests
+- [ ] Add Tikz compilation template (`data/tex_tikz_template.tex`)
+- [ ] Test: simple automaton Tikz compiles with lualatex
+- [ ] Test: automaton with epsilon Tikz compiles
+- [ ] Test: DFA from LR(0) automaton Tikz compiles
+- [ ] Test: multiple start/final states Tikz compiles
 
-### 4. `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — Project file
-- [ ] Add `GoldenHelpers.fs` before golden test files in compilation order
-- [ ] Add `CykSummaryGoldenTests.fs` in compilation order
+### 4. `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — Add template content
+- [ ] Add `tex_tikz_template.tex` to Content items
 
-### 5. Generate golden reference files
-- [ ] Run tests (they will fail and create golden files)
-- [ ] Copy golden files to `GoldenData/`
-
-### 6. Final Checks
+### 5. Final Checks
 - [ ] Format: `dotnet fantomas . --check`
 - [ ] Build: `dotnet build FLPQ.slnx -c Release`
 - [ ] Tests: `dotnet test`
