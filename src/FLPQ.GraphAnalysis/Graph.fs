@@ -20,7 +20,7 @@ module Graph =
 
     let getVertex idx (graph: Graph<'v, 'e>) = Map.find idx graph.vertexMap
 
-    let edge (graph: Graph<'v, 'e>) (fromIdx: int) (toIdx: int) = graph.edges.data.[fromIdx, toIdx]
+    let edge (graph: Graph<'v, 'e>) (fromIdx: int) (toIdx: int) = Matrix.get graph.edges fromIdx toIdx
 
     let mapVertices (f: 'v -> 'w) (graph: Graph<'v, 'e>) : Graph<'w, 'e> =
         { vertexMap = graph.vertexMap |> Map.map (fun _ v -> f v)
@@ -46,7 +46,7 @@ module Graph =
             |> Map.ofArray
 
         let newEdges =
-            Matrix.create newSize newSize (fun i j -> graph.edges.data.[keepArr.[i], keepArr.[j]])
+            Matrix.create newSize newSize (fun i j -> Matrix.get graph.edges keepArr.[i] keepArr.[j])
 
         { vertexMap = newVertexMap
           edges = newEdges }

@@ -241,9 +241,9 @@ module LRParser =
         (goto: byref<Map<int * Nonterminal<'nt>, int>>)
         (conflicts: byref<LRConflict<'t, 'nt> list>)
         : unit =
-        for i in 0 .. transitions.rows - 1 do
-            for j in 0 .. transitions.cols - 1 do
-                match transitions.data.[i, j] with
+        for i in 0 .. Matrix.rows transitions - 1 do
+            for j in 0 .. Matrix.cols transitions - 1 do
+                match Matrix.get transitions i j with
                 | Some symbols ->
                     for sym in NonEmptySet.toSeq symbols do
                         match sym with

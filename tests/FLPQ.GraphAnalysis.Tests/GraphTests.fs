@@ -58,7 +58,7 @@ let ``NFA member transitions provides backward compatibility`` () =
     let nfa =
         Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-    Assert.True(nfa.transitions.data.[0, 1].IsSome)
+    Assert.True((Matrix.get nfa.transitions 0 1).IsSome)
 
 [<Fact>]
 let ``DFA member states provides backward compatibility`` () =
@@ -69,7 +69,7 @@ let ``DFA member states provides backward compatibility`` () =
 [<Fact>]
 let ``DFA member transitions provides backward compatibility`` () =
     let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
-    Assert.True(dfa.transitions.data.[0, 1].IsSome)
+    Assert.True((Matrix.get dfa.transitions 0 1).IsSome)
 
 [<Fact>]
 let ``filterOutgoing keeps only edges from selected vertices`` () =

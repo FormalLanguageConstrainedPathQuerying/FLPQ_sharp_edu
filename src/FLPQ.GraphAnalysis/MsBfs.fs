@@ -44,13 +44,13 @@ module MsBfs =
     ///   return visited
     let msBfs (sources: int[]) (adjacencyMatrix: Matrix<bool>) : Matrix<bool> =
         let k = sources.Length
-        let n = adjacencyMatrix.rows
+        let n = Matrix.rows adjacencyMatrix
 
         let mutable currentFront = Matrix.init k n false
         let mutable visited = Matrix.init k n false
 
         for i in 0 .. k - 1 do
-            currentFront.data.[i, sources.[i]] <- true
+            Matrix.set currentFront i sources.[i] true
 
         while anyTrue currentFront do
             visited <- boolAdd visited currentFront

@@ -27,12 +27,12 @@ module PropertyTests =
     let ``map preserves dimensions`` (m: Matrix<int>) (f: int) =
         let f = (+) f
         let result = Matrix.map f m
-        result.rows = m.rows && result.cols = m.cols
+        Matrix.rows result = Matrix.rows m && Matrix.cols result = Matrix.cols m
 
     [<Property>]
     let ``transpose swaps dimensions`` (m: Matrix<int>) =
         let result = Matrix.transpose m
-        result.rows = m.cols && result.cols = m.rows
+        Matrix.rows result = Matrix.cols m && Matrix.cols result = Matrix.rows m
 
 module FactTests =
 
@@ -48,12 +48,12 @@ module FactTests =
         let cols = 2
         let m = Matrix.create rows cols (fun i j -> i * 1000 + j)
 
-        Assert.Equal(0 * 1000 + 0, m.data.[0, 0])
-        Assert.Equal(0 * 1000 + 1, m.data.[0, 1])
-        Assert.Equal(1 * 1000 + 0, m.data.[1, 0])
-        Assert.Equal(1 * 1000 + 1, m.data.[1, 1])
-        Assert.Equal(2 * 1000 + 0, m.data.[2, 0])
-        Assert.Equal(2 * 1000 + 1, m.data.[2, 1])
+        Assert.Equal(0 * 1000 + 0, Matrix.get m 0 0)
+        Assert.Equal(0 * 1000 + 1, Matrix.get m 0 1)
+        Assert.Equal(1 * 1000 + 0, Matrix.get m 1 0)
+        Assert.Equal(1 * 1000 + 1, Matrix.get m 1 1)
+        Assert.Equal(2 * 1000 + 0, Matrix.get m 2 0)
+        Assert.Equal(2 * 1000 + 1, Matrix.get m 2 1)
 
     [<Fact>]
     let ``init fills all cells with the same value`` () =
@@ -61,42 +61,42 @@ module FactTests =
 
         for i in 0..2 do
             for j in 0..1 do
-                Assert.Equal(42, m.data.[i, j])
+                Assert.Equal(42, Matrix.get m i j)
 
     [<Fact>]
     let ``transpose of 2x3 produces 3x2`` () =
         let m = Matrix.create 2 3 (fun i j -> i * 10 + j)
         let t = Matrix.transpose m
-        Assert.Equal(3, t.rows)
-        Assert.Equal(2, t.cols)
-        Assert.Equal(m.data.[0, 0], t.data.[0, 0])
-        Assert.Equal(m.data.[0, 1], t.data.[1, 0])
-        Assert.Equal(m.data.[0, 2], t.data.[2, 0])
-        Assert.Equal(m.data.[1, 0], t.data.[0, 1])
-        Assert.Equal(m.data.[1, 1], t.data.[1, 1])
-        Assert.Equal(m.data.[1, 2], t.data.[2, 1])
+        Assert.Equal(3, Matrix.rows t)
+        Assert.Equal(2, Matrix.cols t)
+        Assert.Equal(Matrix.get m 0 0, Matrix.get t 0 0)
+        Assert.Equal(Matrix.get m 0 1, Matrix.get t 1 0)
+        Assert.Equal(Matrix.get m 0 2, Matrix.get t 2 0)
+        Assert.Equal(Matrix.get m 1 0, Matrix.get t 0 1)
+        Assert.Equal(Matrix.get m 1 1, Matrix.get t 1 1)
+        Assert.Equal(Matrix.get m 1 2, Matrix.get t 2 1)
 
 [<Fact>]
 let ``diagonal matrix has ones on diagonal for selected indices`` () =
     let d = Matrix.diagonal 5 (set [ 0; 2; 4 ]) 1 0
-    Assert.Equal(1, d.data.[0, 0])
-    Assert.Equal(0, d.data.[1, 1])
-    Assert.Equal(1, d.data.[2, 2])
-    Assert.Equal(0, d.data.[3, 3])
-    Assert.Equal(1, d.data.[4, 4])
-    Assert.Equal(0, d.data.[0, 1])
+    Assert.Equal(1, Matrix.get d 0 0)
+    Assert.Equal(0, Matrix.get d 1 1)
+    Assert.Equal(1, Matrix.get d 2 2)
+    Assert.Equal(0, Matrix.get d 3 3)
+    Assert.Equal(1, Matrix.get d 4 4)
+    Assert.Equal(0, Matrix.get d 0 1)
 
 [<Fact>]
 let ``diagonal matrix with empty set is zero matrix`` () =
     let d = Matrix.diagonal 3 Set.empty 1 0
-    Assert.Equal(0, d.data.[0, 0])
-    Assert.Equal(0, d.data.[1, 1])
-    Assert.Equal(0, d.data.[2, 2])
+    Assert.Equal(0, Matrix.get d 0 0)
+    Assert.Equal(0, Matrix.get d 1 1)
+    Assert.Equal(0, Matrix.get d 2 2)
 
 [<Fact>]
 let ``diagonal matrix with all indices is identity`` () =
     let d = Matrix.diagonal 3 (set [ 0; 1; 2 ]) 1 0
-    Assert.Equal(1, d.data.[0, 0])
-    Assert.Equal(1, d.data.[1, 1])
-    Assert.Equal(1, d.data.[2, 2])
-    Assert.Equal(0, d.data.[0, 1])
+    Assert.Equal(1, Matrix.get d 0 0)
+    Assert.Equal(1, Matrix.get d 1 1)
+    Assert.Equal(1, Matrix.get d 2 2)
+    Assert.Equal(0, Matrix.get d 0 1)

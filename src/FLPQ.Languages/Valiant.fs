@@ -99,13 +99,13 @@ module Valiant =
         p
 
     let private extractSlice (fullMatrix: Matrix<bool>) (m: Submatrix) : Matrix<bool> =
-        Matrix.create m.Size m.Size (fun i j -> fullMatrix.data.[m.row - m.Size + 1 + i, m.col + j])
+        Matrix.create m.Size m.Size (fun i j -> Matrix.get fullMatrix (m.row - m.Size + 1 + i) (m.col + j))
 
     let private writeSlice (target: Matrix<bool>) (m: Submatrix) (slice: Matrix<bool>) : unit =
         for i in 0 .. m.Size - 1 do
             for j in 0 .. m.Size - 1 do
-                if slice.data.[i, j] then
-                    target.data.[m.row - m.Size + 1 + i, m.col + j] <- true
+                if Matrix.get slice i j then
+                    Matrix.set target (m.row - m.Size + 1 + i) (m.col + j) true
 
     let private performMultiplications
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
@@ -154,7 +154,7 @@ module Valiant =
 
         let fullMatrix = BooleanDecomposition.recompose decompMap
 
-        let recomposed = Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
+        let recomposed = Matrix.create n n (fun ri rj -> Matrix.get fullMatrix ri (rj + 1))
 
         { table = recomposed
           currentSubmatrix = currentSubmatrix
@@ -177,21 +177,21 @@ module Valiant =
                 | Some nts ->
                     for nt in nts do
                         match init.tByNt.TryGetValue nt with
-                        | true, mat -> mat.data.[i, j] <- true
+                        | true, mat -> Matrix.set mat i j true
                         | _ -> ()
                 | None -> ()
             else
                 for pair in init.pairs do
                     let pairHasValue =
                         match init.pByPair.TryGetValue pair with
-                        | true, mat -> mat.data.[i, j]
+                        | true, mat -> Matrix.get mat i j
                         | _ -> false
 
                     if pairHasValue then
                         for (a, bc) in init.binaryRules do
                             if bc = pair then
                                 match init.tByNt.TryGetValue a with
-                                | true, mat -> mat.data.[i, j] <- true
+                                | true, mat -> Matrix.set mat i j true
                                 | _ -> ()
 
             match traceAcc with
@@ -254,14 +254,14 @@ module Valiant =
                         for pair in pairs do
                             let pairHasValue =
                                 match pByPair.TryGetValue pair with
-                                | true, mat -> mat.data.[i, j]
+                                | true, mat -> Matrix.get mat i j
                                 | _ -> false
 
                             if pairHasValue then
                                 for (a, bc) in binaryRules do
                                     if bc = pair then
                                         match tByNt.TryGetValue a with
-                                        | true, mat -> mat.data.[i, j] <- true
+                                        | true, mat -> Matrix.set mat i j true
                                         | _ -> ()
             else
                 let bottomLayer = mList |> List.map bottomSubmatrix
@@ -341,7 +341,7 @@ module Valiant =
             match Map.tryFind tokensArr.[i] terminalRules with
             | Some nts ->
                 for nt in nts do
-                    initMatrix.data.[i, i + 1] <- Set.add nt initMatrix.data.[i, i + 1]
+                    Matrix.set initMatrix i (i + 1) (Set.add nt (Matrix.get initMatrix i (i + 1)))
             | None -> ()
 
         let initDecomp = BooleanDecomposition.decompose initMatrix
@@ -399,7 +399,7 @@ module Valiant =
             let lastStep = List.last steps
 
             let accepted =
-                Set.contains cnf.start lastStep.table.data.[0, lastStep.table.cols - 1]
+                Set.contains cnf.start (Matrix.get lastStep.table 0 (Matrix.cols lastStep.table - 1))
 
             (lastStep.table, accepted)
 
@@ -437,7 +437,7 @@ module Valiant =
                     |> Map.ofList
 
                 let fullMatrix = BooleanDecomposition.recompose decompMap
-                Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
+                Matrix.create n n (fun ri rj -> Matrix.get fullMatrix ri (rj + 1))
 
             let mutable steps = []
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
@@ -479,7 +479,7 @@ module Valiant =
             let lastStep = List.last steps
 
             let accepted =
-                Set.contains cnf.start lastStep.table.data.[0, lastStep.table.cols - 1]
+                Set.contains cnf.start (Matrix.get lastStep.table 0 (Matrix.cols lastStep.table - 1))
 
             (lastStep.table, accepted)
 

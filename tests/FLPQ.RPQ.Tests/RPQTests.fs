@@ -49,8 +49,8 @@ let ``GraphReader: no start vertices specified, all vertices as sources`` () =
     let g = GraphReader.parseGraph text
     Assert.Equal(3, Nfa.stateCount g)
     Assert.True(Set.ofList [ 0; 1; 2 ] = g.startStates)
-    Assert.True(g.transitions.data.[0, 1].IsSome)
-    Assert.True(g.transitions.data.[1, 2].IsSome)
+    Assert.True((Matrix.get g.transitions 0 1).IsSome)
+    Assert.True((Matrix.get g.transitions 1 2).IsSome)
 
 [<Fact>]
 let ``GraphReader: explicit start vertices`` () =
@@ -64,8 +64,8 @@ let ``GraphReader: per-label adjacency`` () =
     let text = "0 a 1\n0 b 2"
     let g = GraphReader.parseGraph text
     Assert.True(Set.ofList [ "a"; "b" ] = Nfa.alphabet g)
-    Assert.True(g.transitions.data.[0, 1].IsSome)
-    Assert.True(g.transitions.data.[0, 2].IsSome)
+    Assert.True((Matrix.get g.transitions 0 1).IsSome)
+    Assert.True((Matrix.get g.transitions 0 2).IsSome)
 
 // --- Belyanin tests (task 59, updated for task 64) ---
 
@@ -74,30 +74,30 @@ let ``Belyanin: single edge v0-[a]->v1, query a, v1 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
     let result = BelyaninRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 1])
+    Assert.True(Matrix.get result 0 1)
 
 [<Fact>]
 let ``Belyanin: v0-[a]->v1-[b]->v2, query a*b, v2 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0); (0, "b", 1) ] 0 [ 1 ]
     let result = BelyaninRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Belyanin: v0-[a]->v1-[a]->v2, query a+, v1 and v2 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1); (1, "a", 1) ] 0 [ 1 ]
     let result = BelyaninRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 1])
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 1)
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Belyanin: cycle v0-[a]->v1-[a]->v0, query a*, both reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 0) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0) ] 0 [ 0 ]
     let result = BelyaninRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 0])
-    Assert.True(result.data.[0, 1])
+    Assert.True(Matrix.get result 0 0)
+    Assert.True(Matrix.get result 0 1)
 
 // --- Arroyuelo tests (task 60, updated for task 64) ---
 
@@ -106,41 +106,41 @@ let ``Arroyuelo: single edge v0-[a]->v1, query a, v1 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let regexp = Regexp.RTerm(Terminal "a")
     let result = ArroyueloRPQ.evaluate nfa regexp
-    Assert.True(result.data.[0, 1])
+    Assert.True(Matrix.get result 0 1)
 
 [<Fact>]
 let ``Arroyuelo: v0-[a]->v1-[b]->v2, query a b, v2 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let regexp = Regexp.RSeq(Regexp.RTerm(Terminal "a"), Regexp.RTerm(Terminal "b"))
     let result = ArroyueloRPQ.evaluate nfa regexp
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Arroyuelo: alternation a|b, both branches`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (0, "b", 2) ] [ 0 ]
     let regexp = Regexp.RAlt(Regexp.RTerm(Terminal "a"), Regexp.RTerm(Terminal "b"))
     let result = ArroyueloRPQ.evaluate nfa regexp
-    Assert.True(result.data.[0, 1])
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 1)
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Arroyuelo: Kleene star a* on path, all pairs`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "a", 2) ] [ 0 ]
     let regexp = Regexp.RStar(Regexp.RTerm(Terminal "a"))
     let result = ArroyueloRPQ.evaluate nfa regexp
-    Assert.True(result.data.[0, 0])
-    Assert.True(result.data.[0, 1])
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 0)
+    Assert.True(Matrix.get result 0 1)
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Arroyuelo: epsilon query returns identity`` () =
     let nfa = nfaWithSources [ (0, "a", 1) ] [ 0; 1 ]
     let regexp = Regexp.REps
     let result = ArroyueloRPQ.evaluate nfa regexp
-    Assert.True(result.data.[0, 0])
-    Assert.False(result.data.[0, 1])
-    Assert.True(result.data.[1, 1])
-    Assert.False(result.data.[1, 0])
+    Assert.True(Matrix.get result 0 0)
+    Assert.False(Matrix.get result 0 1)
+    Assert.True(Matrix.get result 1 1)
+    Assert.False(Matrix.get result 1 0)
 
 // --- Kronecker tests (task 61, updated for task 64) ---
 
@@ -149,22 +149,22 @@ let ``Kronecker: single edge v0-[a]->v1, query a, v1 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
     let result = KroneckerRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 1])
+    Assert.True(Matrix.get result 0 1)
 
 [<Fact>]
 let ``Kronecker: v0-[a]->v1-[b]->v2, query a*b, v2 reachable`` () =
     let nfa = nfaWithSources [ (0, "a", 1); (1, "b", 2) ] [ 0 ]
     let dfa = buildDfa [ (0, "a", 0); (0, "b", 1) ] 0 [ 1 ]
     let result = KroneckerRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 2])
+    Assert.True(Matrix.get result 0 2)
 
 [<Fact>]
 let ``Kronecker: multiple sources, only one connects`` () =
     let nfa = nfaWithSources [ (0, "a", 2); (1, "b", 2) ] [ 0; 1 ]
     let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
     let result = KroneckerRPQ.evaluate dfa nfa
-    Assert.True(result.data.[0, 2])
-    Assert.False(result.data.[1, 2])
+    Assert.True(Matrix.get result 0 2)
+    Assert.False(Matrix.get result 1 2)
 
 // --- Cross-algorithm property-based tests (task 63, updated for task 64) ---
 
@@ -207,7 +207,7 @@ module PropertyTests =
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.data.[0, j] <> arroResult.data.[0, j] then
+                    if Matrix.get belyResult 0 j <> Matrix.get arroResult 0 j then
                         ok <- false
 
                 ok
@@ -231,7 +231,7 @@ module PropertyTests =
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.data.[0, j] <> kronResult.data.[0, j] then
+                    if Matrix.get belyResult 0 j <> Matrix.get kronResult 0 j then
                         ok <- false
 
                 ok
@@ -256,11 +256,11 @@ module PropertyTests =
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
                 let mutable ok = true
-                let rows = arroResult.rows
+                let rows = Matrix.rows arroResult
 
                 for i in 0 .. rows - 1 do
                     for j in 0 .. v - 1 do
-                        if arroResult.data.[i, j] <> kronResult.data.[i, j] then
+                        if Matrix.get arroResult i j <> Matrix.get kronResult i j then
                             ok <- false
 
                 ok
@@ -354,7 +354,7 @@ module RegexPropertyTests =
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.data.[0, j] <> arroResult.data.[0, j] then
+                    if Matrix.get belyResult 0 j <> Matrix.get arroResult 0 j then
                         ok <- false
 
                 ok
@@ -378,7 +378,7 @@ module RegexPropertyTests =
                 let mutable ok = true
 
                 for j in 0 .. v - 1 do
-                    if belyResult.data.[0, j] <> kronResult.data.[0, j] then
+                    if Matrix.get belyResult 0 j <> Matrix.get kronResult 0 j then
                         ok <- false
 
                 ok
@@ -403,9 +403,9 @@ module RegexPropertyTests =
 
                 let mutable ok = true
 
-                for i in 0 .. arroResult.rows - 1 do
+                for i in 0 .. Matrix.rows arroResult - 1 do
                     for j in 0 .. v - 1 do
-                        if arroResult.data.[i, j] <> kronResult.data.[i, j] then
+                        if Matrix.get arroResult i j <> Matrix.get kronResult i j then
                             ok <- false
 
                 ok

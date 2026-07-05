@@ -41,8 +41,8 @@ module ValiantParseTests =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)
 
         Assert.True(accepted)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.rows table)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.cols table)
 
     [<Fact>]
     let ``Valiant table matches CYK table for small example`` () =
@@ -55,14 +55,14 @@ module ValiantParseTests =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals input)
 
         Assert.Equal(cykAcc, valAcc)
-        Assert.Equal(cykTable.rows, valTable.rows)
-        Assert.Equal(cykTable.cols, valTable.cols)
+        Assert.Equal(Matrix.rows cykTable, Matrix.rows valTable)
+        Assert.Equal(Matrix.cols cykTable, Matrix.cols valTable)
 
-        let n = cykTable.rows
+        let n = Matrix.rows cykTable
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(cykTable.data.[i, j], valTable.data.[i, j])
+                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get cykTable i j, Matrix.get valTable i j)
 
     [<Fact>]
     let ``Valiant table matches CYK table for grammar 1 small example`` () =
@@ -76,11 +76,11 @@ module ValiantParseTests =
 
         Assert.Equal(cykAcc, valAcc)
 
-        let n = cykTable.rows
+        let n = Matrix.rows cykTable
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(cykTable.data.[i, j], valTable.data.[i, j])
+                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get cykTable i j, Matrix.get valTable i j)
 
 
 module ModifiedValiantTests =
@@ -117,11 +117,11 @@ module ModifiedValiantTests =
 
         Assert.Equal(valAcc, modAcc)
 
-        let n = valTable.rows
+        let n = Matrix.rows valTable
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(valTable.data.[i, j], modTable.data.[i, j])
+                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for grammar 3`` () =
@@ -135,11 +135,11 @@ module ModifiedValiantTests =
 
         Assert.Equal(valAcc, modAcc)
 
-        let n = valTable.rows
+        let n = Matrix.rows valTable
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(valTable.data.[i, j], modTable.data.[i, j])
+                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for expression grammar`` () =
@@ -153,11 +153,11 @@ module ModifiedValiantTests =
 
         Assert.Equal(valAcc, modAcc)
 
-        let n = valTable.rows
+        let n = Matrix.rows valTable
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(valTable.data.[i, j], modTable.data.[i, j])
+                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
 
     [<Fact>]
     let ``Modified Valiant trace produces steps for grammar 1`` () =
@@ -215,12 +215,12 @@ module PropertyTests =
                 let valTable, valAcc =
                     Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s)
 
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -245,12 +245,12 @@ module PropertyTests =
                         grammar1
                         (Tokenizer.tokenizeTerminals s)
 
-                let n = valTable.rows
+                let n = Matrix.rows valTable
 
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                             if Matrix.get valTable i j <> Matrix.get modTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -275,12 +275,12 @@ module PropertyTests =
                 let valTable, valAcc =
                     Valiant.parseWithTable Grammar.freshStringNonterminal grammar2 (Tokenizer.tokenizeTerminals s)
 
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -305,12 +305,12 @@ module PropertyTests =
                 let valTable, valAcc =
                     Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s)
 
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -328,11 +328,11 @@ module PropertyTests =
             if cykAcc || valAcc then
                 true
             else
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 [ for i in 0 .. n - 1 do
                       for j in i .. n - 1 do
-                          if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                          if Matrix.get cykTable i j <> Matrix.get valTable i j then
                               yield false ]
                 |> List.forall id
 
@@ -350,11 +350,11 @@ module PropertyTests =
             if valAcc || modAcc then
                 true
             else
-                let n = valTable.rows
+                let n = Matrix.rows valTable
 
                 [ for i in 0 .. n - 1 do
                       for j in i .. n - 1 do
-                          if valTable.data.[i, j] <> modTable.data.[i, j] then
+                          if Matrix.get valTable i j <> Matrix.get modTable i j then
                               yield false ]
                 |> List.forall id
 
@@ -382,12 +382,12 @@ module PropertyTests =
                         grammar6
                         (Tokenizer.tokenizeTerminals s)
 
-                let n = valTable.rows
+                let n = Matrix.rows valTable
 
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                             if Matrix.get valTable i j <> Matrix.get modTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -412,12 +412,12 @@ module PropertyTests =
                 let valTable, valAcc =
                     Valiant.parseWithTable Grammar.freshStringNonterminal grammar7 (Tokenizer.tokenizeTerminals s)
 
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -442,12 +442,12 @@ module PropertyTests =
                         grammar7
                         (Tokenizer.tokenizeTerminals s)
 
-                let n = valTable.rows
+                let n = Matrix.rows valTable
 
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                             if Matrix.get valTable i j <> Matrix.get modTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -472,12 +472,12 @@ module PropertyTests =
                 let valTable, valAcc =
                     Valiant.parseWithTable Grammar.freshStringNonterminal grammar8 (Tokenizer.tokenizeTerminals s)
 
-                let n = cykTable.rows
+                let n = Matrix.rows cykTable
 
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if cykTable.data.[i, j] <> valTable.data.[i, j] then
+                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
                                  yield false ]
                    |> List.forall id
 
@@ -502,11 +502,11 @@ module PropertyTests =
                         grammar8
                         (Tokenizer.tokenizeTerminals s)
 
-                let n = valTable.rows
+                let n = Matrix.rows valTable
 
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if valTable.data.[i, j] <> modTable.data.[i, j] then
+                             if Matrix.get valTable i j <> Matrix.get modTable i j then
                                  yield false ]
                    |> List.forall id

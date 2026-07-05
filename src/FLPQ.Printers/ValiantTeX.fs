@@ -13,8 +13,12 @@ module ValiantTeX =
             | Some m ->
                 [ for i in m.row - m.Size + 1 .. m.row do
                       for j in m.col .. m.col + m.Size - 1 do
-                          if i < step.table.rows && j < step.table.cols then
-                              yield ({ row = i; col = j; color = "yellow" }: Matrix.Highlight) ]
+                          if i < Matrix.rows step.table && j < Matrix.cols step.table then
+                              yield
+                                  ({ row = i
+                                     col = j
+                                     label = Matrix.CurrentCell }
+                                  : Matrix.Highlight) ]
 
             | None -> []
 
@@ -27,17 +31,16 @@ module ValiantTeX =
                 let endCol = m.col + m.Size - 2
 
                 let clippedStartRow = max 0 startRow
-                let clippedEndRow = min (step.table.rows - 1) endRow
+                let clippedEndRow = min (Matrix.rows step.table - 1) endRow
                 let clippedStartCol = max 0 startCol
-                let clippedEndCol = min (step.table.cols - 1) endCol
+                let clippedEndCol = min (Matrix.cols step.table - 1) endCol
 
                 if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
                     [ ({ startRow = clippedStartRow
                          startCol = clippedStartCol
                          rowCount = clippedEndRow - clippedStartRow + 1
                          colCount = clippedEndCol - clippedStartCol + 1
-                         borderColor = Some "red"
-                         fillColor = None }
+                         label = Matrix.CurrentStepSubmatrix }
                       : Matrix.SubmatrixBlock) ]
                 else
                     []
@@ -54,25 +57,11 @@ module ValiantTeX =
 
     /// Convert a modified Valiant trace step to TeX with colored submatrix blocks.
     let modifiedStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
-        let colors =
-            [ "red"
-              "blue"
-              "green"
-              "orange"
-              "purple"
-              "brown"
-              "cyan"
-              "magenta"
-              "teal"
-              "olive" ]
-
-        let n = step.table.rows
+        let n = Matrix.rows step.table
 
         let blocks =
             step.submatrices
             |> List.mapi (fun idx m ->
-                let color = colors.[idx % colors.Length]
-
                 let startRow = m.row - m.Size + 1
                 let endRow = m.row
 
@@ -90,8 +79,7 @@ module ValiantTeX =
                           startCol = clippedStartCol
                           rowCount = clippedEndRow - clippedStartRow + 1
                           colCount = clippedEndCol - clippedStartCol + 1
-                          borderColor = Some color
-                          fillColor = None }
+                          label = Matrix.Submatrix idx }
 
                     Some block
                 else

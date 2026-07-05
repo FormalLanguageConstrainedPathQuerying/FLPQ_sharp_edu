@@ -88,9 +88,7 @@ type SetMatrixGenerators =
                         let j = k % cols
                         array.[i, j] <- set [ values.[k] ]
 
-                    { rows = rows
-                      cols = cols
-                      data = array })))
+                    Matrix.ofArray2D array)))
         |> MyArb.fromGen
 
 type RandomGraphGenerators =
@@ -113,7 +111,7 @@ type RandomGraphGenerators =
                                 (fromList, toList)
                                 ||> List.iter2 (fun f t ->
                                     if f <> t then
-                                        m.data.[f, t] <- true)
+                                        Matrix.set m f t true)
 
                                 (m, Array.ofList sources)))))))
         |> MyArb.fromGen

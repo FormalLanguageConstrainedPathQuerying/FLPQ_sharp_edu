@@ -27,12 +27,12 @@ let ``decompose cells match original sets`` () =
     Assert.True(Map.containsKey 1 decomp)
 
     let mat0 = Map.find 0 decomp
-    Assert.True(mat0.data.[0, 0])
-    Assert.False(mat0.data.[1, 1])
+    Assert.True(Matrix.get mat0 0 0)
+    Assert.False(Matrix.get mat0 1 1)
 
     let mat1 = Map.find 1 decomp
-    Assert.False(mat1.data.[0, 0])
-    Assert.True(mat1.data.[1, 1])
+    Assert.False(Matrix.get mat1 0 0)
+    Assert.True(Matrix.get mat1 1 1)
 
 [<Fact>]
 let ``recompose restores original after decompose`` () =
@@ -43,7 +43,7 @@ let ``recompose restores original after decompose`` () =
 
     for i in 0..2 do
         for j in 0..2 do
-            Assert.Equal<Set<int>>(m.data.[i, j], restored.data.[i, j])
+            Assert.Equal<Set<int>>(Matrix.get m i j, Matrix.get restored i j)
 
 [<Fact>]
 let ``decompose handles empty matrix`` () =
@@ -64,8 +64,8 @@ let ``decompose preserves matrix dimensions`` () =
     let decomp = BooleanDecomposition.decompose m
 
     for kv in decomp do
-        Assert.Equal(3, kv.Value.rows)
-        Assert.Equal(4, kv.Value.cols)
+        Assert.Equal(3, Matrix.rows kv.Value)
+        Assert.Equal(4, Matrix.cols kv.Value)
 
 [<Properties(Arbitrary = [| typeof<SetMatrixGenerators> |])>]
 module PropertyTests =
@@ -79,10 +79,10 @@ module PropertyTests =
         else
             let restored = BooleanDecomposition.recompose decomp
 
-            m.rows = restored.rows
-            && m.cols = restored.cols
-            && [ for i in 0 .. m.rows - 1 do
-                     for j in 0 .. m.cols - 1 do
-                         if m.data.[i, j] <> restored.data.[i, j] then
+            Matrix.rows m = Matrix.rows restored
+            && Matrix.cols m = Matrix.cols restored
+            && [ for i in 0 .. Matrix.rows m - 1 do
+                     for j in 0 .. Matrix.cols m - 1 do
+                         if Matrix.get m i j <> Matrix.get restored i j then
                              yield false ]
                |> List.forall id

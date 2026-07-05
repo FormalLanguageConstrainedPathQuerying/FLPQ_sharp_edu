@@ -2,12 +2,19 @@ namespace FLPQ.LinearAlgebra
 
 open System
 
-type Matrix<'a> = { rows: int; cols: int; data: 'a[,] }
+type Matrix<'a> =
+    private
+        { rows: int
+          cols: int
+          data: 'a[,] }
 
 module Matrix =
 
     let rows (m: Matrix<'a>) = m.rows
     let cols (m: Matrix<'a>) = m.cols
+
+    let get (m: Matrix<'a>) (i: int) (j: int) : 'a = m.data.[i, j]
+    let set (m: Matrix<'a>) (i: int) (j: int) (value: 'a) : unit = m.data.[i, j] <- value
 
     let create rows cols (f: int -> int -> 'a) : Matrix<'a> =
         let data = Array2D.init rows cols f
@@ -28,7 +35,7 @@ module Matrix =
 
         for i in 0 .. m.rows - 1 do
             for j in 0 .. m.cols - 1 do
-                acc <- folder acc m.data.[i, j]
+                acc <- folder acc (get m i j)
 
         acc
 
@@ -43,14 +50,14 @@ module Matrix =
         if a.rows <> b.rows || a.cols <> b.cols then
             invalidArg (nameof b) $"Matrix dimensions must match: ({a.rows}x{a.cols}) vs ({b.rows}x{b.cols})"
 
-        let data = Array2D.init a.rows a.cols (fun i j -> f a.data.[i, j] b.data.[i, j])
+        let data = Array2D.init a.rows a.cols (fun i j -> f (get a i j) (get b i j))
 
         { rows = a.rows
           cols = a.cols
           data = data }
 
     let transpose (m: Matrix<'a>) : Matrix<'a> =
-        let data = Array2D.init m.cols m.rows (fun i j -> m.data.[j, i])
+        let data = Array2D.init m.cols m.rows (fun i j -> get m j i)
 
         { rows = m.cols
           cols = m.rows
@@ -69,16 +76,24 @@ module Matrix =
             let mutable acc = init
 
             for i in 0 .. m.rows - 1 do
-                acc <- op acc m.data.[i, j]
+                acc <- op acc (get m i j)
 
             acc)
 
-    type Highlight = { row: int; col: int; color: string }
+    type HighlightLabel = | CurrentCell
+
+    type SubmatrixBlockLabel =
+        | CurrentStepSubmatrix
+        | Submatrix of int
+
+    type Highlight =
+        { row: int
+          col: int
+          label: HighlightLabel }
 
     type SubmatrixBlock =
         { startRow: int
           startCol: int
           rowCount: int
           colCount: int
-          borderColor: string option
-          fillColor: string option }
+          label: SubmatrixBlockLabel }

@@ -14,12 +14,12 @@ module ArroyueloRPQ =
     /// Compute transitive closure of a square Boolean matrix using repeated squaring.
     /// Computes (I + M)^n where n = number of rows, by squaring (I + M) ceil(log2(n)) times.
     let private transitiveClosure (m: Matrix<bool>) : Matrix<bool> =
-        let n = m.rows
+        let n = Matrix.rows m
 
         let mutable a = Matrix.init n n false
 
         for i in 0 .. n - 1 do
-            a.data.[i, i] <- true
+            Matrix.set a i i true
 
         a <- MsBfs.boolAdd a m
 
@@ -43,7 +43,7 @@ module ArroyueloRPQ =
         let identity = Matrix.init vCount vCount false
 
         for i in 0 .. vCount - 1 do
-            identity.data.[i, i] <- true
+            Matrix.set identity i i true
 
         match regexp with
         | Regexp.REps -> identity
@@ -80,6 +80,6 @@ module ArroyueloRPQ =
 
         for i in 0 .. k - 1 do
             for j in 0 .. vCount - 1 do
-                result.data.[i, j] <- fullMatrix.data.[sources.[i], j]
+                Matrix.set result i j (Matrix.get fullMatrix sources.[i] j)
 
         result

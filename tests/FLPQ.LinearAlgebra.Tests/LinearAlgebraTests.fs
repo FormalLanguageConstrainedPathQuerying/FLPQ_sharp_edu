@@ -18,7 +18,7 @@ module PropertyTests =
 
     [<Property>]
     let ``mxm with identity matrix returns original matrix`` (a: Matrix<int>) =
-        let n = a.rows
+        let n = Matrix.rows a
         let identity = Matrix.create n n (fun i j -> if i = j then 1 else 0)
 
         let leftResult = LinearAlgebra.mxm identity a (*) (+) 0
@@ -51,16 +51,16 @@ module FactTests =
         let a = Matrix.init 3 4 1
         let b = Matrix.init 4 2 2
         let result = LinearAlgebra.mxm a b (*) (+) 0
-        Assert.Equal(3, result.rows)
-        Assert.Equal(2, result.cols)
+        Assert.Equal(3, Matrix.rows result)
+        Assert.Equal(2, Matrix.cols result)
 
     [<Fact>]
     let ``kron produces correct result dimensions`` () =
         let a = Matrix.init 2 3 1
         let b = Matrix.init 4 5 2
         let result = LinearAlgebra.kron a b (*) 0
-        Assert.Equal(8, result.rows)
-        Assert.Equal(15, result.cols)
+        Assert.Equal(8, Matrix.rows result)
+        Assert.Equal(15, Matrix.cols result)
 
     [<Fact>]
     let ``kron with 1x1 matrix produces correct values`` () =
@@ -68,12 +68,12 @@ module FactTests =
         let b = Matrix.create 2 3 (fun i j -> i * 3 + j)
         let result = LinearAlgebra.kron a b (*) 0
 
-        Assert.Equal(2, result.rows)
-        Assert.Equal(3, result.cols)
+        Assert.Equal(2, Matrix.rows result)
+        Assert.Equal(3, Matrix.cols result)
 
         for i in 0..1 do
             for j in 0..2 do
-                Assert.Equal(7 * (i * 3 + j), result.data.[i, j])
+                Assert.Equal(7 * (i * 3 + j), Matrix.get result i j)
 
     [<Fact>]
     let ``mxm with identity matrix preserves values`` () =
@@ -83,19 +83,19 @@ module FactTests =
 
         for i in 0..2 do
             for j in 0..2 do
-                Assert.Equal(a.data.[i, j], result.data.[i, j])
+                Assert.Equal(Matrix.get a i j, Matrix.get result i j)
 
     [<Fact>]
     let ``mxm computes known product correctly`` () =
         let a = Matrix.ofArray2D (array2D [ [ 1; 2; 3 ]; [ 4; 5; 6 ] ])
         let b = Matrix.ofArray2D (array2D [ [ 7; 8 ]; [ 9; 10 ]; [ 11; 12 ] ])
         let result = LinearAlgebra.mxm a b (*) (+) 0
-        Assert.Equal(2, result.rows)
-        Assert.Equal(2, result.cols)
-        Assert.Equal(1 * 7 + 2 * 9 + 3 * 11, result.data.[0, 0])
-        Assert.Equal(1 * 8 + 2 * 10 + 3 * 12, result.data.[0, 1])
-        Assert.Equal(4 * 7 + 5 * 9 + 6 * 11, result.data.[1, 0])
-        Assert.Equal(4 * 8 + 5 * 10 + 6 * 12, result.data.[1, 1])
+        Assert.Equal(2, Matrix.rows result)
+        Assert.Equal(2, Matrix.cols result)
+        Assert.Equal(1 * 7 + 2 * 9 + 3 * 11, Matrix.get result 0 0)
+        Assert.Equal(1 * 8 + 2 * 10 + 3 * 12, Matrix.get result 0 1)
+        Assert.Equal(4 * 7 + 5 * 9 + 6 * 11, Matrix.get result 1 0)
+        Assert.Equal(4 * 8 + 5 * 10 + 6 * 12, Matrix.get result 1 1)
 
     [<Fact>]
     let ``kron result cell equals product of corresponding elements`` () =
@@ -103,9 +103,9 @@ module FactTests =
         let b = Matrix.create 3 2 (fun i j -> i * 2 + j + 10)
         let result = LinearAlgebra.kron a b (*) 0
 
-        Assert.Equal(6, result.rows)
-        Assert.Equal(4, result.cols)
+        Assert.Equal(6, Matrix.rows result)
+        Assert.Equal(4, Matrix.cols result)
 
-        Assert.Equal(a.data.[0, 0] * b.data.[0, 0], result.data.[0, 0])
-        Assert.Equal(a.data.[0, 1] * b.data.[2, 1], result.data.[2, 3])
-        Assert.Equal(a.data.[1, 1] * b.data.[1, 0], result.data.[4, 2])
+        Assert.Equal(Matrix.get a 0 0 * Matrix.get b 0 0, Matrix.get result 0 0)
+        Assert.Equal(Matrix.get a 0 1 * Matrix.get b 2 1, Matrix.get result 2 3)
+        Assert.Equal(Matrix.get a 1 1 * Matrix.get b 1 0, Matrix.get result 4 2)

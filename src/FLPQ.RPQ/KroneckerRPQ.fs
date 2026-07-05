@@ -47,9 +47,9 @@ module KroneckerRPQ =
                     let mutable reachable = false
 
                     for qf in dfa.finalStates do
-                        if forwardVisited.data.[i, qvToIndex qf v] then
+                        if Matrix.get forwardVisited i (qvToIndex qf v) then
                             reachable <- true
 
-                    result.data.[i, v] <- reachable
+                    Matrix.set result i v reachable
 
             result

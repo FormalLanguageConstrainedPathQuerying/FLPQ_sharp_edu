@@ -116,8 +116,8 @@ module FactTests =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar9 (Tokenizer.tokenizeTerminals input)
 
         Assert.True(accepted)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.rows table)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.cols table)
 
     [<Fact>]
     let ``LL(1) table for grammar10 detects conflict`` () =
@@ -157,8 +157,8 @@ module FactTests =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar10 (Tokenizer.tokenizeTerminals input)
 
         Assert.True(accepted)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.rows)
-        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, table.cols)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.rows table)
+        Assert.Equal(Tokenizer.tokenizeTerminals input |> List.length, Matrix.cols table)
 
 
 module PropertyTests =

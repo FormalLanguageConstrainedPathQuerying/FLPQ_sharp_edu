@@ -36,13 +36,28 @@ module MatrixTeX =
         let dataRowOffset = if showColNumbers then 1 else 0
         let dataColOffset = if showRowNumbers then 1 else 0
 
-        let totalRows = matrix.rows + dataRowOffset
-        let totalCols = matrix.cols + dataColOffset
+        let totalRows = Matrix.rows matrix + dataRowOffset
+        let totalCols = Matrix.cols matrix + dataColOffset
 
         let highlightSet =
             highlights
-            |> List.map (fun h -> (h.row + dataRowOffset, h.col + dataColOffset, h.color))
+            |> List.map (fun h -> (h.row + dataRowOffset, h.col + dataColOffset, "yellow"))
             |> Set.ofList
+
+        let blockColor idx =
+            let colors =
+                [ "red"
+                  "blue"
+                  "green"
+                  "orange"
+                  "purple"
+                  "brown"
+                  "cyan"
+                  "magenta"
+                  "teal"
+                  "olive" ]
+
+            colors.[idx % colors.Length]
 
         let blockMap =
             blocks
@@ -52,13 +67,9 @@ module MatrixTeX =
 
                 let opts = ResizeArray<string>()
 
-                match b.borderColor with
-                | Some bc -> opts.Add(sprintf "draw=%s" bc)
-                | None -> ()
-
-                match b.fillColor with
-                | Some fc -> opts.Add(sprintf "fill=%s" fc)
-                | None -> ()
+                match b.label with
+                | Matrix.CurrentStepSubmatrix -> opts.Add("draw=red")
+                | Matrix.Submatrix idx -> opts.Add(sprintf "draw=%s" (blockColor idx))
 
                 let blockOptions =
                     if opts.Count = 0 then
@@ -85,7 +96,7 @@ module MatrixTeX =
                           else
                               let dataRow = row - dataRowOffset
                               let dataCol = col - dataColOffset
-                              cellPrinter matrix.data.[dataRow, dataCol]
+                              cellPrinter (Matrix.get matrix dataRow dataCol)
 
                       let hc =
                           highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)

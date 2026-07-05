@@ -16,8 +16,8 @@ let ``mxm of 200x200 integer matrices succeeds`` () =
     let b = Array2D.init n n (fun i j -> (i + j) % 100) |> Matrix.ofArray2D
 
     let c = LinearAlgebra.mxm a b (*) (+) 0
-    Assert.Equal(n, c.rows)
-    Assert.Equal(n, c.cols)
+    Assert.Equal(n, Matrix.rows c)
+    Assert.Equal(n, Matrix.cols c)
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
@@ -29,8 +29,8 @@ let ``kron of 50x50 matrices produces 2500x2500 result`` () =
     let b = Array2D.init n n (fun i j -> i * j) |> Matrix.ofArray2D
 
     let c = LinearAlgebra.kron a b (*) 0
-    Assert.Equal(n * n, c.rows)
-    Assert.Equal(n * n, c.cols)
+    Assert.Equal(n * n, Matrix.rows c)
+    Assert.Equal(n * n, Matrix.cols c)
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
@@ -42,9 +42,9 @@ let ``map2 of 200x200 matrices succeeds`` () =
     let b = Array2D.init n n (fun i j -> i * j) |> Matrix.ofArray2D
 
     let c = Matrix.map2 (+) a b
-    Assert.Equal(n, c.rows)
-    Assert.Equal(n, c.cols)
-    Assert.Equal(0 + 0 + 0 * 0, c.data.[0, 0])
+    Assert.Equal(n, Matrix.rows c)
+    Assert.Equal(n, Matrix.cols c)
+    Assert.Equal(0 + 0 + 0 * 0, Matrix.get c 0 0)
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
@@ -64,7 +64,7 @@ let ``mxm associativity holds for 100x100 random matrices`` () =
 
     for i in 0 .. n - 1 do
         for j in 0 .. n - 1 do
-            Assert.Equal(ab_c.data.[i, j], a_bc.data.[i, j])
+            Assert.Equal(Matrix.get ab_c i j, Matrix.get a_bc i j)
 
 [<Properties(Arbitrary = [| typeof<StressMatrixGenerators> |], MaxTest = 5)>]
 module StressMatrixProperties =
@@ -73,16 +73,18 @@ module StressMatrixProperties =
     [<Trait("Category", "Stress")>]
     let ``mxm terminates for large random square matrices`` (m: Matrix<int>) =
         let result = LinearAlgebra.mxm m m (*) (+) 0
-        result.rows = m.rows && result.cols = m.cols
+        Matrix.rows result = Matrix.rows m && Matrix.cols result = Matrix.cols m
 
     [<Property>]
     [<Trait("Category", "Stress")>]
     let ``kron terminates for large random square matrices`` (m: Matrix<int>) =
         let result = LinearAlgebra.kron m m (*) 0
-        result.rows = m.rows * m.rows && result.cols = m.cols * m.cols
+
+        Matrix.rows result = Matrix.rows m * Matrix.rows m
+        && Matrix.cols result = Matrix.cols m * Matrix.cols m
 
     [<Property>]
     [<Trait("Category", "Stress")>]
     let ``map2 terminates for large random square matrices`` (m: Matrix<int>) =
         let result = Matrix.map2 (+) m m
-        result.rows = m.rows && result.cols = m.cols
+        Matrix.rows result = Matrix.rows m && Matrix.cols result = Matrix.cols m

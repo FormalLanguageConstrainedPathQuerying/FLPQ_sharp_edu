@@ -45,8 +45,8 @@ module Cyk =
         : Set<Nonterminal<'nt>> =
         seq { i .. j - 1 }
         |> Seq.collect (fun k ->
-            let leftSet = table.data.[i, k]
-            let rightSet = table.data.[k + 1, j]
+            let leftSet = Matrix.get table i k
+            let rightSet = Matrix.get table (k + 1) j
 
             if Set.isEmpty leftSet || Set.isEmpty rightSet then
                 Seq.empty
@@ -72,7 +72,7 @@ module Cyk =
 
             if not (List.isEmpty producing) then
                 let ntSet = Set.ofList producing
-                table.data.[i, i] <- ntSet
+                Matrix.set table i i ntSet
                 onDiagonalCell i ntSet
 
         onLengthDone table 1
@@ -83,7 +83,7 @@ module Cyk =
                 let accumulated = computeCell cnf.rules table i j
 
                 if not (Set.isEmpty accumulated) then
-                    table.data.[i, j] <- accumulated
+                    Matrix.set table i j accumulated
 
                 onCellFound i j accumulated
 
@@ -99,20 +99,25 @@ module Cyk =
         let mutable stepHighlights = []
 
         let onDiagonalCell i _ =
-            let h: Matrix.Highlight = { row = i; col = i; color = "yellow" }
+            let h: Matrix.Highlight =
+                { row = i
+                  col = i
+                  label = Matrix.CurrentCell }
+
             stepHighlights <- h :: stepHighlights
 
         let onCellFound i j accumulated =
             if not (Set.isEmpty accumulated) then
-                let h: Matrix.Highlight = { row = i; col = j; color = "yellow" }
+                let h: Matrix.Highlight =
+                    { row = i
+                      col = j
+                      label = Matrix.CurrentCell }
+
                 stepHighlights <- h :: stepHighlights
 
         let onLengthDone table _len =
             steps.Add(
-                { table =
-                    { rows = table.rows
-                      cols = table.cols
-                      data = Array2D.copy table.data }
+                { table = Matrix.create (Matrix.rows table) (Matrix.cols table) (fun i j -> Matrix.get table i j)
                   highlights = List.rev stepHighlights }
             )
 
@@ -122,12 +127,12 @@ module Cyk =
         steps |> List.ofSeq
 
     let private isAccepted (cnf: Grammar<'t, 'nt>) (table: ParsingTable<'nt>) : bool =
-        let n = table.rows
+        let n = Matrix.rows table
 
         if n = 0 then
             false
         else
-            Set.contains cnf.start table.data.[0, n - 1]
+            Set.contains cnf.start (Matrix.get table 0 (n - 1))
 
     /// Parse pre-tokenized input using CYK algorithm.
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
