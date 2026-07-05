@@ -10,11 +10,14 @@ type RsmSymbol<'t, 'nt when 't: comparison and 'nt: comparison> =
     | RTerm of Terminal<'t>
     | RNonterm of Nonterminal<'nt>
 
+/// Type alias for a DFA over RsmSymbol alphabet, used in RSM blocks.
+type RsmDfa<'t, 'nt when 't: comparison and 'nt: comparison> = DFA<RsmSymbol<'t, 'nt>, int>
+
 /// A single block in an RSM — a deterministic finite automaton for one nonterminal.
 /// Transitions are over the alphabet Σ ∪ Q_S.
 type RsmBlock<'t, 'nt when 't: comparison and 'nt: comparison> =
     { nonterminal: Nonterminal<'nt>
-      dfa: DFA<RsmSymbol<'t, 'nt>, int> }
+      dfa: RsmDfa<'t, 'nt> }
 
 /// Recursive State Machine: a tuple ⟨N, Σ, B, B_S, Q, Q_S⟩ where each block B_{N_i}
 /// is a deterministic finite automaton over Σ ∪ Q_S.

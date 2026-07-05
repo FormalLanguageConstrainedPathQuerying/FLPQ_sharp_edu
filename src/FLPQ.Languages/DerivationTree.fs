@@ -16,7 +16,8 @@ type MutableTree<'t, 'nt>(sym: Symbol<'t, 'nt>) =
 
     member this.ToImmutable() : DerivationTree<'t, 'nt> =
         match this.Symbol with
-        | N nt when not (List.isEmpty this.Children) -> Node(nt, this.Children |> List.map (fun c -> c.ToImmutable()))
+        | Symbol.N nt when not (List.isEmpty this.Children) ->
+            Node(nt, this.Children |> List.map (fun c -> c.ToImmutable()))
         | _ -> Leaf this.Symbol
 
     member this.GetPath() : int list =
@@ -36,13 +37,13 @@ module DerivationTree =
     /// Epsilon leaves contribute nothing.
     let rec leaves (tree: DerivationTree<'t, 'nt>) : 't list =
         match tree with
-        | Leaf(T(Terminal t)) -> [ t ]
-        | Leaf(Epsilon) -> []
-        | Leaf(N _) -> []
+        | Leaf(Symbol.T(Terminal t)) -> [ t ]
+        | Leaf(Symbol.Epsilon) -> []
+        | Leaf(Symbol.N _) -> []
         | Node(_, children) -> children |> List.collect leaves
 
     /// Extract the root symbol of a derivation tree.
     let rootSymbol (tree: DerivationTree<'t, 'nt>) : Symbol<'t, 'nt> =
         match tree with
         | Leaf sym -> sym
-        | Node(nt, _) -> N nt
+        | Node(nt, _) -> Symbol.N nt

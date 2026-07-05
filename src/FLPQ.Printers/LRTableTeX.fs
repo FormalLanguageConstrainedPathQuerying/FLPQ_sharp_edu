@@ -69,7 +69,7 @@ module LRTableTeX =
                 Rhs.toNonEpsilonList r.rhs
                 |> List.choose (fun sym ->
                     match sym with
-                    | T t -> Some t
+                    | Symbol.T t -> Some t
                     | _ -> None))
             |> List.distinct
 
@@ -98,13 +98,13 @@ module LRTableTeX =
         sb.Append(@" & ") |> ignore
 
         for t in terminals do
-            sb.Append(symbolPrinter (T t) + @" & ") |> ignore
+            sb.Append(symbolPrinter (Symbol.T t) + @" & ") |> ignore
 
         sb.Append(@"\$ & ") |> ignore
 
         for i in 0 .. nonterminals.Length - 1 do
             let nt = nonterminals.[i]
-            sb.Append(symbolPrinter (N nt)) |> ignore
+            sb.Append(symbolPrinter (Symbol.N nt)) |> ignore
 
             if i < nonterminals.Length - 1 then
                 sb.Append(@" & ") |> ignore
@@ -115,10 +115,10 @@ module LRTableTeX =
             sb.Append(sprintf @"\hline %d" state) |> ignore
 
             for t in terminals do
-                let cell = actionCell table state (T t)
+                let cell = actionCell table state (Symbol.T t)
                 sb.Append(@" & " + cell) |> ignore
 
-            let endCell = actionCell table state Epsilon
+            let endCell = actionCell table state Symbol.Epsilon
             sb.Append(@" & " + endCell) |> ignore
 
             for nt in nonterminals do

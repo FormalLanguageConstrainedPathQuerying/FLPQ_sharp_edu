@@ -9,7 +9,7 @@ open FLPQ.Printers
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``leaf tree dot compiles`` () =
-    let tree = Leaf(T(Terminal "x"))
+    let tree = Leaf(Symbol.T(Terminal "x"))
     let dot = DerivationTreeDot.toDot string tree
     Assert.Contains("digraph DerivationTree", dot)
     Assert.Contains("shape=box", dot)
@@ -22,7 +22,11 @@ let ``leaf tree dot compiles`` () =
 [<Trait("Category", "Graphviz")>]
 let ``node with children dot compiles`` () =
     let tree =
-        Node(Nonterminal "S", [ Leaf(T(Terminal "a")); Node(Nonterminal "B", [ Leaf(T(Terminal "b")) ]) ])
+        Node(
+            Nonterminal "S",
+            [ Leaf(Symbol.T(Terminal "a"))
+              Node(Nonterminal "B", [ Leaf(Symbol.T(Terminal "b")) ]) ]
+        )
 
     let dot = DerivationTreeDot.toDot string tree
     Assert.Contains("digraph DerivationTree", dot)
@@ -34,7 +38,7 @@ let ``node with children dot compiles`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``epsilon leaf dot compiles`` () =
-    let tree = Node(Nonterminal "S", [ Leaf(Epsilon) ])
+    let tree = Node(Nonterminal "S", [ Leaf(Symbol.Epsilon) ])
     let dot = DerivationTreeDot.toDot string tree
 
     let info = ExternalTools.compileDotStringToInfo dot

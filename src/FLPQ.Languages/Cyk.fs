@@ -17,7 +17,7 @@ module Cyk =
             match rule.rhs with
             | Symbols nel when NonEmptyList.length nel = 1 ->
                 match NonEmptyList.head nel with
-                | T t' when t' = t -> Some rule.lhs
+                | Symbol.T t' when t' = t -> Some rule.lhs
                 | _ -> None
             | _ -> None)
 
@@ -33,7 +33,7 @@ module Cyk =
                 let syms = NonEmptyList.toList nel
 
                 match syms.[0], syms.[1] with
-                | N l, N r when l = left && r = right -> Some rule.lhs
+                | Symbol.N l, Symbol.N r when l = left && r = right -> Some rule.lhs
                 | _ -> None
             | _ -> None)
 

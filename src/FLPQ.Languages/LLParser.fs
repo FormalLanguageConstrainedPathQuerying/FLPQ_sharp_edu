@@ -40,10 +40,10 @@ module LLParser =
                     let firstOfRhs =
                         FirstFollow.firstKOfString firstMap k (Rhs.toListWithEpsilon rule.rhs)
 
-                    let withoutEps = Set.remove [ Epsilon ] firstOfRhs
+                    let withoutEps = Set.remove [ Symbol.Epsilon ] firstOfRhs
                     let followOfA = followMap |> Map.find rule.lhs
 
-                    if Set.contains [ Epsilon ] firstOfRhs then
+                    if Set.contains [ Symbol.Epsilon ] firstOfRhs then
                         Set.union withoutEps followOfA
                     else
                         withoutEps
@@ -68,7 +68,7 @@ module LLParser =
 
     let private lookahead (tokens: Symbol<'t, 'nt> list) (pos: int) (k: int) : Symbol<'t, 'nt> list =
         if pos >= tokens.Length then
-            [ Epsilon ]
+            [ Symbol.Epsilon ]
         else
             let endIdx = min (pos + k) tokens.Length
             tokens.[pos .. endIdx - 1]
@@ -83,9 +83,9 @@ module LLParser =
         (k: int)
         (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list =
-        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
+        let tokens = terminals |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))
 
-        let root = MutableTree(N g.start)
+        let root = MutableTree(Symbol.N g.start)
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
         let recordStep (stack: MutableTree<'t, 'nt> list) (pos: int) =
@@ -133,11 +133,11 @@ module LLParser =
 
             | top :: restStack ->
                 match top.Symbol with
-                | T _ when pos < tokens.Length && tokens.[pos] = top.Symbol -> parseLoop restStack (pos + 1)
+                | Symbol.T _ when pos < tokens.Length && tokens.[pos] = top.Symbol -> parseLoop restStack (pos + 1)
 
-                | Epsilon -> parseLoop restStack pos
+                | Symbol.Epsilon -> parseLoop restStack pos
 
-                | N nt ->
+                | Symbol.N nt ->
                     let la = lookahead tokens pos k
 
                     match expandNonterminal nt top restStack la with

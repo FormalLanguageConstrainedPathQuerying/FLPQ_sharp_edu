@@ -15,6 +15,6 @@ module SymbolTeX =
     /// Convert a grammar symbol to its TeX representation using the provided printers.
     let toLaTeX (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (sym: Symbol<'t, 'nt>) : string =
         match sym with
-        | T t -> terminalContent terminalPrinter t
-        | N nt -> nonterminalContent nonterminalPrinter nt
-        | Epsilon -> @"\varepsilon"
+        | Symbol.T t -> terminalContent terminalPrinter t
+        | Symbol.N nt -> nonterminalContent nonterminalPrinter nt
+        | Symbol.Epsilon -> @"\varepsilon"

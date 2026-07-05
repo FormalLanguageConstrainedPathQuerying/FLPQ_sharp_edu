@@ -18,7 +18,7 @@ module FactTests =
         let first = FirstFollow.firstK g 1
 
         Assert.Contains(Nonterminal "S", Map.keys first)
-        Assert.Equal<Symbol<string, string> list>(set [ [ T(Terminal "a") ] ], Map.find (Nonterminal "S") first)
+        Assert.Equal<Symbol<string, string> list>(set [ [ Symbol.T(Terminal "a") ] ], Map.find (Nonterminal "S") first)
 
     [<Fact>]
     let ``firstK for grammar1 with k=1 includes epsilon`` () =
@@ -32,7 +32,7 @@ module FactTests =
         let first = FirstFollow.firstK g 1
 
         Assert.Equal<Symbol<string, string> list>(
-            set [ [ T(Terminal "a") ]; [ Epsilon ] ],
+            set [ [ Symbol.T(Terminal "a") ]; [ Symbol.Epsilon ] ],
             Map.find (Nonterminal "S") first
         )
 
@@ -48,8 +48,8 @@ module FactTests =
         let follow = FirstFollow.followK g 1
 
         let sFollow = Map.find (Nonterminal "S") follow
-        Assert.Contains<Symbol<string, string> list>([ Epsilon ], sFollow)
-        Assert.Contains<Symbol<string, string> list>([ T(Terminal "b") ], sFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.Epsilon ], sFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "b") ], sFollow)
 
     [<Fact>]
     let ``firstK with k=2 for grammar3`` () =
@@ -63,7 +63,9 @@ module FactTests =
         let first = FirstFollow.firstK g 2
 
         Assert.Equal<Symbol<string, string> list>(
-            set [ [ T(Terminal "a") ]; [ T(Terminal "a"); T(Terminal "a") ] ],
+            set
+                [ [ Symbol.T(Terminal "a") ]
+                  [ Symbol.T(Terminal "a"); Symbol.T(Terminal "a") ] ],
             Map.find (Nonterminal "S") first
         )
 
@@ -83,8 +85,8 @@ module FactTests =
         let first = FirstFollow.firstK g 1
         let eFirst = Map.find (Nonterminal "E") first
 
-        Assert.Contains<Symbol<string, string> list>([ T(Terminal "x") ], eFirst)
-        Assert.Contains<Symbol<string, string> list>([ T(Terminal "(") ], eFirst)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "x") ], eFirst)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "(") ], eFirst)
 
     [<Fact>]
     let ``firstKOfString concatenates correctly`` () =
@@ -97,8 +99,8 @@ module FactTests =
 
         let first = FirstFollow.firstK g 2
 
-        let firstB = FirstFollow.firstKOfString first 2 [ N(Nonterminal "B") ]
-        Assert.Equal<Symbol<string, string> list>(set [ [ T(Terminal "b") ] ], firstB)
+        let firstB = FirstFollow.firstKOfString first 2 [ Symbol.N(Nonterminal "B") ]
+        Assert.Equal<Symbol<string, string> list>(set [ [ Symbol.T(Terminal "b") ] ], firstB)
 
     [<Fact>]
     let ``firstK with k=0 returns only epsilon`` () =
@@ -109,7 +111,7 @@ module FactTests =
         "
 
         let first = FirstFollow.firstK g 0
-        Assert.Equal<Symbol<string, string> list>(set [ [ Epsilon ] ], Map.find (Nonterminal "S") first)
+        Assert.Equal<Symbol<string, string> list>(set [ [ Symbol.Epsilon ] ], Map.find (Nonterminal "S") first)
 
     [<Fact>]
     let ``followK for grammar3 with k=1`` () =
@@ -122,7 +124,7 @@ module FactTests =
 
         let follow = FirstFollow.followK g 1
 
-        Assert.Equal<Symbol<string, string> list>(set [ [ Epsilon ] ], Map.find (Nonterminal "S") follow)
+        Assert.Equal<Symbol<string, string> list>(set [ [ Symbol.Epsilon ] ], Map.find (Nonterminal "S") follow)
 
     [<Fact>]
     let ``followK for expression grammar 7 with k=1`` () =
@@ -140,6 +142,6 @@ module FactTests =
         let follow = FirstFollow.followK g 1
         let eFollow = Map.find (Nonterminal "E") follow
 
-        Assert.Contains<Symbol<string, string> list>([ T(Terminal "+") ], eFollow)
-        Assert.Contains<Symbol<string, string> list>([ T(Terminal ")") ], eFollow)
-        Assert.Contains<Symbol<string, string> list>([ Epsilon ], eFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "+") ], eFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal ")") ], eFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.Epsilon ], eFollow)

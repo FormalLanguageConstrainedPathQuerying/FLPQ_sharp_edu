@@ -63,19 +63,19 @@ module FactTests =
         Assert.Equal(4, List.length rhsList)
 
         match rhsList.[0] with
-        | T(Terminal "a") -> ()
+        | Symbol.T(Terminal "a") -> ()
         | _ -> Assert.Fail("Expected terminal 'a'")
 
         match rhsList.[1] with
-        | N(Nonterminal "B") -> ()
+        | Symbol.N(Nonterminal "B") -> ()
         | _ -> Assert.Fail("Expected nonterminal 'B'")
 
         match rhsList.[2] with
-        | T(Terminal "c") -> ()
+        | Symbol.T(Terminal "c") -> ()
         | _ -> Assert.Fail("Expected terminal 'c'")
 
         match rhsList.[3] with
-        | N(Nonterminal "D") -> ()
+        | Symbol.N(Nonterminal "D") -> ()
         | _ -> Assert.Fail("Expected nonterminal 'D'")
 
     [<Fact>]
@@ -111,19 +111,19 @@ module FactTests =
         Assert.Equal(4, List.length r1List)
 
         match r1List.[0] with
-        | T(Terminal "a") -> ()
+        | Symbol.T(Terminal "a") -> ()
         | _ -> Assert.Fail("Expected 'a'")
 
         match r1List.[1] with
-        | N(Nonterminal "S") -> ()
+        | Symbol.N(Nonterminal "S") -> ()
         | _ -> Assert.Fail("Expected 'S'")
 
         match r1List.[2] with
-        | T(Terminal "b") -> ()
+        | Symbol.T(Terminal "b") -> ()
         | _ -> Assert.Fail("Expected 'b'")
 
         match r1List.[3] with
-        | N(Nonterminal "S") -> ()
+        | Symbol.N(Nonterminal "S") -> ()
         | _ -> Assert.Fail("Expected 'S'")
 
         let r2 = g.rules.[1]
@@ -155,8 +155,8 @@ module CnfTests =
                 let syms = NonEmptyList.toList nel
 
                 match syms with
-                | [ T _ ] -> true
-                | [ N _; N _ ] -> true
+                | [ Symbol.T _ ] -> true
+                | [ Symbol.N _; Symbol.N _ ] -> true
                 | _ -> false)
 
     let private allRhsSymbolsAreNonterminals (g: Grammar<string, string>) : bool =
@@ -168,8 +168,8 @@ module CnfTests =
                 let syms = NonEmptyList.toList nel
 
                 match syms with
-                | [ T _ ] -> true
-                | [ N _; N _ ] -> true
+                | [ Symbol.T _ ] -> true
+                | [ Symbol.N _; Symbol.N _ ] -> true
                 | _ -> false)
 
     [<Fact>]
@@ -367,7 +367,7 @@ module CnfTests =
                 | Symbols nel ->
                     NonEmptyList.length nel = 1
                     && (match NonEmptyList.head nel with
-                        | N _ -> true
+                        | Symbol.N _ -> true
                         | _ -> false)
                 | _ -> false)
 

@@ -7,12 +7,12 @@ module FirstFollow =
 
     let private concat (s1: Symbol<'t, 'nt> list) (s2: Symbol<'t, 'nt> list) : Symbol<'t, 'nt> list =
         match s1, s2 with
-        | [ Epsilon ], _ -> s2
-        | _, [ Epsilon ] -> s1
+        | [ Symbol.Epsilon ], _ -> s2
+        | _, [ Symbol.Epsilon ] -> s1
         | _, _ -> s1 @ s2
 
     let private truncate (lst: Symbol<'t, 'nt> list) (k: int) : Symbol<'t, 'nt> list =
-        if k <= 0 then [ Epsilon ]
+        if k <= 0 then [ Symbol.Epsilon ]
         elif lst.Length <= k then lst
         else lst |> List.take k
 
@@ -27,7 +27,7 @@ module FirstFollow =
         set1
         |> Set.toSeq
         |> Seq.collect (fun s1 ->
-            if s1 = [ Epsilon ] then set2 |> Set.toSeq
+            if s1 = [ Symbol.Epsilon ] then set2 |> Set.toSeq
             elif s1.Length = k then Seq.singleton s1
             else set2 |> Set.toSeq |> Seq.map (concatTrunc k s1))
         |> Set.ofSeq
@@ -39,21 +39,21 @@ module FirstFollow =
         : Set<Symbol<'t, 'nt> list> =
         let rec loop (remaining: Symbol<'t, 'nt> list) : Set<Symbol<'t, 'nt> list> =
             match remaining with
-            | [] -> set [ [ Epsilon ] ]
-            | (T _ as t) :: rest ->
+            | [] -> set [ [ Symbol.Epsilon ] ]
+            | (Symbol.T _ as t) :: rest ->
                 let tailFirst = loop rest
 
-                if tailFirst = set [ [ Epsilon ] ] then
+                if tailFirst = set [ [ Symbol.Epsilon ] ] then
                     set [ truncate [ t ] k ]
                 else
                     tailFirst |> Set.map (fun s -> truncate (t :: s) k)
-            | Epsilon :: rest -> loop rest
-            | N nt :: rest ->
+            | Symbol.Epsilon :: rest -> loop rest
+            | Symbol.N nt :: rest ->
                 match Map.tryFind nt firstMap with
                 | Some ntFirst ->
                     let tailFirst = loop rest
                     productTrunc k ntFirst tailFirst
-                | None -> set [ [ Epsilon ] ]
+                | None -> set [ [ Symbol.Epsilon ] ]
 
         loop symbols
 
@@ -70,10 +70,10 @@ module FirstFollow =
                     |> List.choose (fun r ->
                         if r.lhs = nt then
                             if Rhs.isEpsilon r.rhs then
-                                Some [ Epsilon ]
+                                Some [ Symbol.Epsilon ]
                             else
                                 match Rhs.toNonEpsilonList r.rhs with
-                                | (T _ as t) :: _ -> Some(truncate [ t ] k)
+                                | (Symbol.T _ as t) :: _ -> Some(truncate [ t ] k)
                                 | _ -> None
                         else
                             None)
@@ -128,7 +128,7 @@ module FirstFollow =
             allNt
             |> List.map (fun nt ->
                 if nt = g.start then
-                    (nt, set [ [ Epsilon ] ])
+                    (nt, set [ [ Symbol.Epsilon ] ])
                 else
                     (nt, Set.empty))
             |> Map.ofList
@@ -143,7 +143,7 @@ module FirstFollow =
 
                 for idx in 0 .. rhs.Length - 1 do
                     match rhs.[idx] with
-                    | N bNt ->
+                    | Symbol.N bNt ->
                         let beta = rhs |> List.skip (idx + 1)
                         let firstBeta = firstOfSymbols firstMap k beta
 
@@ -155,7 +155,7 @@ module FirstFollow =
                             changed <- true
                             followMap <- Map.add bNt (Set.union currentF additions) followMap
 
-                        if Set.contains [ Epsilon ] firstBeta then
+                        if Set.contains [ Symbol.Epsilon ] firstBeta then
                             let aFollow = Map.find rule.lhs followMap
 
                             let more = aFollow |> Set.filter (fun s -> not (Set.contains s currentF))

@@ -30,7 +30,7 @@ module DerivationTreeDot =
                 sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
 
             | Node(nt, children) ->
-                let label = escapeLabel (symbolVisualizer (N nt))
+                let label = escapeLabel (symbolVisualizer (Symbol.N nt))
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
                 for child in children do
@@ -75,7 +75,7 @@ module DerivationTreeDot =
                 sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
 
             | Node(nt, children) ->
-                let label = escapeLabel (symbolVisualizer (N nt))
+                let label = escapeLabel (symbolVisualizer (Symbol.N nt))
 
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
@@ -132,7 +132,7 @@ module DerivationTreeDot =
                 sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=box];" nid label) |> ignore
 
             | Node(nt, children) ->
-                let label = escapeLabel (symbolVisualizer (N nt))
+                let label = escapeLabel (symbolVisualizer (Symbol.N nt))
                 sb.AppendLine(sprintf "  n%d [label=\"%s\"];" nid label) |> ignore
 
                 for child in children do

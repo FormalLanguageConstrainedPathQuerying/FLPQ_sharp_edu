@@ -17,7 +17,7 @@ module Tokenizer =
 
     /// Tokenize input into a list of Grammar symbols (terminals).
     let tokenize (input: string) : Symbol<string, string> list =
-        tokenizeStrings input |> List.map (fun t -> T(Terminal t))
+        tokenizeStrings input |> List.map (fun t -> Symbol.T(Terminal t))
 
     /// Tokenize input into a list of Terminal values.
     let tokenizeTerminals (input: string) : Terminal<string> list =
@@ -25,4 +25,4 @@ module Tokenizer =
 
     /// Convert a list of terminals to grammar symbols.
     let terminalsToSymbols (terminals: Terminal<'t> list) : Symbol<'t, 'nt> list =
-        terminals |> List.map (fun (Terminal t) -> T(Terminal t))
+        terminals |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))

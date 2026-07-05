@@ -67,10 +67,10 @@ module FactTests =
         | Some tree ->
             match tree with
             | Node(Nonterminal "S",
-                   [ Leaf(T(Terminal "a"))
-                     Node(Nonterminal "S", [ Leaf(Epsilon) ])
-                     Leaf(T(Terminal "b"))
-                     Node(Nonterminal "S", [ Leaf(Epsilon) ]) ]) -> ()
+                   [ Leaf(Symbol.T(Terminal "a"))
+                     Node(Nonterminal "S", [ Leaf(Symbol.Epsilon) ])
+                     Leaf(Symbol.T(Terminal "b"))
+                     Node(Nonterminal "S", [ Leaf(Symbol.Epsilon) ]) ]) -> ()
             | _ -> Assert.Fail(sprintf "Unexpected tree structure: %A" tree)
         | None -> Assert.Fail("Failed to parse a b")
 

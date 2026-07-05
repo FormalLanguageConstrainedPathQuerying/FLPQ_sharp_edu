@@ -143,9 +143,9 @@ let ``LL step visualization tree is properly nested`` () =
     | Some tree ->
         match tree with
         | DerivationTree.Node(Nonterminal "S",
-                              [ DerivationTree.Leaf(T(Terminal "a"))
-                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Epsilon) ])
-                                DerivationTree.Leaf(T(Terminal "b"))
-                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Epsilon) ]) ]) -> ()
+                              [ DerivationTree.Leaf(Symbol.T(Terminal "a"))
+                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Symbol.Epsilon) ])
+                                DerivationTree.Leaf(Symbol.T(Terminal "b"))
+                                DerivationTree.Node(Nonterminal "S", [ DerivationTree.Leaf(Symbol.Epsilon) ]) ]) -> ()
         | _ -> Assert.Fail(sprintf "Unexpected tree structure: %A" tree)
     | None -> Assert.Fail("Failed to parse a b")

@@ -63,7 +63,7 @@ module LRAutomaton =
     let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
         { rules =
             { lhs = freshStart
-              rhs = NonEmptyList.create (N g.start) [] |> Symbols }
+              rhs = NonEmptyList.create (Symbol.N g.start) [] |> Symbols }
             :: g.rules
           start = freshStart }
 
@@ -77,7 +77,7 @@ module LRAutomaton =
             for item in closure |> Set.toSeq |> Seq.toList do
                 if item.dot < item.rhs.Length then
                     match item.rhs.[item.dot] with
-                    | N nt ->
+                    | Symbol.N nt ->
                         let newItems =
                             rules
                             |> List.filter (fun r -> r.lhs = nt)
@@ -118,7 +118,7 @@ module LRAutomaton =
             for item in closure |> Set.toSeq |> Seq.toList do
                 if item.dot < item.rhs.Length then
                     match item.rhs.[item.dot] with
-                    | N nt ->
+                    | Symbol.N nt ->
                         let beta =
                             if item.dot + 1 < item.rhs.Length then
                                 item.rhs |> List.skip (item.dot + 1)
@@ -130,7 +130,7 @@ module LRAutomaton =
                                 set [ [ item.lookahead ] ]
                             else
                                 FirstFollow.firstKOfString firstMap 1 beta
-                                |> Set.filter (fun s -> s <> [ Epsilon ])
+                                |> Set.filter (fun s -> s <> [ Symbol.Epsilon ])
 
                         let newItems =
                             rules
@@ -229,12 +229,12 @@ module LRAutomaton =
                 { lhs = r.lhs
                   rhs = Rhs.toNonEpsilonList r.rhs
                   dot = 0
-                  lookahead = Epsilon })
+                  lookahead = Symbol.Epsilon })
             (fun r ->
                 { lhs = r.lhs
                   rhs = Rhs.toNonEpsilonList r.rhs
                   dot = Rhs.toNonEpsilonList r.rhs |> List.length
-                  lookahead = Epsilon })
+                  lookahead = Symbol.Epsilon })
             (fun i -> i.dot)
             (fun i -> i.rhs)
             (fun items -> closureLR1 aug.rules items firstMap)
@@ -260,7 +260,7 @@ module LRParser =
                 | Some symbols ->
                     for sym in NonEmptySet.toSeq symbols do
                         match sym with
-                        | ATerm(T _ as tSym) ->
+                        | ATerm(Symbol.T _ as tSym) ->
                             let key = (i, tSym)
 
                             match Map.tryFind key action with
@@ -268,7 +268,7 @@ module LRParser =
                             | Some(Shift _) -> ()
                             | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
                             | None -> action <- Map.add key (Shift j) action
-                        | ATerm(N nt) -> goto <- Map.add (i, nt) j goto
+                        | ATerm(Symbol.N nt) -> goto <- Map.add (i, nt) j goto
                         | _ -> ()
                 | None -> ()
 
@@ -286,7 +286,7 @@ module LRParser =
             [ for rule in aug.rules do
                   for sym in Rhs.toNonEpsilonList rule.rhs do
                       match sym with
-                      | T _ as tSym -> yield tSym
+                      | Symbol.T _ as tSym -> yield tSym
                       | _ -> () ]
             |> List.distinct
 
@@ -298,11 +298,11 @@ module LRParser =
             for item in state do
                 if isCompletedLR0 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
-                        let key = (stateIdx, Epsilon)
+                        let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
@@ -310,7 +310,7 @@ module LRParser =
                             aug.rules
                             |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
 
-                        for t in Epsilon :: allTerminals do
+                        for t in Symbol.Epsilon :: allTerminals do
                             let key = (stateIdx, t)
 
                             match Map.tryFind key action with
@@ -343,11 +343,11 @@ module LRParser =
             for item in state do
                 if isCompletedLR0 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
-                        let key = (stateIdx, Epsilon)
+                        let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
@@ -390,11 +390,11 @@ module LRParser =
             for item in state do
                 if isCompletedLR1 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
-                        let key = (stateIdx, Epsilon)
+                        let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Epsilon, r, -1) :: conflicts
+                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
                         | Some Accept -> ()
                         | None -> action <- Map.add key Accept action
                     else
@@ -429,7 +429,7 @@ module LRParser =
         (table: LRTable<'t, 'nt>)
         (terminals: Terminal<'t> list)
         : Option<DerivationTree<'t, 'nt>> * LRParsingStep<'t, 'nt> list =
-        let tokens = terminals |> List.map (fun (Terminal t) -> T(Terminal t))
+        let tokens = terminals |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))
         let mutable stack: LRStackFrame<'t, 'nt> list = [ LRState 0 ]
         let mutable pos = 0
         let mutable finished = false
@@ -468,7 +468,7 @@ module LRParser =
             iteration <- iteration + 1
             let currentState = topState ()
 
-            let lookahead = if pos < tokens.Length then tokens.[pos] else Epsilon
+            let lookahead = if pos < tokens.Length then tokens.[pos] else Symbol.Epsilon
 
             match Map.tryFind (currentState, lookahead) table.action with
             | Some(Shift nextState) ->
@@ -495,8 +495,8 @@ module LRParser =
                 finished <- true
                 accepted <- true
             | None ->
-                if pos = tokens.Length && lookahead = Epsilon then
-                    match Map.tryFind (currentState, Epsilon) table.action with
+                if pos = tokens.Length && lookahead = Symbol.Epsilon then
+                    match Map.tryFind (currentState, Symbol.Epsilon) table.action with
                     | Some Accept ->
                         finished <- true
                         accepted <- true

@@ -10,7 +10,14 @@ type Terminal<'t> = Terminal of 't
 /// A nonterminal symbol, wrapping a user-defined type 'nt.
 type Nonterminal<'nt> = Nonterminal of 'nt
 
+/// A named pair of nonterminals, used in Valiant's algorithm for binary rule decomposition.
+[<Struct>]
+type BinaryPair<'nt> =
+    { left: Nonterminal<'nt>
+      right: Nonterminal<'nt> }
+
 /// A grammar symbol: a terminal, a nonterminal, or epsilon.
+[<RequireQualifiedAccess>]
 type Symbol<'t, 'nt> =
     | T of Terminal<'t>
     | N of Nonterminal<'nt>
@@ -27,7 +34,7 @@ module Rhs =
     let toListWithEpsilon (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
         | Symbols nel -> NonEmptyList.toList nel
-        | EpsilonRhs -> [ Epsilon ]
+        | EpsilonRhs -> [ Symbol.Epsilon ]
 
     let toNonEpsilonList (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
@@ -58,9 +65,9 @@ module Grammar =
 
     let private classifyToken (token: string) : Symbol<string, string> =
         if System.Char.IsUpper(token[0]) then
-            N(Nonterminal token)
+            Symbol.N(Nonterminal token)
         else
-            T(Terminal token)
+            Symbol.T(Terminal token)
 
     let private parseLine (line: string) : Rule<string, string> =
         let parts = line.Split("->", 2, StringSplitOptions.None)
@@ -110,7 +117,7 @@ module Grammar =
             let rhsNts =
                 Rhs.toNonEpsilonList r.rhs
                 |> List.choose (function
-                    | N nt -> Some nt
+                    | Symbol.N nt -> Some nt
                     | _ -> None)
 
             r.lhs :: rhsNts)
@@ -121,7 +128,7 @@ module Grammar =
         |> List.collect (fun r ->
             Rhs.toNonEpsilonList r.rhs
             |> List.choose (function
-                | T t -> Some t
+                | Symbol.T t -> Some t
                 | _ -> None))
         |> Set.ofList
 
@@ -136,9 +143,9 @@ module Grammar =
                 |> List.filter (fun r ->
                     Rhs.toListWithEpsilon r.rhs
                     |> List.forall (function
-                        | N nt -> Set.contains nt current
-                        | Epsilon -> true
-                        | T _ -> false))
+                        | Symbol.N nt -> Set.contains nt current
+                        | Symbol.Epsilon -> true
+                        | Symbol.T _ -> false))
                 |> List.map (fun r -> r.lhs)
                 |> Set.ofList
 
@@ -155,20 +162,17 @@ module Grammar =
         |> Set.ofList
         |> loop
 
-    let private computeUnitPairs
-        (rules: Rule<'t, 'nt> list)
-        (nts: Set<Nonterminal<'nt>>)
-        : Set<Nonterminal<'nt> * Nonterminal<'nt>> =
-        let initial = nts |> Set.map (fun a -> (a, a))
+    let private computeUnitPairs (rules: Rule<'t, 'nt> list) (nts: Set<Nonterminal<'nt>>) : Set<BinaryPair<'nt>> =
+        let initial = nts |> Set.map (fun a -> { left = a; right = a })
 
-        let rec loop (current: Set<Nonterminal<'nt> * Nonterminal<'nt>>) =
+        let rec loop (current: Set<BinaryPair<'nt>>) =
             let newPairs =
                 rules
                 |> List.filter (fun r ->
                     match r.rhs with
                     | Symbols nel when NonEmptyList.length nel = 1 ->
                         match NonEmptyList.head nel with
-                        | N _ -> true
+                        | Symbol.N _ -> true
                         | _ -> false
                     | _ -> false)
                 |> List.collect (fun r ->
@@ -177,11 +181,11 @@ module Grammar =
                     match r.rhs with
                     | Symbols nel ->
                         match NonEmptyList.head nel with
-                        | N b ->
+                        | Symbol.N b ->
                             current
-                            |> Set.filter (fun (x, y) -> y = a)
+                            |> Set.filter (fun bp -> bp.right = a)
                             |> Set.toList
-                            |> List.map (fun (x, _) -> (x, b))
+                            |> List.map (fun bp -> { left = bp.left; right = b })
                         | _ -> []
                     | _ -> [])
                 |> Set.ofList
@@ -215,7 +219,7 @@ module Grammar =
 
         let startRule =
             { lhs = newStart
-              rhs = NonEmptyList.create (N g.start) [] |> Symbols }
+              rhs = NonEmptyList.create (Symbol.N g.start) [] |> Symbols }
 
         let startEpsRule =
             if hasEps then
@@ -236,7 +240,7 @@ module Grammar =
                         |> List.indexed
                         |> List.choose (fun (idx, sym) ->
                             match sym with
-                            | N nt when Set.contains nt nullable -> Some idx
+                            | Symbol.N nt when Set.contains nt nullable -> Some idx
                             | _ -> None)
 
                     let combos = combinations nullableIndices
@@ -248,11 +252,11 @@ module Grammar =
                             |> List.indexed
                             |> List.filter (fun (idx, sym) ->
                                 match sym with
-                                | T _ -> true
-                                | N nt ->
+                                | Symbol.T _ -> true
+                                | Symbol.N nt ->
                                     let isNullable = Set.contains nt nullable
                                     (not isNullable) || List.contains idx keepIndices
-                                | Epsilon -> true)
+                                | Symbol.Epsilon -> true)
                             |> List.map snd
 
                         if newRhsList.IsEmpty then
@@ -274,19 +278,19 @@ module Grammar =
         let newRules =
             pairs
             |> Set.toList
-            |> List.collect (fun (a, b) ->
+            |> List.collect (fun bp ->
                 g.rules
-                |> List.filter (fun r -> r.lhs = b)
+                |> List.filter (fun r -> r.lhs = bp.right)
                 |> List.choose (fun r ->
                     match r.rhs with
                     | Symbols nel ->
                         if NonEmptyList.length nel = 1 then
                             match NonEmptyList.head nel with
-                            | N _ -> None
-                            | _ -> Some { lhs = a; rhs = r.rhs }
+                            | Symbol.N _ -> None
+                            | _ -> Some { lhs = bp.left; rhs = r.rhs }
                         else
-                            Some { lhs = a; rhs = r.rhs }
-                    | EpsilonRhs -> Some { lhs = a; rhs = r.rhs }))
+                            Some { lhs = bp.left; rhs = r.rhs }
+                    | EpsilonRhs -> Some { lhs = bp.left; rhs = r.rhs }))
 
         let allRules = List.distinct (newRules @ g.rules)
 
@@ -297,7 +301,7 @@ module Grammar =
                 | Symbols nel ->
                     NonEmptyList.length nel <> 1
                     || (match NonEmptyList.head nel with
-                        | N _ -> false
+                        | Symbol.N _ -> false
                         | _ -> true)
                 | EpsilonRhs -> true)
 
@@ -318,7 +322,7 @@ module Grammar =
             |> Map.toList
             |> List.map (fun (term, nt) ->
                 { lhs = nt
-                  rhs = NonEmptyList.create (T term) [] |> Symbols })
+                  rhs = NonEmptyList.create (Symbol.T term) [] |> Symbols })
 
         let newRules =
             g.rules
@@ -329,10 +333,10 @@ module Grammar =
                     symbols
                     |> List.map (fun sym ->
                         match sym with
-                        | T t when symbols.Length > 1 ->
+                        | Symbol.T t when symbols.Length > 1 ->
                             match Map.tryFind t terminalToNt with
-                            | Some nt -> N nt
-                            | None -> T t
+                            | Some nt -> Symbol.N nt
+                            | None -> Symbol.T t
                         | _ -> sym)
 
                 { lhs = r.lhs
@@ -369,7 +373,7 @@ module Grammar =
                                 let restRules = breakDown newNt more
 
                                 { lhs = prevNt
-                                  rhs = NonEmptyList.create s1 [ N newNt ] |> Symbols }
+                                  rhs = NonEmptyList.create s1 [ Symbol.N newNt ] |> Symbols }
                                 :: restRules
                             | _ -> []
 
@@ -377,7 +381,7 @@ module Grammar =
                         let rhsRules = breakDown newNt rest
 
                         { lhs = r.lhs
-                          rhs = NonEmptyList.create first [ N newNt ] |> Symbols }
+                          rhs = NonEmptyList.create first [ Symbol.N newNt ] |> Symbols }
                         :: rhsRules
                     | _ -> [ r ])
 

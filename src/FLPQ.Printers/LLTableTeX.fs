@@ -16,7 +16,7 @@ module LLTableTeX =
                     syms
                     |> List.map (fun sym ->
                         match sym with
-                        | Epsilon -> @"\varepsilon"
+                        | Symbol.Epsilon -> @"\varepsilon"
                         | _ -> symbolPrinter sym)
                     |> String.concat " ")
                 |> Seq.sort
@@ -25,7 +25,7 @@ module LLTableTeX =
             @"$\{ " + elements + @" \}$"
 
     let private renderRule (symbolPrinter: Symbol<'t, 'nt> -> string) (rule: Rule<'t, 'nt>) : string =
-        let lhs = symbolPrinter (N rule.lhs)
+        let lhs = symbolPrinter (Symbol.N rule.lhs)
 
         let rhs =
             if Rhs.isEpsilon rule.rhs then
@@ -34,7 +34,7 @@ module LLTableTeX =
                 Rhs.toNonEpsilonList rule.rhs
                 |> List.map (fun sym ->
                     match sym with
-                    | Epsilon -> @"\varepsilon"
+                    | Symbol.Epsilon -> @"\varepsilon"
                     | _ -> symbolPrinter sym)
                 |> String.concat " "
 
@@ -64,7 +64,7 @@ module LLTableTeX =
         sb.Append(@"N & $\operatorname{First}$ & $\operatorname{Follow}$") |> ignore
 
         for t in terms do
-            sb.Append(@" & " + symbolPrinter (T t)) |> ignore
+            sb.Append(@" & " + symbolPrinter (Symbol.T t)) |> ignore
 
         sb.Append(@" & $\$ $ \\ \hline") |> ignore
 
@@ -72,12 +72,12 @@ module LLTableTeX =
             let firstSet = firstMap |> Map.tryFind nt |> Option.defaultValue Set.empty
             let followSet = followMap |> Map.tryFind nt |> Option.defaultValue Set.empty
 
-            sb.Append(@"$" + symbolPrinter (N nt) + @"$") |> ignore
+            sb.Append(@"$" + symbolPrinter (Symbol.N nt) + @"$") |> ignore
             sb.Append(@" & " + renderSet symbolPrinter firstSet) |> ignore
             sb.Append(@" & " + renderSet symbolPrinter followSet) |> ignore
 
             for t in terms do
-                let key = (nt, [ T t ])
+                let key = (nt, [ Symbol.T t ])
 
                 let cell =
                     match Map.tryFind key table with
@@ -86,7 +86,7 @@ module LLTableTeX =
 
                 sb.Append(@" & " + cell) |> ignore
 
-            let endKey = (nt, [ Epsilon ])
+            let endKey = (nt, [ Symbol.Epsilon ])
 
             let endCell =
                 match Map.tryFind endKey table with

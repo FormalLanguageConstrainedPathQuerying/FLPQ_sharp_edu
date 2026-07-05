@@ -36,8 +36,8 @@ module RsmToGrammar =
 
                         let rhsSymbols =
                             match sym with
-                            | RsmSymbol.RTerm(Terminal t) -> [ T(Terminal t); N toNt ]
-                            | RsmSymbol.RNonterm calledNt -> [ N calledNt; N toNt ]
+                            | RsmSymbol.RTerm(Terminal t) -> [ Symbol.T(Terminal t); Symbol.N toNt ]
+                            | RsmSymbol.RNonterm calledNt -> [ Symbol.N calledNt; Symbol.N toNt ]
 
                         rules.Add(
                             { lhs = fromNt

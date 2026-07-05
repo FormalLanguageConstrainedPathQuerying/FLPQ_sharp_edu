@@ -70,7 +70,7 @@ module TokenizeTests =
         Assert.Equal<Terminal<string>>(
             Terminal "x",
             match result with
-            | [ T t ] -> t
+            | [ Symbol.T t ] -> t
             | _ -> failwith "wrong"
         )
 
@@ -80,7 +80,7 @@ module TokenizeTests =
         Assert.Equal(3, List.length result)
 
         match result with
-        | [ T(Terminal "a"); T(Terminal "b"); T(Terminal "c") ] -> ()
+        | [ Symbol.T(Terminal "a"); Symbol.T(Terminal "b"); Symbol.T(Terminal "c") ] -> ()
         | _ -> failwith "wrong terminals"
 
     [<Fact>]
@@ -110,7 +110,7 @@ module TerminalsToSymbolsTests =
     [<Fact>]
     let ``wraps terminals as T symbols`` () =
         let result = Tokenizer.terminalsToSymbols [ Terminal 1; Terminal 2 ]
-        Assert.Equal<Symbol<int, string> list>([ T(Terminal 1); T(Terminal 2) ], result)
+        Assert.Equal<Symbol<int, string> list>([ Symbol.T(Terminal 1); Symbol.T(Terminal 2) ], result)
 
 module TokenizeGenTests =
 
@@ -118,17 +118,25 @@ module TokenizeGenTests =
     let ``custom classifier`` () =
         let classify (s: string) : Symbol<string, string> =
             if s.Length > 0 && System.Char.IsUpper(s.[0]) then
-                N(Nonterminal s)
+                Symbol.N(Nonterminal s)
             else
-                T(Terminal s)
+                Symbol.T(Terminal s)
 
         let result = Tokenizer.tokenizeGen classify "S a b"
-        Assert.Equal<Symbol<string, string> list>([ N(Nonterminal "S"); T(Terminal "a"); T(Terminal "b") ], result)
+
+        Assert.Equal<Symbol<string, string> list>(
+            [ Symbol.N(Nonterminal "S"); Symbol.T(Terminal "a"); Symbol.T(Terminal "b") ],
+            result
+        )
 
     [<Fact>]
     let ``identity classifier wraps all as terminals`` () =
-        let result = Tokenizer.tokenizeGen (fun s -> T(Terminal s)) "a b c"
-        Assert.Equal<Symbol<string, string> list>([ T(Terminal "a"); T(Terminal "b"); T(Terminal "c") ], result)
+        let result = Tokenizer.tokenizeGen (fun s -> Symbol.T(Terminal s)) "a b c"
+
+        Assert.Equal<Symbol<string, string> list>(
+            [ Symbol.T(Terminal "a"); Symbol.T(Terminal "b"); Symbol.T(Terminal "c") ],
+            result
+        )
 
 module PropertyTests =
 

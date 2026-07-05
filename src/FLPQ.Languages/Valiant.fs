@@ -21,13 +21,13 @@ module Valiant =
 
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
         { tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>
-          pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>
+          pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>
           tokensArr: 't[]
           tableSize: int
           n: int
           allNt: Nonterminal<'nt> list
-          binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list
-          pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list
+          binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list
+          pairs: BinaryPair<'nt> list
           terminalRules: Map<'t, Nonterminal<'nt> list> }
 
     let private submatrixCells (m: Submatrix) : (int * int) list =
@@ -109,16 +109,17 @@ module Valiant =
 
     let private performMultiplications
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
         (tasks: (Submatrix * Submatrix * Submatrix) list)
-        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
+        (pairs: BinaryPair<'nt> list)
         : unit =
         if List.isEmpty pairs then
             ()
         else
             for (mTarget, m1, m2) in tasks do
                 for pair in pairs do
-                    let leftNt, rightNt = pair
+                    let leftNt = pair.left
+                    let rightNt = pair.right
 
                     let leftSlice =
                         match tByNt.TryGetValue leftNt with
@@ -236,11 +237,11 @@ module Valiant =
 
     let rec private completeLayerModified
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
         (mList: Submatrix list)
         (terminalRules: Map<'t, Nonterminal<'nt> list>)
-        (binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list)
-        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
+        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
+        (pairs: BinaryPair<'nt> list)
         : unit =
         match mList with
         | [] -> ()
@@ -270,11 +271,11 @@ module Valiant =
 
     and private completeVLayerModified
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>)
+        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
         (mList: Submatrix list)
         (terminalRules: Map<'t, Nonterminal<'nt> list>)
-        (binaryRules: (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list)
-        (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
+        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
+        (pairs: BinaryPair<'nt> list)
         : unit =
         let leftSubLayer = mList |> List.map leftSubmatrix
         let rightSubLayer = mList |> List.map rightSubmatrix
@@ -308,19 +309,17 @@ module Valiant =
         cnf.rules
         |> List.choose (fun r ->
             match Rhs.toNonEpsilonList r.rhs with
-            | [ T(Terminal t) ] -> Some(t, r.lhs)
+            | [ Symbol.T(Terminal t) ] -> Some(t, r.lhs)
             | _ -> None)
         |> List.groupBy fst
         |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
         |> Map.ofList
 
-    let private binaryRulesFromGrammar
-        (cnf: Grammar<'t, 'nt>)
-        : (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list =
+    let private binaryRulesFromGrammar (cnf: Grammar<'t, 'nt>) : (Nonterminal<'nt> * BinaryPair<'nt>) list =
         cnf.rules
         |> List.choose (fun r ->
             match Rhs.toNonEpsilonList r.rhs with
-            | [ N left; N right ] -> Some(r.lhs, (left, right))
+            | [ Symbol.N left; Symbol.N right ] -> Some(r.lhs, { left = left; right = right })
             | _ -> None)
 
     let private initValiant (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitData<'t, 'nt> =
@@ -351,8 +350,7 @@ module Valiant =
             | Some mat -> tByNt.[nt] <- mat
             | None -> tByNt.[nt] <- Matrix.init tableSize tableSize false
 
-        let pByPair =
-            System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
+        let pByPair = System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>()
 
         for pair in pairs do
             pByPair.[pair] <- Matrix.init tableSize tableSize false
