@@ -19,6 +19,8 @@ module Program =
             let summary = results.Contains AlgorithmTypes.Summary
             let useDot = results.Contains AlgorithmTypes.UseDot
 
+            Helpers.cleanOutputDir output
+
             match algorithm with
             | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output
             | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output

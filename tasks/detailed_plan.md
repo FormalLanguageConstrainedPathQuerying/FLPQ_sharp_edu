@@ -1,54 +1,31 @@
-# Detailed Plan: Task 109 — Golden Tests for LL and LR Steps Visualization
+# Detailed Plan: Task 110 — CLI: Clean Output Directory
 
 ## Problem
 
-No golden tests exist for LL and LR step-by-step visualization output. Changes to the visualization code could silently break the generated DOT output. Golden tests are needed to catch regressions.
+The CLI currently writes output to the specified directory without checking if it's empty. If the user re-runs the CLI with the same output directory, old files from a previous run may remain, causing confusion or stale artifacts.
 
-## Test Inputs
+## Design
 
-LL tests (using `LLParser.parseWithSteps` with k=1, then `LLStepVisualizer.renderSteps`):
+Add a `cleanOutputDir` function to `Helpers.fs`:
+- If directory does not exist → create it
+- If directory exists and is empty → do nothing
+- If directory exists and has content → delete and recreate it
 
-| Test | Grammar | Input | Golden File |
-|------|---------|-------|-------------|
-| LL grammar1 "a b" | `S -> a S b S \| eps` | `"a b"` | `ll_grammar1_ab.dot` |
-| LL grammar1 "a a b a b b" | `S -> a S b S \| eps` | `"a a b a b b"` | `ll_grammar1_aababb.dot` |
+Call this function from `Program.fs` before dispatching to algorithm runners.
 
-LR tests (using `LRAutomaton.augmentGrammar`, `LRParser.buildSLR1Table`, `LRParser.parseWithSteps`, then `LRStepVisualizer.renderSteps`):
+## Files to Modify
 
-| Test | Grammar | Input | Golden File |
-|------|---------|-------|-------------|
-| LR grammar3 "a a" | `S -> a S \| a` | `"a a"` | `lr_grammar3_aa.dot` |
-| LR grammar7 "x + x" | Expression grammar | `"x + x"` | `lr_grammar7_xplusx.dot` |
+1. `src/FLPQ.Cli/Helpers.fs` — add `cleanOutputDir` function
+2. `src/FLPQ.Cli/Program.fs` — call `cleanOutputDir` before algorithm dispatch
 
-## Golden File Format
+## Implementation
 
-Each golden file contains the concatenated DOT content for all steps, with step headers:
-
+```fsharp
+let cleanOutputDir (dir: string) =
+    if Directory.Exists dir then
+        if Directory.GetFileSystemEntries(dir).Length > 0 then
+            Directory.Delete(dir, true)
+            Directory.CreateDirectory dir |> ignore
+    else
+        Directory.CreateDirectory dir |> ignore
 ```
---- Step 0 ---
-digraph StackTree {
-...
-}
-
---- Step 1 ---
-digraph StackTree {
-...
-}
-```
-
-## Files to Create/Modify
-
-1. **New**: `tests/FLPQ.Printers.Tests/LLStepsGoldenTests.fs`
-2. **New**: `tests/FLPQ.Printers.Tests/LRStepsGoldenTests.fs`
-3. **New**: `tests/FLPQ.Printers.Tests/GoldenData/ll_grammar1_ab.dot`
-4. **New**: `tests/FLPQ.Printers.Tests/GoldenData/ll_grammar1_aababb.dot`
-5. **New**: `tests/FLPQ.Printers.Tests/GoldenData/lr_grammar3_aa.dot`
-6. **New**: `tests/FLPQ.Printers.Tests/GoldenData/lr_grammar7_xplusx.dot`
-7. **Modify**: `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — add compilation entries and golden data `.dot` glob
-
-## Implementation Steps
-
-1. Create golden dot reference files first (by running the generation code, saving output)
-2. Create test files with golden tests
-3. Update `.fsproj`
-4. Format, build, test

@@ -22,6 +22,14 @@ module Helpers =
 
         File.WriteAllText(path, content)
 
+    let cleanOutputDir (dir: string) =
+        if Directory.Exists dir then
+            if Directory.GetFileSystemEntries(dir).Length > 0 then
+                Directory.Delete(dir, true)
+                Directory.CreateDirectory dir |> ignore
+        else
+            Directory.CreateDirectory dir |> ignore
+
     let writeStepsVisualization (outputDir: string) (steps: VisualizationStep list) =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
