@@ -1,0 +1,95 @@
+module StressTests
+
+open Xunit
+open FsCheck
+open FsCheck.Xunit
+open FLPQ.LinearAlgebra
+open FLPQ.Languages
+open FLPQ.RPQ
+open FLPQ.GraphAnalysis
+open FLPQ.TestUtilities
+
+let private nfaWithSources (vCount: int) (edges: (int * string * int) list) (sources: int list) : NFA<string, int> =
+    let states = [ 0 .. vCount - 1 ]
+    Nfa.fromTransitions states edges Set.empty (Set.ofList sources) Set.empty
+
+let private buildDfa (transitions: (int * string * int) list) (startState: int) (finalStates: int list) =
+    let allStates =
+        transitions
+        |> List.collect (fun (f, _, t) -> [ f; t ])
+        |> List.append (startState :: finalStates)
+        |> List.distinct
+        |> List.sort
+
+    Dfa.fromTransitions (List.map id allStates) transitions startState (Set.ofList finalStates)
+
+[<Fact>]
+[<Trait("Category", "Stress")>]
+let ``RPQ Belyanin and Kronecker agree on 100-vertex line graph`` () =
+    let n = 100
+    let edges = [ for i in 0 .. n - 2 -> (i, "a", i + 1) ]
+    let nfa = nfaWithSources n edges [ 0 ]
+    let dfa = buildDfa [ (0, "a", 0) ] 0 [ 0 ]
+
+    let belyResult = BelyaninRPQ.evaluate dfa nfa
+    let kronResult = KroneckerRPQ.evaluate dfa nfa
+    let regexp = Regexp.RStar(RTerm(Terminal "a"))
+    let arroResult = ArroyueloRPQ.evaluate nfa regexp
+
+    for i in 0 .. n - 1 do
+        Assert.True(belyResult.data.[0, i] = kronResult.data.[0, i], sprintf "Mismatch at vertex %d" i)
+        Assert.True(belyResult.data.[0, i] = arroResult.data.[0, i], sprintf "Arroyuelo mismatch at vertex %d" i)
+
+[<Fact>]
+[<Trait("Category", "Stress")>]
+let ``RPQ Belyanin and Kronecker agree on 80-vertex random-like graph`` () =
+    let n = 80
+    let dfa = buildDfa [ (0, "a", 1); (1, "b", 2) ] 0 [ 2 ]
+
+    let edges =
+        [ for i in 0 .. n - 2 do
+              yield (i, "a", i + 1)
+
+              if i % 3 = 0 then
+                  yield (i, "b", i + 2) ]
+        |> List.filter (fun (_, _, t) -> t < n)
+
+    let nfa = nfaWithSources n edges [ 0 ]
+
+    let belyResult = BelyaninRPQ.evaluate dfa nfa
+    let kronResult = KroneckerRPQ.evaluate dfa nfa
+
+    for i in 0 .. n - 1 do
+        Assert.True(belyResult.data.[0, i] = kronResult.data.[0, i])
+
+[<Properties(Arbitrary = [| typeof<StressRpqGenerators> |], MaxTest = 5)>]
+module StressRpqProperties =
+
+    let private nfaWithSourcesProp
+        (vCount: int)
+        (edges: (int * string * int) list)
+        (sources: int[])
+        : NFA<string, int> =
+        let states = [ 0 .. vCount - 1 ]
+        Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
+
+    [<Property>]
+    [<Trait("Category", "Stress")>]
+    let ``Belyanin and Kronecker agree on large random graphs`` (d: RPQTestData) =
+        if d.sources.Length = 0 || d.vertexCount = 0 then
+            true
+        else
+            let source = min d.sources.[0] (d.vertexCount - 1)
+            let nfa = nfaWithSourcesProp d.vertexCount d.edges [| source |]
+            let dfa = buildDfa [ (0, "a", 1) ] 0 [ 1 ]
+
+            let belyResult = BelyaninRPQ.evaluate dfa nfa
+            let kronResult = KroneckerRPQ.evaluate dfa nfa
+
+            let mutable ok = true
+
+            for j in 0 .. d.vertexCount - 1 do
+                if belyResult.data.[0, j] <> kronResult.data.[0, j] then
+                    ok <- false
+
+            ok

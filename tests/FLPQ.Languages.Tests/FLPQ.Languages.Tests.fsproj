@@ -18,6 +18,7 @@
     <Compile Include="RsmToGrammarTests.fs" />
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
+    <Compile Include="StressTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

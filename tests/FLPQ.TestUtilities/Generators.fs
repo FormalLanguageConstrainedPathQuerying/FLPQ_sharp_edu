@@ -319,3 +319,94 @@ type RegexAndGraphGenerators =
                                           edges = edges
                                           sources = Array.ofList sources }))))))))
         |> MyArb.fromGen
+
+type StressStringGenerators =
+
+    static member LongAbString() : Arbitrary<string> =
+        MyGen.choose (20, 30)
+        |> MyGen.map (fun n ->
+            let aPart = System.String.Concat(Array.replicate n "a ")
+            let bPart = System.String.Concat(Array.replicate n "b ")
+            (aPart + bPart).Trim())
+        |> MyArb.fromGen
+
+type StressNfaGenerators =
+
+    static member LargeNfa() : Arbitrary<NFA<string, int>> =
+        MyGen.choose (30, 80)
+        |> MyGen.bind (fun stateCount ->
+            MyGen.listOfLength (stateCount * 2) (MyGen.choose (0, stateCount - 1))
+            |> MyGen.bind (fun fromStates ->
+                MyGen.listOfLength (stateCount * 2) (MyGen.choose (0, stateCount - 1))
+                |> MyGen.bind (fun toStates ->
+                    MyGen.listOfLength (stateCount * 2) (MyGen.elements [ "a"; "b" ])
+                    |> MyGen.bind (fun labels ->
+                        MyGen.choose (1, min 3 stateCount)
+                        |> MyGen.bind (fun startCount ->
+                            MyGen.listOfLength startCount (MyGen.choose (0, stateCount - 1))
+                            |> MyGen.bind (fun startStates ->
+                                MyGen.choose (1, min 3 stateCount)
+                                |> MyGen.bind (fun finalCount ->
+                                    MyGen.listOfLength finalCount (MyGen.choose (0, stateCount - 1))
+                                    |> MyGen.map (fun finalStates ->
+                                        let trans =
+                                            List.zip3 fromStates labels toStates
+                                            |> List.filter (fun (f, _, t) -> f <> t)
+
+                                        Nfa.fromTransitions
+                                            ([ 0 .. stateCount - 1 ] |> List.map id)
+                                            trans
+                                            Set.empty
+                                            (Set.ofList startStates)
+                                            (Set.ofList finalStates)))))))))
+        |> MyArb.fromGen
+
+type StressRpqGenerators =
+
+    static member LargeRpqGraph() : Arbitrary<RPQTestData> =
+        let alphabet = [ "a"; "b" ]
+
+        MyGen.choose (50, 100)
+        |> MyGen.bind (fun n ->
+            MyGen.choose (n, n * 3)
+            |> MyGen.bind (fun edgeCount ->
+                MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                |> MyGen.bind (fun fromList ->
+                    MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                    |> MyGen.bind (fun toList ->
+                        MyGen.listOfLength edgeCount (MyGen.elements alphabet)
+                        |> MyGen.bind (fun labelList ->
+                            MyGen.choose (1, 3)
+                            |> MyGen.bind (fun k ->
+                                MyGen.listOfLength k (MyGen.choose (0, n - 1))
+                                |> MyGen.map (fun sources ->
+                                    let edges =
+                                        List.zip3 fromList labelList toList
+                                        |> List.filter (fun (f, _, t) -> f <> t)
+
+                                    { vertexCount = n
+                                      edges = edges
+                                      sources = Array.ofList sources })))))))
+        |> MyArb.fromGen
+
+type StressMatrixGenerators =
+
+    static member LargeSquareMatrix() : Arbitrary<Matrix<int>> =
+        MyGen.choose (100, 200)
+        |> MyGen.bind (fun n ->
+            MyGen.choose (-1000, 1000)
+            |> MyGen.listOfLength (n * n)
+            |> MyGen.map (fun values ->
+                let arr = Array2D.init n n (fun i j -> values.[i * n + j])
+                Matrix.ofArray2D arr))
+        |> MyArb.fromGen
+
+    static member LargeBoolMatrix() : Arbitrary<Matrix<bool>> =
+        MyGen.choose (100, 200)
+        |> MyGen.bind (fun n ->
+            MyGen.choose (0, 1)
+            |> MyGen.listOfLength (n * n)
+            |> MyGen.map (fun values ->
+                let arr = Array2D.init n n (fun i j -> values.[i * n + j] = 1)
+                Matrix.ofArray2D arr))
+        |> MyArb.fromGen
