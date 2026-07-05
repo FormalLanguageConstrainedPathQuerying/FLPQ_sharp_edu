@@ -29,37 +29,21 @@ module LRRunner =
             | _ -> failwithf "Unexpected algorithm in LR runner: %A" algo
 
         if useDot then
-            match algo with
-            | AlgorithmTypes.LR0
-            | AlgorithmTypes.SLR1 ->
-                Helpers.writeOutputFile
-                    (Path.Combine(outputDir, "lr_automaton.dot"))
-                    (AutomatonDot.dfaToDot
-                        (SymbolTeX.toLaTeX string string)
-                        (fun idx _ -> sprintf "State %d" idx)
-                        (LRAutomaton.buildLR0 aug))
-            | AlgorithmTypes.CLR1 ->
-                Helpers.writeOutputFile
-                    (Path.Combine(outputDir, "lr_automaton.dot"))
-                    (AutomatonDot.dfaToDot
-                        (SymbolTeX.toLaTeX string string)
-                        (fun idx _ -> sprintf "State %d" idx)
-                        (LRAutomaton.buildLR1 aug))
-            | _ -> ()
+            let dotContent =
+                match table.automaton with
+                | LR0 dfa ->
+                    AutomatonDot.dfaToDot (SymbolTeX.toLaTeX string string) (fun idx _ -> sprintf "State %d" idx) dfa
+                | LR1 dfa ->
+                    AutomatonDot.dfaToDot (SymbolTeX.toLaTeX string string) (fun idx _ -> sprintf "State %d" idx) dfa
+
+            Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.dot")) dotContent
         else
-            match algo with
-            | AlgorithmTypes.LR0
-            | AlgorithmTypes.SLR1 ->
-                let tikzContent =
-                    LRAutomatonTikz.lr0AutomatontoTikz string string aug (LRAutomaton.buildLR0 aug)
+            let tikzContent =
+                match table.automaton with
+                | LR0 dfa -> LRAutomatonTikz.lr0AutomatontoTikz string string aug dfa
+                | LR1 dfa -> LRAutomatonTikz.lr1AutomatontoTikz string string aug dfa
 
-                Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
-            | AlgorithmTypes.CLR1 ->
-                let tikzContent =
-                    LRAutomatonTikz.lr1AutomatontoTikz string string aug (LRAutomaton.buildLR1 aug)
-
-                Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
-            | _ -> ()
+            Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))

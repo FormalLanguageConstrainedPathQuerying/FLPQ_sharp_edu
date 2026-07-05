@@ -29,11 +29,17 @@ type LRConflict<'t, 'nt> =
     | ShiftReduce of state: int * symbol: Symbol<'t, 'nt> * shiftTo: int * reduceRule: int
     | ReduceReduce of state: int * symbol: Symbol<'t, 'nt> * rule1: int * rule2: int
 
-/// LR parsing table with action and goto maps, plus detected conflicts.
+/// Built LR automaton returned from table construction for reuse in rendering.
+type LRAutomaton<'t, 'nt when 't: comparison and 'nt: comparison> =
+    | LR0 of DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>>
+    | LR1 of DFA<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>>
+
+/// LR parsing table with action and goto maps, detected conflicts, and the automaton used to build it.
 type LRTable<'t, 'nt when 't: comparison and 'nt: comparison> =
     { action: Map<int * Symbol<'t, 'nt>, LRAction>
       goto: Map<int * Nonterminal<'nt>, int>
-      conflicts: LRConflict<'t, 'nt> list }
+      conflicts: LRConflict<'t, 'nt> list
+      automaton: LRAutomaton<'t, 'nt> }
 
 /// Construction of LR(0) and LR(1) automata as deterministic finite automata.
 /// Functions take an already-augmented grammar (with fresh start nonterminal).
@@ -302,7 +308,8 @@ module LRParser =
 
         { action = action
           goto = goto
-          conflicts = List.rev conflicts }
+          conflicts = List.rev conflicts
+          automaton = LR0 lr0 }
 
     /// Build the SLR(1) parsing table from an augmented grammar.
     let buildSLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
@@ -349,7 +356,8 @@ module LRParser =
 
         { action = action
           goto = goto
-          conflicts = List.rev conflicts }
+          conflicts = List.rev conflicts
+          automaton = LR0 lr0 }
 
     /// Build the CLR(1) (canonical LR(1)) parsing table from an augmented grammar.
     let buildCLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
@@ -398,7 +406,8 @@ module LRParser =
 
         { action = action
           goto = goto
-          conflicts = List.rev conflicts }
+          conflicts = List.rev conflicts
+          automaton = LR1 lr1 }
 
     /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
     /// Also collects visualization steps as structured data.
