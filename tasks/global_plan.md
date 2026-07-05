@@ -1,129 +1,107 @@
 
-# Global Plan: Tasks 119--121
+# Global Plan: Tasks 122--124
 
 ## Task Summary
 
 | ID | Description | Type | Dependencies |
 |----|-------------|------|--------------|
-| 119 | Deduplicate automaton infrastructure: shared `alphabet`, reuse `buildAutomaton` for `toDfa`, deduplicate `buildLR0`/`buildLR1` BFS | Refactor | None |
-| 120 | Reuse LR automaton in CLI runners — return automaton from table builders, use in `LRRunner` | Refactor | 119 (modified table builders + automaton types) |
-| 121 | Fix naming and style: rename misspelled functions, fix `LRSymbol` collision, params consistency, rename `Submatrix.A/B`, remove unused `aug`, remove magic 10000 | Refactor | 119, 120 (touches same files after refactoring) |
+| 122 | Make `Matrix.data` private, add `get`/`set` functions, replace color strings with semantic labels | Refactor | None |
+| 123 | Deduplicate miscellaneous helpers: `readIfExists`, `collectSteps`, `termPrinter`, `escapeLabel`, unused definitions, exception handling, `AlgorithmKind` | Refactor | None |
+| 124 | Rename `Rhs.toList`→`toListWithEpsilon`, `Rhs.toSymbols`→`toNonEpsilonList` | Rename | None |
 
 ## Dependencies Graph
 
 ```
-Task 119 (Deduplicate automaton infrastructure)
-    └── Task 120 (Reuse LR automaton in CLI — depends on refactored table builders)
-    └── Task 121 (Fix naming/style — independent but best done after structural refactoring)
+No interdependencies between tasks. They touch mostly disjoint sets of files.
+Execution order: 124 (simplest) → 123 (collection of small changes) → 122 (largest, most files affected)
 ```
-
-Tasks 120 and 121 could theoretically be independent, but doing them after 119 avoids merge conflicts on `LRParser.fs` and `Automaton.fs`.
 
 ## Execution Order
 
-1. **Task 119** — Deduplicate automaton infrastructure
-2. **Task 120** — Reuse LR automaton in CLI runners
-3. **Task 121** — Fix naming and style issues
+1. **Task 124** — Rename `Rhs.toList`/`toSymbols`
+2. **Task 123** — Deduplicate miscellaneous helpers
+3. **Task 122** — Matrix.data privatization + semantic labels
 
-## Potential Conflicts
+## Shared Infrastructure / Potential Conflicts
 
-| Task | Files Modified | Conflicts With |
-|------|---------------|----------------|
-| 119 | `src/FLPQ.Languages/Automaton.fs`, `src/FLPQ.Languages/LRParser.fs` | 120 (same files), 121 (naming in same files) |
-| 120 | `src/FLPQ.Languages/LRParser.fs`, `src/FLPQ.Cli/LRRunner.fs` | 121 (naming in LRParser.fs) |
-| 121 | `src/FLPQ.Printers/LRAutomatonTikz.fs`, `src/FLPQ.Languages/LRParser.fs`, `src/FLPQ.Languages/VisualizationTypes.fs`, `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Printers/ValiantTeX.fs`, `src/FLPQ.Printers/GrammarTeX.fs`, `src/FLPQ.Printers/MatrixTeX.fs`, `src/FLPQ.Printers/LLTableTeX.fs`, `src/FLPQ.GraphAnalysis/Graph.fs`, `src/FLPQ.LinearAlgebra/BooleanDecomposition.fs`, `src/FLPQ.Cli/LRRunner.fs`, `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs`, docs | Depends on 119+120 refactored state |
+Tasks 122 and 123 both touch `src/FLPQ.Languages/Grammar.fs`, `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Printers/SummaryTeX.fs`, `src/FLPQ.Cli/Helpers.fs`, `src/FLPQ.Cli/Summary.fs`, and test files. However, they modify different parts of those files, so conflicts are minimal. Execution order avoids rework.
 
-## Shared Infrastructure
+## Task 122: Matrix.data Privatization
 
-### Task 119: Deduplicate automaton infrastructure
+### Files to modify (source)
+- `src/FLPQ.LinearAlgebra/Matrix.fs` — make `data` private, add `get`/`set`/`unsafeGet`/`unsafeSet`, add semantic label types, rename `Highlight`/`SubmatrixBlock`
+- `src/FLPQ.LinearAlgebra/BooleanDecomposition.fs` — update direct `.data` accesses
+- `src/FLPQ.LinearAlgebra/LinearAlgebra.fs` — update direct `.data` accesses
+- `src/FLPQ.Languages/Automaton.fs` — update direct `.data` accesses
+- `src/FLPQ.Languages/Cyk.fs` — update `.data` accesses + replace color strings with semantic labels
+- `src/FLPQ.Languages/Valiant.fs` — update `.data` accesses
+- `src/FLPQ.Languages/LRParser.fs` — update `.data` accesses
+- `src/FLPQ.GraphAnalysis/Graph.fs` — update `.data` accesses
+- `src/FLPQ.GraphAnalysis/MsBfs.fs` — update `.data` accesses
+- `src/FLPQ.RPQ/ArroyueloRPQ.fs` — update `.data` accesses
+- `src/FLPQ.RPQ/KroneckerRPQ.fs` — update `.data` accesses
+- `src/FLPQ.RPQ/BelyaninRPQ.fs` — update `.data` accesses
+- `src/FLPQ.Printers/MatrixTeX.fs` — update `.data` accesses + use semantic label→color mapping
+- `src/FLPQ.Printers/ValiantTeX.fs` — replace color strings with semantic labels
+- `src/FLPQ.Printers/AutomatonDot.fs` — update `.data` accesses
+- `src/FLPQ.Printers/AutomatonTikz.fs` — update `.data` accesses
+- `tests/FLPQ.GraphAnalysis.Tests/MsBfsTests.fs` — update `.data` accesses
+- `tests/FLPQ.RPQ.Tests/RPQTests.fs` — update `.data` accesses
+- `tests/FLPQ.RPQ.Tests/StressTests.fs` — update `.data` accesses
+- `tests/FLPQ.Languages.Tests/ValiantTests.fs` — update `.data` accesses
 
-**1. Shared `alphabet` function:**
-- Current: `Nfa.alphabet` (lines 74-87) and `Dfa.alphabet` (lines 323-336) — identical code
-- Extract into a private helper in `Automaton.fs` taking `Matrix<Option<NonEmptySet<AutomatonSymbol<'t>>>>` 
-- Both `Nfa.alphabet` and `Dfa.alphabet` become one-liners calling the helper
+### Semantic label design
+```fsharp
+type HighlightLabel = CurrentCell
 
-**2. Replace `Dfa.alphabet` temporary-NFA:**
-- `Dfa.alphabet` currently duplicates the NFA iteration pattern
-- After step 1, this is resolved
+type SubmatrixBlockLabel = SubmatrixRegion
 
-**3. Replace `Nfa.toDfa` with `buildAutomaton`:**
-- Both implement identical worklist-based state-space exploration:
-  - Worklist queue with deduplication
-  - For each state, for each symbol, compute transition target, assign new index
-  - Final states determined by predicate
-- Create adapter functions: `getSymbols` = `alphabet nfa`, `goto` = `moveSet`, `isAcceptState` = checks intersection with final states
-- Note: `buildAutomaton` uses `Dfa.fromTransitions` while `toDfa` manually builds via `Graph.fromEdges` and `buildMatrix` — need to check equivalence
-- The `Set<int>` state type in DFA (from `toDfa`) vs generic `Set<'item>` in `buildAutomaton` — need adapter
+// Color mapping in FLPQ.Printers only
+let highlightColor : HighlightLabel -> string = function
+    | CurrentCell -> "yellow"
 
-**4. Deduplicate `buildLR0`/`buildLR1`:**
-- Current: `buildLR0` (lines 219-238) and `buildLR1` (lines 240-262) have ~60 duplicated lines
-- Both delegate to `buildLR` helper (already exists!) which delegates to `buildAutomaton`
-- Wait — the agent reports they already share `buildLR` (lines 202-217). The ~60 lines is the helper `buildLR` itself.
-- Actually looking again: `buildLR0` and `buildLR1` are thin wrappers (20 lines each) over `buildLR`. The near-identical portion is the `mkStartItem`, `mkCompleteItem`, `dotOf`, `rhsOf` lambda construction pattern.
-- Already well-factored! Task says "extracting a common BFS framework parameterized by closure function and item construction" — this is already done via `buildLR` + `buildAutomaton`.
-- Need to verify this matches what the task intends; may just need minimal cleanup.
+let submatrixColors : SubmatrixBlockLabel -> string option * string option = function
+    | SubmatrixRegion -> None, None  // colors determined by printer logic
+```
 
-### Task 120: Reuse LR automaton in CLI
+### Equivalence
+- All matrix operations must produce identical results
+- Rendering output must be identical
 
-- Modify `LRTable<'t, 'nt>` to include an optional `automaton` field (or add to return type)
-- Or: return a tuple `(LRTable * DFA<...>)` from table builders
-- `buildLR0Table` and `buildSLR1Table` already call `LRAutomaton.buildLR0 aug` internally
-- `buildCLR1Table` already calls `LRAutomaton.buildLR1 aug` internally
-- In `LRRunner`: currently builds automaton a second time for rendering — instead reuse from table builder
-- Need to decide: return type — tuple vs extended LRTable
+## Task 123: Deduplicate Miscellaneous Helpers
 
-Decision: Add a field to `LRTable` with the automaton. Problem: `LRTable` is generic only over `'t, 'nt`, but the automaton DFA has different state types for LR0 vs LR1 (`Set<LR0Item>` vs `Set<LR1Item>`). Options:
-a) Make `LRTable` generic over `'state` as well: `LRTable<'t, 'nt, 'state>`
-b) Use a discriminated union for the automaton: `type LRAutomaton = LR0 of DFA<Symbol<'t,'nt>, Set<LR0Item<'t,'nt>>> | LR1 of DFA<Symbol<'t,'nt>, Set<LR1Item<'t,'nt>>>`
-c) Return tuple from builders, don't modify LRTable
+### Items
+1. `readIfExists`: Keep single public copy in `FLPQ.Printers`, remove from `FLPQ.Cli/Helpers.fs`, update CLI tests
+2. `collectSteps`: Move to `FLPQ.Printers` as public function, use from both `SummaryTeX` and CLI `Helpers`
+3. `termPrinter`: Extract into shared visualizer helper module
+4. `escapeLabel`: Make public in `DerivationTreeDot`, use in `AutomatonDot`
+5. `Grammar.nonterminalsOf`/`terminalsOf`: Already public, just update `code_review.md` to remove stale note
+6. Unused `Automaton.buildDfaMatrix`: Already gone (skip)
+7. Remove `GrammarTests.nonterminalsOfCnf`
+8. Remove unused `StringArb` from Generators.fs
+9. Remove unused `MyGen`/`MyArb` imports from test files (RsmToGrammarTests, EbnfParserTests) — but these come via `open FLPQ.TestUtilities`, so need to check if they're actually used for anything else
+10. `ExternalToolsTests`: Replace `try...with _ -> ()` with `printfn` warnings
+11. `Summary.AlgorithmKind`: Simplify to 3-case DU with `toString` member
 
-Option (c) is simplest and least invasive. Let's check what the task says: "Modify table-construction functions to return the built automaton as part of LRTable (or a separate return value)". OK, separate return value (tuple) is fine.
+### Equivalence
+- CLI behavior identical after refactoring
+- All golden tests pass
 
-### Task 121: Fix naming and style
+## Task 124: Rename Rhs Functions
 
-**1. Rename `lr0AutomatontoTikz` / `lr1AutomatontoTikz`:**
-- Change to `lr0AutomatonToTikz` / `lr1AutomatonToTikz`
-- Update: `LRAutomatonTikz.fs`, `LRRunner.fs`, `AutomatonVisualizationTests.fs`, `automaton-viz.md`
-- Also rename module-level reference in docs
+### Renames
+- `Rhs.toList` → `Rhs.toListWithEpsilon` (returns `[Epsilon]` for epsilon)
+- `Rhs.toSymbols` → `Rhs.toNonEpsilonList` (returns `[]` for epsilon)
 
-**2. Fix `LRSymbol` collision:**
-- `LRSymbol` is both a DU case of `LRStackFrame` and a module name
-- Rename module to `LRSymbolHelpers`
-- Update: `VisualizationTypes.fs` (definition), any usage of `LRSymbol.symbol`/`LRSymbol.tree`
-- Find all usages of `module LRSymbol` qualified access
+### Call sites to update
+- `Grammar.fs` (3 call sites for each)
+- `FirstFollow.fs` (3 call sites)
+- `LLParser.fs` (2 call sites)
+- `LRParser.fs` (12 call sites)
+- `Valiant.fs` (2 call sites)
+- `LLTableTeX.fs` (1 call site)
+- `LRTableTeX.fs` (1 call site)
+- `GrammarTests.fs` (3 call sites for toList, 2 for length)
 
-**3. Make `LRAutomatonTikz` consistent with `AutomatonTikz.dfaToTikz`:**
-- `dfaToTikz` takes: `labelPrinter`, `stateVisualizer`, `shape`, `dfa`
-- `lr0AutomatonToTikz` currently takes: `terminalPrinter`, `nonterminalPrinter`, `aug`, `dfa`
-- Task says: accept `labelPrinter`/`stateVisualizer`/`shape` parameters
-- Remove `aug` (unused)
-
-**4. Rename `isCompleted` → `isCompletedLR0`, `isCompleted1` → `isCompletedLR1`:**
-- In `LRParser.fs` lines 268, 270
-- Update all call sites in `buildLR0Table`, `buildSLR1Table`, `buildCLR1Table`
-
-**5. Replace single-letter params:**
-- `g` → `grammar` in `GrammarTeX.fs` (3 functions)
-- `m` → `matrix` in `BooleanDecomposition.fs` (2 functions)
-- `m` → `matrix` in `MatrixTeX.fs` (2 functions)
-- `g` → `graph` in `Graph.fs` (12 functions)
-- `g` → `grammar` in `LLTableTeX.fs` (1 function)
-
-**6. Rename `Submatrix.A`/`B` → `row`/`col`:**
-- `Valiant.fs` type definition and all usage
-- `ValiantTeX.fs` all usage
-- `ValiantTests.fs` test usage
-- `docs/valiant.md`
-
-**7. Remove unused `aug` param:**
-- From `lr0AutomatonToTikz` and `lr1AutomatonToTikz` signatures
-- Update all call sites to remove the arg
-
-**8. Remove magic number 10000:**
-- In `LRParser.parseWithSteps` line 485
-- Replace with named constant or just remove (infinite loop should be handled differently, or keep a well-named constant)
-
-**Equivalence checks:**
-- Task 119: NFA→DFA must produce identical DFA; LR0/LR1 automata unchanged
-- Task 120: LR parsing results identical
-- Task 121: Pure renames, all tests must pass
+### Equivalence
+- Behavior identical after rename

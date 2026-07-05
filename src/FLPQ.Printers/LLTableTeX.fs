@@ -31,7 +31,7 @@ module LLTableTeX =
             if Rhs.isEpsilon rule.rhs then
                 @"\varepsilon"
             else
-                Rhs.toSymbols rule.rhs
+                Rhs.toNonEpsilonList rule.rhs
                 |> List.map (fun sym ->
                     match sym with
                     | Epsilon -> @"\varepsilon"

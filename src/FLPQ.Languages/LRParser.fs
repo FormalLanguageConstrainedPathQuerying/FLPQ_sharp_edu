@@ -70,7 +70,7 @@ module LRAutomaton =
                             |> List.filter (fun r -> r.lhs = nt)
                             |> List.map (fun r ->
                                 { lhs = r.lhs
-                                  rhs = Rhs.toSymbols r.rhs
+                                  rhs = Rhs.toNonEpsilonList r.rhs
                                   dot = 0 })
 
                         for ni in newItems do
@@ -127,7 +127,7 @@ module LRAutomaton =
                                 |> Set.toList
                                 |> List.map (fun la ->
                                     { lhs = r.lhs
-                                      rhs = Rhs.toSymbols r.rhs
+                                      rhs = Rhs.toNonEpsilonList r.rhs
                                       dot = 0
                                       lookahead = List.head la }))
 
@@ -192,12 +192,12 @@ module LRAutomaton =
             augmentedRule
             (fun r ->
                 { lhs = r.lhs
-                  rhs = Rhs.toSymbols r.rhs
+                  rhs = Rhs.toNonEpsilonList r.rhs
                   dot = 0 })
             (fun r ->
                 { lhs = r.lhs
-                  rhs = Rhs.toSymbols r.rhs
-                  dot = Rhs.toSymbols r.rhs |> List.length })
+                  rhs = Rhs.toNonEpsilonList r.rhs
+                  dot = Rhs.toNonEpsilonList r.rhs |> List.length })
             (fun i -> i.dot)
             (fun i -> i.rhs)
             (closureLR0 aug.rules)
@@ -214,13 +214,13 @@ module LRAutomaton =
             augmentedRule
             (fun r ->
                 { lhs = r.lhs
-                  rhs = Rhs.toSymbols r.rhs
+                  rhs = Rhs.toNonEpsilonList r.rhs
                   dot = 0
                   lookahead = Epsilon })
             (fun r ->
                 { lhs = r.lhs
-                  rhs = Rhs.toSymbols r.rhs
-                  dot = Rhs.toSymbols r.rhs |> List.length
+                  rhs = Rhs.toNonEpsilonList r.rhs
+                  dot = Rhs.toNonEpsilonList r.rhs |> List.length
                   lookahead = Epsilon })
             (fun i -> i.dot)
             (fun i -> i.rhs)
@@ -271,7 +271,7 @@ module LRParser =
 
         let allTerminals =
             [ for rule in aug.rules do
-                  for sym in Rhs.toSymbols rule.rhs do
+                  for sym in Rhs.toNonEpsilonList rule.rhs do
                       match sym with
                       | T _ as tSym -> yield tSym
                       | _ -> () ]
@@ -295,7 +295,7 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
 
                         for t in Epsilon :: allTerminals do
                             let key = (stateIdx, t)
@@ -340,7 +340,7 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
 
                         let followSet = followMap |> Map.find item.lhs
 
@@ -387,7 +387,7 @@ module LRParser =
                     else
                         let ruleIdx =
                             aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toSymbols r.rhs = item.rhs)
+                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
 
                         let t = item.lookahead
 
@@ -465,7 +465,7 @@ module LRParser =
                 recordStep ()
             | Some(Reduce ruleIdx) ->
                 let rule = aug.rules.[ruleIdx]
-                let popCount = Rhs.toSymbols rule.rhs |> List.length
+                let popCount = Rhs.toNonEpsilonList rule.rhs |> List.length
 
                 let children = popFrames popCount
                 let newNode = Node(rule.lhs, children)

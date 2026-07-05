@@ -57,30 +57,13 @@ The Valiant initialization (building `tByNt` dictionary, `pByPair` dictionary, t
 
 ## 2. Code Quality and Duplication
 
-### 2.1 nonterminalsOf/terminalsOf duplicated across modules
+### 2.1 nonterminalsOf/terminalsOf duplicated across modules [FIXED in task 119/123]
 
-Same logic appears in three locations:
+`Grammar.nonterminalsOf` and `Grammar.terminalsOf` are now public (no `private` modifier). `LLTableTeX.fs` uses the public versions directly. No duplicates remain.
 
-| Location | Visibility |
-|----------|-----------|
-| `Grammar.fs:107–126` | `private` |
-| `LLTableTeX.fs:43–54` | `private` |
+### 2.2 Rhs.toList vs Rhs.toSymbols vs Rhs.length — three epsilon ambiguities [FIXED in task 124]
 
-`Grammar.fs` defines these functions privately so they cannot be reused.
-
-**Suggested fix**: Make them public in `Grammar.fs`, remove from `LLTableTeX.fs`.
-
-### 2.2 Rhs.toList vs Rhs.toSymbols vs Rhs.length — three epsilon ambiguities
-
-| Function | Returns for epsilon-RHS |
-|----------|------------------------|
-| `Rhs.toList` | `[Epsilon]` |
-| `Rhs.toSymbols` | `[]` |
-| `Rhs.length` | `0` |
-
-The choice between them in calling code is not always obvious. `toList` and `length` are inconsistent (length 0 but list is `[Epsilon]`). `toSymbols` and `length` are consistent (both give empty/0 for epsilon). A reader would reasonably expect `toList` to return `[]` for epsilon, not `[Epsilon]`.
-
-**Suggested fix**: Rename `toSymbols` → `toNonEpsilonList`, `toList` → `withEpsilon` or similar. Or unify behavior.
+Fixed: `Rhs.toSymbols` → `Rhs.toNonEpsilonList` (returns `[]` for epsilon), `Rhs.toList` → `Rhs.toListWithEpsilon` (returns `[Epsilon]` for epsilon).
 
 ### 2.3 CYK uses mutable HashSet
 

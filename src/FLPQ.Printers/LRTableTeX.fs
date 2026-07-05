@@ -66,7 +66,7 @@ module LRTableTeX =
         let terminals =
             aug.rules
             |> List.collect (fun r ->
-                Rhs.toSymbols r.rhs
+                Rhs.toNonEpsilonList r.rhs
                 |> List.choose (fun sym ->
                     match sym with
                     | T t -> Some t

@@ -17,7 +17,8 @@ module LLParser =
                 if Rhs.isEpsilon rule.rhs then
                     followMap |> Map.find rule.lhs
                 else
-                    let firstOfRhs = FirstFollow.firstKOfString firstMap k (Rhs.toList rule.rhs)
+                    let firstOfRhs =
+                        FirstFollow.firstKOfString firstMap k (Rhs.toListWithEpsilon rule.rhs)
 
                     let withoutEps = Set.remove [ Epsilon ] firstOfRhs
                     let followOfA = followMap |> Map.find rule.lhs
@@ -94,7 +95,7 @@ module LLParser =
             match Map.tryFind key table with
             | Some ruleIdx ->
                 let rule = g.rules.[ruleIdx]
-                let rhsSyms = Rhs.toList rule.rhs
+                let rhsSyms = Rhs.toListWithEpsilon rule.rhs
                 let rhsNodes = rhsSyms |> List.map (fun sym -> MutableTree(sym))
 
                 for child in rhsNodes do

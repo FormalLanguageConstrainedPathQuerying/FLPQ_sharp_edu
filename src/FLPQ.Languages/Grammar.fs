@@ -24,12 +24,12 @@ type Rhs<'t, 'nt> =
 
 module Rhs =
 
-    let toList (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
+    let toListWithEpsilon (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
         | Symbols nel -> NonEmptyList.toList nel
         | EpsilonRhs -> [ Epsilon ]
 
-    let toSymbols (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
+    let toNonEpsilonList (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
         | Symbols nel -> NonEmptyList.toList nel
         | EpsilonRhs -> []
@@ -108,7 +108,7 @@ module Grammar =
         g.rules
         |> List.collect (fun r ->
             let rhsNts =
-                Rhs.toSymbols r.rhs
+                Rhs.toNonEpsilonList r.rhs
                 |> List.choose (function
                     | N nt -> Some nt
                     | _ -> None)
@@ -119,7 +119,7 @@ module Grammar =
     let terminalsOf (g: Grammar<'t, 'nt>) : Set<Terminal<'t>> =
         g.rules
         |> List.collect (fun r ->
-            Rhs.toSymbols r.rhs
+            Rhs.toNonEpsilonList r.rhs
             |> List.choose (function
                 | T t -> Some t
                 | _ -> None))
@@ -134,7 +134,7 @@ module Grammar =
             let newNullable =
                 rules
                 |> List.filter (fun r ->
-                    Rhs.toList r.rhs
+                    Rhs.toListWithEpsilon r.rhs
                     |> List.forall (function
                         | N nt -> Set.contains nt current
                         | Epsilon -> true
@@ -229,7 +229,7 @@ module Grammar =
                 if Rhs.isEpsilon r.rhs then
                     []
                 else
-                    let symbols = Rhs.toSymbols r.rhs
+                    let symbols = Rhs.toNonEpsilonList r.rhs
 
                     let nullableIndices =
                         symbols
@@ -323,7 +323,7 @@ module Grammar =
         let newRules =
             g.rules
             |> List.map (fun r ->
-                let symbols = Rhs.toSymbols r.rhs
+                let symbols = Rhs.toNonEpsilonList r.rhs
 
                 let newSymbols =
                     symbols

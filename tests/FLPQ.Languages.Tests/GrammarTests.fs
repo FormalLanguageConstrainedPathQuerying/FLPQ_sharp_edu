@@ -59,7 +59,7 @@ module FactTests =
         let text = "S -> a B c D"
         let g = Grammar.parseGrammar text
 
-        let rhsList = Rhs.toList g.rules.Head.rhs
+        let rhsList = Rhs.toListWithEpsilon g.rules.Head.rhs
         Assert.Equal(4, List.length rhsList)
 
         match rhsList.[0] with
@@ -107,7 +107,7 @@ module FactTests =
         Assert.Equal(Nonterminal "S", g.start)
 
         let r1 = g.rules.[0]
-        let r1List = Rhs.toList r1.rhs
+        let r1List = Rhs.toListWithEpsilon r1.rhs
         Assert.Equal(4, List.length r1List)
 
         match r1List.[0] with

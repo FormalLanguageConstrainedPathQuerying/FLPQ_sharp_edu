@@ -307,7 +307,7 @@ module Valiant =
     let private terminalRulesFromGrammar (cnf: Grammar<'t, 'nt>) : Map<'t, Nonterminal<'nt> list> =
         cnf.rules
         |> List.choose (fun r ->
-            match Rhs.toSymbols r.rhs with
+            match Rhs.toNonEpsilonList r.rhs with
             | [ T(Terminal t) ] -> Some(t, r.lhs)
             | _ -> None)
         |> List.groupBy fst
@@ -319,7 +319,7 @@ module Valiant =
         : (Nonterminal<'nt> * (Nonterminal<'nt> * Nonterminal<'nt>)) list =
         cnf.rules
         |> List.choose (fun r ->
-            match Rhs.toSymbols r.rhs with
+            match Rhs.toNonEpsilonList r.rhs with
             | [ N left; N right ] -> Some(r.lhs, (left, right))
             | _ -> None)
 
