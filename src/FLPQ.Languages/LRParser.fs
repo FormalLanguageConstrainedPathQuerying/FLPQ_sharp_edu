@@ -450,9 +450,8 @@ module LRParser =
             children
 
         recordStep ()
-        let maxIterations = 10000
 
-        while not finished && iteration < maxIterations do
+        while not finished do
             iteration <- iteration + 1
             let currentState = topState ()
 
