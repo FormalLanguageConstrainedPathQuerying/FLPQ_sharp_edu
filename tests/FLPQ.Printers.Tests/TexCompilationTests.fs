@@ -18,7 +18,7 @@ let ``CYK table TeX compiles with lualatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     let step = trace.[0]
-    let tex = CykTeX.tableToTeX step.table
+    let tex = CykTeX.tableToTeX string step.table
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -30,7 +30,7 @@ let ``CYK all steps TeX compile with lualatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     for step in trace do
-        let tex = CykTeX.tableToTeX step.table
+        let tex = CykTeX.tableToTeX string step.table
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -41,7 +41,7 @@ let ``LL step input TeX compiles with lualatex`` () =
     let tokens = Tokenizer.tokenizeTerminals "a b"
 
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
@@ -57,7 +57,7 @@ let ``LR step input TeX compiles with lualatex`` () =
     let tokens = Tokenizer.tokenizeTerminals "a a"
 
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
 
     for step in vizSteps do
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.input)
@@ -93,7 +93,7 @@ let ``Modified Valiant trace TeX compiles with lualatex`` () =
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = ValiantTeX.modifiedStepToTeX step
+        let tex = ValiantTeX.modifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
@@ -118,7 +118,7 @@ S -> ( S )
         if Set.isEmpty s then @"\cdot" else string s
 
     for step in trace do
-        let tex = ValiantTeX.modifiedStepToTeX step
+        let tex = ValiantTeX.modifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
@@ -133,7 +133,8 @@ let ``LL table TeX compiles with lualatex for grammar1`` () =
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
+    let tex =
+        LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) g 1 firstMap followMap table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
@@ -165,7 +166,8 @@ T -> c
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
 
-    let tex = LLTableTeX.tableToTeX SymbolTeX.toLaTeX g 1 firstMap followMap table
+    let tex =
+        LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) g 1 firstMap followMap table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
@@ -185,7 +187,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
+    let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
@@ -202,7 +204,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildLR0Table aug
 
-    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
+    let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
@@ -216,7 +218,7 @@ let ``CLR(1) table TeX compiles for grammar1`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildCLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
+    let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
@@ -238,7 +240,7 @@ F -> x
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
-    let tex = LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table
+    let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 

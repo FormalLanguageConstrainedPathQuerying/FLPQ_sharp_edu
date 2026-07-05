@@ -16,10 +16,13 @@ module CykRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "input.tex"))
-            (TeXRenderer.inputRow SymbolTeX.terminalContent tokenList -1)
+            (TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokenList -1)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeX string string grammar)
+
+        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX string string cnf)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -28,9 +31,9 @@ module CykRunner =
 
             let tex =
                 if step.highlights.IsEmpty then
-                    CykTeX.tableToTeX step.table
+                    CykTeX.tableToTeX string step.table
                 else
-                    CykTeX.tableToTeXStyled step.table step.highlights
+                    CykTeX.tableToTeXStyled string step.table step.highlights
 
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 

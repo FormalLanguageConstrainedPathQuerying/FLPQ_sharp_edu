@@ -7,8 +7,13 @@ open FLPQ.Languages
 module CykTeX =
 
     /// Convert a CYK working table to TeX with highlighted cells.
-    let tableToTeXStyled (table: ParsingTable<'nt>) (highlights: Matrix.Highlight list) : string =
-        MatrixTeX.toTeXStyled true true ParsingTableTeX.ntCellToTeX table highlights []
+    let tableToTeXStyled
+        (nonterminalPrinter: 'nt -> string)
+        (table: ParsingTable<'nt>)
+        (highlights: Matrix.Highlight list)
+        : string =
+        MatrixTeX.toTeXStyled true true (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights []
 
     /// Convert a CYK working table to TeX.
-    let tableToTeX (table: ParsingTable<'nt>) : string = tableToTeXStyled table []
+    let tableToTeX (nonterminalPrinter: 'nt -> string) (table: ParsingTable<'nt>) : string =
+        tableToTeXStyled nonterminalPrinter table []

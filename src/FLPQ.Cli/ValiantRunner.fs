@@ -17,10 +17,13 @@ module ValiantRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "input.tex"))
-            (TeXRenderer.inputRow SymbolTeX.terminalContent tokenList -1)
+            (TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokenList -1)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX cnf)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeX string string grammar)
+
+        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX string string cnf)
 
         if trace.Length > 0 then
             let initialStepDir = Path.Combine(outputDir, "step_0")
@@ -32,7 +35,7 @@ module ValiantRunner =
             let step = trace.[idx]
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            let tex = ValiantTeX.stepToTeX step
+            let tex = ValiantTeX.stepToTeX string step
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
             if idx = trace.Length - 1 then
@@ -40,7 +43,7 @@ module ValiantRunner =
 
                 for (nt, mat) in decomp |> Map.toSeq |> Seq.sortBy (fun (nt, _) -> string nt) do
                     let ntName = string nt
-                    let decompTex = ValiantTeX.boolDecompToTeX nt mat
+                    let decompTex = ValiantTeX.boolDecompToTeX string nt mat
                     Helpers.writeOutputFile (Path.Combine(stepDir, sprintf "bool_decomp_%s.tex" ntName)) decompTex
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir

@@ -30,22 +30,22 @@ module private Grammars =
     let clr1TableGrammar7 = LRParser.buildCLR1Table augGrammar7
 
     let texLr0Grammar1 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar1 lr0TableGrammar1
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar1 lr0TableGrammar1
 
     let texSlr1Grammar1 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar1 slr1TableGrammar1
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar1 slr1TableGrammar1
 
     let texClr1Grammar1 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar1 clr1TableGrammar1
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar1 clr1TableGrammar1
 
     let texLr0Grammar7 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar7 lr0TableGrammar7
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar7 lr0TableGrammar7
 
     let texSlr1Grammar7 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar7 slr1TableGrammar7
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar7 slr1TableGrammar7
 
     let texClr1Grammar7 =
-        LRTableTeX.tableToTeX SymbolTeX.toLaTeX augGrammar7 clr1TableGrammar7
+        LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) augGrammar7 clr1TableGrammar7
 
 type ``LR table TeX golden tests``() =
 

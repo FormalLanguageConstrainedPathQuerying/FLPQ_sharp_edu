@@ -35,14 +35,14 @@ module LRRunner =
                 Helpers.writeOutputFile
                     (Path.Combine(outputDir, "lr_automaton.dot"))
                     (AutomatonDot.dfaToDot
-                        SymbolTeX.toLaTeX
+                        (SymbolTeX.toLaTeX string string)
                         (fun idx _ -> sprintf "State %d" idx)
                         (LRAutomaton.buildLR0 aug))
             | AlgorithmTypes.CLR1 ->
                 Helpers.writeOutputFile
                     (Path.Combine(outputDir, "lr_automaton.dot"))
                     (AutomatonDot.dfaToDot
-                        SymbolTeX.toLaTeX
+                        (SymbolTeX.toLaTeX string string)
                         (fun idx _ -> sprintf "State %d" idx)
                         (LRAutomaton.buildLR1 aug))
             | _ -> ()
@@ -50,22 +50,26 @@ module LRRunner =
             match algo with
             | AlgorithmTypes.LR0
             | AlgorithmTypes.SLR1 ->
-                let tikzContent = LRAutomatonTikz.lr0AutomatontoTikz aug (LRAutomaton.buildLR0 aug)
+                let tikzContent =
+                    LRAutomatonTikz.lr0AutomatontoTikz string string aug (LRAutomaton.buildLR0 aug)
 
                 Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
             | AlgorithmTypes.CLR1 ->
-                let tikzContent = LRAutomatonTikz.lr1AutomatontoTikz aug (LRAutomaton.buildLR1 aug)
+                let tikzContent =
+                    LRAutomatonTikz.lr1AutomatontoTikz string string aug (LRAutomaton.buildLR1 aug)
 
                 Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
             | _ -> ()
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeX string string grammar)
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "lr_table.tex"))
-            (LRTableTeX.tableToTeX SymbolTeX.toLaTeX aug table)
+            (LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table)
 
         let _, steps = LRParser.parseWithSteps aug table tokens
-        let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+        let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
         Helpers.writeStepsVisualization outputDir vizSteps
         printfn "%s trace: %d steps written to %s" (AlgorithmTypes.displayName algo) vizSteps.Length outputDir

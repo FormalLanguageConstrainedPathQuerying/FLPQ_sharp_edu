@@ -5,7 +5,7 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
-let private symbolPrinter = SymbolTeX.toLaTeX
+let private symbolPrinter = SymbolTeX.toLaTeX string string
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]

@@ -6,15 +6,15 @@ open FLPQ.Languages
 /// Only the symbol content is printed, without type wrappers.
 module SymbolTeX =
 
-    /// Return the content of a terminal.
-    let terminalContent (Terminal t) : string = string t
+    /// Return the content of a terminal using the provided printer.
+    let terminalContent (terminalPrinter: 't -> string) (Terminal t) : string = terminalPrinter t
 
-    /// Return the content of a nonterminal.
-    let nonterminalContent (Nonterminal nt) : string = string nt
+    /// Return the content of a nonterminal using the provided printer.
+    let nonterminalContent (nonterminalPrinter: 'nt -> string) (Nonterminal nt) : string = nonterminalPrinter nt
 
-    /// Convert a grammar symbol to its TeX representation.
-    let toLaTeX (sym: Symbol<'t, 'nt>) : string =
+    /// Convert a grammar symbol to its TeX representation using the provided printers.
+    let toLaTeX (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (sym: Symbol<'t, 'nt>) : string =
         match sym with
-        | T t -> terminalContent t
-        | N nt -> nonterminalContent nt
+        | T t -> terminalContent terminalPrinter t
+        | N nt -> nonterminalContent nonterminalPrinter nt
         | Epsilon -> @"\varepsilon"

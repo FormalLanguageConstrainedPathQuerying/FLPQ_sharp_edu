@@ -25,48 +25,48 @@ type ``Grammar to TeX golden tests``() =
 
     [<Fact>]
     member _.``grammar1 BNF plain``() =
-        verifyGolden "grammar1_bnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar1Bnf)
+        verifyGolden "grammar1_bnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar1Bnf)
 
     [<Fact>]
     member _.``grammar1 BNF numbered``() =
-        verifyGolden "grammar1_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar1Bnf)
+        verifyGolden "grammar1_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar1Bnf)
 
     [<Fact>]
     member _.``grammar1 CNF plain``() =
-        verifyGolden "grammar1_cnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar1Cnf)
+        verifyGolden "grammar1_cnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar1Cnf)
 
     [<Fact>]
     member _.``grammar1 CNF numbered``() =
-        verifyGolden "grammar1_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar1Cnf)
+        verifyGolden "grammar1_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar1Cnf)
 
     [<Fact>]
     member _.``grammar7 BNF plain``() =
-        verifyGolden "grammar7_bnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar7Bnf)
+        verifyGolden "grammar7_bnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar7Bnf)
 
     [<Fact>]
     member _.``grammar7 BNF numbered``() =
-        verifyGolden "grammar7_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar7Bnf)
+        verifyGolden "grammar7_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar7Bnf)
 
     [<Fact>]
     member _.``grammar7 CNF plain``() =
-        verifyGolden "grammar7_cnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar7Cnf)
+        verifyGolden "grammar7_cnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar7Cnf)
 
     [<Fact>]
     member _.``grammar7 CNF numbered``() =
-        verifyGolden "grammar7_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar7Cnf)
+        verifyGolden "grammar7_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar7Cnf)
 
     [<Fact>]
     member _.``grammar9 BNF plain``() =
-        verifyGolden "grammar9_bnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar9Bnf)
+        verifyGolden "grammar9_bnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar9Bnf)
 
     [<Fact>]
     member _.``grammar9 BNF numbered``() =
-        verifyGolden "grammar9_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar9Bnf)
+        verifyGolden "grammar9_bnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar9Bnf)
 
     [<Fact>]
     member _.``grammar9 CNF plain``() =
-        verifyGolden "grammar9_cnf_plain.tex" (GrammarTeX.grammarToTeX Grammars.grammar9Cnf)
+        verifyGolden "grammar9_cnf_plain.tex" (GrammarTeX.grammarToTeX string string Grammars.grammar9Cnf)
 
     [<Fact>]
     member _.``grammar9 CNF numbered``() =
-        verifyGolden "grammar9_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers Grammars.grammar9Cnf)
+        verifyGolden "grammar9_cnf_numbered.tex" (GrammarTeX.grammarToTeXWithNumbers string string Grammars.grammar9Cnf)

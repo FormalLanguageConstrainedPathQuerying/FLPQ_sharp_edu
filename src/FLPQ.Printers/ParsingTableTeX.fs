@@ -25,7 +25,8 @@ module ParsingTableTeX =
         | Some items -> setToTeX itemPrinter items
 
     /// Render a set of nonterminals as a TeX cell: \cdot for empty, \{...\} otherwise.
-    let ntCellToTeX (s: Set<Nonterminal<'nt>>) : string = setToTeX SymbolTeX.nonterminalContent s
+    let ntCellToTeX (nonterminalPrinter: 'nt -> string) (s: Set<Nonterminal<'nt>>) : string =
+        setToTeX (SymbolTeX.nonterminalContent nonterminalPrinter) s
 
     /// Render a boolean as TeX: 1 for true, \cdot for false.
     let boolToTeX (b: bool) : string = if b then "1" else @"\cdot"

@@ -7,7 +7,7 @@ open FLPQ.Languages
 module ValiantTeX =
 
     /// Convert a Valiant trace step to TeX with highlighted current submatrix.
-    let stepToTeX (step: Valiant.ValiantTraceStep<'nt>) : string =
+    let stepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantTraceStep<'nt>) : string =
         let highlights =
             match step.currentSubmatrix with
             | Some m ->
@@ -43,17 +43,17 @@ module ValiantTeX =
                     []
             | None -> []
 
-        MatrixTeX.toTeXStyled true true ParsingTableTeX.ntCellToTeX step.table highlights blocks
+        MatrixTeX.toTeXStyled true true (ParsingTableTeX.ntCellToTeX nonterminalPrinter) step.table highlights blocks
 
     /// Render a boolean decomposition matrix for a single nonterminal.
-    let boolDecompToTeX (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
+    let boolDecompToTeX (nonterminalPrinter: 'nt -> string) (nt: Nonterminal<'nt>) (mat: Matrix<bool>) : string =
         @"\mathrm{"
-        + SymbolTeX.nonterminalContent nt
+        + SymbolTeX.nonterminalContent nonterminalPrinter nt
         + "}\n"
         + MatrixTeX.toTeX true true ParsingTableTeX.boolToTeX mat
 
     /// Convert a modified Valiant trace step to TeX with colored submatrix blocks.
-    let modifiedStepToTeX (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
+    let modifiedStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
         let colors =
             [ "red"
               "blue"
@@ -98,4 +98,4 @@ module ValiantTeX =
                     None)
             |> List.choose id
 
-        MatrixTeX.toTeXStyled false false ParsingTableTeX.ntCellToTeX step.table [] blocks
+        MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) step.table [] blocks

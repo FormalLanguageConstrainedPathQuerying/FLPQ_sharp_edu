@@ -21,11 +21,14 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
     Directory.CreateDirectory tmpDir |> ignore
 
     try
-        File.WriteAllText(Path.Combine(tmpDir, "input.tex"), TeXRenderer.inputRow SymbolTeX.terminalContent tokens -1)
+        File.WriteAllText(
+            Path.Combine(tmpDir, "input.tex"),
+            TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokens -1
+        )
 
-        File.WriteAllText(Path.Combine(tmpDir, "grammar_original.tex"), GrammarTeX.grammarToTeX grammar)
+        File.WriteAllText(Path.Combine(tmpDir, "grammar_original.tex"), GrammarTeX.grammarToTeX string string grammar)
 
-        File.WriteAllText(Path.Combine(tmpDir, "grammar_cnf.tex"), GrammarTeX.grammarToTeX cnf)
+        File.WriteAllText(Path.Combine(tmpDir, "grammar_cnf.tex"), GrammarTeX.grammarToTeX string string cnf)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -34,9 +37,9 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
 
             let tex =
                 if step.highlights.IsEmpty then
-                    CykTeX.tableToTeX step.table
+                    CykTeX.tableToTeX string step.table
                 else
-                    CykTeX.tableToTeXStyled step.table step.highlights
+                    CykTeX.tableToTeXStyled string step.table step.highlights
 
             File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
 

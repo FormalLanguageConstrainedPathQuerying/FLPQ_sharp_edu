@@ -7,7 +7,12 @@ open FLPQ.Languages
 /// TeX rendering for grammar rules.
 module GrammarTeX =
 
-    let private renderGrammar (showNumbers: bool) (g: Grammar<'t, 'nt>) : string =
+    let private renderGrammar
+        (showNumbers: bool)
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (g: Grammar<'t, 'nt>)
+        : string =
         let orderedRules =
             let startRules, otherRules = g.rules |> List.partition (fun r -> r.lhs = g.start)
             startRules @ otherRules
@@ -17,12 +22,15 @@ module GrammarTeX =
 
         for idx in 0 .. orderedRules.Length - 1 do
             let rule = orderedRules.[idx]
-            let lhs = SymbolTeX.nonterminalContent rule.lhs
+            let lhs = SymbolTeX.nonterminalContent nonterminalPrinter rule.lhs
 
             let rhs =
                 match rule.rhs with
                 | EpsilonRhs -> @"\varepsilon"
-                | Symbols nel -> NonEmptyList.toList nel |> List.map SymbolTeX.toLaTeX |> String.concat "\\ "
+                | Symbols nel ->
+                    NonEmptyList.toList nel
+                    |> List.map (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter)
+                    |> String.concat "\\ "
 
             let prefix = if showNumbers then sprintf "[%d] " idx else ""
 
@@ -34,7 +42,17 @@ module GrammarTeX =
     /// Render a grammar as a TeX align* environment.
     /// Productions are ordered: start nonterminal first, then the rest.
     /// Production numbers are not printed.
-    let grammarToTeX (g: Grammar<'t, 'nt>) : string = renderGrammar false g
+    let grammarToTeX
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (g: Grammar<'t, 'nt>)
+        : string =
+        renderGrammar false terminalPrinter nonterminalPrinter g
 
     /// Render a grammar as a TeX align* environment with production numbers (0-based).
-    let grammarToTeXWithNumbers (g: Grammar<'t, 'nt>) : string = renderGrammar true g
+    let grammarToTeXWithNumbers
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (g: Grammar<'t, 'nt>)
+        : string =
+        renderGrammar true terminalPrinter nonterminalPrinter g

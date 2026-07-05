@@ -20,7 +20,7 @@ let ``LR steps dot grammar3 aa`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
     let combined = combineStepsDot vizSteps
 
     verifyGolden "lr_grammar3_aa.dot" combined
@@ -43,7 +43,7 @@ let ``LR steps dot grammar7 x+x`` () =
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "x + x"
     let _, steps = LRParser.parseWithSteps aug table tokens
-    let vizSteps = LRStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
     let combined = combineStepsDot vizSteps
 
     verifyGolden "lr_grammar7_xplusx.dot" combined

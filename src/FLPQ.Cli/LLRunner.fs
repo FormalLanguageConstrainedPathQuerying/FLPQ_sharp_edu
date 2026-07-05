@@ -15,13 +15,15 @@ module LLRunner =
         let firstMap = FirstFollow.firstK grammar k
         let followMap = FirstFollow.followK grammar k
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_original.tex")) (GrammarTeX.grammarToTeX grammar)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeX string string grammar)
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "ll_table.tex"))
-            (LLTableTeX.tableToTeX SymbolTeX.toLaTeX grammar k firstMap followMap table)
+            (LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) grammar k firstMap followMap table)
 
         let _, steps = LLParser.parseWithSteps grammar table k tokens
-        let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+        let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
         Helpers.writeStepsVisualization outputDir vizSteps
         printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir

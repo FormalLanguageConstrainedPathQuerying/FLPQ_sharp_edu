@@ -18,7 +18,7 @@ let ``LL steps dot grammar1 ab`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
     let combined = combineStepsDot vizSteps
 
     verifyGolden "ll_grammar1_ab.dot" combined
@@ -35,7 +35,7 @@ let ``LL steps dot grammar1 aababb`` () =
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
     let _, steps = LLParser.parseWithSteps g table 1 tokens
-    let vizSteps = LLStepVisualizer.renderSteps SymbolTeX.toLaTeX steps
+    let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
     let combined = combineStepsDot vizSteps
 
     verifyGolden "ll_grammar1_aababb.dot" combined

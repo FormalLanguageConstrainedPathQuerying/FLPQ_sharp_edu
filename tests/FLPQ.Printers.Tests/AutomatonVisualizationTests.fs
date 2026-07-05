@@ -199,7 +199,7 @@ let ``LR(0) automaton Tikz compiles`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
-    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz string string aug aut
 
     Assert.Contains(@"\begin{tikzpicture}", tikz)
     Assert.Contains(@"rectangle", tikz)
@@ -218,7 +218,7 @@ let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
-    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz string string aug aut
 
     Assert.Contains(@"State 0", tikz)
     Assert.Contains(@"label=above:Start", tikz)
@@ -236,7 +236,7 @@ let ``LR(0) automaton Tikz has correct number of states`` () =
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
-    let tikz = LRAutomatonTikz.lr0AutomatontoTikz aug aut
+    let tikz = LRAutomatonTikz.lr0AutomatontoTikz string string aug aut
 
     for i in 0 .. aut.states.Length - 1 do
         Assert.Contains(sprintf "State %d" i, tikz)
