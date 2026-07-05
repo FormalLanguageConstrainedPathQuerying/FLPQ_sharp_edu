@@ -87,4 +87,4 @@
      2.   Rework steps rendering. Draw combined stack-tree ctructure where some leafs of some partial trees are stack frames.
      3.   Resulting tree for LL must be converted to current immutable version.
 109. [done] Add golden tests of LL and LR steps visulization. Generate dot files for several inputs, store them as reference, crete tests that generates dot files for respective input and compare result with reference.
-110. In CLI. Check that specified output directory is empty. Clean it up if no.
+110. [done] In CLI. Check that specified output directory is empty. Clean it up if no.
