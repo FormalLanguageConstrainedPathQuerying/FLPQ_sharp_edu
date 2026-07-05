@@ -16,6 +16,8 @@
     <Compile Include="GrammarTeXGoldenTests.fs" />
     <Compile Include="LRTableTeXGoldenTests.fs" />
     <Compile Include="CykSummaryGoldenTests.fs" />
+    <Compile Include="LLStepsGoldenTests.fs" />
+    <Compile Include="LRStepsGoldenTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
     <Compile Include="CliSummaryTests.fs" />
   </ItemGroup>
@@ -46,6 +48,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="GoldenData\*.tex">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="GoldenData\*.dot">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

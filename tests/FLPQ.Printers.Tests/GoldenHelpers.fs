@@ -1,6 +1,7 @@
 module GoldenHelpers
 
 open System.IO
+open FLPQ.Languages
 open Xunit
 
 let goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
@@ -20,3 +21,8 @@ let verifyGolden (goldenFileName: string) (actualContent: string) =
             $"Golden file '{goldenFileName}' was created in output/GoldenData/.\n"
             + "Copy it to tests/FLPQ.Printers.Tests/GoldenData/ and re-run tests."
         )
+
+let combineStepsDot (steps: VisualizationStep list) : string =
+    steps
+    |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i step.treeAndStack)
+    |> String.concat "\n\n"

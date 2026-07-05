@@ -1,0 +1,120 @@
+--- Step 0 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S", shape=box];
+  {rank=same; n1}
+}
+
+
+--- Step 1 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S", shape=box];
+  n1 -> n3;
+  n4 [label="b", shape=box];
+  n1 -> n4;
+  n5 [label="S", shape=box];
+  n1 -> n5;
+  n5 -> n4 [style=dashed, constraint=false];
+  n4 -> n3 [style=dashed, constraint=false];
+  n3 -> n2 [style=dashed, constraint=false];
+  {rank=same; n5; n4; n3; n2}
+}
+
+
+--- Step 2 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S", shape=box];
+  n1 -> n3;
+  n4 [label="b", shape=box];
+  n1 -> n4;
+  n5 [label="S", shape=box];
+  n1 -> n5;
+  n5 -> n4 [style=dashed, constraint=false];
+  n4 -> n3 [style=dashed, constraint=false];
+  {rank=same; n5; n4; n3}
+}
+
+
+--- Step 3 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="\varepsilon", shape=box];
+  n3 -> n4;
+  n1 -> n3;
+  n5 [label="b", shape=box];
+  n1 -> n5;
+  n6 [label="S", shape=box];
+  n1 -> n6;
+  n6 -> n5 [style=dashed, constraint=false];
+  n5 -> n4 [style=dashed, constraint=false];
+  {rank=same; n6; n5; n4}
+}
+
+
+--- Step 4 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="\varepsilon", shape=box];
+  n3 -> n4;
+  n1 -> n3;
+  n5 [label="b", shape=box];
+  n1 -> n5;
+  n6 [label="S", shape=box];
+  n1 -> n6;
+  n6 -> n5 [style=dashed, constraint=false];
+  {rank=same; n6; n5}
+}
+
+
+--- Step 5 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="\varepsilon", shape=box];
+  n3 -> n4;
+  n1 -> n3;
+  n5 [label="b", shape=box];
+  n1 -> n5;
+  n6 [label="S", shape=box];
+  n1 -> n6;
+  {rank=same; n6}
+}
+
+
+--- Step 6 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="\varepsilon", shape=box];
+  n3 -> n4;
+  n1 -> n3;
+  n5 [label="b", shape=box];
+  n1 -> n5;
+  n6 [label="S"];
+  n7 [label="\varepsilon", shape=box];
+  n6 -> n7;
+  n1 -> n6;
+  {rank=same; n7}
+}

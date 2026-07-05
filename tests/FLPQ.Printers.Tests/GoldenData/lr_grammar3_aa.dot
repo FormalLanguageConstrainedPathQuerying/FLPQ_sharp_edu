@@ -1,0 +1,70 @@
+--- Step 0 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  {rank=same; n1}
+}
+
+
+--- Step 1 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n2 [label="a", shape=box];
+  n3 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n1 -> n2 [style=dashed, constraint=false];
+  n2 -> n3 [style=dashed, constraint=false];
+  {rank=same; n1; n2; n3}
+}
+
+
+--- Step 2 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n2 [label="a", shape=box];
+  n3 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n4 [label="a", shape=box];
+  n5 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n1 -> n2 [style=dashed, constraint=false];
+  n2 -> n3 [style=dashed, constraint=false];
+  n3 -> n4 [style=dashed, constraint=false];
+  n4 -> n5 [style=dashed, constraint=false];
+  {rank=same; n1; n2; n3; n4; n5}
+}
+
+
+--- Step 3 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="s3", shape=box, style=filled, fillcolor=lightgray];
+  n2 [label="S"];
+  n3 [label="a", shape=box];
+  n2 -> n3;
+  n4 [label="s1", shape=box, style=filled, fillcolor=lightgray];
+  n5 [label="a", shape=box];
+  n6 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n1 -> n2 [style=dashed, constraint=false];
+  n2 -> n4 [style=dashed, constraint=false];
+  n4 -> n5 [style=dashed, constraint=false];
+  n5 -> n6 [style=dashed, constraint=false];
+  {rank=same; n1; n2; n4; n5; n6}
+}
+
+
+--- Step 4 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="s2", shape=box, style=filled, fillcolor=lightgray];
+  n2 [label="S"];
+  n3 [label="a", shape=box];
+  n2 -> n3;
+  n4 [label="S"];
+  n5 [label="a", shape=box];
+  n4 -> n5;
+  n2 -> n4;
+  n6 [label="s0", shape=box, style=filled, fillcolor=lightgray];
+  n1 -> n2 [style=dashed, constraint=false];
+  n2 -> n6 [style=dashed, constraint=false];
+  {rank=same; n1; n2; n6}
+}

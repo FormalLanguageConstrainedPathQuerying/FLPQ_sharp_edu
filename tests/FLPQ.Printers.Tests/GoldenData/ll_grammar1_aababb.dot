@@ -1,0 +1,538 @@
+--- Step 0 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S", shape=box];
+  {rank=same; n1}
+}
+
+
+--- Step 1 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S", shape=box];
+  n1 -> n3;
+  n4 [label="b", shape=box];
+  n1 -> n4;
+  n5 [label="S", shape=box];
+  n1 -> n5;
+  n5 -> n4 [style=dashed, constraint=false];
+  n4 -> n3 [style=dashed, constraint=false];
+  n3 -> n2 [style=dashed, constraint=false];
+  {rank=same; n5; n4; n3; n2}
+}
+
+
+--- Step 2 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S", shape=box];
+  n1 -> n3;
+  n4 [label="b", shape=box];
+  n1 -> n4;
+  n5 [label="S", shape=box];
+  n1 -> n5;
+  n5 -> n4 [style=dashed, constraint=false];
+  n4 -> n3 [style=dashed, constraint=false];
+  {rank=same; n5; n4; n3}
+}
+
+
+--- Step 3 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S", shape=box];
+  n3 -> n5;
+  n6 [label="b", shape=box];
+  n3 -> n6;
+  n7 [label="S", shape=box];
+  n3 -> n7;
+  n1 -> n3;
+  n8 [label="b", shape=box];
+  n1 -> n8;
+  n9 [label="S", shape=box];
+  n1 -> n9;
+  n9 -> n8 [style=dashed, constraint=false];
+  n8 -> n7 [style=dashed, constraint=false];
+  n7 -> n6 [style=dashed, constraint=false];
+  n6 -> n5 [style=dashed, constraint=false];
+  n5 -> n4 [style=dashed, constraint=false];
+  {rank=same; n9; n8; n7; n6; n5; n4}
+}
+
+
+--- Step 4 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S", shape=box];
+  n3 -> n5;
+  n6 [label="b", shape=box];
+  n3 -> n6;
+  n7 [label="S", shape=box];
+  n3 -> n7;
+  n1 -> n3;
+  n8 [label="b", shape=box];
+  n1 -> n8;
+  n9 [label="S", shape=box];
+  n1 -> n9;
+  n9 -> n8 [style=dashed, constraint=false];
+  n8 -> n7 [style=dashed, constraint=false];
+  n7 -> n6 [style=dashed, constraint=false];
+  n6 -> n5 [style=dashed, constraint=false];
+  {rank=same; n9; n8; n7; n6; n5}
+}
+
+
+--- Step 5 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S", shape=box];
+  n3 -> n8;
+  n1 -> n3;
+  n9 [label="b", shape=box];
+  n1 -> n9;
+  n10 [label="S", shape=box];
+  n1 -> n10;
+  n10 -> n9 [style=dashed, constraint=false];
+  n9 -> n8 [style=dashed, constraint=false];
+  n8 -> n7 [style=dashed, constraint=false];
+  n7 -> n6 [style=dashed, constraint=false];
+  {rank=same; n10; n9; n8; n7; n6}
+}
+
+
+--- Step 6 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S", shape=box];
+  n3 -> n8;
+  n1 -> n3;
+  n9 [label="b", shape=box];
+  n1 -> n9;
+  n10 [label="S", shape=box];
+  n1 -> n10;
+  n10 -> n9 [style=dashed, constraint=false];
+  n9 -> n8 [style=dashed, constraint=false];
+  n8 -> n7 [style=dashed, constraint=false];
+  {rank=same; n10; n9; n8; n7}
+}
+
+
+--- Step 7 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S", shape=box];
+  n3 -> n8;
+  n1 -> n3;
+  n9 [label="b", shape=box];
+  n1 -> n9;
+  n10 [label="S", shape=box];
+  n1 -> n10;
+  n10 -> n9 [style=dashed, constraint=false];
+  n9 -> n8 [style=dashed, constraint=false];
+  {rank=same; n10; n9; n8}
+}
+
+
+--- Step 8 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S", shape=box];
+  n8 -> n10;
+  n11 [label="b", shape=box];
+  n8 -> n11;
+  n12 [label="S", shape=box];
+  n8 -> n12;
+  n3 -> n8;
+  n1 -> n3;
+  n13 [label="b", shape=box];
+  n1 -> n13;
+  n14 [label="S", shape=box];
+  n1 -> n14;
+  n14 -> n13 [style=dashed, constraint=false];
+  n13 -> n12 [style=dashed, constraint=false];
+  n12 -> n11 [style=dashed, constraint=false];
+  n11 -> n10 [style=dashed, constraint=false];
+  n10 -> n9 [style=dashed, constraint=false];
+  {rank=same; n14; n13; n12; n11; n10; n9}
+}
+
+
+--- Step 9 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S", shape=box];
+  n8 -> n10;
+  n11 [label="b", shape=box];
+  n8 -> n11;
+  n12 [label="S", shape=box];
+  n8 -> n12;
+  n3 -> n8;
+  n1 -> n3;
+  n13 [label="b", shape=box];
+  n1 -> n13;
+  n14 [label="S", shape=box];
+  n1 -> n14;
+  n14 -> n13 [style=dashed, constraint=false];
+  n13 -> n12 [style=dashed, constraint=false];
+  n12 -> n11 [style=dashed, constraint=false];
+  n11 -> n10 [style=dashed, constraint=false];
+  {rank=same; n14; n13; n12; n11; n10}
+}
+
+
+--- Step 10 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S", shape=box];
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n14 [label="b", shape=box];
+  n1 -> n14;
+  n15 [label="S", shape=box];
+  n1 -> n15;
+  n15 -> n14 [style=dashed, constraint=false];
+  n14 -> n13 [style=dashed, constraint=false];
+  n13 -> n12 [style=dashed, constraint=false];
+  n12 -> n11 [style=dashed, constraint=false];
+  {rank=same; n15; n14; n13; n12; n11}
+}
+
+
+--- Step 11 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S", shape=box];
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n14 [label="b", shape=box];
+  n1 -> n14;
+  n15 [label="S", shape=box];
+  n1 -> n15;
+  n15 -> n14 [style=dashed, constraint=false];
+  n14 -> n13 [style=dashed, constraint=false];
+  n13 -> n12 [style=dashed, constraint=false];
+  {rank=same; n15; n14; n13; n12}
+}
+
+
+--- Step 12 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S", shape=box];
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n14 [label="b", shape=box];
+  n1 -> n14;
+  n15 [label="S", shape=box];
+  n1 -> n15;
+  n15 -> n14 [style=dashed, constraint=false];
+  n14 -> n13 [style=dashed, constraint=false];
+  {rank=same; n15; n14; n13}
+}
+
+
+--- Step 13 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S"];
+  n14 [label="\varepsilon", shape=box];
+  n13 -> n14;
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n15 [label="b", shape=box];
+  n1 -> n15;
+  n16 [label="S", shape=box];
+  n1 -> n16;
+  n16 -> n15 [style=dashed, constraint=false];
+  n15 -> n14 [style=dashed, constraint=false];
+  {rank=same; n16; n15; n14}
+}
+
+
+--- Step 14 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S"];
+  n14 [label="\varepsilon", shape=box];
+  n13 -> n14;
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n15 [label="b", shape=box];
+  n1 -> n15;
+  n16 [label="S", shape=box];
+  n1 -> n16;
+  n16 -> n15 [style=dashed, constraint=false];
+  {rank=same; n16; n15}
+}
+
+
+--- Step 15 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S"];
+  n14 [label="\varepsilon", shape=box];
+  n13 -> n14;
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n15 [label="b", shape=box];
+  n1 -> n15;
+  n16 [label="S", shape=box];
+  n1 -> n16;
+  {rank=same; n16}
+}
+
+
+--- Step 16 ---
+digraph StackTree {
+  rankdir=TB;
+  n1 [label="S"];
+  n2 [label="a", shape=box];
+  n1 -> n2;
+  n3 [label="S"];
+  n4 [label="a", shape=box];
+  n3 -> n4;
+  n5 [label="S"];
+  n6 [label="\varepsilon", shape=box];
+  n5 -> n6;
+  n3 -> n5;
+  n7 [label="b", shape=box];
+  n3 -> n7;
+  n8 [label="S"];
+  n9 [label="a", shape=box];
+  n8 -> n9;
+  n10 [label="S"];
+  n11 [label="\varepsilon", shape=box];
+  n10 -> n11;
+  n8 -> n10;
+  n12 [label="b", shape=box];
+  n8 -> n12;
+  n13 [label="S"];
+  n14 [label="\varepsilon", shape=box];
+  n13 -> n14;
+  n8 -> n13;
+  n3 -> n8;
+  n1 -> n3;
+  n15 [label="b", shape=box];
+  n1 -> n15;
+  n16 [label="S"];
+  n17 [label="\varepsilon", shape=box];
+  n16 -> n17;
+  n1 -> n16;
+  {rank=same; n17}
+}
