@@ -1,4 +1,4 @@
-# Detailed Plan: Task 115 — RPQ Cross-Algorithm Property Tests with Complex Regex
+# Detailed Plan: Task 116 — Tokenizer Unit Tests
 
 ## Goal
 Extend RPQ property tests to cover complex regex patterns (RStar, RAlt, RSeq, epsilon, multi-symbol chains). Use FsCheck to generate random regex patterns and prove Belyanin ≡ Arroyuelo ≡ Kronecker.
