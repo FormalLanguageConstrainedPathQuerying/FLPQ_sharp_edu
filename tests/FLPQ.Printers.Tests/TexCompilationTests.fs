@@ -247,3 +247,41 @@ F -> x
     Assert.Contains(@"E", tex)
     Assert.Contains(@"T", tex)
     Assert.Contains(@"F", tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LL table TeX compiles with lualatex`` () =
+    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let first = FirstFollow.firstK g 1
+    let follow = FirstFollow.followK g 1
+    let table = LLParser.buildTable g 1
+
+    let tex =
+        LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) g 1 first follow table
+
+    let tabularTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_tabular_template.tex")
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``Matrix TeX compiles with lualatex`` () =
+    let m = Matrix.create 3 3 (fun i j -> i * 3 + j + 1)
+    let tex = MatrixTeX.toTeX false false string m
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
+let ``Derivation tree dot compiles with graphviz`` () =
+    let tree =
+        Node(
+            Nonterminal "S",
+            [ Leaf(Symbol.T(Terminal "a"))
+              Node(Nonterminal "B", [ Leaf(Symbol.T(Terminal "b")) ]) ]
+        )
+
+    let dot = DerivationTreeDot.toDot string tree
+    let info = ExternalTools.compileDotStringToInfo dot
+    Assert.True(info.nodeCount > 0)
+    Assert.True(info.edgeCount > 0)

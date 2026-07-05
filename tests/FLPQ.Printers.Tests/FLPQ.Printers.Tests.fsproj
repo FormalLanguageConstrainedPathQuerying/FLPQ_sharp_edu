@@ -18,6 +18,8 @@
     <Compile Include="CykSummaryGoldenTests.fs" />
     <Compile Include="LLStepsGoldenTests.fs" />
     <Compile Include="LRStepsGoldenTests.fs" />
+    <Compile Include="LLTableTeXGoldenTests.fs" />
+    <Compile Include="ValiantTraceGoldenTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
   </ItemGroup>
 

@@ -1,0 +1,4 @@
+digraph DerivationTree {
+  rankdir=TB;
+  n1 [label="T (Terminal \"x\")", shape=box];
+}

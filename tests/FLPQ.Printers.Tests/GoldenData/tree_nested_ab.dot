@@ -1,0 +1,10 @@
+digraph DerivationTree {
+  rankdir=TB;
+  n1 [label="N (Nonterminal \"S\")"];
+  n2 [label="T (Terminal \"a\")", shape=box];
+  n1 -> n2;
+  n3 [label="N (Nonterminal \"B\")"];
+  n4 [label="T (Terminal \"b\")", shape=box];
+  n3 -> n4;
+  n1 -> n3;
+}

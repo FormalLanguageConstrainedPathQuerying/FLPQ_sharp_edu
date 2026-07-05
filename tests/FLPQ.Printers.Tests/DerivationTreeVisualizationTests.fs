@@ -61,3 +61,32 @@ let ``LR parser tree dot compiles`` () =
         Assert.True(info.nodeCount > 0)
         Assert.True(info.edgeCount > 0)
     | None -> Assert.Fail("Failed to parse")
+
+
+module DerivationTreeGoldenTests =
+
+    open GoldenHelpers
+
+    [<Fact>]
+    let ``simple tree dot golden`` () =
+        let tree = Leaf(Symbol.T(Terminal "x"))
+        let dot = DerivationTreeDot.toDot string tree
+        verifyGolden "tree_leaf_x.dot" dot
+
+    [<Fact>]
+    let ``nested tree dot golden`` () =
+        let tree =
+            Node(
+                Nonterminal "S",
+                [ Leaf(Symbol.T(Terminal "a"))
+                  Node(Nonterminal "B", [ Leaf(Symbol.T(Terminal "b")) ]) ]
+            )
+
+        let dot = DerivationTreeDot.toDot string tree
+        verifyGolden "tree_nested_ab.dot" dot
+
+    [<Fact>]
+    let ``epsilon tree dot golden`` () =
+        let tree = Node(Nonterminal "S", [ Leaf(Symbol.Epsilon) ])
+        let dot = DerivationTreeDot.toDot string tree
+        verifyGolden "tree_epsilon.dot" dot

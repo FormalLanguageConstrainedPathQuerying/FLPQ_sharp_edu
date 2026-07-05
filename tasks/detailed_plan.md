@@ -1,24 +1,34 @@
-# Detailed Plan: Task 132 — LL(k>1) Tests, Empty-Input, Test Moves
+# Detailed Plan: Task 129 — Golden Test Gaps
 
-## Steps
+## Goal
+Add golden tests for modules lacking them, plus TeX/DOT runtime compilation checks.
 
-### 1. Add LL(k>1) parsing tests (LLParserTests.fs)
-- Create a grammar that requires k=2 lookahead (e.g., S->aAa | aBb, A->x, B->y)
-- Test that k=1 fails (conflict at table build)
-- Test that k=2 succeeds and correctly parses
-- Add a second grammar requiring k>1 lookahead
+## Changes
 
-### 2. Add modified Valiant empty-input test (ValiantTests.fs)
-- Test `parseModified` with empty input string
-- Verify it returns correct acceptance for grammar with/without epsilon
+### 1. LL table TeX golden tests (new file)
+- `tests/FLPQ.Printers.Tests/LLTableTeXGoldenTests.fs`
+- Generate LL table TeX for grammar1 and grammar8
+- Compare with golden reference files
 
-### 3. Move 4 NFA/DFA backward-compatibility tests
-- From `tests/FLPQ.GraphAnalysis.Tests/GraphTests.fs` (lines 49-67)
-- To `tests/FLPQ.Languages.Tests/AutomatonTests.fs`
-- Tests: NFA.states, NFA.transitions, DFA.states, DFA.transitions
+### 2. Matrix TeX golden tests (add to MatrixTeXTests.fs)
+- Generate Matrix TeX for known matrices
+- Compare with golden reference files
 
-### 4. Remove FLPQ.Languages reference from GraphAnalysis.Tests
-- Edit `tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj`
+### 3. Automaton dot/Tikz golden tests (add to AutomatonVisualizationTests.fs)
+- Generate dot/Tikz for known automata
+- Compare with golden reference files
 
-### 5. Verify CliSummaryTests.fs location
-- Already in FLPQ.Cli.Tests (confirmed)
+### 4. Derivation tree dot golden tests (add to DerivationTreeVisualizationTests.fs)
+- Generate dot for known derivation trees
+- Compare with golden reference files
+
+### 5. Valiant trace TeX golden tests (new file)
+- `tests/FLPQ.Printers.Tests/ValiantTraceGoldenTests.fs`
+- Generate Valiant trace TeX for grammar1
+- Compare with golden reference files
+
+### 6. TeX/DOT compilation checks (add to TexCompilationTests.fs)
+- LL table TeX compilation check
+- Matrix TeX compilation check  
+- Valiant trace TeX compilation check
+- Derivation tree dot compilation check

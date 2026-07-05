@@ -1,0 +1,6 @@
+digraph DerivationTree {
+  rankdir=TB;
+  n1 [label="N (Nonterminal \"S\")"];
+  n2 [label="Epsilon", shape=box];
+  n1 -> n2;
+}

@@ -1,0 +1,7 @@
+digraph Automaton {
+  rankdir=LR;
+  s0 [style=filled, fillcolor=green, label="q0"];
+  s1 [peripheries=2, label="q1"];
+  s0 -> s1 [label="a"];
+  s1 -> s1 [label="a"];
+}

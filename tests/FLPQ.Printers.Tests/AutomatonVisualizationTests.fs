@@ -288,3 +288,32 @@ module DotParseabilityPropertyTests =
             Assert.Contains("digraph", dot)
             let _info = ExternalTools.compileDotStringToInfo dot
             true
+
+
+module AutomatonGoldenTests =
+
+    open GoldenHelpers
+
+    [<Fact>]
+    let ``NFA a+ dot golden`` () =
+        let aut =
+            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
+        verifyGolden "nfa_aplus.dot" dot
+
+    [<Fact>]
+    let ``DFA a+ dot golden`` () =
+        let aut =
+            Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] 0 (set [ 1 ])
+
+        let dot = AutomatonDot.dfaToDot string (fun _i s -> s) aut
+        verifyGolden "dfa_aplus.dot" dot
+
+    [<Fact>]
+    let ``NFA a+ tikz golden`` () =
+        let aut =
+            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+        verifyGolden "nfa_aplus.tikz" tikz
