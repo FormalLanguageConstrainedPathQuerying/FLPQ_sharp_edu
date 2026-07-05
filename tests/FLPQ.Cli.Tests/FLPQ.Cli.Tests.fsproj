@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

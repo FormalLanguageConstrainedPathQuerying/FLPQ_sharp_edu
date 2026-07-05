@@ -7,18 +7,14 @@ open FLPQ.Printers
 
 module Summary =
 
-    type SummaryKind =
-        | TablePerStep
-        | StackPerStep
-
-    let algorithmKind (algo: AlgorithmTypes.Algorithm) : SummaryKind =
+    let algorithmToKind (algo: AlgorithmTypes.Algorithm) : SummaryTeX.SummaryKind =
         match algo with
         | AlgorithmTypes.CYK
-        | AlgorithmTypes.Valiant -> TablePerStep
-        | AlgorithmTypes.LL
+        | AlgorithmTypes.Valiant -> SummaryTeX.SummaryKind.TablePerStep
+        | AlgorithmTypes.LL -> SummaryTeX.SummaryKind.LL
         | AlgorithmTypes.LR0
         | AlgorithmTypes.SLR1
-        | AlgorithmTypes.CLR1 -> StackPerStep
+        | AlgorithmTypes.CLR1 -> SummaryTeX.SummaryKind.LR
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
@@ -39,7 +35,7 @@ module Summary =
             else
                 ok <- false
 
-        for stepDir in Helpers.collectSteps vizDir do
+        for stepDir in SummaryTeX.collectSteps vizDir do
             let stepName = Path.GetFileName(stepDir)
 
             for dotFile in Directory.GetFiles(stepDir, "*.dot") do
@@ -75,7 +71,7 @@ module Summary =
             eprintfn "Summary: Dot compilation failed for %s" (AlgorithmTypes.displayName algo)
             false
         else
-            let steps = Helpers.collectSteps vizDir
+            let steps = SummaryTeX.collectSteps vizDir
 
             let lrAutomatonPdf, lrAutomatonTikz =
                 match algo with
@@ -94,14 +90,7 @@ module Summary =
                         (None, None)
                 | _ -> (None, None)
 
-            let algoKind =
-                match algo with
-                | AlgorithmTypes.CYK
-                | AlgorithmTypes.Valiant -> "table"
-                | AlgorithmTypes.LL -> "ll"
-                | AlgorithmTypes.LR0
-                | AlgorithmTypes.SLR1
-                | AlgorithmTypes.CLR1 -> "lr"
+            let algoKind = algorithmToKind algo
 
             let content =
                 SummaryTeX.buildContent

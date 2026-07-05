@@ -17,7 +17,7 @@ module AutomatonDot =
         : unit =
         for idx in 0 .. stateCount - 1 do
             let state = states.[idx]
-            let label = stateVisualizer idx state |> fun s -> s.Replace("\"", "\\\"")
+            let label = stateVisualizer idx state |> DerivationTreeDot.escapeLabel
 
             let attrs =
                 let start = Set.contains idx startStates
@@ -54,7 +54,7 @@ module AutomatonDot =
                         |> List.ofSeq
 
                     if not (List.isEmpty termLabels) then
-                        let label = termLabels |> String.concat ", " |> (fun s -> s.Replace("\"", "\\\""))
+                        let label = termLabels |> String.concat ", " |> DerivationTreeDot.escapeLabel
 
                         sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" i j label) |> ignore
                     else

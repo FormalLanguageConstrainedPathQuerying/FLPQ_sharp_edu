@@ -159,9 +159,6 @@ module CnfTests =
                 | [ N _; N _ ] -> true
                 | _ -> false)
 
-    let private nonterminalsOfCnf (g: Grammar<string, string>) : Set<Nonterminal<string>> =
-        g.rules |> List.map (fun r -> r.lhs) |> Set.ofList
-
     let private allRhsSymbolsAreNonterminals (g: Grammar<string, string>) : bool =
         g.rules
         |> List.forall (fun r ->

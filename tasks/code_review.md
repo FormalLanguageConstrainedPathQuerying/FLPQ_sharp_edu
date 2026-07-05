@@ -77,14 +77,33 @@ Fixed: `Rhs.toSymbols` → `Rhs.toNonEpsilonList` (returns `[]` for epsilon), `R
 
 **Suggested fix**: Use `row`, `col`, `size` or `RowEnd`, `ColStart`, `Size`.
 
-### 2.5 Unused definitions
+### 2.5 Unused definitions [FIXED in task 123]
 
-| Location | Definition | Notes |
-|----------|-----------|-------|
-| `Automaton.fs:91` | `private buildDfaMatrix` | Delegates to `Nfa.buildMatrix`. Never called. |
-| `GrammarTests.fs:162` | `nonterminalsOfCnf` | Defined but never invoked in any test. |
+| Location | Definition | Status |
+|----------|-----------|--------|
+| `Automaton.fs:91` | `buildDfaMatrix` | Already removed (never existed in current codebase) |
+| `GrammarTests.fs:162` | `nonterminalsOfCnf` | Removed |
+| `Generators.fs:233` | `StringArb` | Removed (never used) |
 
----
+### 2.11 readIfExists duplicate definition [FIXED in task 123]
+
+`readIfExists` was defined both in `FLPQ.Cli/Helpers.fs` (public) and `FLPQ.Printers/SummaryTeX.fs` (private). Removed from Helpers, made public in SummaryTeX. Helpers tests now use `SummaryTeX.readIfExists`.
+
+### 2.12 collectSteps duplicate implementation [FIXED in task 123]
+
+Step directory enumeration was implemented inline in `SummaryTeX.buildContent` and as a function in `FLPQ.Cli/Helpers.fs`. Extracted to a single public `collectSteps` in `SummaryTeX`, used by both.
+
+### 2.14 termPrinter duplicate lambda [FIXED in task 123]
+
+Identical `termPrinter` lambda (`(Terminal t) -> symbolVisualizer (T(Terminal t))`) existed in both `LLStepVisualizer` and `LRStepVisualizer`. Extracted to `TeXRenderer.termPrinterFromSymbolVisualizer`.
+
+### 2.15 escapeLabel not reused in AutomatonDot [FIXED in task 123]
+
+`DerivationTreeDot.escapeLabel` was private and not used in `AutomatonDot`, which had two inline `.Replace` calls. Made `escapeLabel` public; `AutomatonDot` now uses it.
+
+### 2.17 SummaryKind double-mapping [FIXED in task 123]
+
+The old `SummaryKind` DU (`TablePerStep | StackPerStep`) was insufficient, requiring a parallel `string` mapping ("table"/"ll"/"lr"). Replaced with `SummaryTeX.SummaryKind` (`TablePerStep | LL | LR`) with `toString` member. Moved from `FLPQ.Cli.Summary` to `FLPQ.Printers.SummaryTeX` to avoid circular dependency.
 
 ## 3. Naming and Style
 
@@ -159,9 +178,9 @@ Only non-empty inputs are tested for the modified Valiant variant. The standard 
 
 `allActionsFor` (`LRTableTeX.fs:15–30`) enumerates conflicts from `table.conflicts` list to augment actions from `table.action`. However, when a conflict exists in the action map, only the first-inserted action is stored (by `Map.tryFind`). The visualization may show actions (e.g., both shift and reduce) that the parser never takes, because the parser will only use the first action inserted into the map. This creates a mismatch between the visualized table and the actual parser behavior.
 
-### 5.2 LLTableTeX duplicates nonterminalsOf/terminalsOf
+### 5.2 LLTableTeX duplicates nonterminalsOf/terminalsOf [FIXED in task 119]
 
-As noted in 2.1, `LLTableTeX.fs` reimplements `nonterminalsOf`/`terminalsOf` already present (but private) in `Grammar.fs`.
+As noted in 2.1, `LLTableTeX.fs` previously reimplemented `nonterminalsOf`/`terminalsOf`. Now uses the public versions from `Grammar.fs`.
 
 ---
 
@@ -176,8 +195,8 @@ As noted in 2.1, `LLTableTeX.fs` reimplements `nonterminalsOf`/`terminalsOf` alr
 | **Medium** | Define LR parse behavior when conflicts exist (fail vs best-effort) | Small |
 | **Medium** | Rename `Submatrix` fields `A`/`B` → `row`/`col` | Small |
 | **Low** | Fix `Dfa.alphabet` to not construct temporary NFA | Small |
-| **Low** | Remove unused `buildDfaMatrix` (`Automaton.fs:91`) and `nonterminalsOfCnf` (`GrammarTests.fs:162`) | Small |
-| **Low** | Rename `Rhs.toSymbols` → `Rhs.toNonEpsilonList`; document distinction | Small |
+| **Low** | Remove unused `buildDfaMatrix` (`Automaton.fs:91`) and `nonterminalsOfCnf` (`GrammarTests.fs:162`) | Small — DONE task 123 |
+| **Low** | Rename `Rhs.toSymbols` → `Rhs.toNonEpsilonList`; document distinction | Small — DONE task 124 |
 | **Low** | Standardize trace-type locations across parsers | Medium |
 | **Low** | Add property tests for `toCnf`, `FirstFollow`, automaton conversion | Large |
 | **Low** | Add LL(k>1) tests | Medium |

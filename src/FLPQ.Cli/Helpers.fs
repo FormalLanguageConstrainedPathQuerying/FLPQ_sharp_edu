@@ -37,24 +37,10 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].treeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
 
-    let readIfExists (path: string) : string option =
-        if File.Exists path then
-            Some(File.ReadAllText(path).Trim())
-        else
-            None
-
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
         if m.Success then Int32.Parse(m.Groups.[1].Value) else 0
-
-    let collectSteps (vizDir: string) : string[] =
-        if not (Directory.Exists vizDir) then
-            [||]
-        else
-            Directory.GetDirectories vizDir
-            |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
-            |> Array.sortBy (fun d -> naturalSortKey (Path.GetFileName d))
 
     let findSummaryTemplate () : string =
         let candidates =

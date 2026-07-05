@@ -44,8 +44,8 @@ let ``compileDotFileToPdf produces non-empty PDF`` () =
     finally
         try
             Directory.Delete(tmpDir, true)
-        with _ ->
-            ()
+        with ex ->
+            eprintfn "Warning: failed to clean up temp dir %s: %s" tmpDir ex.Message
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -75,8 +75,8 @@ let ``compileTexFile produces non-empty PDF in output directory`` () =
     finally
         try
             Directory.Delete(tmpDir, true)
-        with _ ->
-            ()
+        with ex ->
+            eprintfn "Warning: failed to clean up temp dir %s: %s" tmpDir ex.Message
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -94,5 +94,5 @@ let ``compileTexFileTwice produces non-empty PDF`` () =
     finally
         try
             Directory.Delete(tmpDir, true)
-        with _ ->
-            ()
+        with ex ->
+            eprintfn "Warning: failed to clean up temp dir %s: %s" tmpDir ex.Message

@@ -3,30 +3,31 @@ module SummaryTests
 open Xunit
 open FLPQ.Cli.Summary
 open FLPQ.Cli.AlgorithmTypes
+open FLPQ.Printers
 
 [<Fact>]
-let ``algorithmKind for CYK is TablePerStep`` () =
-    Assert.Equal(TablePerStep, algorithmKind CYK)
+let ``algorithmToKind for CYK is TablePerStep`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.TablePerStep, algorithmToKind CYK)
 
 [<Fact>]
-let ``algorithmKind for Valiant is TablePerStep`` () =
-    Assert.Equal(TablePerStep, algorithmKind Valiant)
+let ``algorithmToKind for Valiant is TablePerStep`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.TablePerStep, algorithmToKind Valiant)
 
 [<Fact>]
-let ``algorithmKind for LL is StackPerStep`` () =
-    Assert.Equal(StackPerStep, algorithmKind LL)
+let ``algorithmToKind for LL is LL`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.LL, algorithmToKind LL)
 
 [<Fact>]
-let ``algorithmKind for LR0 is StackPerStep`` () =
-    Assert.Equal(StackPerStep, algorithmKind LR0)
+let ``algorithmToKind for LR0 is LR`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.LR, algorithmToKind LR0)
 
 [<Fact>]
-let ``algorithmKind for SLR1 is StackPerStep`` () =
-    Assert.Equal(StackPerStep, algorithmKind SLR1)
+let ``algorithmToKind for SLR1 is LR`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.LR, algorithmToKind SLR1)
 
 [<Fact>]
-let ``algorithmKind for CLR1 is StackPerStep`` () =
-    Assert.Equal(StackPerStep, algorithmKind CLR1)
+let ``algorithmToKind for CLR1 is LR`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.LR, algorithmToKind CLR1)
 
 [<Fact>]
 let ``algorithmLower for CYK`` () = Assert.Equal("cyk", algorithmLower CYK)

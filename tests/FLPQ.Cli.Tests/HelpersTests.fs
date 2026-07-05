@@ -3,6 +3,7 @@ module HelpersTests
 open System.IO
 open Xunit
 open FLPQ.Cli.Helpers
+open FLPQ.Printers
 
 [<Fact>]
 let ``readFile reads existing file`` () =
@@ -48,12 +49,12 @@ let ``cleanOutputDir clears existing directory`` () =
 let ``readIfExists returns Some for existing file`` () =
     let tmp = Path.GetTempFileName()
     File.WriteAllText(tmp, "data")
-    Assert.Equal(Some "data", readIfExists tmp)
+    Assert.Equal(Some "data", SummaryTeX.readIfExists tmp)
     File.Delete tmp
 
 [<Fact>]
 let ``readIfExists returns None for missing file`` () =
-    Assert.Equal(None, readIfExists "nonexistent_file_xyz.txt")
+    Assert.Equal(None, SummaryTeX.readIfExists "nonexistent_file_xyz.txt")
 
 [<Fact>]
 let ``naturalSortKey extracts step number`` () =

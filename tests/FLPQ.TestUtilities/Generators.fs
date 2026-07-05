@@ -230,14 +230,6 @@ type IntersectionGenerators =
 
         MyArb.fromGen genNfa
 
-    static member StringArb() : Arbitrary<Terminal<string> list> =
-        let genString =
-            MyGen.choose (0, 8)
-            |> MyGen.bind (fun len ->
-                MyGen.listOfLength len (MyGen.elements [ "a"; "b" ])
-                |> MyGen.map (fun chars -> chars |> List.map Terminal))
-
-        MyArb.fromGen genString
 
 type RegexGenerators =
 

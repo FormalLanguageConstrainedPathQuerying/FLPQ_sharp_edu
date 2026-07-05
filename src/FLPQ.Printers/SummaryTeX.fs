@@ -2,8 +2,20 @@ namespace FLPQ.Printers
 
 open System
 open System.IO
+open System.Text.RegularExpressions
 
 module SummaryTeX =
+
+    type SummaryKind =
+        | TablePerStep
+        | LL
+        | LR
+
+        member this.toString =
+            match this with
+            | TablePerStep -> "table"
+            | LL -> "ll"
+            | LR -> "lr"
 
     let wrapMath (tex: string) : string =
         [ @"\begin{center}"; @"\["; tex; @"\]"; @"\end{center}" ] |> String.concat "\n"
@@ -24,15 +36,28 @@ module SummaryTeX =
 
     let section (title: string) : string = sprintf "\\subsection*{%s}" title
 
-    let private readIfExists (path: string) : string option =
+    let readIfExists (path: string) : string option =
         if File.Exists path then
             Some(File.ReadAllText(path).Trim())
         else
             None
 
+    let collectSteps (vizDir: string) : string[] =
+        if not (Directory.Exists vizDir) then
+            [||]
+        else
+            Directory.GetDirectories vizDir
+            |> Array.filter (fun d ->
+                let name = Path.GetFileName(d)
+                name.StartsWith("step_"))
+            |> Array.sortBy (fun d ->
+                let name = Path.GetFileName(d)
+                let m = Text.RegularExpressions.Regex.Match(name, "step_(\d+)")
+                if m.Success then Int32.Parse(m.Groups.[1].Value) else 0)
+
     let headerSection
         (vizDir: string)
-        (algoKind: string)
+        (algoKind: SummaryKind)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
         : string list =
@@ -43,7 +68,7 @@ module SummaryTeX =
         | None -> ()
 
         match algoKind with
-        | "table" ->
+        | SummaryKind.TablePerStep ->
             match readIfExists (Path.Combine(vizDir, "grammar_cnf.tex")) with
             | Some tex -> lines <- lines @ [ section "CNF Grammar (passed to algorithm)"; wrapCenter tex; "" ]
             | None -> ()
@@ -51,11 +76,11 @@ module SummaryTeX =
             match readIfExists (Path.Combine(vizDir, "input.tex")) with
             | Some tex -> lines <- lines @ [ section "Input String"; wrapMath tex; "" ]
             | None -> ()
-        | "ll" ->
+        | SummaryKind.LL ->
             match readIfExists (Path.Combine(vizDir, "ll_table.tex")) with
             | Some tex -> lines <- lines @ [ section "LL Parsing Table"; wrapCenter tex; "" ]
             | None -> ()
-        | "lr" ->
+        | SummaryKind.LR ->
             match readIfExists (Path.Combine(vizDir, "lr_table.tex")) with
             | Some tex -> lines <- lines @ [ section "LR Parsing Table"; wrapCenter tex; "" ]
             | None -> ()
@@ -67,7 +92,6 @@ module SummaryTeX =
             match lrAutomatonTikz with
             | Some tikz -> lines <- lines @ [ section "LR Automaton"; wrapTikzCenter tikz; "" ]
             | None -> ()
-        | _ -> ()
 
         lines
 
@@ -101,7 +125,7 @@ module SummaryTeX =
 
     let buildContent
         (algo: string)
-        (algoKind: string)
+        (algoKind: SummaryKind)
         (vizDir: string)
         (stepCount: int)
         (lrAutomatonPdf: string option)
@@ -114,20 +138,9 @@ module SummaryTeX =
 
         lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz
 
-        let stepDirs =
-            if not (Directory.Exists vizDir) then
-                [||]
-            else
-                Directory.GetDirectories vizDir
-                |> Array.filter (fun d ->
-                    let name = Path.GetFileName(d)
-                    name.StartsWith("step_"))
-                |> Array.sortBy (fun d ->
-                    let name = Path.GetFileName(d)
-                    let m = Text.RegularExpressions.Regex.Match(name, "step_(\d+)")
-                    if m.Success then Int32.Parse(m.Groups.[1].Value) else 0)
+        let stepDirs = collectSteps vizDir
 
-        let isTableBased = algoKind = "table"
+        let isTableBased = algoKind = SummaryKind.TablePerStep
 
         for stepDir in stepDirs do
             let stepName = Path.GetFileName(stepDir)
