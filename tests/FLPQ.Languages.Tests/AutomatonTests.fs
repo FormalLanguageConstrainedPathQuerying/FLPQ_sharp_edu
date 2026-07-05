@@ -550,3 +550,32 @@ module PropertyNfaToDfaTests =
         let nfaResult = Nfa.accept nfa input
         let dfaResult = Dfa.accept dfa input
         nfaResult = dfaResult
+
+
+module BackwardCompatibilityTests =
+
+    [<Fact>]
+    let ``NFA member states provides backward compatibility`` () =
+        let nfa =
+            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        let states = nfa.states
+        Assert.Equal<string list>([ "q0"; "q1" ], states)
+
+    [<Fact>]
+    let ``NFA member transitions provides backward compatibility`` () =
+        let nfa =
+            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        Assert.True((Matrix.get nfa.transitions 0 1).IsSome)
+
+    [<Fact>]
+    let ``DFA member states provides backward compatibility`` () =
+        let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+        let states = dfa.states
+        Assert.Equal<string list>([ "q0"; "q1" ], states)
+
+    [<Fact>]
+    let ``DFA member transitions provides backward compatibility`` () =
+        let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+        Assert.True((Matrix.get dfa.transitions 0 1).IsSome)

@@ -191,6 +191,44 @@ module ModifiedValiantTests =
             let uniqueCells = Set.ofList cells
             Assert.Equal(List.length cells, Set.count uniqueCells)
 
+    [<Fact>]
+    let ``Modified Valiant empty input with epsilon grammar returns accepted`` () =
+        let result = Valiant.parseModified Grammar.freshStringNonterminal grammar1 []
+        Assert.True(result)
+
+    [<Fact>]
+    let ``Modified Valiant empty input with non-epsilon grammar returns rejected`` () =
+        let result = Valiant.parseModified Grammar.freshStringNonterminal grammar3 []
+        Assert.False(result)
+
+    [<Fact>]
+    let ``Modified Valiant empty input parseWithTable returns correct table`` () =
+        let table, accepted =
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar1 []
+
+        Assert.True(accepted)
+        Assert.Equal(0, Matrix.rows table)
+        Assert.Equal(0, Matrix.cols table)
+
+    [<Fact>]
+    let ``Modified Valiant empty input parseWithTable with non-epsilon grammar`` () =
+        let table, accepted =
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal grammar3 []
+
+        Assert.False(accepted)
+        Assert.Equal(0, Matrix.rows table)
+        Assert.Equal(0, Matrix.cols table)
+
+    [<Fact>]
+    let ``Standard Valiant empty input with epsilon grammar returns accepted`` () =
+        let result = Valiant.parse Grammar.freshStringNonterminal grammar1 []
+        Assert.True(result)
+
+    [<Fact>]
+    let ``Standard Valiant empty input with non-epsilon grammar returns rejected`` () =
+        let result = Valiant.parse Grammar.freshStringNonterminal grammar3 []
+        Assert.False(result)
+
 
 module PropertyTests =
 

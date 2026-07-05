@@ -207,3 +207,93 @@ module CrossParserPropertyTests =
                 Valiant.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s)
 
             llResult = valResult
+
+
+module LLHigherKTests =
+
+    let private ll2Grammar =
+        Grammar.parseGrammar
+            "
+        S -> a b A
+        S -> a a B
+        A -> c
+        B -> d
+        "
+
+    let private ll2Accept = [ "a b c"; "a a d" ]
+
+    let private ll2Reject = [ ""; "a"; "a b"; "a a"; "a b d"; "a a c"; "a a" ]
+
+    [<Fact>]
+    let ``LL(k=1) detects conflict for grammar requiring k=2`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable ll2Grammar 1 |> ignore)
+
+    [<Fact>]
+    let ``LL(k=2) resolves conflict for grammar requiring k=2`` () =
+        let table = LLParser.buildTable ll2Grammar 2
+        Assert.True(Map.count table > 0)
+
+    [<Fact>]
+    let ``LL(2) parser accepts correct strings`` () =
+        let table = LLParser.buildTable ll2Grammar 2
+
+        for s in ll2Accept do
+            let result = LLParser.parse ll2Grammar table 2 (Tokenizer.tokenizeTerminals s)
+            Assert.True(result.IsSome, s)
+
+    [<Fact>]
+    let ``LL(2) parser rejects incorrect strings`` () =
+        let table = LLParser.buildTable ll2Grammar 2
+
+        for s in ll2Reject do
+            let result = LLParser.parse ll2Grammar table 2 (Tokenizer.tokenizeTerminals s)
+            Assert.True(result.IsNone, s)
+
+    [<Fact>]
+    let ``LL(2) leaves match input for k=2 grammar`` () =
+        let table = LLParser.buildTable ll2Grammar 2
+
+        for s in ll2Accept do
+            match LLParser.parse ll2Grammar table 2 (Tokenizer.tokenizeTerminals s) with
+            | Some tree ->
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
+                Assert.Equal(s, leafTokens)
+            | None -> Assert.Fail($"Failed to parse: {s}")
+
+    let private ll3Grammar =
+        Grammar.parseGrammar
+            "
+        S -> a b c A
+        S -> a b d B
+        A -> x
+        B -> y
+        "
+
+    [<Fact>]
+    let ``LL(k=2) detects conflict for grammar requiring k=3`` () =
+        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable ll3Grammar 2 |> ignore)
+
+    [<Fact>]
+    let ``LL(k=3) resolves conflict for grammar requiring k=3`` () =
+        let table = LLParser.buildTable ll3Grammar 3
+        Assert.True(Map.count table > 0)
+
+    [<Fact>]
+    let ``LL(3) parser accepts correct strings`` () =
+        let table = LLParser.buildTable ll3Grammar 3
+
+        let accept = [ "a b c x"; "a b d y" ]
+
+        for s in accept do
+            let result = LLParser.parse ll3Grammar table 3 (Tokenizer.tokenizeTerminals s)
+            Assert.True(result.IsSome, s)
+
+    [<Fact>]
+    let ``LL(3) parser rejects incorrect strings`` () =
+        let table = LLParser.buildTable ll3Grammar 3
+
+        let reject = [ ""; "a"; "a b"; "a b c"; "a b d"; "a b c y"; "a b d x" ]
+
+        for s in reject do
+            let result = LLParser.parse ll3Grammar table 3 (Tokenizer.tokenizeTerminals s)
+            Assert.True(result.IsNone, s)
