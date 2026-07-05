@@ -42,6 +42,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
   </ItemGroup>
 
 </Project>

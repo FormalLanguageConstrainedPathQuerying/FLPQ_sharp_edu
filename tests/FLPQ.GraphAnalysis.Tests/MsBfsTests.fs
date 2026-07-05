@@ -5,9 +5,7 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
+open FLPQ.TestUtilities
 
 [<Fact>]
 let ``boolAdd: element-wise OR`` () =
@@ -123,7 +121,7 @@ let ``msBfs: self-loop source, reachable only to self`` () =
     Assert.True(result.data.[0, 0])
     Assert.False(result.data.[0, 1])
 
-[<Properties(Arbitrary = [| typeof<RandomGraphGenerators.RandomGraphGenerators> |])>]
+[<Properties(Arbitrary = [| typeof<RandomGraphGenerators> |])>]
 module PropertyTests =
 
     [<Property>]

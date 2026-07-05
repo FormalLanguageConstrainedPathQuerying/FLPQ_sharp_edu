@@ -4,31 +4,7 @@ open Xunit
 open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
-type SetMatrixGenerators =
-
-    static member SetMatrix() : Arbitrary<Matrix<Set<int>>> =
-        MyGen.choose (0, 5)
-        |> MyGen.bind (fun rows ->
-            MyGen.choose (0, 5)
-            |> MyGen.bind (fun cols ->
-                MyGen.choose (0, 4)
-                |> MyGen.listOfLength (rows * cols)
-                |> MyGen.map (fun values ->
-                    let array = Array2D.init rows cols (fun i j -> Set.empty)
-
-                    for k in 0 .. min (values.Length - 1) (rows * cols - 1) do
-                        let i = k / cols
-                        let j = k % cols
-                        array.[i, j] <- set [ values.[k] ]
-
-                    { rows = rows
-                      cols = cols
-                      data = array })))
-        |> MyArb.fromGen
+open FLPQ.TestUtilities
 
 [<Fact>]
 let ``decompose produces correct number of matrices`` () =

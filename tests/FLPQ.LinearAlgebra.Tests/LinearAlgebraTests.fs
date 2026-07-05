@@ -4,40 +4,7 @@ open Xunit
 open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
-type LinearAlgebraGenerators =
-
-    static member SquareMatrix() : Arbitrary<Matrix<int>> =
-        MyGen.choose (1, 5)
-        |> MyGen.bind (fun n ->
-            MyGen.choose (-100, 100)
-            |> MyGen.listOfLength (n * n)
-            |> MyGen.map (fun values ->
-                let arr = Array2D.init n n (fun i j -> values.[i * n + j])
-                Matrix.ofArray2D arr))
-        |> MyArb.fromGen
-
-    static member CompatibleDimsPair() : Arbitrary<Matrix<int> * Matrix<int>> =
-        MyGen.choose (1, 5)
-        |> MyGen.bind (fun m ->
-            MyGen.choose (1, 5)
-            |> MyGen.bind (fun k ->
-                MyGen.choose (1, 5)
-                |> MyGen.bind (fun n ->
-                    MyGen.choose (-10, 10)
-                    |> MyGen.listOfLength (m * k)
-                    |> MyGen.bind (fun valuesA ->
-                        let arrA = Array2D.init m k (fun i j -> valuesA.[i * k + j])
-
-                        MyGen.choose (-10, 10)
-                        |> MyGen.listOfLength (k * n)
-                        |> MyGen.map (fun valuesB ->
-                            let arrB = Array2D.init k n (fun i j -> valuesB.[i * n + j])
-                            (Matrix.ofArray2D arrA, Matrix.ofArray2D arrB))))))
-        |> MyArb.fromGen
+open FLPQ.TestUtilities
 
 [<Properties(Arbitrary = [| typeof<LinearAlgebraGenerators> |])>]
 module PropertyTests =

@@ -4,43 +4,7 @@ open Xunit
 open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
-type MatrixGenerators =
-
-    static member Matrix() : Arbitrary<Matrix<int>> =
-        MyGen.choose (1, 5)
-        |> MyGen.bind (fun rows ->
-            MyGen.choose (1, 5)
-            |> MyGen.bind (fun cols ->
-                MyGen.choose (-100, 100)
-                |> MyGen.listOfLength (rows * cols)
-                |> MyGen.map (fun values ->
-                    let arr = Array2D.init rows cols (fun i j -> values.[i * cols + j])
-
-                    Matrix.ofArray2D arr)))
-        |> MyArb.fromGen
-
-    static member SameDimMatrixPair() : Arbitrary<Matrix<int> * Matrix<int>> =
-        MyGen.choose (1, 5)
-        |> MyGen.bind (fun rows ->
-            MyGen.choose (1, 5)
-            |> MyGen.bind (fun cols ->
-                MyGen.choose (-100, 100)
-                |> MyGen.listOfLength (rows * cols)
-                |> MyGen.bind (fun valuesA ->
-                    let arrA = Array2D.init rows cols (fun i j -> valuesA.[i * cols + j])
-
-                    MyGen.choose (-100, 100)
-                    |> MyGen.listOfLength (rows * cols)
-                    |> MyGen.map (fun valuesB ->
-                        let arrB = Array2D.init rows cols (fun i j -> valuesB.[i * cols + j])
-
-                        (Matrix.ofArray2D arrA, Matrix.ofArray2D arrB)))))
-
-        |> MyArb.fromGen
+open FLPQ.TestUtilities
 
 [<Properties(Arbitrary = [| typeof<MatrixGenerators> |])>]
 module PropertyTests =

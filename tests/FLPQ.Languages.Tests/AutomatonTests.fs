@@ -5,9 +5,7 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
-
-module MyGenAuto = FsCheck.FSharp.Gen
-module MyArbAuto = FsCheck.FSharp.Arb
+open FLPQ.TestUtilities
 
 module FactTests =
 
@@ -528,48 +526,6 @@ module IntersectionTests =
         Assert.True(Nfa.accept inter [ T "a"; T "a" ])
         Assert.False(Nfa.accept inter [])
         Assert.False(Nfa.accept inter [ T "b" ])
-
-type IntersectionGenerators =
-    static member NfaArb() : Arbitrary<NFA<string, int>> =
-        let alphabet = [ "a"; "b" ]
-
-        let genNfa =
-            MyGenAuto.choose (1, 6)
-            |> MyGenAuto.bind (fun stateCount ->
-                MyGenAuto.listOf (
-                    MyGenAuto.choose (0, stateCount - 1)
-                    |> MyGenAuto.bind (fun fromIdx ->
-                        MyGenAuto.elements alphabet
-                        |> MyGenAuto.bind (fun label ->
-                            MyGenAuto.choose (0, stateCount - 1)
-                            |> MyGenAuto.map (fun toIdx -> (fromIdx, label, toIdx))))
-                )
-                |> MyGenAuto.bind (fun transitions ->
-                    MyGenAuto.choose (1, min 2 stateCount)
-                    |> MyGenAuto.bind (fun startCount ->
-                        MyGenAuto.listOfLength startCount (MyGenAuto.choose (0, stateCount - 1))
-                        |> MyGenAuto.bind (fun startStates ->
-                            MyGenAuto.choose (1, min 2 stateCount)
-                            |> MyGenAuto.bind (fun finalCount ->
-                                MyGenAuto.listOfLength finalCount (MyGenAuto.choose (0, stateCount - 1))
-                                |> MyGenAuto.map (fun finalStates ->
-                                    Nfa.fromTransitions
-                                        ([ 0 .. stateCount - 1 ] |> List.map id)
-                                        transitions
-                                        Set.empty
-                                        (Set.ofList startStates)
-                                        (Set.ofList finalStates)))))))
-
-        MyArbAuto.fromGen genNfa
-
-    static member StringArb() : Arbitrary<Terminal<string> list> =
-        let genString =
-            MyGenAuto.choose (0, 8)
-            |> MyGenAuto.bind (fun len ->
-                MyGenAuto.listOfLength len (MyGenAuto.elements [ "a"; "b" ])
-                |> MyGenAuto.map (fun chars -> chars |> List.map Terminal))
-
-        MyArbAuto.fromGen genString
 
 [<Properties(Arbitrary = [| typeof<IntersectionGenerators> |])>]
 module PropertyIntersectionTests =

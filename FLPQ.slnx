@@ -13,5 +13,6 @@
     <Project Path="tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj" />
     <Project Path="tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj" />
     <Project Path="tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj" />
+    <Project Path="tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj" />
   </Folder>
 </Solution>

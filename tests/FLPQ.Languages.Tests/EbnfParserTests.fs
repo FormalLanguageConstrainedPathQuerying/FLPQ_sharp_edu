@@ -1,15 +1,12 @@
 module EbnfParserTests
 
 open Xunit
-open FsCheck
 open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
 open TestGrammars
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
+open FLPQ.TestUtilities
 
 module EbnfParseTests =
 

@@ -7,9 +7,7 @@ open FLPQ.LinearAlgebra
 open FLPQ.Languages
 open FLPQ.RPQ
 open FLPQ.GraphAnalysis
-
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
+open FLPQ.TestUtilities
 
 let private smallGraphNfa (edges: (int * string * int) list) : NFA<string, int> =
     let allVerts = edges |> List.collect (fun (f, _, t) -> [ f; t ]) |> List.distinct
@@ -169,39 +167,6 @@ let ``Kronecker: multiple sources, only one connects`` () =
     Assert.False(result.data.[1, 2])
 
 // --- Cross-algorithm property-based tests (task 63, updated for task 64) ---
-
-type RPQTestData =
-    { vertexCount: int
-      edges: (int * string * int) list
-      sources: int[] }
-
-type RPQGenerators =
-
-    static member RPQTestData() : Arbitrary<RPQTestData> =
-        let alphabet = [ "a"; "b" ]
-
-        MyGen.choose (2, 6)
-        |> MyGen.bind (fun n ->
-            MyGen.choose (2, n * 2)
-            |> MyGen.bind (fun edgeCount ->
-                MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
-                |> MyGen.bind (fun fromList ->
-                    MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
-                    |> MyGen.bind (fun toList ->
-                        MyGen.listOfLength edgeCount (MyGen.elements alphabet)
-                        |> MyGen.bind (fun labelList ->
-                            MyGen.choose (1, n)
-                            |> MyGen.bind (fun k ->
-                                MyGen.listOfLength k (MyGen.choose (0, n - 1))
-                                |> MyGen.map (fun sources ->
-                                    let edges =
-                                        List.zip3 fromList labelList toList
-                                        |> List.filter (fun (f, _, t) -> f <> t)
-
-                                    { vertexCount = n
-                                      edges = edges
-                                      sources = Array.ofList sources })))))))
-        |> MyArb.fromGen
 
 [<Properties(Arbitrary = [| typeof<RPQGenerators> |])>]
 module PropertyTests =

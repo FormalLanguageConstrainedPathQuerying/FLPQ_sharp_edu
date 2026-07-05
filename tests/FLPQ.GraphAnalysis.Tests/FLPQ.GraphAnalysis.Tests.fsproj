@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="RandomGraphGenerators.fs" />
     <Compile Include="GraphTests.fs" />
     <Compile Include="MsBfsTests.fs" />
   </ItemGroup>
@@ -24,6 +23,7 @@
     <ProjectReference Include="..\..\src\FLPQ.GraphAnalysis\FLPQ.GraphAnalysis.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
   </ItemGroup>
 
 </Project>

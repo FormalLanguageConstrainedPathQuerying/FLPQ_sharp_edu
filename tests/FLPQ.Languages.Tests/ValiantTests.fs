@@ -7,6 +7,7 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
 open TestGrammars
+open FLPQ.TestUtilities
 
 
 module ValiantParseTests =
