@@ -72,17 +72,25 @@ module PropertyTests =
 
     [<Property>]
     let ``decompose then recompose is identity`` (m: Matrix<Set<int>>) =
+        let hasNonEmpty =
+            [ for i in 0 .. Matrix.rows m - 1 do
+                  for j in 0 .. Matrix.cols m - 1 do
+                      if not (Set.isEmpty (Matrix.get m i j)) then
+                          yield true ]
+            |> List.contains true
+
         let decomp = BooleanDecomposition.decompose m
 
-        if Map.isEmpty decomp then
-            true
-        else
-            let restored = BooleanDecomposition.recompose decomp
+        if hasNonEmpty then
+            not (Map.isEmpty decomp)
+            && (let restored = BooleanDecomposition.recompose decomp
 
-            Matrix.rows m = Matrix.rows restored
-            && Matrix.cols m = Matrix.cols restored
-            && [ for i in 0 .. Matrix.rows m - 1 do
-                     for j in 0 .. Matrix.cols m - 1 do
-                         if Matrix.get m i j <> Matrix.get restored i j then
-                             yield false ]
-               |> List.forall id
+                Matrix.rows m = Matrix.rows restored
+                && Matrix.cols m = Matrix.cols restored
+                && [ for i in 0 .. Matrix.rows m - 1 do
+                         for j in 0 .. Matrix.cols m - 1 do
+                             if Matrix.get m i j <> Matrix.get restored i j then
+                                 yield false ]
+                   |> List.forall id)
+        else
+            true

@@ -116,3 +116,44 @@ module RSMTests =
         Assert.Equal(2, rsm.blocks.Length)
         Assert.Equal(ntA, rsm.startBlock)
         Assert.Equal<int>(set [ 0 ], RSM.startStates rsm)
+
+
+module RsmBuilderPropertyTests =
+
+    open FsCheck
+    open FsCheck.Xunit
+
+    [<Property>]
+    let ``buildRSMFromText produces deterministic blocks`` () =
+        let ebnfTexts =
+            [ "S -> a S b\nS -> eps"
+              "S -> a b\nS -> a S b"
+              "S -> ( a | b ) S\nS -> eps"
+              "S -> a\nA -> b" ]
+
+        ebnfTexts
+        |> List.forall (fun text ->
+            let rsm = RsmBuilder.buildRSMFromText text
+
+            rsm.blocks |> List.forall (fun block -> Dfa.isDeterministic block.dfa))
+
+    [<Property>]
+    let ``buildRSMFromText blocks match nonterminal count`` () =
+        let ebnfTexts =
+            [ "S -> a S b\nS -> eps"
+              "S -> a b\nS -> a S b"
+              "S -> ( a | b ) S\nS -> eps"
+              "S -> a\nA -> b" ]
+
+        ebnfTexts
+        |> List.forall (fun text ->
+            let rsm = RsmBuilder.buildRSMFromText text
+            let rules = EbnfParser.parseEbnf text
+            let grouped = EbnfParser.groupRules rules
+            rsm.blocks.Length = Map.count grouped)
+
+    [<Fact>]
+    let ``buildRSMFromText handles single terminal rule`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        Assert.Equal(1, rsm.blocks.Length)
+        Assert.True(Dfa.isDeterministic rsm.blocks.Head.dfa)

@@ -540,3 +540,13 @@ module PropertyIntersectionTests =
         let expected = Nfa.accept a input && Nfa.accept b input
         let actual = Nfa.accept inter input
         expected = actual
+
+[<Properties(Arbitrary = [| typeof<IntersectionGenerators> |])>]
+module PropertyNfaToDfaTests =
+
+    [<Property>]
+    let ``NFA to DFA conversion preserves language`` (nfa: NFA<string, int>) (input: Terminal<string> list) =
+        let dfa = Automaton.toDfa nfa
+        let nfaResult = Nfa.accept nfa input
+        let dfaResult = Dfa.accept dfa input
+        nfaResult = dfaResult

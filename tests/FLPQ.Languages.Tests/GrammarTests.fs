@@ -372,3 +372,54 @@ module CnfTests =
                 | _ -> false)
 
         Assert.False(hasUnit)
+
+
+module PropertyCnfTests =
+
+    open FsCheck
+    open FsCheck.Xunit
+    open FLPQ.TestUtilities
+
+    [<Property(MaxTest = 100)>]
+    let ``toCnf preserves language acceptance`` () =
+        let grammars =
+            [ Grammar.parseGrammar "S -> a S b S\nS -> eps"
+              Grammar.parseGrammar "S -> a S\nS -> a"
+              Grammar.parseGrammar "S -> A\nA -> B\nB -> a"
+              Grammar.parseGrammar "S -> a b c d"
+              Grammar.parseGrammar "S -> A a B b\nA -> a\nB -> b"
+              Grammar.parseGrammar "S -> eps"
+              Grammar.parseGrammar "S -> S a\nS -> a" ]
+
+        let testStrings =
+            [ ""
+              "a"
+              "b"
+              "aa"
+              "ab"
+              "ba"
+              "bb"
+              "aaa"
+              "aab"
+              "aba"
+              "abb"
+              "abab"
+              "aabb" ]
+
+        grammars
+        |> List.forall (fun g ->
+            let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
+
+            testStrings
+            |> List.forall (fun s ->
+                let tokens =
+                    if s = "" then
+                        []
+                    else
+                        s.ToCharArray() |> Array.toList |> List.map (fun c -> Terminal(string c))
+
+                let origResult = Cyk.parse (fun i -> $"_N{i}") g tokens
+
+                let cnfResult = Cyk.parse (fun i -> $"_CNF_N{i}") cnf tokens
+
+                origResult = cnfResult))

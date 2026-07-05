@@ -1,6 +1,8 @@
 module FirstFollowTests
 
 open Xunit
+open FsCheck
+open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
@@ -145,3 +147,68 @@ module FactTests =
         Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "+") ], eFollow)
         Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal ")") ], eFollow)
         Assert.Contains<Symbol<string, string> list>([ Symbol.Epsilon ], eFollow)
+
+module PropertyTests =
+
+    let private enumerateDerivations (g: Grammar<string, string>) (maxDepth: int) : Set<Symbol<string, string> list> =
+        let rec derive (current: Symbol<string, string> list) (depth: int) : Set<Symbol<string, string> list> =
+            if depth <= 0 then
+                Set.singleton current
+            else
+                let expansionResults =
+                    g.rules
+                    |> List.collect (fun r ->
+                        match current with
+                        | Symbol.N nt :: rest when nt = r.lhs ->
+                            let rhsSyms = Rhs.toNonEpsilonList r.rhs
+                            derive (rhsSyms @ rest) (depth - 1) |> Set.toList
+                        | _ -> [])
+                    |> Set.ofList
+
+                if Set.isEmpty expansionResults then
+                    Set.singleton current
+                else
+                    expansionResults
+
+        derive [ Symbol.N g.start ] maxDepth
+
+    let private prefixes (k: int) (sentences: Set<Symbol<string, string> list>) : Set<Symbol<string, string> list> =
+        sentences
+        |> Set.map (fun syms ->
+            let taken = List.truncate k syms
+            if List.isEmpty taken then [ Symbol.Epsilon ] else taken)
+
+    [<Property(MaxTest = 200)>]
+    let ``firstK matches brute-force derivation`` () =
+        let grammars =
+            [ Grammar.parseGrammar "S -> a S b S\nS -> eps"
+              Grammar.parseGrammar "S -> a S\nS -> a"
+              Grammar.parseGrammar "S -> a B\nB -> b"
+              Grammar.parseGrammar "S -> S S\nS -> a\nS -> b"
+              Grammar.parseGrammar "E -> E + T\nE -> T\nT -> x" ]
+
+        grammars
+        |> List.forall (fun g ->
+            let k = 1
+
+            let computed = FirstFollow.firstK g k
+
+            let allDerivable = enumerateDerivations g 5
+
+            let nonterminals = Grammar.nonterminalsOf g
+
+            nonterminals
+            |> Set.forall (fun nt ->
+                let computedFirst = Map.tryFind nt computed |> Option.defaultValue Set.empty
+
+                let derived =
+                    allDerivable
+                    |> Set.filter (fun syms ->
+                        match syms with
+                        | Symbol.N nt' :: _ when nt' = nt -> true
+                        | _ -> false)
+                    |> prefixes k
+
+                not (Set.isEmpty computedFirst)
+                || Set.isEmpty derived
+                   && (Set.isEmpty derived || Set.isSubset derived computedFirst)))

@@ -260,3 +260,31 @@ let ``LR(0) automaton Tikz has correct number of states`` () =
         Assert.Contains(sprintf "State %d" i, tikz)
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+
+module DotParseabilityPropertyTests =
+
+    open FsCheck
+    open FsCheck.Xunit
+    open FLPQ.TestUtilities
+
+    [<Properties(Arbitrary = [| typeof<IntersectionGenerators> |])>]
+    module DotParseability =
+
+        [<Property>]
+        [<Trait("Category", "Graphviz")>]
+        let ``NFA dot output is syntactically valid`` (nfa: NFA<string, int>) =
+            let dot = AutomatonDot.nfaToDot string (fun _i s -> string s) nfa
+            Assert.Contains("digraph", dot)
+            Assert.Contains("{", dot)
+            Assert.Contains("}", dot)
+            let info = ExternalTools.compileDotStringToInfo dot
+            info.nodeCount >= 0 && info.edgeCount >= 0
+
+        [<Property(MaxTest = 50)>]
+        [<Trait("Category", "Graphviz")>]
+        let ``NFA dot output parses with graphviz`` (nfa: NFA<string, int>) =
+            let dot = AutomatonDot.nfaToDot string (fun _i s -> string s) nfa
+            Assert.Contains("digraph", dot)
+            let _info = ExternalTools.compileDotStringToInfo dot
+            true

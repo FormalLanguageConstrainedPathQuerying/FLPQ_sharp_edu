@@ -1,38 +1,52 @@
-# Detailed Plan: Task 131 — Refactoring (BinaryPair, RsmDfa, RsmSymbol)
+# Detailed Plan: Task 128 — Property-Based Equivalence Tests
 
 ## Goal
-1. Replace `Nonterminal<'nt> * Nonterminal<'nt>` tuples in Valiant with named struct `BinaryPair<'nt>`
-2. Define type alias `RsmDfa<'t,'nt>` and use consistently in RSM modules
-3. Make `RsmSymbol` consistent with `Symbol` by removing `[<RequireQualifiedAccess>]`
+Add property-based equivalence tests for:
+1. `toCnf` language preservation
+2. `FirstFollow` correctness against brute-force derivation
+3. NFA→DFA language preservation
+4. `AutomatonDot` output parseability
+5. `RsmBuilder` output computability
+6. Fix `BooleanDecompositionTests` property test
 
 ## Steps
 
-### 1. Define `BinaryPair<'nt>` struct in Grammar.fs
-- Add `[<Struct>] type BinaryPair<'nt> = { left: Nonterminal<'nt>; right: Nonterminal<'nt> }` near Nonterminal definition
+### 1. toCnf language preservation (GrammarTests.fs)
+- Generate random grammars using FsCheck
+- Convert to CNF using `Grammar.toCnf`
+- Generate random strings up to length N
+- Check same strings are accepted by both original and CNF grammars
+- Use CYK for checking acceptance (ensures correctness)
 
-### 2. Update Valiant.fs
-- Replace all `Nonterminal<'nt> * Nonterminal<'nt>` tuple usages with `BinaryPair<'nt>`
-- Pattern matches: `(left, right)` → `{ left = left; right = right }`
-- Construction: `(nt1, nt2)` → `{ left = nt1; right = nt2 }`
-- Dictionary keys and list types
+### 2. FirstFollow correctness (FirstFollowTests.fs)
+- Generate random grammars
+- Compute FIRST sets using `FirstFollow.firstK`
+- Verify against brute-force: enumerate all derivable prefixes up to length k
+- Verify FOLLOW: enumerate all strings where nonterminal appears in sentential form
 
-### 3. Define `RsmDfa<'t,'nt>` type alias in RSM.fs
-- Add `type RsmDfa<'t,'nt when 't: comparison and 'nt: comparison> = DFA<RsmSymbol<'t,'nt>, int>`
+### 3. NFA→DFA language preservation (AutomatonTests.fs)
+- Generate random NFAs using FsCheck
+- Convert to DFA using `Automaton.toDfa`
+- Generate random strings over NFA alphabet
+- Check both NFA and DFA give same accept/reject results
 
-### 4. Update RsmBlock and RsmBuilder to use RsmDfa
-- `RsmBlock.dfa: DFA<RsmSymbol<'t,'nt>, int>` → `RsmBlock.dfa: RsmDfa<'t,'nt>`
-- `EbnfParser.fs` — update DFA<RsmSymbol<...>, int> references to RsmDfa
-- Any other files using DFA<RsmSymbol<...>, int>
+### 4. AutomatonDot output parseability (AutomatonVisualizationTests.fs)
+- Generate random NFAs/DFAs using FsCheck
+- Render to DOT using `AutomatonDot`
+- Verify DOT output is syntactically valid (balanced braces, correct keyword usage)
 
-### 5. Remove `[<RequireQualifiedAccess>]` from RsmSymbol
-- In RSM.fs: remove the attribute
-- Update all pattern matches that use qualified `RsmSymbol.RTerm`/`RsmSymbol.RNonterm` → unqualified `RTerm`/`RNonterm`
+### 5. RsmBuilder output computability (RSMTests.fs)
+- Generate random EBNF-like RSM text
+- Build RSM using `RsmBuilder.buildRSMFromText`
+- Verify structure: blocks match input, DFAs are deterministic, etc.
 
-### 6. Build, format, test
+### 6. Fix BooleanDecompositionTests property test
+- Add assertion that non-empty matrix input produces non-empty decomposition Map
 
 ## Files to modify
-- `src/FLPQ.Languages/Grammar.fs` — add BinaryPair struct
-- `src/FLPQ.Languages/Valiant.fs` — replace tuples with BinaryPair
-- `src/FLPQ.Languages/RSM.fs` — RsmDfa alias, RsmSymbol [<RQA>] removal
-- `src/FLPQ.Languages/EbnfParser.fs` — use RsmDfa, update RsmSymbol patterns
-- Any other files referencing RsmSymbol qualified or DFA<RsmSymbol<...>, int>
+- `tests/FLPQ.Languages.Tests/GrammarTests.fs` — toCnf preservation
+- `tests/FLPQ.Languages.Tests/FirstFollowTests.fs` — FirstFollow correctness
+- `tests/FLPQ.Languages.Tests/AutomatonTests.fs` — NFA→DFA preservation
+- `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs` — AutomatonDot parseability
+- `tests/FLPQ.Languages.Tests/RSMTests.fs` — RsmBuilder computability
+- `tests/FLPQ.LinearAlgebra.Tests/BooleanDecompositionTests.fs` — fix property test
