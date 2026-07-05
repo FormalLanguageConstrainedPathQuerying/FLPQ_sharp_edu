@@ -19,7 +19,6 @@
     <Compile Include="LLStepsGoldenTests.fs" />
     <Compile Include="LRStepsGoldenTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
-    <Compile Include="CliSummaryTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -67,7 +66,6 @@
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
-    <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
     <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
   </ItemGroup>
 

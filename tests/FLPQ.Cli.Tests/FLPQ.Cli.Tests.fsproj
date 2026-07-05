@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AlgorithmTypesTests.fs" />
+    <Compile Include="HelpersTests.fs" />
+    <Compile Include="SummaryTests.fs" />
+    <Compile Include="ErrorPathTests.fs" />
+    <Compile Include="CykRunnerTests.fs" />
+    <Compile Include="ValiantRunnerTests.fs" />
+    <Compile Include="LLRunnerTests.fs" />
+    <Compile Include="LRRunnerTests.fs" />
+    <Compile Include="CliSummaryTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FSharpPlus" Version="1.9.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\data\example_grammar.bnf">
+      <Link>example_grammar.bnf</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_input.txt">
+      <Link>example_input.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_lr_grammar.bnf">
+      <Link>example_lr_grammar.bnf</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_lr_input.txt">
+      <Link>example_lr_input.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
