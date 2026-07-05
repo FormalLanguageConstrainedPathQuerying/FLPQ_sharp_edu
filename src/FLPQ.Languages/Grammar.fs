@@ -125,6 +125,10 @@ module Grammar =
                 | _ -> None))
         |> Set.ofList
 
+    /// Check whether the start symbol of a CNF grammar can produce epsilon.
+    let isEpsilonAccepted (cnf: Grammar<'t, 'nt>) : bool =
+        cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
+
     let private computeNullable (rules: Rule<'t, 'nt> list) : Set<Nonterminal<'nt>> =
         let rec loop (current: Set<Nonterminal<'nt>>) =
             let newNullable =

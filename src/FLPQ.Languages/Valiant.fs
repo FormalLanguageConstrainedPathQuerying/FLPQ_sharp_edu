@@ -104,30 +104,27 @@ module Valiant =
         (tasks: (Submatrix * Submatrix * Submatrix) list)
         (pairs: (Nonterminal<'nt> * Nonterminal<'nt>) list)
         : unit =
-        for (mTarget, m1, m2) in tasks do
-            for pair in pairs do
-                let leftNt, rightNt = pair
+        if List.isEmpty pairs then
+            ()
+        else
+            for (mTarget, m1, m2) in tasks do
+                for pair in pairs do
+                    let leftNt, rightNt = pair
 
-                let leftSlice =
-                    match tByNt.TryGetValue leftNt with
-                    | true, mat -> extractSlice mat m1
-                    | _ -> Matrix.init m1.Size m1.Size false
+                    let leftSlice =
+                        match tByNt.TryGetValue leftNt with
+                        | true, mat -> extractSlice mat m1
+                        | _ -> Matrix.init m1.Size m1.Size false
 
-                let rightSlice =
-                    match tByNt.TryGetValue rightNt with
-                    | true, mat -> extractSlice mat m2
-                    | _ -> Matrix.init m2.Size m2.Size false
+                    let rightSlice =
+                        match tByNt.TryGetValue rightNt with
+                        | true, mat -> extractSlice mat m2
+                        | _ -> Matrix.init m2.Size m2.Size false
 
-                let product = LinearAlgebra.mxm leftSlice rightSlice (&&) (||) false
+                    let product = LinearAlgebra.mxm leftSlice rightSlice (&&) (||) false
 
-                let pairMatrix =
-                    match pByPair.TryGetValue pair with
-                    | true, mat -> mat
-                    | _ ->
-                        let mat = pByPair.Values |> Seq.head
-                        mat
-
-                writeSlice pairMatrix mTarget product
+                    let pairMatrix = pByPair.[pair]
+                    writeSlice pairMatrix mTarget product
 
     let private recomposeStep
         (allNt: Nonterminal<'nt> list)
@@ -386,9 +383,7 @@ module Valiant =
         let steps = parseWithTrace freshNonterminal g terminals
 
         if List.isEmpty steps then
-            let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
-
+            let epsAccepted = Grammar.isEpsilonAccepted cnf
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
@@ -409,55 +404,32 @@ module Valiant =
         : ModifiedValiantTraceStep<'nt> list =
         let cnf = Grammar.toCnf freshNonterminal g
         let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
-        let n = tokensArr.Length
-        let paddedN = nextPowerOfTwo (n + 1) - 1
-        let tableSize = paddedN + 1
-
-        let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
-
-        let terminalRules = terminalRulesFromGrammar cnf
-        let binaryRules = binaryRulesFromGrammar cnf
-        let pairs = binaryRules |> List.map snd |> List.distinct
-
-        let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
-
-        let initMatrix = Matrix.init tableSize tableSize (Set.empty: Set<Nonterminal<'nt>>)
-
-        for i in 0 .. tokensArr.Length - 1 do
-            match Map.tryFind tokensArr.[i] terminalRules with
-            | Some nts ->
-                for nt in nts do
-                    initMatrix.data.[i, i + 1] <- Set.add nt initMatrix.data.[i, i + 1]
-            | None -> ()
-
-        let initDecomp = BooleanDecomposition.decompose initMatrix
-
-        for nt in allNt do
-            match Map.tryFind nt initDecomp with
-            | Some mat -> tByNt.[nt] <- mat
-            | None -> tByNt.[nt] <- Matrix.init tableSize tableSize false
-
-        let pByPair =
-            System.Collections.Generic.Dictionary<Nonterminal<'nt> * Nonterminal<'nt>, Matrix<bool>>()
-
-        for pair in pairs do
-            pByPair.[pair] <- Matrix.init tableSize tableSize false
-
-        let recomposeTable () =
-            let decompMap =
-                allNt
-                |> List.map (fun nt ->
-                    match tByNt.TryGetValue nt with
-                    | true, mat -> (nt, mat)
-                    | _ -> (nt, Matrix.init tableSize tableSize false))
-                |> Map.ofList
-
-            let fullMatrix = BooleanDecomposition.recompose decompMap
-            Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
 
         if tokensArr.Length = 0 then
             []
         else
+            let init = initValiant cnf tokensArr
+            let tByNt = init.tByNt
+            let pByPair = init.pByPair
+            let allNt = init.allNt
+            let tableSize = init.tableSize
+            let n = init.n
+            let terminalRules = init.terminalRules
+            let binaryRules = init.binaryRules
+            let pairs = init.pairs
+
+            let recomposeTable () =
+                let decompMap =
+                    allNt
+                    |> List.map (fun nt ->
+                        match tByNt.TryGetValue nt with
+                        | true, mat -> (nt, mat)
+                        | _ -> (nt, Matrix.init tableSize tableSize false))
+                    |> Map.ofList
+
+                let fullMatrix = BooleanDecomposition.recompose decompMap
+                Matrix.create n n (fun ri rj -> fullMatrix.data.[ri, rj + 1])
+
             let mutable steps = []
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
 
@@ -491,9 +463,7 @@ module Valiant =
         let steps = parseModifiedWithTrace freshNonterminal g terminals
 
         if List.isEmpty steps then
-            let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
-
+            let epsAccepted = Grammar.isEpsilonAccepted cnf
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else

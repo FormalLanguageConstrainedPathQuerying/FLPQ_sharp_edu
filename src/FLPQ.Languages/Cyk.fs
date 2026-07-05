@@ -140,7 +140,7 @@ module Cyk =
         let cnf = Grammar.toCnf freshNonterminal g
 
         if terminals.IsEmpty then
-            cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
+            Grammar.isEpsilonAccepted cnf
         else
             let table = cykTable cnf terminals
             isAccepted cnf table
@@ -154,9 +154,7 @@ module Cyk =
         let cnf = Grammar.toCnf freshNonterminal g
 
         if terminals.IsEmpty then
-            let epsAccepted =
-                cnf.rules |> List.exists (fun r -> r.lhs = cnf.start && Rhs.isEpsilon r.rhs)
-
+            let epsAccepted = Grammar.isEpsilonAccepted cnf
             let emptyResult: ParsingTable<'nt> = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
