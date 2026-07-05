@@ -50,7 +50,7 @@ module FactTests =
                 (set [ 0 ])
                 (set [ 0 ])
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
         Assert.True(Dfa.stateCount dfa > 1)
 
     [<Fact>]
@@ -63,7 +63,7 @@ module FactTests =
                 (set [ 0 ])
                 (set [ 2 ])
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
         Assert.Equal(0, dfa.startState)
 
     [<Fact>]
@@ -100,7 +100,7 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
 
         [<Fact>]
         let ``NFA accepts a`` () = Assert.True(Nfa.accept nfa [ T "a" ])
@@ -130,7 +130,7 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions [ 0 ] [ (0, "a", 0) ] Set.empty (set [ 0 ]) (set [ 0 ])
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
 
         [<Fact>]
         let ``NFA accepts empty`` () = Assert.True(Nfa.accept nfa [])

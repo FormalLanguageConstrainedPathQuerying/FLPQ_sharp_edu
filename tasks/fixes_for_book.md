@@ -11,3 +11,7 @@
 **Impact**: All Arroyuelo RPQ results must be verified after this fix. The bug only manifests for graphs with paths of length 3+ where no alternative shorter path exists.
 
 **Book reference**: Chapter 11, 03_Arroyuelo.tex. The book should describe the correct transitive closure algorithm: compute `(I+M)^n` by squaring `(I+M)` ceil(log₂(n)) times.
+
+## buildLR0/buildLR1 Already Deduplicated (Task 119)
+
+**Note**: Task 119 mentions deduplicating `buildLR0`/`buildLR1` (~60 duplicated lines) by extracting a common BFS framework. The implementation already has the `buildLR` helper function (parameterized by closure and item construction) which is a thin shared layer over the generic `buildAutomaton` function. `buildLR0` and `buildLR1` are already thin wrappers (~20 lines each) over `buildLR`. No further deduplication is needed here.

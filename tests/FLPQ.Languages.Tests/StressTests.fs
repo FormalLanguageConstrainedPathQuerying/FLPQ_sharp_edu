@@ -83,7 +83,7 @@ module NfaToDfaStress =
         let nfa =
             Nfa.fromTransitions states transitions Set.empty (Set.singleton 0) (Set.singleton 49)
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
         Assert.True(Dfa.stateCount dfa > 0)
 
     [<Fact>]
@@ -97,7 +97,7 @@ module NfaToDfaStress =
         let nfa =
             Nfa.fromTransitions states transitions epsTransitions (Set.singleton 0) (Set.singleton (n - 1))
 
-        let dfa = Nfa.toDfa nfa
+        let dfa = Automaton.toDfa nfa
         Assert.True(Dfa.stateCount dfa > 0)
 
     [<Properties(Arbitrary = [| typeof<StressNfaGenerators> |], MaxTest = 5)>]
@@ -106,7 +106,7 @@ module NfaToDfaStress =
         [<Property>]
         [<Trait("Category", "Stress")>]
         let ``toDfa terminates for large random NFAs`` (nfa: NFA<string, int>) =
-            let dfa = Nfa.toDfa nfa
+            let dfa = Automaton.toDfa nfa
             Dfa.stateCount dfa > 0
 
 module LRStress =

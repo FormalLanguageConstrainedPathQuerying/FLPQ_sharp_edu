@@ -1,116 +1,129 @@
 
-# Global Plan: Tasks 114--118
+# Global Plan: Tasks 119--121
 
 ## Task Summary
 
 | ID | Description | Type | Dependencies |
-|----|-------------|------|-------------|
-| 114 | Create shared `Generators.fs` module for FsCheck generators. Consolidate from 10 files. Create shared test-utility project `FLPQ.TestUtilities`. | Refactor + New project | None |
-| 115 | Extend RPQ cross-algorithm equivalence property tests to cover complex regex patterns (RStar, RAlt, RSeq, epsilon, multi-symbol). Use FsCheck generators. | Test | 114 |
-| 116 | Add dedicated unit tests for `Tokenizer.fs`. Cover: empty string, whitespace-only, multi-character terminals, edge cases. Property-based tests with FsCheck-generated strings. | Test | 114 |
-| 117 | Create `FLPQ.Cli.Tests` project and add to `FLPQ.slnx`. Move `CliSummaryTests.fs` from `FLPQ.Printers.Tests`. Add unit tests for CLI modules. Remove reverse dependency. | New project + Test | 114 |
-| 118 | Add large-input stress tests across all algorithm families (CYK length 50+, Valiant 20+ NTs, NFA→DFA 30+ states, RPQ 50+ vertices, LR 100+ states). FsCheck generators with higher bounds. | Test | 114 |
+|----|-------------|------|--------------|
+| 119 | Deduplicate automaton infrastructure: shared `alphabet`, reuse `buildAutomaton` for `toDfa`, deduplicate `buildLR0`/`buildLR1` BFS | Refactor | None |
+| 120 | Reuse LR automaton in CLI runners — return automaton from table builders, use in `LRRunner` | Refactor | 119 (modified table builders + automaton types) |
+| 121 | Fix naming and style: rename misspelled functions, fix `LRSymbol` collision, params consistency, rename `Submatrix.A/B`, remove unused `aug`, remove magic 10000 | Refactor | 119, 120 (touches same files after refactoring) |
 
 ## Dependencies Graph
 
 ```
-Task 114 (Shared Generators.fs + FLPQ.TestUtilities) ── FOUNDATION for all other tasks
-    ├── Task 115 (RPQ regex property tests)
-    ├── Task 116 (Tokenizer tests)
-    ├── Task 117 (CLI tests project)
-    └── Task 118 (Stress tests)
+Task 119 (Deduplicate automaton infrastructure)
+    └── Task 120 (Reuse LR automaton in CLI — depends on refactored table builders)
+    └── Task 121 (Fix naming/style — independent but best done after structural refactoring)
 ```
 
-Task 114 must be done first. Tasks 115-118 can be done in any order after 114 (they are independent of each other).
+Tasks 120 and 121 could theoretically be independent, but doing them after 119 avoids merge conflicts on `LRParser.fs` and `Automaton.fs`.
+
+## Execution Order
+
+1. **Task 119** — Deduplicate automaton infrastructure
+2. **Task 120** — Reuse LR automaton in CLI runners
+3. **Task 121** — Fix naming and style issues
 
 ## Potential Conflicts
 
 | Task | Files Modified | Conflicts With |
 |------|---------------|----------------|
-| 114 | New: `tests/FLPQ.TestUtilities/` (project, Generators.fs). Modify: all 6 test project `.fsproj` files (add ProjectReference), all 10 source files that define `MyGen`/`MyArb`. Modify: `FLPQ.slnx`. | All tasks (they depend on 114) |
-| 115 | `tests/FLPQ.RPQ.Tests/RPQTests.fs` | None (RPQ-specific) |
-| 116 | `tests/FLPQ.Languages.Tests/TokenizerTests.fs` (new) | None (new file) |
-| 117 | New: `tests/FLPQ.Cli.Tests/`. Modify: `FLPQ.slnx`, `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj`, `tests/FLPQ.Printers.Tests/CliSummaryTests.fs` (removed). | None (removes deps from Printers.Tests, adds new project) |
-| 118 | Multiple existing test files — each gets new stress test module or file. `tests/FLPQ.TestUtilities/Generators.fs` (extended with high-bound generators). | 114 (extends Generators) |
-
-## Execution Order
-
-1. **Task 114** — Shared Generators.fs + FLPQ.TestUtilities (foundation)
-2. **Tasks 115, 116, 117, 118** — can be done in parallel after 114
-
-Recommended: 114 → 115 → 116 → 117 → 118 (linear) to minimize context switching.
+| 119 | `src/FLPQ.Languages/Automaton.fs`, `src/FLPQ.Languages/LRParser.fs` | 120 (same files), 121 (naming in same files) |
+| 120 | `src/FLPQ.Languages/LRParser.fs`, `src/FLPQ.Cli/LRRunner.fs` | 121 (naming in LRParser.fs) |
+| 121 | `src/FLPQ.Printers/LRAutomatonTikz.fs`, `src/FLPQ.Languages/LRParser.fs`, `src/FLPQ.Languages/VisualizationTypes.fs`, `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Printers/ValiantTeX.fs`, `src/FLPQ.Printers/GrammarTeX.fs`, `src/FLPQ.Printers/MatrixTeX.fs`, `src/FLPQ.Printers/LLTableTeX.fs`, `src/FLPQ.GraphAnalysis/Graph.fs`, `src/FLPQ.LinearAlgebra/BooleanDecomposition.fs`, `src/FLPQ.Cli/LRRunner.fs`, `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs`, docs | Depends on 119+120 refactored state |
 
 ## Shared Infrastructure
 
-### Task 114: FLPQ.TestUtilities project
+### Task 119: Deduplicate automaton infrastructure
 
-New test-utility project `tests/FLPQ.TestUtilities/` referenced by all existing test projects.
+**1. Shared `alphabet` function:**
+- Current: `Nfa.alphabet` (lines 74-87) and `Dfa.alphabet` (lines 323-336) — identical code
+- Extract into a private helper in `Automaton.fs` taking `Matrix<Option<NonEmptySet<AutomatonSymbol<'t>>>>` 
+- Both `Nfa.alphabet` and `Dfa.alphabet` become one-liners calling the helper
 
-**Generators.fs** will contain:
-- `MatrixGenerators` (from `MatrixTests.fs`): `Matrix<int>`, same-dim pair
-- `LinearAlgebraGenerators` (from `LinearAlgebraTests.fs`): square `Matrix<int>`, compatible dims pair
-- `SetMatrixGenerators` (from `BooleanDecompositionTests.fs`): `Matrix<Set<int>>`
-- `RandomGraphGenerators` (from `RandomGraphGenerators.fs`): `Matrix<bool> * int[]`
-- `RPQGenerators` (from `RPQTests.fs`): `RPQTestData`
-- `StringGenerators` (from `TestGrammars.fs`): `AbString`, `AString`, `ExprString`
-- `IntersectionGenerators` (from `AutomatonTests.fs`): `NfaArb`, `StringArb`
-- Remove `MyGen`/`MyArb` duplication from 10 files — consolidate to single `module MyGen = FsCheck.FSharp.Gen` / `module MyArb = FsCheck.FSharp.Arb` in `Generators.fs`
-- Remove dead unused imports from `EbnfParserTests.fs` and `RsmToGrammarTests.fs`
+**2. Replace `Dfa.alphabet` temporary-NFA:**
+- `Dfa.alphabet` currently duplicates the NFA iteration pattern
+- After step 1, this is resolved
 
-**FLPQ.TestUtilities.fsproj**: references FsCheck.Xunit, no source deps needed in most cases. May reference FLPQ.Languages/FLPQ.LinearAlgebra/FLPQ.GraphAnalysis if generator types need those.
+**3. Replace `Nfa.toDfa` with `buildAutomaton`:**
+- Both implement identical worklist-based state-space exploration:
+  - Worklist queue with deduplication
+  - For each state, for each symbol, compute transition target, assign new index
+  - Final states determined by predicate
+- Create adapter functions: `getSymbols` = `alphabet nfa`, `goto` = `moveSet`, `isAcceptState` = checks intersection with final states
+- Note: `buildAutomaton` uses `Dfa.fromTransitions` while `toDfa` manually builds via `Graph.fromEdges` and `buildMatrix` — need to check equivalence
+- The `Set<int>` state type in DFA (from `toDfa`) vs generic `Set<'item>` in `buildAutomaton` — need adapter
 
-### Task 115: RPQ regex property tests
+**4. Deduplicate `buildLR0`/`buildLR1`:**
+- Current: `buildLR0` (lines 219-238) and `buildLR1` (lines 240-262) have ~60 duplicated lines
+- Both delegate to `buildLR` helper (already exists!) which delegates to `buildAutomaton`
+- Wait — the agent reports they already share `buildLR` (lines 202-217). The ~60 lines is the helper `buildLR` itself.
+- Actually looking again: `buildLR0` and `buildLR1` are thin wrappers (20 lines each) over `buildLR`. The near-identical portion is the `mkStartItem`, `mkCompleteItem`, `dotOf`, `rhsOf` lambda construction pattern.
+- Already well-factored! Task says "extracting a common BFS framework parameterized by closure function and item construction" — this is already done via `buildLR` + `buildAutomaton`.
+- Need to verify this matches what the task intends; may just need minimal cleanup.
 
-- Generate random regex patterns using FsCheck: `Regexp<string, string>` 
-- Convert regex to DFA (ArroyueloRPQ internally does this or we use `Regexp.toDfa` equivalent)
-- Generate random NFA graphs (reuse `RPQGenerators`)
-- Property test: Belyanin(DFA, NFA) ≡ Arroyuelo(regex, NFA)
-- Property test: Belyanin(DFA, NFA) ≡ Kronecker(DFA, NFA)  
-- Property test: Arroyuelo(regex, NFA) ≡ Kronecker(DFA, NFA)
-- Need a generator for random regex patterns over alphabet `{a, b}`
+### Task 120: Reuse LR automaton in CLI
 
-### Task 116: Tokenizer tests
+- Modify `LRTable<'t, 'nt>` to include an optional `automaton` field (or add to return type)
+- Or: return a tuple `(LRTable * DFA<...>)` from table builders
+- `buildLR0Table` and `buildSLR1Table` already call `LRAutomaton.buildLR0 aug` internally
+- `buildCLR1Table` already calls `LRAutomaton.buildLR1 aug` internally
+- In `LRRunner`: currently builds automaton a second time for rendering — instead reuse from table builder
+- Need to decide: return type — tuple vs extended LRTable
 
-New file: `tests/FLPQ.Languages.Tests/TokenizerTests.fs`
+Decision: Add a field to `LRTable` with the automaton. Problem: `LRTable` is generic only over `'t, 'nt`, but the automaton DFA has different state types for LR0 vs LR1 (`Set<LR0Item>` vs `Set<LR1Item>`). Options:
+a) Make `LRTable` generic over `'state` as well: `LRTable<'t, 'nt, 'state>`
+b) Use a discriminated union for the automaton: `type LRAutomaton = LR0 of DFA<Symbol<'t,'nt>, Set<LR0Item<'t,'nt>>> | LR1 of DFA<Symbol<'t,'nt>, Set<LR1Item<'t,'nt>>>`
+c) Return tuple from builders, don't modify LRTable
 
-Property-based test categories:
-- `tokenizeStrings`: empty string → `[]`, whitespace-only → `[]`, single/multi-char terminals, leading/trailing spaces
-- `tokenizeGen` with identity classifier → returns symbols
-- `tokenize`: roundtrip property (tokenize then reconstruct)
-- `tokenizeTerminals`: terminal extraction
-- Edge cases: null, very long strings, special characters in terminals
-- Use FsCheck-generated strings
+Option (c) is simplest and least invasive. Let's check what the task says: "Modify table-construction functions to return the built automaton as part of LRTable (or a separate return value)". OK, separate return value (tuple) is fine.
 
-### Task 117: FLPQ.Cli.Tests
+### Task 121: Fix naming and style
 
-New project: `tests/FLPQ.Cli.Tests/`
+**1. Rename `lr0AutomatontoTikz` / `lr1AutomatontoTikz`:**
+- Change to `lr0AutomatonToTikz` / `lr1AutomatonToTikz`
+- Update: `LRAutomatonTikz.fs`, `LRRunner.fs`, `AutomatonVisualizationTests.fs`, `automaton-viz.md`
+- Also rename module-level reference in docs
 
-Files:
-- `CliSummaryTests.fs` (moved from Printers.Tests)
-- `CykRunnerTests.fs`: tests for CykRunner logic
-- `ValiantRunnerTests.fs`: tests for ValiantRunner
-- `LLRunnerTests.fs`: tests for LLRunner
-- `LRRunnerTests.fs`: tests for LRRunner
-- `HelpersTests.fs`: tests for Helpers (readIfExists, collectSteps, naturalSortKey, cleanOutputDir)
-- `AlgorithmTypesTests.fs`: tests for Algorithm parsing
-- `ErrorPathTests.fs`: invalid grammar file, missing input file, bad algorithm name, bad lookahead, empty output directory
+**2. Fix `LRSymbol` collision:**
+- `LRSymbol` is both a DU case of `LRStackFrame` and a module name
+- Rename module to `LRSymbolHelpers`
+- Update: `VisualizationTypes.fs` (definition), any usage of `LRSymbol.symbol`/`LRSymbol.tree`
+- Find all usages of `module LRSymbol` qualified access
 
-Remove `CliSummaryTests.fs` from Printers.Tests.
-Remove `FLPQ.Cli` project reference from Printers.Tests .fsproj.
+**3. Make `LRAutomatonTikz` consistent with `AutomatonTikz.dfaToTikz`:**
+- `dfaToTikz` takes: `labelPrinter`, `stateVisualizer`, `shape`, `dfa`
+- `lr0AutomatonToTikz` currently takes: `terminalPrinter`, `nonterminalPrinter`, `aug`, `dfa`
+- Task says: accept `labelPrinter`/`stateVisualizer`/`shape` parameters
+- Remove `aug` (unused)
 
-### Task 118: Stress tests
+**4. Rename `isCompleted` → `isCompletedLR0`, `isCompleted1` → `isCompletedLR1`:**
+- In `LRParser.fs` lines 268, 270
+- Update all call sites in `buildLR0Table`, `buildSLR1Table`, `buildCLR1Table`
 
-Large-input test categories across test projects:
+**5. Replace single-letter params:**
+- `g` → `grammar` in `GrammarTeX.fs` (3 functions)
+- `m` → `matrix` in `BooleanDecomposition.fs` (2 functions)
+- `m` → `matrix` in `MatrixTeX.fs` (2 functions)
+- `g` → `graph` in `Graph.fs` (12 functions)
+- `g` → `grammar` in `LLTableTeX.fs` (1 function)
 
-1. **CYK**: Input length 50-200, verify acceptance matches small-input reference. Verify termination < 30s.
-2. **Valiant**: Grammars with 20-50 nonterminals, input length 30-100. Verify termination and correctness.
-3. **NFA→DFA**: NFAs with 30-100 states, verify DFA preserves language (random strings).
-4. **RPQ**: Graphs with 50-200 vertices, regex/DFA queries. Verify all three algorithms match.
-5. **LR**: Grammars producing 100-500 automaton states. Verify parsing correctness.
-6. **Matrix operations**: 200×200 matrices with mxm, kron. Verify termination.
+**6. Rename `Submatrix.A`/`B` → `row`/`col`:**
+- `Valiant.fs` type definition and all usage
+- `ValiantTeX.fs` all usage
+- `ValiantTests.fs` test usage
+- `docs/valiant.md`
 
-Generator bounds: use 50-200 instead of current 5-15. Each stress test verifies termination within reasonable time (30s) and correctness.
+**7. Remove unused `aug` param:**
+- From `lr0AutomatonToTikz` and `lr1AutomatonToTikz` signatures
+- Update all call sites to remove the arg
 
-## Detailed Task Plans
+**8. Remove magic number 10000:**
+- In `LRParser.parseWithSteps` line 485
+- Replace with named constant or just remove (infinite loop should be handled differently, or keep a well-named constant)
 
-See `detailed_plan.md` for the current task's detailed plan.
+**Equivalence checks:**
+- Task 119: NFA→DFA must produce identical DFA; LR0/LR1 automata unchanged
+- Task 120: LR parsing results identical
+- Task 121: Pure renames, all tests must pass

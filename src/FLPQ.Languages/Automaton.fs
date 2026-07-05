@@ -34,6 +34,21 @@ type DFA<'t, 's when 't: comparison> =
 
 module Nfa =
 
+    let collectAlphabet (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) : Set<'t> =
+        let mutable result = Set.empty
+
+        for i in 0 .. transitions.rows - 1 do
+            for j in 0 .. transitions.cols - 1 do
+                match transitions.data.[i, j] with
+                | Some nes ->
+                    for label in NonEmptySet.toSeq nes do
+                        match label with
+                        | ATerm t -> result <- Set.add t result
+                        | AEpsilon -> ()
+                | None -> ()
+
+        result
+
     let buildMatrix
         (n: int)
         (transitionsList: (int * AutomatonLabel<'t> * int) list)
@@ -71,20 +86,7 @@ module Nfa =
 
     let stateCount (a: NFA<'t, 's>) = Graph.vertexCount a.graph
 
-    let alphabet (a: NFA<'t, 's>) : Set<'t> =
-        let mutable result = Set.empty
-
-        for i in 0 .. a.transitions.rows - 1 do
-            for j in 0 .. a.transitions.cols - 1 do
-                match a.transitions.data.[i, j] with
-                | Some nes ->
-                    for label in NonEmptySet.toSeq nes do
-                        match label with
-                        | ATerm t -> result <- Set.add t result
-                        | AEpsilon -> ()
-                | None -> ()
-
-        result
+    let alphabet (a: NFA<'t, 's>) : Set<'t> = collectAlphabet a.transitions
 
     let move (a: NFA<'t, 's>) (stateIdx: int) (symbol: 't) : Set<int> =
         let mutable result = Set.empty
@@ -118,55 +120,6 @@ module Nfa =
 
     let moveSet (a: NFA<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
         stateIndices |> Set.toSeq |> Seq.collect (fun i -> move a i symbol) |> Set.ofSeq
-
-    /// Subset construction: convert NFA to DFA.
-    let toDfa (nfa: NFA<'t, 's>) : DFA<'t, Set<int>> =
-        let initialSubset = nfa.startStates
-
-        let mutable dfaStates: Set<int> list = [ initialSubset ]
-        let mutable dfaStateMap = Map.ofList [ (initialSubset, 0) ]
-        let mutable transitions: (int * 't * int) list = []
-        let mutable queue = [ initialSubset ]
-
-        while not (List.isEmpty queue) do
-            let currentSubset = queue.Head
-            let currentIdx = Map.find currentSubset dfaStateMap
-            queue <- queue.Tail
-
-            let syms = alphabet nfa
-
-            for sym in syms do
-                let targetSubset = moveSet nfa currentSubset sym
-
-                if not (Set.isEmpty targetSubset) then
-                    let targetIdx =
-                        match Map.tryFind targetSubset dfaStateMap with
-                        | Some idx -> idx
-                        | None ->
-                            let idx = List.length dfaStates
-                            dfaStates <- dfaStates @ [ targetSubset ]
-                            dfaStateMap <- Map.add targetSubset idx dfaStateMap
-                            queue <- queue @ [ targetSubset ]
-                            idx
-
-                    transitions <- (currentIdx, sym, targetIdx) :: transitions
-
-        let dfaFinalStates =
-            dfaStates
-            |> List.indexed
-            |> List.choose (fun (idx, subset) ->
-                if Set.intersect subset nfa.finalStates |> (not << Set.isEmpty) then
-                    Some idx
-                else
-                    None)
-            |> Set.ofList
-
-        { graph =
-            Graph.fromEdges
-                dfaStates
-                (buildMatrix dfaStates.Length (List.rev transitions |> List.map (fun (f, s, t) -> (f, ATerm s, t))))
-          startState = 0
-          finalStates = dfaFinalStates }
 
     /// Classical NFA acceptance with working set of configurations.
     /// Handles epsilon transitions via epsilon closure expansion.
@@ -320,20 +273,7 @@ module Dfa =
 
     let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.graph
 
-    let alphabet (a: DFA<'t, 's>) : Set<'t> =
-        let mutable result = Set.empty
-
-        for i in 0 .. a.transitions.rows - 1 do
-            for j in 0 .. a.transitions.cols - 1 do
-                match a.transitions.data.[i, j] with
-                | Some nes ->
-                    for label in NonEmptySet.toSeq nes do
-                        match label with
-                        | ATerm t -> result <- Set.add t result
-                        | AEpsilon -> ()
-                | None -> ()
-
-        result
+    let alphabet (a: DFA<'t, 's>) : Set<'t> = Nfa.collectAlphabet a.transitions
 
     let move (a: DFA<'t, 's>) (stateIdx: int) (symbol: 't) : int option =
         let mutable result = None
@@ -382,3 +322,60 @@ module Dfa =
             | None -> ok <- false
 
         ok && Set.contains state dfa.finalStates
+
+/// Generic BFS-based automaton construction.
+/// Explores all reachable states from a start set using a worklist algorithm.
+/// Parameterized by getSymbols and goto functions and an accept-state predicate.
+module Automaton =
+
+    /// Build a DFA from a set of start states, using BFS exploration.
+    /// getSymbols returns all outgoing symbols from a state.
+    /// goto computes the target state for a given symbol.
+    /// isAcceptState determines whether a state is final.
+    let buildAutomaton
+        (startItems: Set<'item>)
+        (getSymbols: Set<'item> -> 'sym list)
+        (goto: Set<'item> -> 'sym -> Set<'item>)
+        (isAcceptState: Set<'item> -> bool)
+        : DFA<'sym, Set<'item>> =
+        let mutable states = [ startItems ]
+        let mutable transitions: (int * 'sym * int) list = []
+        let mutable queue = [ startItems ]
+
+        while not (List.isEmpty queue) do
+            let state = queue.Head
+            let stateIdx = states |> List.findIndex (fun s -> s = state)
+            queue <- queue.Tail
+
+            let symbols = getSymbols state
+
+            for sym in symbols do
+                let target = goto state sym
+
+                if not (Set.isEmpty target) then
+                    let targetIdx =
+                        match states |> List.tryFindIndex (fun s -> s = target) with
+                        | Some idx -> idx
+                        | None ->
+                            let idx = List.length states
+                            states <- states @ [ target ]
+                            queue <- queue @ [ target ]
+                            idx
+
+                    transitions <- (stateIdx, sym, targetIdx) :: transitions
+
+        let finalStates =
+            states
+            |> List.indexed
+            |> List.choose (fun (idx, s) -> if isAcceptState s then Some idx else None)
+            |> Set.ofList
+
+        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
+
+    /// Subset construction: convert NFA to DFA using the generic buildAutomaton.
+    /// State labels in the resulting DFA are subsets of NFA state indices.
+    let toDfa (nfa: NFA<'t, 's>) : DFA<'t, Set<int>> =
+        let syms = Nfa.collectAlphabet nfa.transitions
+
+        buildAutomaton nfa.startStates (fun _ -> Set.toList syms) (Nfa.moveSet nfa) (fun subset ->
+            Set.intersect subset nfa.finalStates |> Set.isEmpty |> not)

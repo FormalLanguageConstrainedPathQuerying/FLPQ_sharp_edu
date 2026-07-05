@@ -144,46 +144,6 @@ module LRAutomaton =
         |> Set.map (fun item -> { item with dot = item.dot + 1 })
         |> (fun filtered -> closureLR1 rules filtered firstMap)
 
-    let private buildAutomaton
-        (startItems: Set<'item>)
-        (getSymbols: Set<'item> -> Symbol<'t, 'nt> list)
-        (goto: Set<'item> -> Symbol<'t, 'nt> -> Set<'item>)
-        (isAcceptState: Set<'item> -> bool)
-        : DFA<Symbol<'t, 'nt>, Set<'item>> =
-        let mutable states = [ startItems ]
-        let mutable transitions: (int * Symbol<'t, 'nt> * int) list = []
-        let mutable queue = [ startItems ]
-
-        while not (List.isEmpty queue) do
-            let state = queue.Head
-            let stateIdx = states |> List.findIndex (fun s -> s = state)
-            queue <- queue.Tail
-
-            let symbols = getSymbols state
-
-            for sym in symbols do
-                let target = goto state sym
-
-                if not (Set.isEmpty target) then
-                    let targetIdx =
-                        match states |> List.tryFindIndex (fun s -> s = target) with
-                        | Some idx -> idx
-                        | None ->
-                            let idx = List.length states
-                            states <- states @ [ target ]
-                            queue <- queue @ [ target ]
-                            idx
-
-                    transitions <- (stateIdx, sym, targetIdx) :: transitions
-
-        let finalStates =
-            states
-            |> List.indexed
-            |> List.choose (fun (idx, s) -> if isAcceptState s then Some idx else None)
-            |> Set.ofList
-
-        Dfa.fromTransitions states (List.rev transitions) 0 finalStates
-
     let private getSymbolsOf
         (dotOf: 'item -> int)
         (rhsOf: 'item -> Symbol<'t, 'nt> list)
@@ -214,7 +174,7 @@ module LRAutomaton =
         let startItems = closure (set [ startItem ])
         let getSymbols = getSymbolsOf dotOf rhsOf
         let isAcceptState state = Set.contains acceptItem state
-        buildAutomaton startItems getSymbols gotoFn isAcceptState
+        Automaton.buildAutomaton startItems getSymbols gotoFn isAcceptState
 
     /// Build the LR(0) automaton for an augmented grammar.
     /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
