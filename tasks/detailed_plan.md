@@ -1,101 +1,38 @@
-# Detailed Plan: Task 114 — Shared Generators.fs Module
+# Detailed Plan: Task 115 — RPQ Cross-Algorithm Property Tests with Complex Regex
 
 ## Goal
-Create a shared `Generators.fs` module in a new `FLPQ.TestUtilities` test project. Consolidate all FsCheck `Arbitrary`/`Gen` types into this module. Eliminate `MyGen`/`MyArb` duplication across 10 files.
+Extend RPQ property tests to cover complex regex patterns (RStar, RAlt, RSeq, epsilon, multi-symbol chains). Use FsCheck to generate random regex patterns and prove Belyanin ≡ Arroyuelo ≡ Kronecker.
 
 ## Steps
 
-### 1. Create `tests/FLPQ.TestUtilities/` project
-- Create project directory: `tests/FLPQ.TestUtilities/`
-- Create `FLPQ.TestUtilities.fsproj`: references `FsCheck.Xunit` (for Gen/Arb types), and source projects needed by generator types (FLPQ.Languages, FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.RPQ)
-- Create `Generators.fs` with consolidated generators and `module MyGen = FsCheck.FSharp.Gen` / `module MyArb = FsCheck.FSharp.Arb`
+### 1. Add regex generator to Generators.fs
+Add `RegexGenerators` class to `Generators.fs` that generates random `Regexp<string, string>` patterns (terminal-only, max depth 3-4).
 
-### 2. Consolidate generators into `Generators.fs`
-From each source file, move generator classes into `Generators.fs`:
+### 2. Add regexToDfa helper to RPQTests.fs
+Build a DFA from a regex using Brzozowski derivative-based construction (same algorithm as `RsmBuilder.buildBlockDfa` but outputs `DFA<string, int>` instead of `RsmBlock`).
 
-| Source File | Generator Class | Type Generated |
-|---|---|---|
-| `tests/FLPQ.LinearAlgebra.Tests/MatrixTests.fs` | `MatrixGenerators` | `Matrix<int>`, `Matrix<int> * Matrix<int>` |
-| `tests/FLPQ.LinearAlgebra.Tests/LinearAlgebraTests.fs` | `LinearAlgebraGenerators` | `Matrix<int>` (square), `Matrix<int> * Matrix<int>` (compatible) |
-| `tests/FLPQ.LinearAlgebra.Tests/BooleanDecompositionTests.fs` | `SetMatrixGenerators` | `Matrix<Set<int>>` |
-| `tests/FLPQ.GraphAnalysis.Tests/RandomGraphGenerators.fs` | `RandomGraphGenerators` | `Matrix<bool> * int[]` |
-| `tests/FLPQ.RPQ.Tests/RPQTests.fs` | `RPQGenerators` | `RPQTestData` |
-| `tests/FLPQ.Languages.Tests/TestGrammars.fs` | `AbStringGenerators`, `AStringGenerators`, `ExprStringGenerators` | `string` |
-| `tests/FLPQ.Languages.Tests/AutomatonTests.fs` | `IntersectionGenerators` | `NFA<string,int>`, `Terminal<string> list` |
+### 3. Extend RPQGenerators to include regex
+Add a combined generator `RegexAndGraph` that generates a regex + graph pair.
 
-The `RPQTestData` record must also move to `Generators.fs` (it's defined in RPQTests.fs alongside its generator).
+### 4. Add property tests
+Three property tests comparing each pair of algorithms:
+- Belyanin(DFA, NFA) ≡ Arroyuelo(regex, NFA)
+- Belyanin(DFA, NFA) ≡ Kronecker(DFA, NFA)
+- Arroyuelo(regex, NFA) ≡ Kronecker(DFA, NFA)
 
-### 3. Add to solution
-```sh
-dotnet sln FLPQ.slnx add tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj
-```
+Test for multiple sources (not just single source).
 
-### 4. Update all test projects' .fsproj files
-Add `<ProjectReference>` to `FLPQ.TestUtilities.fsproj` in each of the 6 test projects:
-- `FLPQ.Languages.Tests`
-- `FLPQ.LinearAlgebra.Tests`
-- `FLPQ.GraphAnalysis.Tests`
-- `FLPQ.Printers.Tests`
-- `FLPQ.RPQ.Tests`
-
-### 5. Update 10 source files that define `MyGen`/`MyArb`
-For each file:
-- Replace `module MyGen = FsCheck.FSharp.Gen` / `module MyArb = FsCheck.FSharp.Arb` with `open FLPQ.TestUtilities.Generators` (or just remove if the file moved its generators out)
-- Remove the generator class definitions (moved to Generators.fs)
-- Update `[<Properties(Arbitrary = [| typeof<MatrixGenerators> |])>]` references to use fully qualified path: `typeof<Generators.MatrixGenerators>` or add an `open` for the module
-- For `RPQTestData` record: import from Generators.fs
-
-### 6. Handle RPQTests.fs special case
-`RPQTests.fs` defines `RPQTestData` record AND `RPQGenerators` class. Both must move to Generators.fs.
-The `RPQTests.fs` must import `RPQTestData` and reference `Generators.RPQGenerators`.
-
-### 7. Handle TestGrammars.fs special cases
-`TestGrammars.fs` defines grammar values (grammar1, grammar2, etc.) AND generator classes. Only the generator classes move. The grammar values stay.
-
-### 8. Handle RandomGraphGenerators.fs
-This file ONLY contains the generator class. The file becomes empty after moving. Keep the file as a thin wrapper or remove it entirely (prefer removing and using Generators.fs directly).
-
-### 9. Remove dead imports
-- `EbnfParserTests.fs`: remove `module MyGen`/`module MyArb` (lines 11-12) — they are unused
-- `RsmToGrammarTests.fs`: remove `module MyGen`/`module MyArb` (lines 11-12) — they are unused
-
-### 10. Verify
-- `dotnet build FLPQ.slnx -c Debug`
+### 5. Verify
+- `dotnet build`
 - `dotnet test`
 - `dotnet fantomas .`
 
-## Files to create
-1. `tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj`
-2. `tests/FLPQ.TestUtilities/Generators.fs`
-
-## Files to modify
-1. `FLPQ.slnx` — add new project
-2. `tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj` — add ProjectReference
-3. `tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj` — add ProjectReference
-4. `tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj` — add ProjectReference
-5. `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` — add ProjectReference
-6. `tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj` — add ProjectReference
-7. `tests/FLPQ.LinearAlgebra.Tests/MatrixTests.fs` — remove MyGen/MyArb/MatrixGenerators, import from Generators
-8. `tests/FLPQ.LinearAlgebra.Tests/LinearAlgebraTests.fs` — remove MyGen/MyArb/LinearAlgebraGenerators, import from Generators
-9. `tests/FLPQ.LinearAlgebra.Tests/BooleanDecompositionTests.fs` — remove MyGen/MyArb/SetMatrixGenerators, import from Generators
-10. `tests/FLPQ.GraphAnalysis.Tests/RandomGraphGenerators.fs` — remove entire file (or make empty module redirecting to Generators)
-11. `tests/FLPQ.GraphAnalysis.Tests/MsBfsTests.fs` — remove MyGen/MyArb, update reference to Generators.RandomGraphGenerators
-12. `tests/FLPQ.RPQ.Tests/RPQTests.fs` — remove RPQTestData, RPQGenerators, MyGen/MyArb; import from Generators
-13. `tests/FLPQ.Languages.Tests/TestGrammars.fs` — remove MyGen/MyArb, AbStringGenerators, AStringGenerators, ExprStringGenerators; import from Generators
-14. `tests/FLPQ.Languages.Tests/AutomatonTests.fs` — remove MyGenAuto/MyArbAuto, IntersectionGenerators; import from Generators
-15. `tests/FLPQ.Languages.Tests/EbnfParserTests.fs` — remove unused MyGen/MyArb
-16. `tests/FLPQ.Languages.Tests/RsmToGrammarTests.fs` — remove unused MyGen/MyArb
-
 ## Design Decisions
 
-### Generator module naming
-All generator classes move into `Generators.fs` module. Each class keeps its original name (e.g., `MatrixGenerators`, `RPQGenerators`). The `MyGen`/`MyArb` aliases are defined once in `Generators.fs`.
+### Regex generator bounds
+- Depth: 0-3 (controls recursion depth)
+- Terminals: alphabet {a, b, c} for multi-symbol testing
+- Full coverage: RStar, RAlt, RSeq, REps, RTerm (no RNonterm for RPQ)
 
-### References for Generators.fs
-Generators that produce types from `FLPQ.LinearAlgebra`, `FLPQ.Languages`, `FLPQ.RPQ`, `FLPQ.GraphAnalysis` need project references to those projects. All can be added.
-
-### RandomGraphGenerators.fs fate
-This file becomes empty after consolidation. Keep the file as `module RandomGraphGenerators` that just re-exports from `FLPQ.TestUtilities.Generators` to avoid breaking references. Actually, just delete it since we'll update all references.
-
-### RPQTestData record
-Must move to Generators.fs since it's closely tied to RPQGenerators. RPQTests.fs imports it.
+### DFA construction
+Use Brzozowski derivatives: `Regexp.derive` already exists and is tested. States are regexes (modulo REmpty). Start state is the original regex. For each alphabet symbol, compute derivative → transition. Final states are nullable regexes.

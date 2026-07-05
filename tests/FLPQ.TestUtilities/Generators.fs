@@ -238,3 +238,84 @@ type IntersectionGenerators =
                 |> MyGen.map (fun chars -> chars |> List.map Terminal))
 
         MyArb.fromGen genString
+
+type RegexGenerators =
+
+    static member RegexPattern() : Arbitrary<Regexp<string, string>> =
+        let alphabet = [ Terminal "a"; Terminal "b"; Terminal "c" ]
+
+        let rec genExpr depth =
+            if depth <= 0 then
+                MyGen.frequency [ (2, MyGen.map RTerm (MyGen.elements alphabet)); (1, MyGen.constant REps) ]
+            else
+                MyGen.choose (0, 3)
+                |> MyGen.bind (fun choice ->
+                    match choice with
+                    | 0 -> MyGen.map RTerm (MyGen.elements alphabet)
+                    | 1 -> MyGen.map2 (fun l r -> RSeq(l, r)) (genExpr (depth - 1)) (genExpr (depth - 1))
+                    | 2 -> MyGen.map2 (fun l r -> RAlt(l, r)) (genExpr (depth - 1)) (genExpr (depth - 1))
+                    | _ -> MyGen.map RStar (genExpr (depth - 1)))
+
+        MyGen.choose (0, 3) |> MyGen.bind (fun d -> genExpr d) |> MyArb.fromGen
+
+type RegexAndGraph =
+    { regex: Regexp<string, string>
+      vertexCount: int
+      edges: (int * string * int) list
+      sources: int[] }
+
+type RegexAndGraphGenerators =
+
+    static member RegexAndGraph() : Arbitrary<RegexAndGraph> =
+        MyGen.choose (2, 6)
+        |> MyGen.bind (fun n ->
+            MyGen.choose (2, n * 2)
+            |> MyGen.bind (fun edgeCount ->
+                MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                |> MyGen.bind (fun fromList ->
+                    MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                    |> MyGen.bind (fun toList ->
+                        MyGen.listOfLength edgeCount (MyGen.elements [ "a"; "b" ])
+                        |> MyGen.bind (fun labelList ->
+                            MyGen.choose (1, n)
+                            |> MyGen.bind (fun k ->
+                                MyGen.listOfLength k (MyGen.choose (0, n - 1))
+                                |> MyGen.bind (fun sources ->
+                                    let genRegex =
+                                        let alphabet = [ Terminal "a"; Terminal "b" ]
+
+                                        let rec genExpr depth =
+                                            if depth <= 0 then
+                                                MyGen.frequency
+                                                    [ (3, MyGen.map RTerm (MyGen.elements alphabet))
+                                                      (1, MyGen.constant REps) ]
+                                            else
+                                                MyGen.choose (0, 3)
+                                                |> MyGen.bind (fun choice ->
+                                                    match choice with
+                                                    | 0 -> MyGen.map RTerm (MyGen.elements alphabet)
+                                                    | 1 ->
+                                                        MyGen.map2
+                                                            (fun l r -> RSeq(l, r))
+                                                            (genExpr (depth - 1))
+                                                            (genExpr (depth - 1))
+                                                    | 2 ->
+                                                        MyGen.map2
+                                                            (fun l r -> RAlt(l, r))
+                                                            (genExpr (depth - 1))
+                                                            (genExpr (depth - 1))
+                                                    | _ -> MyGen.map RStar (genExpr (depth - 1)))
+
+                                        MyGen.choose (0, 3) |> MyGen.bind (fun d -> genExpr d)
+
+                                    genRegex
+                                    |> MyGen.map (fun regex ->
+                                        let edges =
+                                            List.zip3 fromList labelList toList
+                                            |> List.filter (fun (f, _, t) -> f <> t)
+
+                                        { regex = regex
+                                          vertexCount = n
+                                          edges = edges
+                                          sources = Array.ofList sources }))))))))
+        |> MyArb.fromGen

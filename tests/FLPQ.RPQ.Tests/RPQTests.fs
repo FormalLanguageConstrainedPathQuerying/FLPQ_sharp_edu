@@ -264,3 +264,148 @@ module PropertyTests =
                             ok <- false
 
                 ok
+
+// --- Cross-algorithm property tests with random regex patterns (task 115) ---
+
+let private regexToDfa (regexp: Regexp<string, string>) : DFA<string, int> =
+    let terminals =
+        Regexp.symbols regexp
+        |> List.choose (fun s ->
+            match s with
+            | RsmSymbol.RTerm t -> Some t
+            | _ -> None)
+        |> List.distinct
+
+    let alphabet =
+        if List.isEmpty terminals then
+            [ Terminal "a" ]
+        else
+            terminals
+
+    let stateMap = System.Collections.Generic.Dictionary<Regexp<string, string>, int>()
+    let mutable transitions: (int * string * int) list = []
+    let mutable stateList: Regexp<string, string> list = []
+
+    let getStateId (r: Regexp<string, string>) =
+        match stateMap.TryGetValue r with
+        | true, id -> id
+        | false, _ ->
+            let id = stateList.Length
+            stateList <- r :: stateList
+            stateMap.[r] <- id
+            id
+
+    let startId = getStateId regexp
+    let stack = System.Collections.Generic.Stack<Regexp<string, string>>()
+    stack.Push regexp
+
+    while stack.Count > 0 do
+        let state = stack.Pop()
+
+        for (Terminal sym) in alphabet do
+            let deriv = Regexp.derive state (RsmSymbol.RTerm(Terminal sym))
+
+            match deriv with
+            | REmpty -> ()
+            | _ ->
+                if not (stateMap.ContainsKey deriv) then
+                    stack.Push deriv
+
+                let fromId = stateMap.[state]
+                let toId = getStateId deriv
+                transitions <- (fromId, sym, toId) :: transitions
+
+    let finalStates =
+        stateMap
+        |> Seq.choose (fun kvp -> if Regexp.nullable kvp.Key then Some kvp.Value else None)
+        |> Set.ofSeq
+
+    Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
+
+[<Properties(Arbitrary = [| typeof<RegexAndGraphGenerators> |])>]
+module RegexPropertyTests =
+
+    let private nfaWithSourcesRegex
+        (vCount: int)
+        (edges: (int * string * int) list)
+        (sources: int[])
+        : NFA<string, int> =
+        let states = [ 0 .. vCount - 1 ]
+        Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
+
+    [<Property>]
+    let ``Belyanin and Arroyuelo produce identical results with random regex`` (d: RegexAndGraph) =
+        if d.sources.Length = 0 then
+            true
+        else
+            let v = d.vertexCount
+
+            if v = 0 then
+                true
+            else
+                let source = min d.sources.[0] (v - 1)
+                let nfaBely = nfaWithSourcesRegex v d.edges [| source |]
+                let dfa = regexToDfa d.regex
+                let belyResult = BelyaninRPQ.evaluate dfa nfaBely
+
+                let nfaArro = nfaWithSourcesRegex v d.edges [| source |]
+                let arroResult = ArroyueloRPQ.evaluate nfaArro d.regex
+
+                let mutable ok = true
+
+                for j in 0 .. v - 1 do
+                    if belyResult.data.[0, j] <> arroResult.data.[0, j] then
+                        ok <- false
+
+                ok
+
+    [<Property>]
+    let ``Belyanin and Kronecker produce identical results with random DFA`` (d: RegexAndGraph) =
+        if d.sources.Length = 0 then
+            true
+        else
+            let v = d.vertexCount
+
+            if v = 0 then
+                true
+            else
+                let source = min d.sources.[0] (v - 1)
+                let nfa = nfaWithSourcesRegex v d.edges [| source |]
+                let dfa = regexToDfa d.regex
+                let belyResult = BelyaninRPQ.evaluate dfa nfa
+                let kronResult = KroneckerRPQ.evaluate dfa nfa
+
+                let mutable ok = true
+
+                for j in 0 .. v - 1 do
+                    if belyResult.data.[0, j] <> kronResult.data.[0, j] then
+                        ok <- false
+
+                ok
+
+    [<Property>]
+    let ``Arroyuelo and Kronecker produce identical results with random regex`` (d: RegexAndGraph) =
+        if d.sources.Length = 0 then
+            true
+        else
+            let v = d.vertexCount
+
+            if v = 0 then
+                true
+            else
+                let safeSources =
+                    d.sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
+
+                let nfa = nfaWithSourcesRegex v d.edges safeSources
+                let dfa = regexToDfa d.regex
+                let arroResult = ArroyueloRPQ.evaluate nfa d.regex
+                let kronResult = KroneckerRPQ.evaluate dfa nfa
+
+                let mutable ok = true
+
+                for i in 0 .. arroResult.rows - 1 do
+                    for j in 0 .. v - 1 do
+                        if arroResult.data.[i, j] <> kronResult.data.[i, j] then
+                            ok <- false
+
+                ok

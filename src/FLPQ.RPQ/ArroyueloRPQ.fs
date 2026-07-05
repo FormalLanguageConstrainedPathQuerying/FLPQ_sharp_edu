@@ -12,20 +12,24 @@ open FLPQ.Languages
 module ArroyueloRPQ =
 
     /// Compute transitive closure of a square Boolean matrix using repeated squaring.
+    /// Computes (I + M)^n where n = number of rows, by squaring (I + M) ceil(log2(n)) times.
     let private transitiveClosure (m: Matrix<bool>) : Matrix<bool> =
         let n = m.rows
-        let mutable result = Matrix.init n n false
+
+        let mutable a = Matrix.init n n false
 
         for i in 0 .. n - 1 do
-            result.data.[i, i] <- true
+            a.data.[i, i] <- true
 
-        let mutable power = m
+        a <- MsBfs.boolAdd a m
 
-        for _ in 0 .. n - 1 do
-            result <- MsBfs.boolAdd result power
-            power <- MsBfs.boolMul power power
+        let mutable k = 1
 
-        result
+        while k < n do
+            a <- MsBfs.boolMul a a
+            k <- k * 2
+
+        a
 
     /// Evaluate a regular expression AST to a Boolean matrix.
     /// M(ε) = I, M(a) = graphAdj[a], M(a^-) = graphAdj[a]^T,
