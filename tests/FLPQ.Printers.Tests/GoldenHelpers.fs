@@ -2,6 +2,7 @@ module GoldenHelpers
 
 open System.IO
 open FLPQ.Languages
+open FLPQ.Printers
 open Xunit
 
 let goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")

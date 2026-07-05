@@ -11,25 +11,34 @@ type Graph<'v, 'e> =
 
 module Graph =
 
+    /// Returns the number of vertices in the graph.
     let vertexCount (graph: Graph<'v, 'e>) = graph.vertexMap.Count
 
+    /// Returns all vertices as (index, value) pairs sorted by index.
     let vertices (graph: Graph<'v, 'e>) : (int * 'v) list =
         graph.vertexMap |> Map.toList |> List.sortBy fst
 
+    /// Tries to get the vertex value at the given index. Returns None if the index does not exist.
     let tryGetVertex idx (graph: Graph<'v, 'e>) = Map.tryFind idx graph.vertexMap
 
+    /// Gets the vertex value at the given index. Throws KeyNotFoundException if the index does not exist.
     let getVertex idx (graph: Graph<'v, 'e>) = Map.find idx graph.vertexMap
 
+    /// Returns the edge label between two vertices.
     let edge (graph: Graph<'v, 'e>) (fromIdx: int) (toIdx: int) = Matrix.get graph.edges fromIdx toIdx
 
+    /// Transforms vertex values using the given function, preserving edges.
     let mapVertices (f: 'v -> 'w) (graph: Graph<'v, 'e>) : Graph<'w, 'e> =
         { vertexMap = graph.vertexMap |> Map.map (fun _ v -> f v)
           edges = graph.edges }
 
+    /// Transforms edge labels using the given function, preserving vertices.
     let mapEdges (f: 'e -> 'f) (graph: Graph<'v, 'e>) : Graph<'v, 'f> =
         { vertexMap = graph.vertexMap
           edges = Matrix.map f graph.edges }
 
+    /// Creates a graph from a list of vertex labels and an edge matrix.
+    /// Vertices are assigned indices 0..|states|-1 in list order.
     let fromEdges (states: 'v list) (edgeMatrix: Matrix<'e>) : Graph<'v, 'e> =
         { vertexMap = states |> List.indexed |> List.map (fun (i, v) -> (i, v)) |> Map.ofList
           edges = edgeMatrix }

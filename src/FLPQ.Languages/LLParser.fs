@@ -1,5 +1,25 @@
 namespace FLPQ.Languages
 
+/// Input state for LL/LR parser step visualization.
+[<Struct>]
+type StepInput<'t> =
+    { tokens: Terminal<'t> list
+      position: int }
+
+/// A stack leaf node in an LL parsing step.
+/// Contains the immutable snapshot of the leaf and its path from the tree root.
+[<Struct>]
+type LLStackLeaf<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      path: int list }
+
+/// Data for a single LL parser visualization step.
+[<Struct>]
+type LLParsingStep<'t, 'nt> =
+    { tree: DerivationTree<'t, 'nt>
+      stack: LLStackLeaf<'t, 'nt> list
+      input: StepInput<'t> }
+
 module LLParser =
 
     /// Build an LL(k) parsing table.

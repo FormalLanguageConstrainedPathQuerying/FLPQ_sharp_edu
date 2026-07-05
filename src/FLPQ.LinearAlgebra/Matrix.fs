@@ -10,12 +10,20 @@ type Matrix<'a> =
 
 module Matrix =
 
+    /// Returns the number of rows in the matrix.
     let rows (m: Matrix<'a>) = m.rows
+
+    /// Returns the number of columns in the matrix.
     let cols (m: Matrix<'a>) = m.cols
 
+    /// Returns the element at position (i, j). No bounds checking is performed.
     let get (m: Matrix<'a>) (i: int) (j: int) : 'a = m.data.[i, j]
+
+    /// Sets the element at position (i, j) to the given value. No bounds checking is performed.
     let set (m: Matrix<'a>) (i: int) (j: int) (value: 'a) : unit = m.data.[i, j] <- value
 
+    /// Creates a matrix with the given number of rows and columns,
+    /// using the supplied function to initialize each element.
     let create rows cols (f: int -> int -> 'a) : Matrix<'a> =
         let data = Array2D.init rows cols f
 
@@ -23,13 +31,17 @@ module Matrix =
           cols = cols
           data = data }
 
+    /// Creates a matrix with the given dimensions where all elements are initialized to the same value.
     let init rows cols (value: 'a) : Matrix<'a> = create rows cols (fun _ _ -> value)
 
+    /// Creates a matrix from a 2D array. The resulting matrix shares the same backing array.
     let ofArray2D (arr: 'a[,]) : Matrix<'a> =
         { rows = Array2D.length1 arr
           cols = Array2D.length2 arr
           data = arr }
 
+    /// Folds over all elements of the matrix in row-major order.
+    /// folder receives the accumulator and the current element.
     let fold (folder: 'acc -> 'a -> 'acc) (state: 'acc) (m: Matrix<'a>) : 'acc =
         let mutable acc = state
 
@@ -39,6 +51,7 @@ module Matrix =
 
         acc
 
+    /// Applies a function to each element of the matrix, returning a new matrix with the same dimensions.
     let map (f: 'a -> 'b) (m: Matrix<'a>) : Matrix<'b> =
         let data = Array2D.map f m.data
 
@@ -46,6 +59,8 @@ module Matrix =
           cols = m.cols
           data = data }
 
+    /// Applies a function element-wise to two matrices of the same dimensions.
+    /// Throws ArgumentException if dimensions differ.
     let map2 (f: 'a -> 'b -> 'c) (a: Matrix<'a>) (b: Matrix<'b>) : Matrix<'c> =
         if a.rows <> b.rows || a.cols <> b.cols then
             invalidArg (nameof b) $"Matrix dimensions must match: ({a.rows}x{a.cols}) vs ({b.rows}x{b.cols})"
@@ -56,6 +71,7 @@ module Matrix =
           cols = a.cols
           data = data }
 
+    /// Returns the transpose of the matrix: rows become columns and columns become rows.
     let transpose (m: Matrix<'a>) : Matrix<'a> =
         let data = Array2D.init m.cols m.rows (fun i j -> get m j i)
 
@@ -80,17 +96,21 @@ module Matrix =
 
             acc)
 
+    /// Labels for cell highlighting in algorithm visualization.
     type HighlightLabel = | CurrentCell
 
+    /// Labels for submatrix regions in algorithm visualization.
     type SubmatrixBlockLabel =
         | CurrentStepSubmatrix
         | Submatrix of int
 
+    /// A highlighted cell in a matrix visualization.
     type Highlight =
         { row: int
           col: int
           label: HighlightLabel }
 
+    /// A rectangular submatrix region in a matrix visualization.
     type SubmatrixBlock =
         { startRow: int
           startCol: int

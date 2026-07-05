@@ -34,6 +34,8 @@ type DFA<'t, 's when 't: comparison> =
 
 module Nfa =
 
+    /// Collects all terminal symbols (excluding epsilon) from the transition matrix.
+    /// Iterates over all matrix entries and extracts ATerm labels.
     let collectAlphabet (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) : Set<'t> =
         let mutable result = Set.empty
 
@@ -49,6 +51,8 @@ module Nfa =
 
         result
 
+    /// Builds a transition matrix from a list of labeled transitions.
+    /// Multiple transitions between the same pair of states are merged into a non-empty set.
     let buildMatrix
         (n: int)
         (transitionsList: (int * AutomatonLabel<'t> * int) list)
@@ -84,10 +88,14 @@ module Nfa =
           startStates = startStates
           finalStates = finalStates }
 
+    /// Returns the number of states in the NFA.
     let stateCount (a: NFA<'t, 's>) = Graph.vertexCount a.graph
 
+    /// Returns the alphabet (set of all terminal symbols) of the NFA.
     let alphabet (a: NFA<'t, 's>) : Set<'t> = collectAlphabet a.transitions
 
+    /// Returns the set of states reachable from the given state via a single transition on the given symbol.
+    /// Does not include epsilon-transitions.
     let move (a: NFA<'t, 's>) (stateIdx: int) (symbol: 't) : Set<int> =
         let mutable result = Set.empty
 
@@ -98,6 +106,8 @@ module Nfa =
 
         result
 
+    /// Computes the epsilon-closure of a state: the set of all states reachable via zero or more epsilon-transitions.
+    /// Uses a worklist algorithm; terminates even in the presence of epsilon cycles.
     let epsilonClosure (a: NFA<'t, 's>) (stateIdx: int) : Set<int> =
         let mutable closure = set [ stateIdx ]
         let mutable changed = true
@@ -118,6 +128,8 @@ module Nfa =
 
         closure
 
+    /// Returns the set of states reachable from any state in the given set via a single transition on the given symbol.
+    /// Does not include epsilon-transitions.
     let moveSet (a: NFA<'t, 's>) (stateIndices: Set<int>) (symbol: 't) : Set<int> =
         stateIndices |> Set.toSeq |> Seq.collect (fun i -> move a i symbol) |> Set.ofSeq
 
@@ -271,10 +283,14 @@ module Dfa =
           startState = startState
           finalStates = finalStates }
 
+    /// Returns the number of states in the DFA.
     let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.graph
 
+    /// Returns the alphabet (set of all terminal symbols) of the DFA.
     let alphabet (a: DFA<'t, 's>) : Set<'t> = Nfa.collectAlphabet a.transitions
 
+    /// Returns Some targetState for a transition on the given symbol, or None if no such transition exists.
+    /// In a deterministic automaton, at most one transition per symbol exists from any state.
     let move (a: DFA<'t, 's>) (stateIdx: int) (symbol: 't) : int option =
         let mutable result = None
 
@@ -285,6 +301,8 @@ module Dfa =
 
         result
 
+    /// Verifies that the DFA is truly deterministic: for each state and each symbol,
+    /// at most one transition exists. Returns true if deterministic, false otherwise.
     let isDeterministic (a: DFA<'t, 's>) : bool =
         let n = stateCount a
         let alph = alphabet a

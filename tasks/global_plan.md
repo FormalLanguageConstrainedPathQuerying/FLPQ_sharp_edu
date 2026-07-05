@@ -1,107 +1,73 @@
 
-# Global Plan: Tasks 122--124
+# Global Plan: Tasks 125--127
 
 ## Task Summary
 
 | ID | Description | Type | Dependencies |
 |----|-------------|------|--------------|
-| 122 | Make `Matrix.data` private, add `get`/`set` functions, replace color strings with semantic labels | Refactor | None |
-| 123 | Deduplicate miscellaneous helpers: `readIfExists`, `collectSteps`, `termPrinter`, `escapeLabel`, unused definitions, exception handling, `AlgorithmKind` | Refactor | None |
-| 124 | Rename `Rhs.toList`→`toListWithEpsilon`, `Rhs.toSymbols`→`toNonEpsilonList` | Rename | None |
+| 125 | Move `VisualizationStep` to Printers, standardize trace-type locations | Refactor | None |
+| 126 | Add XML doc comments to undocumented public APIs | Docs | 125 (VisualizationTypes changes) |
+| 127 | Refactor `SummaryTeX.fs` from mutable to functional | Refactor | 125 (types motion), 126 (doc comments) |
 
 ## Dependencies Graph
 
 ```
-No interdependencies between tasks. They touch mostly disjoint sets of files.
-Execution order: 124 (simplest) → 123 (collection of small changes) → 122 (largest, most files affected)
+Task 125 → Task 126, Task 127
+Task 126 and 127 are independent of each other after 125.
 ```
 
 ## Execution Order
 
-1. **Task 124** — Rename `Rhs.toList`/`toSymbols`
-2. **Task 123** — Deduplicate miscellaneous helpers
-3. **Task 122** — Matrix.data privatization + semantic labels
+1. **Task 125** — Move types (structural, potentially breaking)
+2. **Task 126** — Add XML doc comments
+3. **Task 127** — Refactor SummaryTeX.fs
 
-## Shared Infrastructure / Potential Conflicts
+## Task 125: Move Visualization Types
 
-Tasks 122 and 123 both touch `src/FLPQ.Languages/Grammar.fs`, `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Printers/SummaryTeX.fs`, `src/FLPQ.Cli/Helpers.fs`, `src/FLPQ.Cli/Summary.fs`, and test files. However, they modify different parts of those files, so conflicts are minimal. Execution order avoids rework.
-
-## Task 122: Matrix.data Privatization
-
-### Files to modify (source)
-- `src/FLPQ.LinearAlgebra/Matrix.fs` — make `data` private, add `get`/`set`/`unsafeGet`/`unsafeSet`, add semantic label types, rename `Highlight`/`SubmatrixBlock`
-- `src/FLPQ.LinearAlgebra/BooleanDecomposition.fs` — update direct `.data` accesses
-- `src/FLPQ.LinearAlgebra/LinearAlgebra.fs` — update direct `.data` accesses
-- `src/FLPQ.Languages/Automaton.fs` — update direct `.data` accesses
-- `src/FLPQ.Languages/Cyk.fs` — update `.data` accesses + replace color strings with semantic labels
-- `src/FLPQ.Languages/Valiant.fs` — update `.data` accesses
-- `src/FLPQ.Languages/LRParser.fs` — update `.data` accesses
-- `src/FLPQ.GraphAnalysis/Graph.fs` — update `.data` accesses
-- `src/FLPQ.GraphAnalysis/MsBfs.fs` — update `.data` accesses
-- `src/FLPQ.RPQ/ArroyueloRPQ.fs` — update `.data` accesses
-- `src/FLPQ.RPQ/KroneckerRPQ.fs` — update `.data` accesses
-- `src/FLPQ.RPQ/BelyaninRPQ.fs` — update `.data` accesses
-- `src/FLPQ.Printers/MatrixTeX.fs` — update `.data` accesses + use semantic label→color mapping
-- `src/FLPQ.Printers/ValiantTeX.fs` — replace color strings with semantic labels
-- `src/FLPQ.Printers/AutomatonDot.fs` — update `.data` accesses
-- `src/FLPQ.Printers/AutomatonTikz.fs` — update `.data` accesses
-- `tests/FLPQ.GraphAnalysis.Tests/MsBfsTests.fs` — update `.data` accesses
-- `tests/FLPQ.RPQ.Tests/RPQTests.fs` — update `.data` accesses
-- `tests/FLPQ.RPQ.Tests/StressTests.fs` — update `.data` accesses
-- `tests/FLPQ.Languages.Tests/ValiantTests.fs` — update `.data` accesses
-
-### Semantic label design
-```fsharp
-type HighlightLabel = CurrentCell
-
-type SubmatrixBlockLabel = SubmatrixRegion
-
-// Color mapping in FLPQ.Printers only
-let highlightColor : HighlightLabel -> string = function
-    | CurrentCell -> "yellow"
-
-let submatrixColors : SubmatrixBlockLabel -> string option * string option = function
-    | SubmatrixRegion -> None, None  // colors determined by printer logic
-```
+### Changes
+1. Move `LLStackLeaf`, `LLParsingStep` from `VisualizationTypes.fs` → `LLParser.fs`
+2. Move `LRStackFrame`, `LRParsingStep` from `VisualizationTypes.fs` → `LRParser.fs`
+3. Move `VisualizationStep` from `VisualizationTypes.fs` → new `FLPQ.Printers/VisualizationTypes.fs`
+4. Keep `StepInput` in `FLPQ.Languages/VisualizationTypes.fs`
+5. Delete `LRSymbolHelpers` module (unused)
+6. Update all references:
+   - `LLStepVisualizer.fs` — open FLPQ.Printers for VisualizationStep
+   - `LRStepVisualizer.fs` — open FLPQ.Printers for VisualizationStep
+   - `Helpers.fs` — already opens FLPQ.Printers, still works
+   - `GoldenHelpers.fs` — add open FLPQ.Printers
+   - `LRParser.fs` — add LRStackFrame, LRParsingStep definitions
+   - `LLParser.fs` — add LLStackLeaf, LLParsingStep definitions
+   - `DerivationTreeDot.fs` — already opens FLPQ.Languages, still works
+7. Update `FLPQ.Printers.fsproj` — add `VisualizationTypes.fs` before LLStepVisualizer
+8. Update `FLPQ.Languages.fsproj` — remove `VisualizationTypes.fs` from compile list (actually keep it since StepInput stays)
 
 ### Equivalence
-- All matrix operations must produce identical results
-- Rendering output must be identical
+- All existing tests must pass
+- Compilation must succeed
 
-## Task 123: Deduplicate Miscellaneous Helpers
+## Task 126: XML Doc Comments
 
-### Items
-1. `readIfExists`: Keep single public copy in `FLPQ.Printers`, remove from `FLPQ.Cli/Helpers.fs`, update CLI tests
-2. `collectSteps`: Move to `FLPQ.Printers` as public function, use from both `SummaryTeX` and CLI `Helpers`
-3. `termPrinter`: Extract into shared visualizer helper module
-4. `escapeLabel`: Make public in `DerivationTreeDot`, use in `AutomatonDot`
-5. `Grammar.nonterminalsOf`/`terminalsOf`: Already public, just update `code_review.md` to remove stale note
-6. Unused `Automaton.buildDfaMatrix`: Already gone (skip)
-7. Remove `GrammarTests.nonterminalsOfCnf`
-8. Remove unused `StringArb` from Generators.fs
-9. Remove unused `MyGen`/`MyArb` imports from test files (RsmToGrammarTests, EbnfParserTests) — but these come via `open FLPQ.TestUtilities`, so need to check if they're actually used for anything else
-10. `ExternalToolsTests`: Replace `try...with _ -> ()` with `printfn` warnings
-11. `Summary.AlgorithmKind`: Simplify to 3-case DU with `toString` member
+### Files to document
+- `Matrix.fs` — rows, cols, get, set, create, init, ofArray2D, fold, map, map2, transpose + HighlightLabel, SubmatrixBlockLabel, Highlight, SubmatrixBlock types
+- `Graph.fs` — vertexCount, vertices, tryGetVertex, getVertex, edge, mapVertices, mapEdges, fromEdges
+- `Automaton.fs` Nfa module — collectAlphabet, buildMatrix, stateCount, alphabet, move, epsilonClosure, moveSet
+- `Automaton.fs` Dfa module — stateCount, alphabet, move, isDeterministic
+- `SummaryTeX.fs` — SummaryKind, wrapMath, wrapCenter, wrapTikzCenter, includePdf, section, readIfExists, collectSteps, headerSection, tableStepSection, stackStepSection, buildContent
+- `RSM.fs` — blocks, blockOf, startBlock, nonterminals, terminals, startStates, stateCount
 
 ### Equivalence
-- CLI behavior identical after refactoring
-- All golden tests pass
+- Compilation with GenerateDocumentationFile=true must succeed
+- All existing tests must pass
 
-## Task 124: Rename Rhs Functions
+## Task 127: Refactor SummaryTeX.fs
 
-### Renames
-- `Rhs.toList` → `Rhs.toListWithEpsilon` (returns `[Epsilon]` for epsilon)
-- `Rhs.toSymbols` → `Rhs.toNonEpsilonList` (returns `[]` for epsilon)
+### Changes
+Replace `let mutable lines = [] ; lines <- lines @ [...]` with functional patterns:
 
-### Call sites to update
-- `Grammar.fs` (3 call sites for each)
-- `FirstFollow.fs` (3 call sites)
-- `LLParser.fs` (2 call sites)
-- `LRParser.fs` (12 call sites)
-- `Valiant.fs` (2 call sites)
-- `LLTableTeX.fs` (1 call site)
-- `LRTableTeX.fs` (1 call site)
-- `GrammarTests.fs` (3 call sites for toList, 2 for length)
+- `headerSection`: use `List.collect` / sequence expressions to build lines from option matches
+- `tableStepSection`: use sequence expressions
+- `stackStepSection`: use sequence expressions
+- `buildContent`: use `List.collect` for step iteration
 
 ### Equivalence
-- Behavior identical after rename
+- Golden tests for summary TeX must produce identical output

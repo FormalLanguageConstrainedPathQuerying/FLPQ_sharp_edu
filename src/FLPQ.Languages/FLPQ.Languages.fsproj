@@ -14,7 +14,6 @@
     <Compile Include="EbnfParser.fs" />
     <Compile Include="RsmToGrammar.fs" />
     <Compile Include="DerivationTree.fs" />
-    <Compile Include="VisualizationTypes.fs" />
     <Compile Include="ParsingTable.fs" />
     <Compile Include="Cyk.fs" />
     <Compile Include="Valiant.fs" />

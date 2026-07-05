@@ -19,6 +19,7 @@
     <Compile Include="ValiantTeX.fs" />
     <Compile Include="LLTableTeX.fs" />
     <Compile Include="LRTableTeX.fs" />
+    <Compile Include="VisualizationTypes.fs" />
     <Compile Include="LLStepVisualizer.fs" />
     <Compile Include="LRStepVisualizer.fs" />
     <Compile Include="SummaryTeX.fs" />

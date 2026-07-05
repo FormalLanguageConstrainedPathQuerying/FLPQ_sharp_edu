@@ -6,6 +6,7 @@ open System.Text.RegularExpressions
 
 module SummaryTeX =
 
+    /// Classifies the visualization type for summary generation.
     type SummaryKind =
         | TablePerStep
         | LL
@@ -17,12 +18,15 @@ module SummaryTeX =
             | LL -> "ll"
             | LR -> "lr"
 
+    /// Wraps TeX content in a centered display math environment.
     let wrapMath (tex: string) : string =
         [ @"\begin{center}"; @"\["; tex; @"\]"; @"\end{center}" ] |> String.concat "\n"
 
+    /// Wraps TeX content in a centered environment.
     let wrapCenter (tex: string) : string =
         [ @"\begin{center}"; tex; @"\end{center}" ] |> String.concat "\n"
 
+    /// Wraps a TikZ picture in a centered, resizable box.
     let wrapTikzCenter (tikz: string) : string =
         [ @"\begin{center}"
           @"\resizebox{0.98\textwidth}{!}{%%"
@@ -31,17 +35,22 @@ module SummaryTeX =
           @"\end{center}" ]
         |> String.concat "\n"
 
+    /// Generates LaTeX code to include a PDF file as a centered figure.
     let includePdf (relPath: string) : string =
         sprintf @"\begin{center}\includegraphics[width=0.9\textwidth,keepaspectratio]{{%s}}\end{center}" relPath
 
+    /// Generates a LaTeX subsection header with the given title.
     let section (title: string) : string = sprintf "\\subsection*{%s}" title
 
+    /// Reads a file and returns its trimmed content, or None if the file does not exist.
     let readIfExists (path: string) : string option =
         if File.Exists path then
             Some(File.ReadAllText(path).Trim())
         else
             None
 
+    /// Enumerates step directories in the given visualization directory,
+    /// sorted by step number. Returns an empty array if the directory does not exist.
     let collectSteps (vizDir: string) : string[] =
         if not (Directory.Exists vizDir) then
             [||]
@@ -55,74 +64,72 @@ module SummaryTeX =
                 let m = Text.RegularExpressions.Regex.Match(name, "step_(\d+)")
                 if m.Success then Int32.Parse(m.Groups.[1].Value) else 0)
 
+    /// Builds the header section of the summary, including grammar, input, and parsing table.
     let headerSection
         (vizDir: string)
         (algoKind: SummaryKind)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
         : string list =
-        let mutable lines = []
+        let maybe (file: string) (label: string) (wrap: string -> string) =
+            match readIfExists (Path.Combine(vizDir, file)) with
+            | Some tex -> [ section label; wrap tex; "" ]
+            | None -> []
 
-        match readIfExists (Path.Combine(vizDir, "grammar_original.tex")) with
-        | Some tex -> lines <- lines @ [ section "Original Grammar"; wrapCenter tex; "" ]
-        | None -> ()
+        let grammar = maybe "grammar_original.tex" "Original Grammar" wrapCenter
 
-        match algoKind with
-        | SummaryKind.TablePerStep ->
-            match readIfExists (Path.Combine(vizDir, "grammar_cnf.tex")) with
-            | Some tex -> lines <- lines @ [ section "CNF Grammar (passed to algorithm)"; wrapCenter tex; "" ]
-            | None -> ()
+        let algoLines =
+            match algoKind with
+            | SummaryKind.TablePerStep ->
+                maybe "grammar_cnf.tex" "CNF Grammar (passed to algorithm)" wrapCenter
+                @ maybe "input.tex" "Input String" wrapMath
 
-            match readIfExists (Path.Combine(vizDir, "input.tex")) with
-            | Some tex -> lines <- lines @ [ section "Input String"; wrapMath tex; "" ]
-            | None -> ()
-        | SummaryKind.LL ->
-            match readIfExists (Path.Combine(vizDir, "ll_table.tex")) with
-            | Some tex -> lines <- lines @ [ section "LL Parsing Table"; wrapCenter tex; "" ]
-            | None -> ()
-        | SummaryKind.LR ->
-            match readIfExists (Path.Combine(vizDir, "lr_table.tex")) with
-            | Some tex -> lines <- lines @ [ section "LR Parsing Table"; wrapCenter tex; "" ]
-            | None -> ()
+            | SummaryKind.LL -> maybe "ll_table.tex" "LL Parsing Table" wrapCenter
 
-            match lrAutomatonPdf with
-            | Some rel -> lines <- lines @ [ section "LR Automaton"; includePdf rel; "" ]
-            | None -> ()
+            | SummaryKind.LR ->
+                maybe "lr_table.tex" "LR Parsing Table" wrapCenter
+                @ (match lrAutomatonPdf with
+                   | Some rel -> [ section "LR Automaton"; includePdf rel; "" ]
+                   | None -> [])
+                @ (match lrAutomatonTikz with
+                   | Some tikz -> [ section "LR Automaton"; wrapTikzCenter tikz; "" ]
+                   | None -> [])
 
-            match lrAutomatonTikz with
-            | Some tikz -> lines <- lines @ [ section "LR Automaton"; wrapTikzCenter tikz; "" ]
-            | None -> ()
+        grammar @ algoLines
 
-        lines
-
+    /// Builds the content lines for a single table-based algorithm step.
+    /// Includes the step header, the parsing table, and any Boolean decomposition matrices.
     let tableStepSection (stepDir: string) (stepNum: int) : string list =
-        let mutable lines = [ section (sprintf "Step %d" stepNum) ]
+        let header = [ section (sprintf "Step %d" stepNum) ]
 
-        match readIfExists (Path.Combine(stepDir, "table.tex")) with
-        | Some tex -> lines <- lines @ [ wrapMath tex; "" ]
-        | None -> ()
+        let tableLines =
+            match readIfExists (Path.Combine(stepDir, "table.tex")) with
+            | Some tex -> [ wrapMath tex; "" ]
+            | None -> []
 
-        let decompFiles =
+        let decompLines =
             Directory.GetFiles(stepDir, "bool_decomp_*.tex")
-            |> Array.sortBy (fun f -> Path.GetFileName(f))
+            |> Array.sortBy Path.GetFileName
+            |> Array.collect (fun f -> [| wrapMath (File.ReadAllText(f).Trim()); "" |])
+            |> Array.toList
 
-        for f in decompFiles do
-            lines <- lines @ [ wrapMath (File.ReadAllText(f).Trim()); "" ]
+        header @ tableLines @ decompLines
 
-        lines
-
+    /// Builds the content lines for a single stack-based algorithm step (LL or LR).
+    /// Includes the step header, stack-tree PDF, and input state.
     let stackStepSection (stepDir: string) (stepNum: int) (stepName: string) : string list =
-        let mutable lines = [ section (sprintf "Step %d" stepNum) ]
+        let header = [ section (sprintf "Step %d" stepNum) ]
+        let pdfLine = [ includePdf (sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName); "" ]
 
-        let rel = sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName
-        lines <- lines @ [ includePdf rel; "" ]
+        let inputLines =
+            match readIfExists (Path.Combine(stepDir, "input.tex")) with
+            | Some tex -> [ wrapMath tex; "" ]
+            | None -> []
 
-        match readIfExists (Path.Combine(stepDir, "input.tex")) with
-        | Some tex -> lines <- lines @ [ wrapMath tex; "" ]
-        | None -> ()
+        header @ pdfLine @ inputLines
 
-        lines
-
+    /// Builds the complete summary content as a list of LaTeX lines.
+    /// Combines the header section with all step sections into a single document.
     let buildContent
         (algo: string)
         (algoKind: SummaryKind)
@@ -131,30 +138,28 @@ module SummaryTeX =
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
         : string list =
-        let mutable lines =
+        let prefix =
             [ section ("Algorithm: " + algo)
               sprintf "\\textit{Total steps: %d}\\\\" stepCount
               "" ]
 
-        lines <- lines @ headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz
-
-        let stepDirs = collectSteps vizDir
+        let headerLines = headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
 
-        for stepDir in stepDirs do
-            let stepName = Path.GetFileName(stepDir)
+        let stepLines =
+            collectSteps vizDir
+            |> Array.collect (fun stepDir ->
+                let stepName = Path.GetFileName(stepDir)
 
-            let stepNum =
-                let m = Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
-                if m.Success then Int32.Parse(m.Groups.[1].Value) else 0
+                let stepNum =
+                    let m = Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+                    if m.Success then Int32.Parse(m.Groups.[1].Value) else 0
 
-            let stepLines =
                 if isTableBased then
-                    tableStepSection stepDir stepNum
+                    tableStepSection stepDir stepNum |> List.toArray
                 else
-                    stackStepSection stepDir stepNum stepName
+                    stackStepSection stepDir stepNum stepName |> List.toArray)
+            |> Array.toList
 
-            lines <- lines @ stepLines
-
-        lines
+        prefix @ headerLines @ stepLines

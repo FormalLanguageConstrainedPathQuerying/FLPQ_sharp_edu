@@ -41,6 +41,19 @@ type LRTable<'t, 'nt when 't: comparison and 'nt: comparison> =
       conflicts: LRConflict<'t, 'nt> list
       automaton: LRAutomaton<'t, 'nt> }
 
+/// Frame on the unified LR parser stack.
+/// Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols.
+[<Struct>]
+type LRStackFrame<'t, 'nt> =
+    | LRState of state: int
+    | LRSymbol of tree: DerivationTree<'t, 'nt>
+
+/// Data for a single LR parser visualization step.
+[<Struct>]
+type LRParsingStep<'t, 'nt> =
+    { stack: LRStackFrame<'t, 'nt> list
+      input: StepInput<'t> }
+
 /// Construction of LR(0) and LR(1) automata as deterministic finite automata.
 /// Functions take an already-augmented grammar (with fresh start nonterminal).
 module LRAutomaton =
