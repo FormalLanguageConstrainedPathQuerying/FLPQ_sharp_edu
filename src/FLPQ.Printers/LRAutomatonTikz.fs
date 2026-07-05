@@ -26,7 +26,7 @@ module LRAutomatonTikz =
         let rhsParts = (beforeDot @ [ @"\cdot" ] @ afterDot) |> String.concat "\\ "
         sprintf "%s &\\to %s" lhs rhsParts
 
-    let private renderLR0StateContent
+    let renderLR0StateContent
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (stateIdx: int)
@@ -41,7 +41,7 @@ module LRAutomatonTikz =
 
         sb.ToString().TrimEnd('\n')
 
-    let private renderLR1StateContent
+    let renderLR1StateContent
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (stateIdx: int)
@@ -64,30 +64,26 @@ module LRAutomatonTikz =
 
         sb.ToString().TrimEnd('\n')
 
-    let private stateContentToTikzAs (content: string) : string =
+    let stateContentToTikzAs (content: string) : string =
         sprintf "$\\begin{aligned}\n%s\n\\end{aligned}$" content
 
     /// Render an LR(0) automaton as a Tikz tikzpicture.
     /// States are rectangles with aligned LR items and state numbers.
-    let lr0AutomatontoTikz
-        (terminalPrinter: 't -> string)
-        (nonterminalPrinter: 'nt -> string)
-        (aug: Grammar<'t, 'nt>)
+    /// Accepts labelPrinter, stateVisualizer, and shape consistent with AutomatonTikz.dfaToTikz.
+    let lr0AutomatonToTikz
+        (labelPrinter: Symbol<'t, 'nt> -> string)
+        (stateVisualizer: int -> Set<LR0Item<'t, 'nt>> -> string)
+        (shape: string)
         (dfa: DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>>)
         : string =
-        let stateVisualizer (stateIdx: int) (items: Set<LR0Item<'t, 'nt>>) =
-            stateContentToTikzAs (renderLR0StateContent terminalPrinter nonterminalPrinter stateIdx items)
-
-        AutomatonTikz.dfaToTikz (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter) stateVisualizer "rectangle" dfa
+        AutomatonTikz.dfaToTikz labelPrinter stateVisualizer shape dfa
 
     /// Render an LR(1) automaton as a Tikz tikzpicture.
-    let lr1AutomatontoTikz
-        (terminalPrinter: 't -> string)
-        (nonterminalPrinter: 'nt -> string)
-        (aug: Grammar<'t, 'nt>)
+    /// Accepts labelPrinter, stateVisualizer, and shape consistent with AutomatonTikz.dfaToTikz.
+    let lr1AutomatonToTikz
+        (labelPrinter: Symbol<'t, 'nt> -> string)
+        (stateVisualizer: int -> Set<LR1Item<'t, 'nt>> -> string)
+        (shape: string)
         (dfa: DFA<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>>)
         : string =
-        let stateVisualizer (stateIdx: int) (items: Set<LR1Item<'t, 'nt>>) =
-            stateContentToTikzAs (renderLR1StateContent terminalPrinter nonterminalPrinter stateIdx items)
-
-        AutomatonTikz.dfaToTikz (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter) stateVisualizer "rectangle" dfa
+        AutomatonTikz.dfaToTikz labelPrinter stateVisualizer shape dfa

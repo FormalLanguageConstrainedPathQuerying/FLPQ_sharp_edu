@@ -4,7 +4,7 @@ open FLPQ.LinearAlgebra
 
 module Valiant =
 
-    type Submatrix = { A: int; B: int; Size: int }
+    type Submatrix = { row: int; col: int; Size: int }
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
@@ -31,37 +31,46 @@ module Valiant =
           terminalRules: Map<'t, Nonterminal<'nt> list> }
 
     let private submatrixCells (m: Submatrix) : (int * int) list =
-        [ for i in m.A - m.Size + 1 .. m.A do
-              for j in m.B .. m.B + m.Size - 1 do
+        [ for i in m.row - m.Size + 1 .. m.row do
+              for j in m.col .. m.col + m.Size - 1 do
                   yield (i, j) ]
 
     let private bottomSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
-        { A = m.A; B = m.B; Size = half }
+
+        { row = m.row
+          col = m.col
+          Size = half }
 
     let private leftSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
-        { A = m.A - half; B = m.B; Size = half }
+
+        { row = m.row - half
+          col = m.col
+          Size = half }
 
     let private rightSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
-        { A = m.A; B = m.B + half; Size = half }
+
+        { row = m.row
+          col = m.col + half
+          Size = half }
 
     let private topSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
 
-        { A = m.A - half
-          B = m.B + half
+        { row = m.row - half
+          col = m.col + half
           Size = half }
 
     let private sshift (m: Submatrix) (di: int) (dj: int) : Submatrix =
-        { A = m.A + di
-          B = m.B + dj
+        { row = m.row + di
+          col = m.col + dj
           Size = m.Size }
 
-    let private rightGrounded (m: Submatrix) : Submatrix = sshift m (m.B - m.A - 1) 0
+    let private rightGrounded (m: Submatrix) : Submatrix = sshift m (m.col - m.row - 1) 0
 
-    let private leftGrounded (m: Submatrix) : Submatrix = sshift m 0 (-(m.B - m.A - 1))
+    let private leftGrounded (m: Submatrix) : Submatrix = sshift m 0 (-(m.col - m.row - 1))
 
     let private rightNeighbor (m: Submatrix) : Submatrix = sshift m m.Size 0
 
@@ -79,7 +88,7 @@ module Valiant =
               let b = baseB + k * size
 
               if a < tableSize && b + size <= tableSize then
-                  yield { A = a; B = b; Size = size } ]
+                  yield { row = a; col = b; Size = size } ]
 
     let private nextPowerOfTwo (n: int) : int =
         let mutable p = 1
@@ -90,13 +99,13 @@ module Valiant =
         p
 
     let private extractSlice (fullMatrix: Matrix<bool>) (m: Submatrix) : Matrix<bool> =
-        Matrix.create m.Size m.Size (fun i j -> fullMatrix.data.[m.A - m.Size + 1 + i, m.B + j])
+        Matrix.create m.Size m.Size (fun i j -> fullMatrix.data.[m.row - m.Size + 1 + i, m.col + j])
 
     let private writeSlice (target: Matrix<bool>) (m: Submatrix) (slice: Matrix<bool>) : unit =
         for i in 0 .. m.Size - 1 do
             for j in 0 .. m.Size - 1 do
                 if slice.data.[i, j] then
-                    target.data.[m.A - m.Size + 1 + i, m.B + j] <- true
+                    target.data.[m.row - m.Size + 1 + i, m.col + j] <- true
 
     let private performMultiplications
         (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
@@ -158,8 +167,8 @@ module Valiant =
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
         if m.Size = 1 then
-            let i = m.A - m.Size + 1
-            let j = m.B
+            let i = m.row - m.Size + 1
+            let j = m.col
 
             if i + 1 = j && i < init.tokensArr.Length then
                 let ch = init.tokensArr.[i]
@@ -222,7 +231,7 @@ module Valiant =
         let b = (i + j) / 2
         let size = (j - i) / 2
 
-        let m = { A = a; B = b; Size = size }
+        let m = { row = a; col = b; Size = size }
         complete init m traceAcc
 
     let rec private completeLayerModified
@@ -238,8 +247,8 @@ module Valiant =
         | first :: _ ->
             if first.Size = 1 then
                 for m in mList do
-                    let i = m.A - m.Size + 1
-                    let j = m.B
+                    let i = m.row - m.Size + 1
+                    let j = m.col
 
                     if i + 1 <> j then
                         for pair in pairs do

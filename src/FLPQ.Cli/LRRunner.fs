@@ -40,8 +40,24 @@ module LRRunner =
         else
             let tikzContent =
                 match table.automaton with
-                | LR0 dfa -> LRAutomatonTikz.lr0AutomatontoTikz string string aug dfa
-                | LR1 dfa -> LRAutomatonTikz.lr1AutomatontoTikz string string aug dfa
+                | LR0 dfa ->
+                    let labelPrinter = SymbolTeX.toLaTeX string string
+
+                    let stateVisualizer stateIdx items =
+                        LRAutomatonTikz.stateContentToTikzAs (
+                            LRAutomatonTikz.renderLR0StateContent string string stateIdx items
+                        )
+
+                    LRAutomatonTikz.lr0AutomatonToTikz labelPrinter stateVisualizer "rectangle" dfa
+                | LR1 dfa ->
+                    let labelPrinter = SymbolTeX.toLaTeX string string
+
+                    let stateVisualizer stateIdx items =
+                        LRAutomatonTikz.stateContentToTikzAs (
+                            LRAutomatonTikz.renderLR1StateContent string string stateIdx items
+                        )
+
+                    LRAutomatonTikz.lr1AutomatonToTikz labelPrinter stateVisualizer "rectangle" dfa
 
             Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.tikz.tex")) tikzContent
 

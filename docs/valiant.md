@@ -8,7 +8,7 @@ Implements Valiant's parsing algorithm for context-free grammars in Chomsky Norm
 
 ### `Submatrix`
 ```fsharp
-type Submatrix = { A: int; B: int; Size: int }
+type Submatrix = { row: int; col: int; Size: int }
 ```
 Defines a square region in the parsing table. The cells are `(i,j)` where `A - Size < i ≤ A` and `B ≤ j < B + Size`. The pair `(A,B)` is the vertex (bottom-right corner relative to the diagonal).
 

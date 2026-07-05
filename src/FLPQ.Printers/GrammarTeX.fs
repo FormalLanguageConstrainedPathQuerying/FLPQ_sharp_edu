@@ -11,10 +11,12 @@ module GrammarTeX =
         (showNumbers: bool)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
-        (g: Grammar<'t, 'nt>)
+        (grammar: Grammar<'t, 'nt>)
         : string =
         let orderedRules =
-            let startRules, otherRules = g.rules |> List.partition (fun r -> r.lhs = g.start)
+            let startRules, otherRules =
+                grammar.rules |> List.partition (fun r -> r.lhs = grammar.start)
+
             startRules @ otherRules
 
         let sb = StringBuilder()
@@ -45,14 +47,14 @@ module GrammarTeX =
     let grammarToTeX
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
-        (g: Grammar<'t, 'nt>)
+        (grammar: Grammar<'t, 'nt>)
         : string =
-        renderGrammar false terminalPrinter nonterminalPrinter g
+        renderGrammar false terminalPrinter nonterminalPrinter grammar
 
     /// Render a grammar as a TeX align* environment with production numbers (0-based).
     let grammarToTeXWithNumbers
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
-        (g: Grammar<'t, 'nt>)
+        (grammar: Grammar<'t, 'nt>)
         : string =
-        renderGrammar true terminalPrinter nonterminalPrinter g
+        renderGrammar true terminalPrinter nonterminalPrinter grammar

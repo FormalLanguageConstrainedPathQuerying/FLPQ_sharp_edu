@@ -9,18 +9,18 @@ module BooleanDecomposition =
     /// Decompose a matrix of sets into a map from each distinct element
     /// to a Boolean matrix of the same dimensions where cell[i,j] = true
     /// iff the element is in the original set at that position.
-    let decompose (m: Matrix<Set<'a>>) : Map<'a, Matrix<bool>> =
+    let decompose (matrix: Matrix<Set<'a>>) : Map<'a, Matrix<bool>> =
         let allElements =
-            [ for i in 0 .. m.rows - 1 do
-                  for j in 0 .. m.cols - 1 do
-                      yield! m.data.[i, j] ]
+            [ for i in 0 .. matrix.rows - 1 do
+                  for j in 0 .. matrix.cols - 1 do
+                      yield! matrix.data.[i, j] ]
             |> Set.ofList
 
         allElements
         |> Set.toList
         |> List.map (fun elem ->
             let boolMatrix =
-                Matrix.create m.rows m.cols (fun i j -> Set.contains elem m.data.[i, j])
+                Matrix.create matrix.rows matrix.cols (fun i j -> Set.contains elem matrix.data.[i, j])
 
             (elem, boolMatrix))
         |> Map.ofList
@@ -29,11 +29,11 @@ module BooleanDecomposition =
     /// distinct element to a Boolean matrix where cell[i,j] = true
     /// iff the element is in the non-empty set at that position.
     /// None cells are treated as empty sets.
-    let decomposeNonEmptySet (m: Matrix<Option<NonEmptySet<'a>>>) : Map<'a, Matrix<bool>> =
+    let decomposeNonEmptySet (matrix: Matrix<Option<NonEmptySet<'a>>>) : Map<'a, Matrix<bool>> =
         let allElements =
-            [ for i in 0 .. m.rows - 1 do
-                  for j in 0 .. m.cols - 1 do
-                      match m.data.[i, j] with
+            [ for i in 0 .. matrix.rows - 1 do
+                  for j in 0 .. matrix.cols - 1 do
+                      match matrix.data.[i, j] with
                       | Some nes -> yield! NonEmptySet.toSeq nes
                       | None -> () ]
             |> Set.ofList
@@ -42,8 +42,8 @@ module BooleanDecomposition =
         |> Set.toList
         |> List.map (fun elem ->
             let boolMatrix =
-                Matrix.create m.rows m.cols (fun i j ->
-                    match m.data.[i, j] with
+                Matrix.create matrix.rows matrix.cols (fun i j ->
+                    match matrix.data.[i, j] with
                     | Some nes -> NonEmptySet.contains elem nes
                     | None -> false)
 

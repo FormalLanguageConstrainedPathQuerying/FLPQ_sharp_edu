@@ -11,8 +11,8 @@ module ValiantTeX =
         let highlights =
             match step.currentSubmatrix with
             | Some m ->
-                [ for i in m.A - m.Size + 1 .. m.A do
-                      for j in m.B .. m.B + m.Size - 1 do
+                [ for i in m.row - m.Size + 1 .. m.row do
+                      for j in m.col .. m.col + m.Size - 1 do
                           if i < step.table.rows && j < step.table.cols then
                               yield ({ row = i; col = j; color = "yellow" }: Matrix.Highlight) ]
 
@@ -21,10 +21,10 @@ module ValiantTeX =
         let blocks =
             match step.currentSubmatrix with
             | Some m ->
-                let startRow = m.A - m.Size + 1
-                let endRow = m.A
-                let startCol = m.B - 1
-                let endCol = m.B + m.Size - 2
+                let startRow = m.row - m.Size + 1
+                let endRow = m.row
+                let startCol = m.col - 1
+                let endCol = m.col + m.Size - 2
 
                 let clippedStartRow = max 0 startRow
                 let clippedEndRow = min (step.table.rows - 1) endRow
@@ -73,11 +73,11 @@ module ValiantTeX =
             |> List.mapi (fun idx m ->
                 let color = colors.[idx % colors.Length]
 
-                let startRow = m.A - m.Size + 1
-                let endRow = m.A
+                let startRow = m.row - m.Size + 1
+                let endRow = m.row
 
-                let startCol = m.B - 1
-                let endCol = m.B + m.Size - 2
+                let startCol = m.col - 1
+                let endCol = m.col + m.Size - 2
 
                 let clippedStartRow = max 0 startRow
                 let clippedEndRow = min (n - 1) endRow

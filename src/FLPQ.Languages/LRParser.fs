@@ -231,9 +231,9 @@ module LRAutomaton =
 /// All table builders and parse take an already-augmented grammar.
 module LRParser =
 
-    let private isCompleted (item: LR0Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
+    let private isCompletedLR0 (item: LR0Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
 
-    let private isCompleted1 (item: LR1Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
+    let private isCompletedLR1 (item: LR1Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
 
     let private populateShiftGoto
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<Symbol<'t, 'nt>>>>>)
@@ -283,7 +283,7 @@ module LRParser =
             let state = states.[stateIdx]
 
             for item in state do
-                if isCompleted item then
+                if isCompletedLR0 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
@@ -328,7 +328,7 @@ module LRParser =
             let state = states.[stateIdx]
 
             for item in state do
-                if isCompleted item then
+                if isCompletedLR0 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
@@ -375,7 +375,7 @@ module LRParser =
             let state = states.[stateIdx]
 
             for item in state do
-                if isCompleted1 item then
+                if isCompletedLR1 item then
                     if item.lhs = augmentedRule.lhs && item.dot = 1 then
                         let key = (stateIdx, Epsilon)
 
@@ -450,8 +450,9 @@ module LRParser =
             children
 
         recordStep ()
+        let maxIterations = 10000
 
-        while not finished && iteration < 10000 do
+        while not finished && iteration < maxIterations do
             iteration <- iteration + 1
             let currentState = topState ()
 

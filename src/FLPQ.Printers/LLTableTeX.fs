@@ -43,7 +43,7 @@ module LLTableTeX =
     /// Render the LL(k) parsing table as a TeX tabular.
     let tableToTeX
         (symbolPrinter: Symbol<'t, 'nt> -> string)
-        (g: Grammar<'t, 'nt>)
+        (grammar: Grammar<'t, 'nt>)
         (k: int)
         (firstMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
         (followMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
@@ -51,8 +51,8 @@ module LLTableTeX =
         : string =
         let sb = System.Text.StringBuilder()
 
-        let nts = Grammar.nonterminalsOf g |> Set.toList
-        let terms = Grammar.terminalsOf g |> Set.toList
+        let nts = Grammar.nonterminalsOf grammar |> Set.toList
+        let terms = Grammar.terminalsOf grammar |> Set.toList
 
         let colSpec =
             let termCols = String.replicate terms.Length "c | "
@@ -81,7 +81,7 @@ module LLTableTeX =
 
                 let cell =
                     match Map.tryFind key table with
-                    | Some ruleIdx -> renderRule symbolPrinter g.rules.[ruleIdx]
+                    | Some ruleIdx -> renderRule symbolPrinter grammar.rules.[ruleIdx]
                     | None -> ""
 
                 sb.Append(@" & " + cell) |> ignore
@@ -90,7 +90,7 @@ module LLTableTeX =
 
             let endCell =
                 match Map.tryFind endKey table with
-                | Some ruleIdx -> renderRule symbolPrinter g.rules.[ruleIdx]
+                | Some ruleIdx -> renderRule symbolPrinter grammar.rules.[ruleIdx]
                 | None -> ""
 
             sb.Append(@" & " + endCell + @" \\ \hline") |> ignore

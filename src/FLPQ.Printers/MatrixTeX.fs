@@ -10,7 +10,7 @@ module MatrixTeX =
         (showRowNumbers: bool)
         (showColNumbers: bool)
         (cellPrinter: 'a -> string)
-        (m: Matrix<'a>)
+        (matrix: Matrix<'a>)
         (highlights: Matrix.Highlight list)
         (blocks: Matrix.SubmatrixBlock list)
         : string =
@@ -36,8 +36,8 @@ module MatrixTeX =
         let dataRowOffset = if showColNumbers then 1 else 0
         let dataColOffset = if showRowNumbers then 1 else 0
 
-        let totalRows = m.rows + dataRowOffset
-        let totalCols = m.cols + dataColOffset
+        let totalRows = matrix.rows + dataRowOffset
+        let totalCols = matrix.cols + dataColOffset
 
         let highlightSet =
             highlights
@@ -85,7 +85,7 @@ module MatrixTeX =
                           else
                               let dataRow = row - dataRowOffset
                               let dataCol = col - dataColOffset
-                              cellPrinter m.data.[dataRow, dataCol]
+                              cellPrinter matrix.data.[dataRow, dataCol]
 
                       let hc =
                           highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)
@@ -112,5 +112,5 @@ module MatrixTeX =
         sb.Append(@"\end{pNiceMatrix}") |> ignore
         sb.ToString()
 
-    let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (m: Matrix<'a>) : string =
-        toTeXStyled showRowNumbers showColNumbers cellPrinter m [] []
+    let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (matrix: Matrix<'a>) : string =
+        toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] []

@@ -33,17 +33,17 @@ type LRStackFrame<'t, 'nt> =
     | LRState of state: int
     | LRSymbol of tree: DerivationTree<'t, 'nt>
 
-module LRSymbol =
+module LRSymbolHelpers =
 
     let symbol frame =
         match frame with
         | LRSymbol tree -> DerivationTree.rootSymbol tree
-        | LRState _ -> failwith "LRSymbol.symbol called on LRState"
+        | LRState _ -> failwith "LRSymbolHelpers.symbol called on LRState"
 
     let tree frame =
         match frame with
         | LRSymbol tree -> tree
-        | LRState _ -> failwith "LRSymbol.tree called on LRState"
+        | LRState _ -> failwith "LRSymbolHelpers.tree called on LRState"
 
 /// Data for a single LR parser visualization step.
 [<Struct>]
