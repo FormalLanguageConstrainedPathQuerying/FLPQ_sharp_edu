@@ -139,7 +139,7 @@ module ValiantTeX =
                         None)
                 |> List.choose id
 
-            MatrixTeX.toTeXStyled true true (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table [] blocks
+            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table [] blocks
 
         | Valiant.LayerBackward(table, _layerSize, submatrices, changedCells) ->
             let n = Matrix.rows table
@@ -182,4 +182,4 @@ module ValiantTeX =
                                  label = Matrix.CurrentCell }
                               : Matrix.Highlight) ]
 
-            MatrixTeX.toTeXStyled true true (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights blocks
+            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights blocks
