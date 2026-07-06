@@ -118,4 +118,7 @@
      5.   In CLI add params to run Valiant and modified Valiant algorithms.
 134. [done] Improve Valiant visualization. Trace only doMultiplications. For each doMultiplications, for each task visualize all three submatrices. 
 135. Investigate output for valiant summary: `-a valiant -g data/example_grammar.bnf -i data/example_input.txt -s` Steps 5, 6, 7, 19, 20, 21, 25, 26, 27 contains only one submatrix, while valiant visualization step is doMultiplications with three submatrices. Detect the problem. Fix it. 
-136. Set test coverage calculation up. Use dotnet-coverage. 
+136. [done] Set test coverage calculation up. Use dotnet-coverage: https://learn.microsoft.com/en-us/dotnet/core/additional-tools/dotnet-coverage. 
+     1.   Improve CI to check coverage. Total line coverage must be not less than 80%. 
+     2.   Investigate local coverage report. Report functions with low coverage.
+     3.   Do not try to improve coverage. Just improve CI and analize current coverage.
