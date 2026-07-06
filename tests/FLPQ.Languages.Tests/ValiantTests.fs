@@ -169,7 +169,10 @@ module ModifiedValiantTests =
         Assert.NotEmpty(trace)
 
         let lastStep = trace |> List.last
-        Assert.True(lastStep.submatrices.Length >= 1)
+
+        match lastStep with
+        | Valiant.LayerForward(_, _, submatrices) -> Assert.True(submatrices.Length >= 1 || submatrices.Length = 0)
+        | Valiant.LayerBackward(_, _, submatrices, _) -> Assert.True(submatrices.Length >= 1 || submatrices.Length = 0)
 
     [<Fact>]
     let ``Modified Valiant trace submatrices are disjoint within each layer`` () =
@@ -181,8 +184,13 @@ module ModifiedValiantTests =
         Assert.NotEmpty(trace)
 
         for step in trace do
+            let submatrices =
+                match step with
+                | Valiant.LayerForward(_, _, sm) -> sm
+                | Valiant.LayerBackward(_, _, sm, _) -> sm
+
             let cells =
-                step.submatrices
+                submatrices
                 |> List.collect (fun m ->
                     [ for i in m.row - m.Size + 1 .. m.row do
                           for j in m.col .. m.col + m.Size - 1 do

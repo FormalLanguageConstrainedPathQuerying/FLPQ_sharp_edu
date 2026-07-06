@@ -1,34 +1,48 @@
-# Detailed Plan: Task 129 — Golden Test Gaps
+# Detailed Plan: Task 133 — Simplify Valiant (and modified Valiant) algorithms
 
-## Goal
-Add golden tests for modules lacking them, plus TeX/DOT runtime compilation checks.
+## Status: COMPLETED
 
-## Changes
+## Summary
+Replaced boolean decomposition-based Valiant implementation with a simpler set-based approach (direct set matrices, like CYK). Added forward/backward step visualization for both standard and modified Valiant. Added CLI support for modified Valiant.
 
-### 1. LL table TeX golden tests (new file)
-- `tests/FLPQ.Printers.Tests/LLTableTeXGoldenTests.fs`
-- Generate LL table TeX for grammar1 and grammar8
-- Compare with golden reference files
+## Changes Made
 
-### 2. Matrix TeX golden tests (add to MatrixTeXTests.fs)
-- Generate Matrix TeX for known matrices
-- Compare with golden reference files
+### 1. Valiant.fs — core algorithm rewrite
+- Removed `BooleanDecomposition` dependency entirely
+- Replaced `tByNt: Dictionary<Nonterminal, Matrix<bool>>` and `pByPair: Dictionary<BinaryPair, Matrix<bool>>` with a single `table: Matrix<Set<Nonterminal<'nt>>>`
+- New functions: `setMult`, `mxmSet`, `writeSliceUnion`, `diffCells`, `snapshot`, `doMultiplications`
+- `initValiant` now pre-fills diagonal cells with terminal rules (fix for modified Valiant)
+- `complete`/`compute`: same recursive structure but on set-based table
+- `completeLayerModified`/`completeVLayerModified`: same structure, set-based
 
-### 3. Automaton dot/Tikz golden tests (add to AutomatonVisualizationTests.fs)
-- Generate dot/Tikz for known automata
-- Compare with golden reference files
+### 2. Trace step types — forward/backward semantics
+- `ValiantTraceStep<'nt>`: DU with `Forward(table * Submatrix)` and `Backward(table * Submatrix * (Submatrix*Submatrix) list * (int*int) list)`
+- `ModifiedValiantTraceStep<'nt>`: DU with `LayerForward(table * int * Submatrix list)` and `LayerBackward(table * int * Submatrix list * (int*int) list)`
 
-### 4. Derivation tree dot golden tests (add to DerivationTreeVisualizationTests.fs)
-- Generate dot for known derivation trees
-- Compare with golden reference files
+### 3. ValiantTeX.fs — new visualization
+- `stepToTeX`: renders Forward steps (submatrix outlined in red + yellow highlights) and Backward steps (target in red, multiplied submatrices in colored blocks, changed cells in yellow)
+- `modifiedStepToTeX`: renders LayerForward (colored blocks for layer submatrices) and LayerBackward (colored blocks + yellow highlights for changed cells)
+- Removed `boolDecompToTeX`
 
-### 5. Valiant trace TeX golden tests (new file)
-- `tests/FLPQ.Printers.Tests/ValiantTraceGoldenTests.fs`
-- Generate Valiant trace TeX for grammar1
-- Compare with golden reference files
+### 4. ValiantRunner.fs
+- Removed boolean decomposition output (no more `bool_decomp_*.tex` files)
+- Added `runValiantModified` function
 
-### 6. TeX/DOT compilation checks (add to TexCompilationTests.fs)
-- LL table TeX compilation check
-- Matrix TeX compilation check  
-- Valiant trace TeX compilation check
-- Derivation tree dot compilation check
+### 5. CLI changes
+- `AlgorithmTypes.fs`: added `ValiantModified` case
+- `Program.fs`: routed `ValiantModified` to `ValiantRunner.runValiantModified`
+- `Summary.fs`: added `ValiantModified` to `TablePerStep` mapping
+- `SummaryTeX.fs`: removed `bool_decomp_*.tex` handling from `tableStepSection`
+
+### 6. Test updates
+- `ValiantTests.fs`: updated tests to pattern-match on DU trace step types
+- `ValiantRunnerTests.fs`: removed boolean decomposition check test
+- `TexCompilationTests.fs`: updated Valiant test to extract table from DU
+- `ValiantTraceGoldenTests.fs`: regenerated golden data files
+
+### Verification
+- All 356 FLPQ.Languages.Tests pass
+- All 56 FLPQ.Cli.Tests pass
+- All 67 FLPQ.Printers.Tests pass
+- All Valiant-related golden tests pass
+- Both `Valiant` and `ValiantModified` work via CLI

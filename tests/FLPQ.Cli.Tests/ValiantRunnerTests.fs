@@ -39,7 +39,7 @@ let ``runValiant produces grammar_cnf.tex`` () =
     Directory.Delete(outDir, true)
 
 [<Fact>]
-let ``runValiant produces step directories with table.tex`` () =
+let ``runValiant produces step directories with table.tex in each step`` () =
     let outDir = runRunner ()
 
     let stepDirs =
@@ -52,21 +52,5 @@ let ``runValiant produces step directories with table.tex`` () =
         let tableTex = Path.Combine(stepDir, "table.tex")
         Assert.True(File.Exists tableTex, sprintf "table.tex missing in %s" stepDir)
         Assert.True(FileInfo(tableTex).Length > 0L)
-
-    Directory.Delete(outDir, true)
-
-[<Fact>]
-let ``runValiant produces boolean decomposition in last step`` () =
-    let outDir = runRunner ()
-
-    let stepDirs =
-        Directory.GetDirectories outDir
-        |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
-        |> Array.sortBy (fun d -> Helpers.naturalSortKey (Path.GetFileName d))
-
-    if stepDirs.Length > 0 then
-        let lastStep = Array.last stepDirs
-        let decompFiles = Directory.GetFiles(lastStep, "bool_decomp_*.tex")
-        Assert.NotEmpty(decompFiles)
 
     Directory.Delete(outDir, true)

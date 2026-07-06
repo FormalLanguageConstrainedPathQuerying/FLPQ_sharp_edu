@@ -8,26 +8,28 @@ module Valiant =
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
-        { table: ParsingTable<'nt>
-          currentSubmatrix: Submatrix option
-          layerSize: int
-          submatrices: Submatrix list }
+        | Forward of table: ParsingTable<'nt> * submatrix: Submatrix
+        | Backward of
+            table: ParsingTable<'nt> *
+            target: Submatrix *
+            multiplied: (Submatrix * Submatrix) list *
+            changedCells: (int * int) list
 
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
-        { table: ParsingTable<'nt>
-          layerSize: int
-          submatrices: Submatrix list }
+        | LayerForward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
+        | LayerBackward of
+            table: ParsingTable<'nt> *
+            layerSize: int *
+            submatrices: Submatrix list *
+            changedCells: (int * int) list
 
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
-        { tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>
-          pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>
+        { table: Matrix<Set<Nonterminal<'nt>>>
           tokensArr: 't[]
           tableSize: int
           n: int
-          allNt: Nonterminal<'nt> list
           binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list
-          pairs: BinaryPair<'nt> list
           terminalRules: Map<'t, Nonterminal<'nt> list> }
 
     let private submatrixCells (m: Submatrix) : (int * int) list =
@@ -98,72 +100,118 @@ module Valiant =
 
         p
 
-    let private extractSlice (fullMatrix: Matrix<bool>) (m: Submatrix) : Matrix<bool> =
+    let private extractSlice (fullMatrix: Matrix<'a>) (m: Submatrix) : Matrix<'a> =
         Matrix.create m.Size m.Size (fun i j -> Matrix.get fullMatrix (m.row - m.Size + 1 + i) (m.col + j))
 
-    let private writeSlice (target: Matrix<bool>) (m: Submatrix) (slice: Matrix<bool>) : unit =
+    let private writeSliceUnion
+        (target: Matrix<Set<Nonterminal<'nt>>>)
+        (m: Submatrix)
+        (slice: Matrix<Set<Nonterminal<'nt>>>)
+        : unit =
         for i in 0 .. m.Size - 1 do
             for j in 0 .. m.Size - 1 do
-                if Matrix.get slice i j then
-                    Matrix.set target (m.row - m.Size + 1 + i) (m.col + j) true
+                let toAdd = Matrix.get slice i j
 
-    let private performMultiplications
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
+                if not (Set.isEmpty toAdd) then
+                    let ti = m.row - m.Size + 1 + i
+                    let tj = m.col + j
+                    let existing = Matrix.get target ti tj
+                    Matrix.set target ti tj (Set.union existing toAdd)
+
+    let private snapshot (table: Matrix<Set<Nonterminal<'nt>>>) (n: int) : ParsingTable<'nt> =
+        Matrix.create n n (fun ri rj -> Matrix.get table ri (rj + 1))
+
+    let private setMult
+        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
+        (a: Set<Nonterminal<'nt>>)
+        (b: Set<Nonterminal<'nt>>)
+        : Set<Nonterminal<'nt>> =
+        if Set.isEmpty a || Set.isEmpty b then
+            Set.empty
+        else
+            binaryRules
+            |> List.choose (fun (lhs, pair) ->
+                if Set.contains pair.left a && Set.contains pair.right b then
+                    Some lhs
+                else
+                    None)
+            |> Set.ofList
+
+    let private mxmSet
+        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
+        (a: Matrix<Set<Nonterminal<'nt>>>)
+        (b: Matrix<Set<Nonterminal<'nt>>>)
+        : Matrix<Set<Nonterminal<'nt>>> =
+        let rA = Matrix.rows a
+        let cB = Matrix.cols b
+        let inner = Matrix.cols a
+
+        Matrix.create rA cB (fun i j ->
+            [ 0 .. inner - 1 ]
+            |> List.fold
+                (fun acc k ->
+                    let leftCell = Matrix.get a i k
+                    let rightCell = Matrix.get b k j
+
+                    if Set.isEmpty leftCell || Set.isEmpty rightCell then
+                        acc
+                    else
+                        Set.union acc (setMult binaryRules leftCell rightCell))
+                Set.empty)
+
+    let private diffCells
+        (before: Matrix<Set<Nonterminal<'nt>>>)
+        (after: Matrix<Set<Nonterminal<'nt>>>)
+        (m: Submatrix)
+        : (int * int) list =
+        let size = Matrix.rows before
+
+        [ for i in 0 .. size - 1 do
+              for j in 0 .. size - 1 do
+                  let oldSet = Matrix.get before i j
+                  let newSet = Matrix.get after i j
+
+                  if Set.difference newSet oldSet |> (not << Set.isEmpty) then
+                      yield (m.row - m.Size + 1 + i, m.col + j) ]
+
+    let private doMultiplications
+        (init: InitData<'t, 'nt>)
+        (table: Matrix<Set<Nonterminal<'nt>>>)
         (tasks: (Submatrix * Submatrix * Submatrix) list)
-        (pairs: BinaryPair<'nt> list)
+        (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
-        if List.isEmpty pairs then
+        if List.isEmpty init.binaryRules then
             ()
         else
             for (mTarget, m1, m2) in tasks do
-                for pair in pairs do
-                    let leftNt = pair.left
-                    let rightNt = pair.right
+                let before =
+                    Matrix.create mTarget.Size mTarget.Size (fun i j ->
+                        let ti = mTarget.row - mTarget.Size + 1 + i
+                        let tj = mTarget.col + j
+                        Matrix.get table ti tj)
 
-                    let leftSlice =
-                        match tByNt.TryGetValue leftNt with
-                        | true, mat -> extractSlice mat m1
-                        | _ -> Matrix.init m1.Size m1.Size false
+                let leftSlice = extractSlice table m1
+                let rightSlice = extractSlice table m2
 
-                    let rightSlice =
-                        match tByNt.TryGetValue rightNt with
-                        | true, mat -> extractSlice mat m2
-                        | _ -> Matrix.init m2.Size m2.Size false
+                let product = mxmSet init.binaryRules leftSlice rightSlice
+                writeSliceUnion table mTarget product
 
-                    let product = LinearAlgebra.mxm leftSlice rightSlice (&&) (||) false
+                let after =
+                    Matrix.create mTarget.Size mTarget.Size (fun i j ->
+                        let ti = mTarget.row - mTarget.Size + 1 + i
+                        let tj = mTarget.col + j
+                        Matrix.get table ti tj)
 
-                    let pairMatrix = pByPair.[pair]
-                    writeSlice pairMatrix mTarget product
+                let changed = diffCells before after mTarget
 
-    let private recomposeStep
-        (allNt: Nonterminal<'nt> list)
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (tableSize: int)
-        (n: int)
-        (currentSubmatrix: Submatrix option)
-        (layerSize: int)
-        (submatrices: Submatrix list)
-        : ValiantTraceStep<'nt> =
-        let decompMap =
-            allNt
-            |> List.map (fun nt ->
-                match tByNt.TryGetValue nt with
-                | true, mat -> (nt, mat)
-                | _ -> (nt, Matrix.init tableSize tableSize false))
-            |> Map.ofList
-
-        let fullMatrix = BooleanDecomposition.recompose decompMap
-
-        let recomposed = Matrix.create n n (fun ri rj -> Matrix.get fullMatrix ri (rj + 1))
-
-        { table = recomposed
-          currentSubmatrix = currentSubmatrix
-          layerSize = layerSize
-          submatrices = submatrices }
+                if not (List.isEmpty changed) then
+                    match traceAcc with
+                    | Some steps -> steps.Add(Backward(snapshot table init.n, mTarget, [ (m1, m2) ], changed))
+                    | None -> ()
 
     let rec private complete
         (init: InitData<'t, 'nt>)
+        (table: Matrix<Set<Nonterminal<'nt>>>)
         (m: Submatrix)
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
@@ -174,29 +222,14 @@ module Valiant =
             if i + 1 = j && i < init.tokensArr.Length then
                 let ch = init.tokensArr.[i]
 
-                match Map.tryFind ch init.terminalRules with
-                | Some nts ->
-                    for nt in nts do
-                        match init.tByNt.TryGetValue nt with
-                        | true, mat -> Matrix.set mat i j true
-                        | _ -> ()
-                | None -> ()
-            else
-                for pair in init.pairs do
-                    let pairHasValue =
-                        match init.pByPair.TryGetValue pair with
-                        | true, mat -> Matrix.get mat i j
-                        | _ -> false
+                let existing = Matrix.get table i j
 
-                    if pairHasValue then
-                        for (a, bc) in init.binaryRules do
-                            if bc = pair then
-                                match init.tByNt.TryGetValue a with
-                                | true, mat -> Matrix.set mat i j true
-                                | _ -> ()
+                match Map.tryFind ch init.terminalRules with
+                | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
+                | None -> ()
 
             match traceAcc with
-            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n (Some m) 1 [])
+            | Some steps -> steps.Add(Forward(snapshot table init.n, m))
             | None -> ()
         else
             let b = bottomSubmatrix m
@@ -204,44 +237,43 @@ module Valiant =
             let r = rightSubmatrix m
             let te = topSubmatrix m
 
-            complete init b traceAcc
-            performMultiplications init.tByNt init.pByPair [ (l, leftGrounded l, b) ] init.pairs
-            complete init l traceAcc
-            performMultiplications init.tByNt init.pByPair [ (r, b, rightGrounded r) ] init.pairs
-            complete init r traceAcc
-            performMultiplications init.tByNt init.pByPair [ (te, leftGrounded te, r) ] init.pairs
-            performMultiplications init.tByNt init.pByPair [ (te, l, rightGrounded te) ] init.pairs
-            complete init te traceAcc
+            complete init table b traceAcc
+            doMultiplications init table [ (l, leftGrounded l, b) ] traceAcc
+            complete init table l traceAcc
+            doMultiplications init table [ (r, b, rightGrounded r) ] traceAcc
+            complete init table r traceAcc
+            doMultiplications init table [ (te, leftGrounded te, r) ] traceAcc
+            doMultiplications init table [ (te, l, rightGrounded te) ] traceAcc
+            complete init table te traceAcc
 
             match traceAcc with
-            | Some steps -> steps.Add(recomposeStep init.allNt init.tByNt init.tableSize init.n (Some m) m.Size [])
+            | Some steps -> steps.Add(Forward(snapshot table init.n, m))
             | None -> ()
 
     and private compute
         (init: InitData<'t, 'nt>)
+        (table: Matrix<Set<Nonterminal<'nt>>>)
         (i: int)
         (j: int)
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
         if j - i >= 4 then
             let mid = (i + j) / 2
-            compute init i mid traceAcc
-            compute init mid j traceAcc
+            compute init table i mid traceAcc
+            compute init table mid j traceAcc
 
         let a = (i + j) / 2 - 1
         let b = (i + j) / 2
         let size = (j - i) / 2
 
         let m = { row = a; col = b; Size = size }
-        complete init m traceAcc
+        complete init table m traceAcc
 
     let rec private completeLayerModified
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
+        (init: InitData<'t, 'nt>)
+        (table: Matrix<Set<Nonterminal<'nt>>>)
         (mList: Submatrix list)
-        (terminalRules: Map<'t, Nonterminal<'nt> list>)
-        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
-        (pairs: BinaryPair<'nt> list)
+        (traceAcc: ResizeArray<ModifiedValiantTraceStep<'nt>> option)
         : unit =
         match mList with
         | [] -> ()
@@ -251,31 +283,24 @@ module Valiant =
                     let i = m.row - m.Size + 1
                     let j = m.col
 
-                    if i + 1 <> j then
-                        for pair in pairs do
-                            let pairHasValue =
-                                match pByPair.TryGetValue pair with
-                                | true, mat -> Matrix.get mat i j
-                                | _ -> false
+                    if i + 1 = j && i < init.tokensArr.Length then
+                        let ch = init.tokensArr.[i]
 
-                            if pairHasValue then
-                                for (a, bc) in binaryRules do
-                                    if bc = pair then
-                                        match tByNt.TryGetValue a with
-                                        | true, mat -> Matrix.set mat i j true
-                                        | _ -> ()
+                        let existing = Matrix.get table i j
+
+                        match Map.tryFind ch init.terminalRules with
+                        | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
+                        | None -> ()
             else
                 let bottomLayer = mList |> List.map bottomSubmatrix
-                completeLayerModified tByNt pByPair bottomLayer terminalRules binaryRules pairs
-                completeVLayerModified tByNt pByPair mList terminalRules binaryRules pairs
+                completeLayerModified init table bottomLayer traceAcc
+                completeVLayerModified init table mList traceAcc
 
     and private completeVLayerModified
-        (tByNt: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>)
-        (pByPair: System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>)
+        (init: InitData<'t, 'nt>)
+        (table: Matrix<Set<Nonterminal<'nt>>>)
         (mList: Submatrix list)
-        (terminalRules: Map<'t, Nonterminal<'nt> list>)
-        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
-        (pairs: BinaryPair<'nt> list)
+        (traceAcc: ResizeArray<ModifiedValiantTraceStep<'nt>> option)
         : unit =
         let leftSubLayer = mList |> List.map leftSubmatrix
         let rightSubLayer = mList |> List.map rightSubmatrix
@@ -287,23 +312,34 @@ module Valiant =
               for m in rightSubLayer do
                   yield (m, leftNeighbor m, rightGrounded m) ]
 
-        performMultiplications tByNt pByPair firstTasks pairs
+        let collectTaskChanges (tasks: (Submatrix * Submatrix * Submatrix) list) : unit =
+            if List.isEmpty init.binaryRules then
+                ()
+            else
+                for (mTarget, m1, m2) in tasks do
+                    let leftSlice = extractSlice table m1
+                    let rightSlice = extractSlice table m2
 
-        completeLayerModified tByNt pByPair (leftSubLayer @ rightSubLayer) terminalRules binaryRules pairs
+                    let product = mxmSet init.binaryRules leftSlice rightSlice
+                    writeSliceUnion table mTarget product
+
+        collectTaskChanges firstTasks
+
+        completeLayerModified init table (leftSubLayer @ rightSubLayer) traceAcc
 
         let secondTasks =
             [ for m in topSubLayer do
                   yield (m, leftGrounded m, rightNeighbor m) ]
 
-        performMultiplications tByNt pByPair secondTasks pairs
+        collectTaskChanges secondTasks
 
         let thirdTasks =
             [ for m in topSubLayer do
                   yield (m, leftNeighbor m, rightGrounded m) ]
 
-        performMultiplications tByNt pByPair thirdTasks pairs
+        collectTaskChanges thirdTasks
 
-        completeLayerModified tByNt pByPair topSubLayer terminalRules binaryRules pairs
+        completeLayerModified init table topSubLayer traceAcc
 
     let private terminalRulesFromGrammar (cnf: Grammar<'t, 'nt>) : Map<'t, Nonterminal<'nt> list> =
         cnf.rules
@@ -327,42 +363,21 @@ module Valiant =
         let paddedN = nextPowerOfTwo (n + 1) - 1
         let tableSize = paddedN + 1
 
-        let allNt = cnf.rules |> List.map (fun r -> r.lhs) |> List.distinct
         let terminalRules = terminalRulesFromGrammar cnf
         let binaryRules = binaryRulesFromGrammar cnf
-        let pairs = binaryRules |> List.map snd |> List.distinct
 
-        let tByNt = System.Collections.Generic.Dictionary<Nonterminal<'nt>, Matrix<bool>>()
-
-        let initMatrix = Matrix.init tableSize tableSize (Set.empty: Set<Nonterminal<'nt>>)
+        let table = Matrix.init tableSize tableSize Set.empty
 
         for i in 0 .. tokensArr.Length - 1 do
             match Map.tryFind tokensArr.[i] terminalRules with
-            | Some nts ->
-                for nt in nts do
-                    Matrix.set initMatrix i (i + 1) (Set.add nt (Matrix.get initMatrix i (i + 1)))
+            | Some nts -> Matrix.set table i (i + 1) (Set.ofList nts)
             | None -> ()
 
-        let initDecomp = BooleanDecomposition.decompose initMatrix
-
-        for nt in allNt do
-            match Map.tryFind nt initDecomp with
-            | Some mat -> tByNt.[nt] <- mat
-            | None -> tByNt.[nt] <- Matrix.init tableSize tableSize false
-
-        let pByPair = System.Collections.Generic.Dictionary<BinaryPair<'nt>, Matrix<bool>>()
-
-        for pair in pairs do
-            pByPair.[pair] <- Matrix.init tableSize tableSize false
-
-        { tByNt = tByNt
-          pByPair = pByPair
+        { table = table
           tokensArr = tokensArr
           tableSize = tableSize
           n = n
-          allNt = allNt
           binaryRules = binaryRules
-          pairs = pairs
           terminalRules = terminalRules }
 
     let parseWithTrace
@@ -377,8 +392,12 @@ module Valiant =
             []
         else
             let init = initValiant cnf tokensArr
+
+            let table =
+                Matrix.create init.tableSize init.tableSize (fun i j -> Matrix.get init.table i j)
+
             let steps = ResizeArray<ValiantTraceStep<'nt>>()
-            compute init 0 init.tableSize (Some steps)
+            compute init table 0 init.tableSize (Some steps)
             List.ofSeq steps
 
     let parseWithTable
@@ -396,10 +415,15 @@ module Valiant =
         else
             let lastStep = List.last steps
 
-            let accepted =
-                Set.contains cnf.start (Matrix.get lastStep.table 0 (Matrix.cols lastStep.table - 1))
+            let finalTable =
+                match lastStep with
+                | Forward(table, _) -> table
+                | Backward(table, _, _, _) -> table
 
-            (lastStep.table, accepted)
+            let accepted =
+                Set.contains cnf.start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+
+            (finalTable, accepted)
 
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
         parseWithTable freshNonterminal g terminals |> snd
@@ -416,48 +440,26 @@ module Valiant =
             []
         else
             let init = initValiant cnf tokensArr
-            let tByNt = init.tByNt
-            let pByPair = init.pByPair
-            let allNt = init.allNt
             let tableSize = init.tableSize
+            let table = Matrix.create tableSize tableSize (fun i j -> Matrix.get init.table i j)
             let n = init.n
-            let terminalRules = init.terminalRules
-            let binaryRules = init.binaryRules
-            let pairs = init.pairs
 
-            let recomposeTable () =
-                let decompMap =
-                    allNt
-                    |> List.map (fun nt ->
-                        match tByNt.TryGetValue nt with
-                        | true, mat -> (nt, mat)
-                        | _ -> (nt, Matrix.init tableSize tableSize false))
-                    |> Map.ofList
-
-                let fullMatrix = BooleanDecomposition.recompose decompMap
-                Matrix.create n n (fun ri rj -> Matrix.get fullMatrix ri (rj + 1))
-
-            let mutable steps = []
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
+
+            let mutable steps: ModifiedValiantTraceStep<'nt> list = []
 
             for layer in 1..maxLayer do
                 let layerSubmatrices = constructLayer layer tableSize
 
                 if not (List.isEmpty layerSubmatrices) then
-                    completeLayerModified tByNt pByPair layerSubmatrices terminalRules binaryRules pairs
+                    steps <- LayerForward(snapshot table n, 1 <<< layer, layerSubmatrices) :: steps
 
-                    steps <-
-                        { ModifiedValiantTraceStep.table = recomposeTable ()
-                          layerSize = 1 <<< layer
-                          submatrices = layerSubmatrices }
-                        :: steps
+                    completeLayerModified init table layerSubmatrices None
+
+                    steps <- LayerBackward(snapshot table n, 1 <<< layer, layerSubmatrices, []) :: steps
 
             if List.isEmpty steps then
-                steps <-
-                    { ModifiedValiantTraceStep.table = recomposeTable ()
-                      layerSize = 1
-                      submatrices = [] }
-                    :: steps
+                steps <- LayerBackward(snapshot table n, 1, [], []) :: steps
 
             List.rev steps
 
@@ -476,10 +478,15 @@ module Valiant =
         else
             let lastStep = List.last steps
 
-            let accepted =
-                Set.contains cnf.start (Matrix.get lastStep.table 0 (Matrix.cols lastStep.table - 1))
+            let finalTable =
+                match lastStep with
+                | LayerForward(table, _, _) -> table
+                | LayerBackward(table, _, _, _) -> table
 
-            (lastStep.table, accepted)
+            let accepted =
+                Set.contains cnf.start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+
+            (finalTable, accepted)
 
     let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
         parseModifiedWithTable freshNonterminal g terminals |> snd

@@ -7,6 +7,7 @@ module AlgorithmTypes =
     type Algorithm =
         | CYK
         | Valiant
+        | ValiantModified
         | LL
         | LR0
         | SLR1
@@ -16,6 +17,7 @@ module AlgorithmTypes =
         match algo with
         | CYK -> "CYK"
         | Valiant -> "Valiant"
+        | ValiantModified -> "Valiant (modified)"
         | LL -> "LL"
         | LR0 -> "LR(0)"
         | SLR1 -> "SLR(1)"
@@ -33,7 +35,7 @@ module AlgorithmTypes =
         interface IArgParserTemplate with
             member this.Usage =
                 match this with
-                | Algorithm _ -> "Parsing algorithm: CYK, Valiant, LL, LR0, SLR1, or CLR1"
+                | Algorithm _ -> "Parsing algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, or CLR1"
                 | Grammar _ -> "Path to grammar file (.bnf format)"
                 | Input _ -> "Path to input string file"
                 | Output _ -> "Output directory for step-by-step visualization"

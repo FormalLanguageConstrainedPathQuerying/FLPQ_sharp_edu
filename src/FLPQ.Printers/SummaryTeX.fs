@@ -98,7 +98,6 @@ module SummaryTeX =
         grammar @ algoLines
 
     /// Builds the content lines for a single table-based algorithm step.
-    /// Includes the step header, the parsing table, and any Boolean decomposition matrices.
     let tableStepSection (stepDir: string) (stepNum: int) : string list =
         let header = [ section (sprintf "Step %d" stepNum) ]
 
@@ -107,13 +106,7 @@ module SummaryTeX =
             | Some tex -> [ wrapMath tex; "" ]
             | None -> []
 
-        let decompLines =
-            Directory.GetFiles(stepDir, "bool_decomp_*.tex")
-            |> Array.sortBy Path.GetFileName
-            |> Array.collect (fun f -> [| wrapMath (File.ReadAllText(f).Trim()); "" |])
-            |> Array.toList
-
-        header @ tableLines @ decompLines
+        header @ tableLines
 
     /// Builds the content lines for a single stack-based algorithm step (LL or LR).
     /// Includes the step header, stack-tree PDF, and input state.

@@ -73,8 +73,13 @@ let ``Valiant trace TeX compiles with lualatex`` () =
     Assert.NotEmpty(trace)
 
     for step in trace do
+        let table =
+            match step with
+            | Valiant.Forward(t, _) -> t
+            | Valiant.Backward(t, _, _, _) -> t
+
         let tex =
-            MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+            MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) table
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)

@@ -10,7 +10,8 @@ module Summary =
     let algorithmToKind (algo: AlgorithmTypes.Algorithm) : SummaryTeX.SummaryKind =
         match algo with
         | AlgorithmTypes.CYK
-        | AlgorithmTypes.Valiant -> SummaryTeX.SummaryKind.TablePerStep
+        | AlgorithmTypes.Valiant
+        | AlgorithmTypes.ValiantModified -> SummaryTeX.SummaryKind.TablePerStep
         | AlgorithmTypes.LL -> SummaryTeX.SummaryKind.LL
         | AlgorithmTypes.LR0
         | AlgorithmTypes.SLR1
