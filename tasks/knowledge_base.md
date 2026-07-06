@@ -346,3 +346,96 @@ The `graphdrawing` library with `layered` algorithm requires lualatex (Lua-based
 
 The `layered layout` algorithm in `graphdrawing` works well with simple `string` state identifiers (`s0`, `s1`, ...). Using complex identifiers (containing dots, commas, or special characters) in node names (before the `as` key) may cause parsing issues. Always use simple alphanumeric identifiers and put content in `as={...}`.
 
+## dotnet-coverage
+
+### Installation
+
+Install as a local tool alongside fantomas:
+
+```sh
+dotnet new tool-manifest        # Creates dotnet-tools.json if not present
+dotnet tool install dotnet-coverage
+```
+
+The tool is invoked as `dotnet dotnet-coverage` (local) or `dotnet-coverage` (global).
+
+### Collecting Coverage
+
+```sh
+dotnet dotnet-coverage collect \
+  dotnet test FLPQ.slnx --filter "Category!=Graphviz&Category!=TeX&Category!=Summary" \
+  -o coverage/coverage.cobertura \
+  -f cobertura \
+  --nologo
+```
+
+Key points:
+- The `<command> <args>` syntax passes arguments positionally: `collect dotnet test FLPQ.slnx --filter ...`
+- Options like `-o`, `-f`, `--nologo` come after the command arguments
+- Use `cobertura` format for XML output parseable by scripts and CI tools
+
+### Coverage Scope
+
+`dotnet-coverage` instruments **all** assemblies loaded during test execution, including:
+- F# core libraries (`FSharp.Core`)
+- Test frameworks (`FsCheck`, `xunit`)
+- Microsoft internals (`Microsoft.VisualStudio.SolutionPersistence`)
+- Application assemblies (`FLPQ.*`)
+
+The Cobertura XML includes all of these in the `<packages>` section. To get meaningful coverage for the project, filter to only `FLPQ.*` source packages (excluding `*.Tests` packages).
+
+### Parsing Cobertura for Threshold Check
+
+Python snippet to extract FLPQ source coverage from Cobertura XML:
+
+```python
+import xml.etree.ElementTree as ET
+
+tree = ET.parse("coverage.cobertura")
+root = tree.getroot()
+
+source_packages = ["FLPQ.LinearAlgebra", "FLPQ.GraphAnalysis", "FLPQ.Languages",
+                   "FLPQ.Printers", "FLPQ.RPQ", "FLPQ.Cli"]
+
+total_covered = 0
+total_valid = 0
+for pkg in root.findall(".//package"):
+    name = pkg.attrib.get("name", "")
+    if name not in source_packages:
+        continue
+    for cls in pkg.findall(".//class"):
+        for line in cls.findall(".//lines/line"):
+            hits = int(line.attrib.get("hits", 0))
+            if hits > 0:
+                total_covered += 1
+            total_valid += 1
+
+rate = (total_covered / total_valid * 100) if total_valid > 0 else 0
+```
+
+### CI Integration
+
+The `coverage-check` job in `.github/workflows/ci.yml`:
+1. Runs `dotnet tool restore` to install dotnet-coverage
+2. Collects coverage using `dotnet dotnet-coverage collect`
+3. Parses Cobertura XML with an inline Python script
+4. Fails if FLPQ source line coverage < 80%
+
+### Current Coverage (as of task 136)
+
+| Package | Coverage |
+|---------|----------|
+| FLPQ.LinearAlgebra | 100.0% |
+| FLPQ.GraphAnalysis | 98.0% |
+| FLPQ.Languages | 95.3% |
+| FLPQ.RPQ | 93.0% |
+| FLPQ.Printers | 77.8% |
+| FLPQ.Cli | 52.7% |
+| **Total** | **86.5%** |
+
+Low-coverage modules requiring attention:
+- `FLPQ.Printers.ExternalTools` — 0% (not testable without external tools)
+- `FLPQ.Cli.Summary` — 7.9% (summary generation, exercised only by Summary-category tests)
+- `FLPQ.Cli.Helpers` — 36% (CLI helper functions)
+- `FLPQ.Cli.ValiantRunner` — 46.8% (Valiant algorithm runner)
+

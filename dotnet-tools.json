@@ -2,6 +2,13 @@
   "version": 1,
   "isRoot": true,
   "tools": {
+    "dotnet-coverage": {
+      "version": "18.8.0",
+      "commands": [
+        "dotnet-coverage"
+      ],
+      "rollForward": false
+    },
     "fantomas": {
       "version": "7.0.5",
       "commands": [
