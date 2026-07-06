@@ -4,14 +4,16 @@
 \begin{document}
 \begin{preview}
 \[
-\begin{pNiceMatrix}
-\{N_4\} & \Block[draw=red]{2-1}{\cdot} \\
-\cdot & \{N_1, N_2, N_5\} \\
+\begin{pNiceMatrix}[first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
+ &  &  \\
+ & \{N_4\} & \Block[draw=red]{2-1}{\cdot} \\
+ & \cdot & \{N_1, N_2, N_5\} \\
 \end{pNiceMatrix}
 
-\begin{pNiceMatrix}
-\{N_4\} & \Block[draw=red]{2-1}{\{N_3, S\}} \\
-\cdot & \{N_1, N_2, N_5\} \\
+\begin{pNiceMatrix}[first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
+ &  &  \\
+ & \{N_4\} & \Block[draw=red]{2-1}{\{N_3, S\}} \\
+ & \cdot & \{N_1, N_2, N_5\} \\
 \end{pNiceMatrix}
 \]
 \end{preview}
