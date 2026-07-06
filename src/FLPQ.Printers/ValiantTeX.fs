@@ -9,7 +9,7 @@ module ValiantTeX =
         let highlights =
             [ for (i, j) in step.changedCells do
                   let ci = i
-                  let cj = j - 1
+                  let cj = j
 
                   if ci >= 0 && ci < Matrix.rows step.table && cj >= 0 && cj < Matrix.cols step.table then
                       yield
@@ -20,8 +20,8 @@ module ValiantTeX =
 
         let startRow = step.target.row - step.target.Size + 1
         let endRow = step.target.row
-        let startCol = step.target.col - 1
-        let endCol = step.target.col + step.target.Size - 2
+        let startCol = step.target.col
+        let endCol = step.target.col + step.target.Size - 1
 
         let clippedStartRow = max 0 startRow
         let clippedEndRow = min (Matrix.rows step.table - 1) endRow
@@ -43,23 +43,23 @@ module ValiantTeX =
             step.multiplied
             |> List.mapi (fun idx (m1, m2) ->
                 let sr1 = max 0 (m1.row - m1.Size + 1)
-                let sc1 = max 0 (m1.col - 1)
+                let sc1 = max 0 m1.col
                 let sr2 = max 0 (m2.row - m2.Size + 1)
-                let sc2 = max 0 (m2.col - 1)
+                let sc2 = max 0 m2.col
 
                 let b1: Matrix.SubmatrixBlock =
                     { startRow = sr1
                       startCol = sc1
                       rowCount = min m1.Size (Matrix.rows step.table - sr1)
                       colCount = min m1.Size (Matrix.cols step.table - sc1)
-                      label = Matrix.Submatrix idx }
+                      label = Matrix.Submatrix(idx * 2 + 1) }
 
                 let b2: Matrix.SubmatrixBlock =
                     { startRow = sr2
                       startCol = sc2
                       rowCount = min m2.Size (Matrix.rows step.table - sr2)
                       colCount = min m2.Size (Matrix.cols step.table - sc2)
-                      label = Matrix.Submatrix idx }
+                      label = Matrix.Submatrix(idx * 2 + 2) }
 
                 [ b1; b2 ])
             |> List.concat

@@ -119,6 +119,9 @@ module Valiant =
     let private snapshot (table: Matrix<Set<Nonterminal<'nt>>>) (n: int) : ParsingTable<'nt> =
         Matrix.create n n (fun ri rj -> Matrix.get table ri (rj + 1))
 
+    let private copyFullTable (table: Matrix<Set<Nonterminal<'nt>>>) (tableSize: int) : ParsingTable<'nt> =
+        Matrix.create tableSize tableSize (fun i j -> Matrix.get table i j)
+
     let private setMult
         (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
         (a: Set<Nonterminal<'nt>>)
@@ -205,7 +208,7 @@ module Valiant =
                 match traceAcc with
                 | Some steps ->
                     steps.Add(
-                        { table = snapshot table init.n
+                        { table = copyFullTable table init.tableSize
                           target = mTarget
                           multiplied = [ (m1, m2) ]
                           changedCells = changed }

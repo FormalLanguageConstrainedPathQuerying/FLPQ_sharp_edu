@@ -117,3 +117,5 @@
      4.   For modified Valiant visualization: layer handling (both forward and backward). Highlight layers with colors.
      5.   In CLI add params to run Valiant and modified Valiant algorithms.
 134. [done] Improve Valiant visualization. Trace only doMultiplications. For each doMultiplications, for each task visualize all three submatrices. 
+135. Investigate output for valiant summary: `-a valiant -g data/example_grammar.bnf -i data/example_input.txt -s` Steps 5, 6, 7, 19, 20, 21, 25, 26, 27 contains only one submatrix, while valiant visualization step is doMultiplications with three submatrices. Detect the problem. Fix it. 
+136. Set test coverage calculation up. Use dotnet-coverage. 

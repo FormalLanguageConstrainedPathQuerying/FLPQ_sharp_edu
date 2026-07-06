@@ -5,7 +5,11 @@
 ## Summary
 Simplified Valiant trace to only record `doMultiplications` steps. Removed `Forward` trace steps (decomposition transitions and size-1 terminal submatrix processing). Changed `ValiantTraceStep` from a DU (`Forward | Backward`) to a record type since only one case remains. Each `doMultiplications` call now always emits a trace step (removed the `changedCells` guard).
 
-## Changes Made
+Fixed a coordinate system bug: trace steps previously captured an `n × n` snapshot (columns shifted by −1 via `snapshot`) but the TeX rendering also applied −1 column offsets to compensate. This double-compensation caused blocks to render at wrong positions for certain steps (5, 6, 7, 19, 20, 21, 25, 26, 27). Now uses `copyFullTable` (full `tableSize × tableSize`) for trace steps with correct coordinates, and removed all −1 column offset workarounds from the TeX rendering.
+
+Added fill colors to all submatrix blocks (`fill=red!10` for target, `fill=<color>!20` for multiplied submatrices) to make three submatrices clearly visible, not just bordered.
+
+## Changes Made (original)
 
 ### 1. Valiant.fs — trace type simplification and algorithm changes
 - Changed `ValiantTraceStep<'nt>` from DU to record:
@@ -36,6 +40,20 @@ Simplified Valiant trace to only record `doMultiplications` steps. Removed `Forw
 
 ### Verification
 - All 586 tests pass across all 6 test projects
+
+### 5. Coordinate system fix (finalization)
+- **Root cause**: trace steps used `snapshot table init.n` which created an `n × n` matrix with columns shifted by −1 (`rj + 1`). Meanwhile, `ValiantTeX.stepToTeX` applied its own `−1` column offset to compensate. This double‑compensation caused block coordinates to be wrong when submatrix corners fell near table boundaries, making blocks disappear in certain steps (5, 6, 7, 19, 20, 21, 25, 26, 27).
+- **Fix**: added `copyFullTable` function that copies the full `tableSize × tableSize` matrix without coordinate transformation. Trace steps now store `copyFullTable table init.tableSize` instead of `snapshot table init.n`.
+- Removed all `−1` column offset workarounds from `ValiantTeX.stepToTeX`: `cj = j` (was `j − 1`), `startCol = step.target.col` (was `col − 1`), `endCol = step.target.col + step.target.Size − 1` (was `Size − 2`), `sc1 = max 0 m1.col` (was `col − 1`), `sc2 = max 0 m2.col` (was `col − 1`).
+- Changed multiplied block labels from `idx` (which caused block deduplication when multiple blocks shared positions) to `idx * 2 + 1` and `idx * 2 + 2` for unique color indices.
+
+### 6. Fill color enhancement
+- Added `fill=red!10` to `CurrentStepSubmatrix` blocks and `fill=<color>!20` to other submatrix blocks in `MatrixTeX.toTeXStyled`.
+- Makes all three submatrices clearly visible as filled colored rectangles, not just thin‑bordered cells.
+- Added `blockFillColor` helper.
+
+### Final Verification
+- All 589 tests pass across all 6 test projects.
 
 ---
 

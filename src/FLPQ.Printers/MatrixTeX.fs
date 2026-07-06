@@ -59,6 +59,8 @@ module MatrixTeX =
 
             colors.[idx % colors.Length]
 
+        let blockFillColor idx = sprintf "%s!20" (blockColor idx)
+
         let blockMap =
             blocks
             |> List.map (fun b ->
@@ -68,8 +70,12 @@ module MatrixTeX =
                 let opts = ResizeArray<string>()
 
                 match b.label with
-                | Matrix.CurrentStepSubmatrix -> opts.Add("draw=red")
-                | Matrix.Submatrix idx -> opts.Add(sprintf "draw=%s" (blockColor idx))
+                | Matrix.CurrentStepSubmatrix ->
+                    opts.Add("draw=red")
+                    opts.Add("fill=red!10")
+                | Matrix.Submatrix idx ->
+                    opts.Add(sprintf "draw=%s" (blockColor idx))
+                    opts.Add(sprintf "fill=%s" (blockFillColor idx))
 
                 let blockOptions =
                     if opts.Count = 0 then
