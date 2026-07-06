@@ -20,9 +20,9 @@ let private wrapInTemplate (content: string) : string =
 type ``Valiant trace TeX golden tests``() =
 
     [<Fact>]
-    member _.``Valiant trace grammar1 ab``() =
+    member _.``Valiant trace grammar1 abab``() =
         let grammar = Grammar.parseGrammar "S -> a S b S\nS -> eps"
-        let tokens = Tokenizer.tokenizeTerminals "a b"
+        let tokens = Tokenizer.tokenizeTerminals "a b a b"
 
         let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokens
 
@@ -30,7 +30,7 @@ type ``Valiant trace TeX golden tests``() =
 
         let combined = combineSteps steps
 
-        verifyGolden "valiant_grammar1_ab.tex" (wrapInTemplate combined)
+        verifyGolden "valiant_grammar1_abab.tex" (wrapInTemplate combined)
 
     [<Fact>]
     member _.``Modified Valiant trace grammar1 ab``() =

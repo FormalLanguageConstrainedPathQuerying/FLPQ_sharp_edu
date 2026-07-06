@@ -116,3 +116,4 @@
      3.   For Valiant visualization: forward step is a one step in recursive submatrices decomposition. Show decomposition. Backward steps are submatrices multiplications. Show multiplied submatrices and changed cells.
      4.   For modified Valiant visualization: layer handling (both forward and backward). Highlight layers with colors.
      5.   In CLI add params to run Valiant and modified Valiant algorithms.
+134. [done] Improve Valiant visualization. Trace only doMultiplications. For each doMultiplications, for each task visualize all three submatrices. 

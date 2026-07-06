@@ -16,10 +16,12 @@ Defines a square region in the parsing table. The cells are `(i,j)` where `A - S
 ```fsharp
 [<Struct>]
 type ValiantTraceStep<'nt when 'nt: comparison> =
-    | Forward of table: ParsingTable<'nt> * submatrix: Submatrix
-    | Backward of table: ParsingTable<'nt> * target: Submatrix * multiplied: (Submatrix * Submatrix) list * changedCells: (int * int) list
+    { table: ParsingTable<'nt>
+      target: Submatrix
+      multiplied: (Submatrix * Submatrix) list
+      changedCells: (int * int) list }
 ```
-DU representing trace steps for the standard Valiant algorithm. `Forward` records a decomposition step (submatrix entered). `Backward` records a multiplication step with target, source submatrices, and changed cell coordinates.
+Record representing a single multiplication step from `doMultiplications`. Contains the current table snapshot, the target submatrix receiving the result, the list of (left, right) operand submatrices, and the coordinates of cells that changed.
 
 ### `ModifiedValiantTraceStep<'nt>`
 ```fsharp
@@ -42,13 +44,13 @@ Determines whether the token sequence belongs to the language of grammar `g` usi
 ```fsharp
 val parseWithTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ParsingTable<'nt> * bool
 ```
-Runs Valiant's algorithm and returns both the final parsing table (n × n matrix of `Set<Nonterminal<'nt>>`, same format as CYK's `parseWithTable`) and the acceptance status.
+Runs Valiant's algorithm without tracing and returns both the final parsing table (n × n matrix of `Set<Nonterminal<'nt>>`, same format as CYK's `parseWithTable`) and the acceptance status. For empty input, returns an empty table with acceptance determined by epsilon rule presence.
 
 ### `parseWithTrace`
 ```fsharp
 val parseWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ValiantTraceStep<'nt> list
 ```
-Runs standard Valiant with step-by-step tracing, returning a list of `Forward`/`Backward` trace steps.
+Runs standard Valiant with step-by-step tracing of `doMultiplications` calls only. Each trace step records a single multiplication task: the target submatrix, the two operand submatrices, and which cells changed. Size-1 submatrices (terminal rules) and recursive decomposition transitions are not traced.
 
 ### `parseModified`
 ```fsharp
@@ -156,7 +158,7 @@ Section `\label{sec:Valiant}`: Valiant's algorithm reduces context-free parsing 
 | Decision | Rationale |
 |----------|-----------|
 | Set-based matrices (no Boolean decomposition) | Simpler: each cell holds `Set<Nonterminal<'nt>>` directly. No `decompose`/`recompose` conversion |
-| Forward/backward trace steps (DU) | Clearly separates decomposition from multiplication results |
+| Multiplication-only trace steps | Trace records only `doMultiplications` results (target + operand submatrices + changed cells), omitting decomposition transitions and size-1 terminal steps |
 | Terminal rules pre-filled in `initValiant` | Ensures all diagonal cells have data before layer processing starts |
 | `bottomSubmatrix` uses higher row indices | "Closest to diagonal" means row index closer to column index |
 | Padding to next power of 2 | Valiant's precondition: n+1 = 2^k for some k |

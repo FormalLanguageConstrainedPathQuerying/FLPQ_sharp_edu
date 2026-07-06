@@ -1,3 +1,44 @@
+# Detailed Plan: Task 134 — Improve Valiant visualization
+
+## Status: COMPLETED
+
+## Summary
+Simplified Valiant trace to only record `doMultiplications` steps. Removed `Forward` trace steps (decomposition transitions and size-1 terminal submatrix processing). Changed `ValiantTraceStep` from a DU (`Forward | Backward`) to a record type since only one case remains. Each `doMultiplications` call now always emits a trace step (removed the `changedCells` guard).
+
+## Changes Made
+
+### 1. Valiant.fs — trace type simplification and algorithm changes
+- Changed `ValiantTraceStep<'nt>` from DU to record:
+  ```fsharp
+  [<Struct>]
+  type ValiantTraceStep<'nt when 'nt: comparison> =
+      { table: ParsingTable<'nt>
+        target: Submatrix
+        multiplied: (Submatrix * Submatrix) list
+        changedCells: (int * int) list }
+  ```
+- Removed `Forward` emissions from `complete` (size-1 branch and post-recursion branch)
+- Changed `doMultiplications` to always emit a trace step (removed `if not (List.isEmpty changed) then` guard)
+- Changed `parseWithTable` to compute directly (no longer depends on `parseWithTrace`), enabling correct results even when no multiplications occur (short inputs)
+- `parseModifiedWithTable` unchanged (modified Valiant always produces trace steps via fallback)
+
+### 2. ValiantTeX.fs — simplified rendering
+- Removed `Forward` match case from `stepToTeX` — now only handles the record type
+- All three submatrices (target, m1, m2) are visualized: target in red (`CurrentStepSubmatrix`), m1/m2 in colored blocks (`Submatrix idx`)
+
+### 3. Test updates
+- `TexCompilationTests.fs`: changed input from "a a" to "a a a a" to trigger `doMultiplications`
+- `ValiantTraceGoldenTests.fs`: changed test input from "a b" to "a b a b" to trigger `doMultiplications`, renamed golden file to `valiant_grammar1_abab.tex`
+- Removed old golden file `valiant_grammar1_ab.tex`
+
+### 4. Documentation
+- Updated `docs/valiant.md`: `ValiantTraceStep` type, `parseWithTable`/`parseWithTrace` descriptions, design decisions
+
+### Verification
+- All 586 tests pass across all 6 test projects
+
+---
+
 # Detailed Plan: Task 133 — Simplify Valiant (and modified Valiant) algorithms
 
 ## Status: COMPLETED

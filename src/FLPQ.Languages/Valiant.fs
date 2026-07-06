@@ -8,12 +8,10 @@ module Valiant =
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
-        | Forward of table: ParsingTable<'nt> * submatrix: Submatrix
-        | Backward of
-            table: ParsingTable<'nt> *
-            target: Submatrix *
-            multiplied: (Submatrix * Submatrix) list *
-            changedCells: (int * int) list
+        { table: ParsingTable<'nt>
+          target: Submatrix
+          multiplied: (Submatrix * Submatrix) list
+          changedCells: (int * int) list }
 
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
@@ -204,10 +202,15 @@ module Valiant =
 
                 let changed = diffCells before after mTarget
 
-                if not (List.isEmpty changed) then
-                    match traceAcc with
-                    | Some steps -> steps.Add(Backward(snapshot table init.n, mTarget, [ (m1, m2) ], changed))
-                    | None -> ()
+                match traceAcc with
+                | Some steps ->
+                    steps.Add(
+                        { table = snapshot table init.n
+                          target = mTarget
+                          multiplied = [ (m1, m2) ]
+                          changedCells = changed }
+                    )
+                | None -> ()
 
     let rec private complete
         (init: InitData<'t, 'nt>)
@@ -228,9 +231,7 @@ module Valiant =
                 | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
                 | None -> ()
 
-            match traceAcc with
-            | Some steps -> steps.Add(Forward(snapshot table init.n, m))
-            | None -> ()
+            ()
         else
             let b = bottomSubmatrix m
             let l = leftSubmatrix m
@@ -245,10 +246,6 @@ module Valiant =
             doMultiplications init table [ (te, leftGrounded te, r) ] traceAcc
             doMultiplications init table [ (te, l, rightGrounded te) ] traceAcc
             complete init table te traceAcc
-
-            match traceAcc with
-            | Some steps -> steps.Add(Forward(snapshot table init.n, m))
-            | None -> ()
 
     and private compute
         (init: InitData<'t, 'nt>)
@@ -406,19 +403,20 @@ module Valiant =
         (terminals: Terminal<'t> list)
         : ParsingTable<'nt> * bool =
         let cnf = Grammar.toCnf freshNonterminal g
-        let steps = parseWithTrace freshNonterminal g terminals
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
 
-        if List.isEmpty steps then
+        if tokensArr.Length = 0 then
             let epsAccepted = Grammar.isEpsilonAccepted cnf
             let emptyResult = Matrix.init 0 0 Set.empty
             (emptyResult, epsAccepted)
         else
-            let lastStep = List.last steps
+            let init = initValiant cnf tokensArr
 
-            let finalTable =
-                match lastStep with
-                | Forward(table, _) -> table
-                | Backward(table, _, _, _) -> table
+            let table =
+                Matrix.create init.tableSize init.tableSize (fun i j -> Matrix.get init.table i j)
+
+            compute init table 0 init.tableSize None
+            let finalTable = snapshot table init.n
 
             let accepted =
                 Set.contains cnf.start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
