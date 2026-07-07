@@ -1,0 +1,660 @@
+namespace FLPQ.Languages
+
+open System.Collections.Generic
+open FSharpPlus.Data
+open FLPQ.LinearAlgebra
+open FLPQ.GraphAnalysis
+
+/// Mapping from global RSM state index to block information.
+[<Struct>]
+type RsmStateInfo<'nt when 'nt: comparison> =
+    { blockNonterminal: Nonterminal<'nt>
+      localState: int
+      isFinal: bool }
+
+/// Descriptor in the GLL worklist: current RSM state, input graph vertex,
+/// current GSS node, and the range matched so far.
+/// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
+[<Struct; CustomEquality; NoComparison>]
+type Descriptor =
+    { rsmState: int
+      vertex: int
+      gssIdx: int
+      range: RangeDescriptor }
+
+    override this.Equals(obj: obj) =
+        match obj with
+        | :? Descriptor as other ->
+            this.rsmState = other.rsmState
+            && this.vertex = other.vertex
+            && this.gssIdx = other.gssIdx
+            && this.range = other.range
+        | _ -> false
+
+    override this.GetHashCode() =
+        hash (this.rsmState, this.vertex, this.gssIdx, this.range)
+
+module GLL =
+
+    /// Converts a string to a path graph: vertices 0..|chars| with edges i -[char]-> i+1.
+    /// Each character becomes a separate vertex, edges carry the character as label.
+    let stringToGraph (chars: 't list) : Graph<int, Option<'t>> =
+        let n = chars.Length
+        let vertices = [ 0..n ]
+
+        let edges =
+            Matrix.init (n + 1) (n + 1) None
+            |> fun m ->
+                for i in 0 .. n - 1 do
+                    Matrix.set m i (i + 1) (Some chars.[i])
+
+                m
+
+        Graph.fromEdges vertices edges
+
+    /// Collects all global state information, terminal transitions, and nonterminal transitions
+    /// from the RSM's DFA blocks. Returns:
+    /// - stateInfo: global state → (nonterminal, localState, isFinal)
+    /// - termTrans: global state → list of (terminal, nextGlobalState)
+    /// - nontermTrans: global state → list of (nonterminal, nextGlobalState)
+    /// - blockStart: nonterminal → global start state
+    /// - finalStates: set of global final state indices (across all blocks)
+    let private collectRsmData (rsm: RSM<'t, 'nt>) =
+        let blocks = RSM.blocks rsm
+        let stateCount = RSM.stateCount rsm
+
+        let stateInfo = Array.zeroCreate<RsmStateInfo<'nt>> stateCount
+        let blockStart = Dictionary<Nonterminal<'nt>, int>()
+        let mutable finalStates = Set.empty<int>
+
+        let termTrans = Array.init stateCount (fun _ -> ResizeArray<Terminal<'t> * int>())
+
+        let nontermTrans =
+            Array.init stateCount (fun _ -> ResizeArray<Nonterminal<'nt> * int>())
+
+        let mutable globalOffset = 0
+
+        for block in blocks do
+            let dfa = block.dfa
+            let localSize = Dfa.stateCount dfa
+            let localFinal = dfa.finalStates
+
+            // Register block start state
+            blockStart.[block.nonterminal] <- globalOffset + dfa.startState
+
+            // Collect transitions by iterating the DFA transition matrix directly
+            for localState in 0 .. localSize - 1 do
+                let globalState = globalOffset + localState
+                let isFinal = Set.contains localState localFinal
+
+                stateInfo.[globalState] <-
+                    { blockNonterminal = block.nonterminal
+                      localState = localState
+                      isFinal = isFinal }
+
+                if isFinal then
+                    finalStates <- Set.add globalState finalStates
+
+                // Iterate all possible targets
+                for localTarget in 0 .. localSize - 1 do
+                    match Matrix.get dfa.transitions localState localTarget with
+                    | Some labels ->
+                        let targetGlobal = globalOffset + localTarget
+
+                        for label in NonEmptySet.toSeq labels do
+                            match label with
+                            | AutomatonLabel.ATerm(RsmSymbol.RTerm t) -> termTrans.[globalState].Add(t, targetGlobal)
+                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) ->
+                                nontermTrans.[globalState].Add(nt, targetGlobal)
+                            | AutomatonLabel.AEpsilon -> ()
+                    | None -> ()
+
+            globalOffset <- globalOffset + localSize
+
+        stateInfo, blockStart, finalStates, termTrans, nontermTrans
+
+    /// Maps graph vertex → list of outgoing (terminal, targetVertex) edges.
+    let private collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
+        let vc = Graph.vertexCount g
+        let edges = Array.init vc (fun _ -> ResizeArray<'t * int>())
+
+        for i in 0 .. vc - 1 do
+            for j in 0 .. vc - 1 do
+                match Matrix.get g.edges i j with
+                | Some t -> edges.[i].Add(t, j)
+                | None -> ()
+
+        edges
+
+    /// Extends a RangeDescriptor by updating its end to (newState, newVertex).
+    /// If the range is EmptyRange, creates a new range from (fromState, fromVertex) to (newState, newVertex).
+    let private extendRange
+        (range: RangeDescriptor)
+        (fromState: int)
+        (fromVertex: int)
+        (newState: int)
+        (newVertex: int)
+        : RangeDescriptor =
+        match range with
+        | RangeDescriptor.EmptyRange ->
+            RangeDescriptor.NonEmptyRange
+                { fromState = fromState
+                  fromVertex = fromVertex
+                  toState = newState
+                  toVertex = newVertex }
+        | RangeDescriptor.NonEmptyRange rk ->
+            RangeDescriptor.NonEmptyRange
+                { rk with
+                    toState = newState
+                    toVertex = newVertex }
+
+    /// Builds the path index for the given RSM over the input graph, starting from the specified vertices.
+    /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
+    let buildPathIndex
+        (rsm: RSM<'t, 'nt>)
+        (inputGraph: Graph<int, Option<'t>>)
+        (startVertices: Set<int>)
+        : PathIndex<'t, 'nt> =
+        let stateCount = RSM.stateCount rsm
+        let vertexCount = Graph.vertexCount inputGraph
+        let K = stateCount * vertexCount
+
+        let pathIndex =
+            { matrix = Matrix.init K K Set.empty
+              stateCount = stateCount
+              vertexCount = vertexCount }
+
+        let stateInfo, blockStart, finalStates, termTrans, nontermTrans = collectRsmData rsm
+        let graphEdges = collectGraphEdges inputGraph
+
+        let gss = GSS.init stateCount vertexCount
+
+        let queue = Queue<Descriptor>()
+        let handled = HashSet<Descriptor>()
+
+        // Helper: add entry at indices, avoiding redundant adds
+        let addToIndex
+            (fromState: int)
+            (fromVertex: int)
+            (toState: int)
+            (toVertex: int)
+            (entry: PathIndexEntry<'t, 'nt>)
+            =
+            let fromIdx = PathIndex.linearIndex pathIndex fromState fromVertex
+            let toIdx = PathIndex.linearIndex pathIndex toState toVertex
+            let current = Matrix.get pathIndex.matrix fromIdx toIdx
+
+            if not (Set.contains entry current) then
+                Matrix.set pathIndex.matrix fromIdx toIdx (Set.add entry current)
+
+        // Helper: try to enqueue a descriptor
+        let tryEnqueue (d: Descriptor) =
+            if handled.Add(d) then
+                queue.Enqueue(d)
+
+        // Initialize: for each start vertex, create descriptor at start block's start state
+        let startBlock = RSM.startBlock rsm
+
+        let startGlobalState =
+            match blockStart.TryGetValue(startBlock.nonterminal) with
+            | true, gs -> gs
+            | false, _ -> failwithf "Start block %A not found" startBlock.nonterminal
+
+        for vs in startVertices do
+            let gssIdx = GSS.linearIndex vertexCount startGlobalState vs
+
+            let desc =
+                { rsmState = startGlobalState
+                  vertex = vs
+                  gssIdx = gssIdx
+                  range = RangeDescriptor.EmptyRange }
+
+            tryEnqueue desc
+
+        // Main loop
+        while queue.Count > 0 do
+            let desc = queue.Dequeue()
+            let q0 = desc.rsmState
+            let v0 = desc.vertex
+            let s0 = desc.gssIdx
+            let range = desc.range
+
+            // Case 1: Terminal transitions
+            for (Terminal tVal, q1) in termTrans.[q0] do
+                for (edgeTerm, v1) in graphEdges.[v0] do
+                    if tVal = edgeTerm then
+                        // Add PTerminal to index
+                        addToIndex q0 v0 q1 v1 (PathIndexEntry.PTerminal(Terminal tVal))
+
+                        // Add PIntermediate if we have a non-empty range
+                        match range with
+                        | RangeDescriptor.NonEmptyRange rk ->
+                            addToIndex rk.fromState rk.fromVertex q1 v1 (PathIndexEntry.PIntermediate(q0, v0))
+                        | RangeDescriptor.EmptyRange -> ()
+
+                        // Create new descriptor with extended range
+                        let newRange = extendRange range q0 v0 q1 v1
+
+                        let newDesc =
+                            { rsmState = q1
+                              vertex = v1
+                              gssIdx = s0
+                              range = newRange }
+
+                        tryEnqueue newDesc
+
+            // Case 2: Nonterminal transitions (calls)
+            for (nt, qRet) in nontermTrans.[q0] do
+                // Find start state of the called nonterminal's block
+                match blockStart.TryGetValue(nt) with
+                | false, _ -> ()
+                | true, qNStart ->
+                    let gssTarget = GSS.linearIndex vertexCount qNStart v0
+
+                    // Add GSS edge from target (callee's GSS node for N's start) to current (caller's GSS node)
+                    let edgeInfo: GssEdgeInfo =
+                        { returnState = qRet
+                          matchedRange = range }
+
+                    let storedPops = GSS.addEdge gss gssTarget s0 edgeInfo
+
+                    // Handle storedPops: these are ranges already recognized at gssTarget
+                    for storedPop in storedPops do
+                        match storedPop with
+                        | RangeDescriptor.EmptyRange -> ()
+                        | RangeDescriptor.NonEmptyRange popRange ->
+                            // block N matched from (qNStart, v0) to (popRange.toState, popRange.toVertex)
+                            let vFinal = popRange.toVertex
+                            let qNFinal = popRange.toState
+
+                            // Add PNonterminal entry
+                            addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+
+                            // Add PIntermediate and create continuation
+                            match range with
+                            | RangeDescriptor.EmptyRange ->
+                                addToIndex qNStart v0 qRet vFinal (PathIndexEntry.PIntermediate(qNStart, v0))
+
+                                let newRange =
+                                    RangeDescriptor.NonEmptyRange
+                                        { fromState = qNStart
+                                          fromVertex = v0
+                                          toState = qRet
+                                          toVertex = vFinal }
+
+                                let contDesc =
+                                    { rsmState = qRet
+                                      vertex = vFinal
+                                      gssIdx = s0
+                                      range = newRange }
+
+                                tryEnqueue contDesc
+                            | RangeDescriptor.NonEmptyRange rk ->
+                                addToIndex
+                                    rk.fromState
+                                    rk.fromVertex
+                                    qRet
+                                    vFinal
+                                    (PathIndexEntry.PIntermediate(qNStart, v0))
+
+                                let newRange =
+                                    RangeDescriptor.NonEmptyRange
+                                        { rk with
+                                            toState = qRet
+                                            toVertex = vFinal }
+
+                                let contDesc =
+                                    { rsmState = qRet
+                                      vertex = vFinal
+                                      gssIdx = s0
+                                      range = newRange }
+
+                                tryEnqueue contDesc
+
+                    // Create descriptor for the start state of the called nonterminal
+                    let callDesc =
+                        { rsmState = qNStart
+                          vertex = v0
+                          gssIdx = gssTarget
+                          range = RangeDescriptor.EmptyRange }
+
+                    tryEnqueue callDesc
+
+            // Case 3: Final state (return)
+            if stateInfo.[q0].isFinal then
+                let recognizedRange =
+                    match range with
+                    | RangeDescriptor.EmptyRange ->
+                        // Empty range means we entered this block at v0 and immediately finished (epsilon-like)
+                        // Create a range from the block's start state at v0 to the final state at v0
+                        let nt = stateInfo.[q0].blockNonterminal
+
+                        match blockStart.TryGetValue(nt) with
+                        | true, qNStart ->
+                            RangeDescriptor.NonEmptyRange
+                                { fromState = qNStart
+                                  fromVertex = v0
+                                  toState = q0
+                                  toVertex = v0 }
+                        | false, _ -> range
+                    | _ -> range
+
+                let outgoingEdges = GSS.pop gss s0 recognizedRange
+
+                match recognizedRange with
+                | RangeDescriptor.EmptyRange -> ()
+                | RangeDescriptor.NonEmptyRange recRange ->
+                    let qNStart = recRange.fromState
+                    let vStart = recRange.fromVertex
+                    let qNFinal = recRange.toState
+                    let vFinal = recRange.toVertex
+                    let nt = stateInfo.[qNStart].blockNonterminal
+
+                    if List.isEmpty outgoingEdges then
+                        addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                    else
+                        for (parentGssIdx, edgeInfo) in outgoingEdges do
+                            let qRet = edgeInfo.returnState
+                            let parentRange = edgeInfo.matchedRange
+
+                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+
+                            // Add PIntermediate and create continuation descriptor
+                            match parentRange with
+                            | RangeDescriptor.EmptyRange ->
+                                addToIndex qNStart vStart qRet vFinal (PathIndexEntry.PIntermediate(qNStart, vStart))
+
+                                let newRange =
+                                    RangeDescriptor.NonEmptyRange
+                                        { fromState = qNStart
+                                          fromVertex = vStart
+                                          toState = qRet
+                                          toVertex = vFinal }
+
+                                let contDesc =
+                                    { rsmState = qRet
+                                      vertex = vFinal
+                                      gssIdx = parentGssIdx
+                                      range = newRange }
+
+                                tryEnqueue contDesc
+                            | RangeDescriptor.NonEmptyRange rk ->
+                                addToIndex
+                                    rk.fromState
+                                    rk.fromVertex
+                                    qRet
+                                    vFinal
+                                    (PathIndexEntry.PIntermediate(qNStart, vStart))
+
+                                let newRange =
+                                    RangeDescriptor.NonEmptyRange
+                                        { rk with
+                                            toState = qRet
+                                            toVertex = vFinal }
+
+                                let contDesc =
+                                    { rsmState = qRet
+                                      vertex = vFinal
+                                      gssIdx = parentGssIdx
+                                      range = newRange }
+
+                                tryEnqueue contDesc
+
+        pathIndex
+
+    /// Checks if the path index contains a path from (fromState, fromVertex) to some final state
+    /// at the end of the input graph.
+    let isAccepted
+        (pathIndex: PathIndex<'t, 'nt>)
+        (startGlobalState: int)
+        (startVertex: int)
+        (finalStates: Set<int>)
+        (vertexCount: int)
+        : bool =
+        // Check if there's any entry from start to a final state at any vertex
+        finalStates
+        |> Set.exists (fun finalState ->
+            let entries =
+                PathIndex.get pathIndex startGlobalState startVertex finalState (vertexCount - 1)
+
+            not (Set.isEmpty entries))
+
+    /// Builds the SPPF from a path index starting from the given root ranges.
+    /// Top-down traversal with memoization: range nodes are created once and reused for packed alternatives.
+    /// Each range is processed exactly once to avoid infinite recursion.
+    /// Book reference: sec:CFPQ_GLL.
+    let buildSppfFromIndex (pathIndex: PathIndex<'t, 'nt>) (rootRanges: RangeKey list) : SPPF<'t, 'nt> =
+        let mutable vertices: SppfNodeInfo<'t, 'nt> list = []
+        let mutable edgeList: (int * Option<SppfEdgeLabel> * int) list = []
+
+        let rangeNodeMap = Dictionary<RangeKey, int>()
+        let processedRanges = System.Collections.Generic.HashSet<RangeKey>()
+        let nodeMap = Dictionary<string, int>()
+
+        let nodeKey (info: SppfNodeInfo<'t, 'nt>) : string =
+            match info with
+            | SppfNodeInfo.SppfTerminal(Terminal _, l, r) -> $"T({l},{r})"
+            | SppfNodeInfo.SppfNonterminal(Nonterminal _, l, r) -> $"N({l},{r})"
+            | SppfNodeInfo.SppfEpsilon p -> $"E({p})"
+            | SppfNodeInfo.SppfIntermediate(s, p) -> $"I({s},{p})"
+            | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> $"R({fs},{fp},{ts},{tp})"
+
+        let getOrCreateNode (info: SppfNodeInfo<'t, 'nt>) : int =
+            let key = nodeKey info
+
+            match nodeMap.TryGetValue(key) with
+            | true, idx -> idx
+            | false, _ ->
+                let idx = vertices.Length
+                vertices <- vertices @ [ info ]
+                nodeMap.[key] <- idx
+                idx
+
+        let getOrCreateRangeNode (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
+            let rk =
+                { fromState = fromState
+                  fromVertex = fromPos
+                  toState = toState
+                  toVertex = toPos }
+
+            match rangeNodeMap.TryGetValue(rk) with
+            | true, idx -> idx
+            | false, _ ->
+                let idx = vertices.Length
+                let info = SppfNodeInfo.SppfRange(fromState, fromPos, toState, toPos)
+                vertices <- vertices @ [ info ]
+                rangeNodeMap.[rk] <- idx
+                idx
+
+        let addEdge (fromIdx: int) (label: SppfEdgeLabel) (toIdx: int) =
+            let lbl = Some label
+
+            if not (List.exists (fun (f, l, t) -> f = fromIdx && l = lbl && t = toIdx) edgeList) then
+                edgeList <- (fromIdx, lbl, toIdx) :: edgeList
+
+        let rec processRange (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
+            let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
+
+            let rk =
+                { fromState = fromState
+                  fromVertex = fromPos
+                  toState = toState
+                  toVertex = toPos }
+
+            if processedRanges.Add(rk) then
+                let entries = PathIndex.get pathIndex fromState fromPos toState toPos
+
+                for entry in entries do
+                    match entry with
+                    | PathIndexEntry.PTerminal t ->
+                        let termNode = getOrCreateNode (SppfNodeInfo.SppfTerminal(t, fromPos, toPos))
+
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative termNode
+
+                    | PathIndexEntry.PNonterminal nt ->
+                        let ntNode = getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos))
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
+                        addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
+
+                    | PathIndexEntry.PIntermediate(state, pos) ->
+                        let interNode = getOrCreateNode (SppfNodeInfo.SppfIntermediate(state, pos))
+                        let leftChild = processRange fromState fromPos state pos
+                        let rightChild = processRange state pos toState toPos
+
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative interNode
+                        addEdge interNode SppfEdgeLabel.LeftChild leftChild
+                        addEdge interNode SppfEdgeLabel.RightChild rightChild
+
+            rangeIdx
+
+        let rootIndices =
+            rootRanges
+            |> List.map (fun rk ->
+                let idx = processRange rk.fromState rk.fromVertex rk.toState rk.toVertex
+                idx)
+
+        let n = vertices.Length
+        let edgeMatrix = Matrix.init n n None
+
+        let sortedEdges = List.rev edgeList
+
+        for (fromIdx, label, toIdx) in sortedEdges do
+            Matrix.set edgeMatrix fromIdx toIdx label
+
+        { graph = Graph.fromEdges vertices edgeMatrix
+          rootIndices = rootIndices }
+
+    /// Extracts a single derivation tree from a path index starting from (fromState, fromVertex) to (toState, toVertex).
+    /// Works directly with the path index entries, bypassing the SPPF.
+    /// For ambiguous grammars, picks the first available derivation.
+    /// Book reference: sec:CFPQ_GLL.
+    let extractDerivationTree
+        (pathIndex: PathIndex<'t, 'nt>)
+        (stateInfo: RsmStateInfo<'nt> array)
+        (blockStart: System.Collections.Generic.Dictionary<Nonterminal<'nt>, int>)
+        (fromState: int)
+        (fromVertex: int)
+        (toState: int)
+        (toVertex: int)
+        : DerivationTree<'t, 'nt> =
+        let rec extract (fs: int) (fv: int) (ts: int) (tv: int) (depth: int) : DerivationTree<'t, 'nt> option =
+            if depth > 100 then
+                None
+            else
+                let entries = PathIndex.get pathIndex fs fv ts tv
+
+                entries
+                |> Set.toList
+                |> List.tryPick (fun entry ->
+                    match entry with
+                    | PathIndexEntry.PTerminal(Terminal t) -> Some(Leaf(Symbol.T(Terminal t)))
+                    | PathIndexEntry.PNonterminal nt ->
+                        let qNStart =
+                            match blockStart.TryGetValue(nt) with
+                            | true, start -> start
+                            | false, _ -> fs
+
+                        let mutable foundTree = None
+
+                        for i in 0 .. pathIndex.stateCount - 1 do
+                            if stateInfo.[i].blockNonterminal = nt && stateInfo.[i].isFinal && foundTree.IsNone then
+                                let innerEntries = PathIndex.get pathIndex qNStart fv i tv
+
+                                if not (Set.isEmpty innerEntries) then
+                                    match extract qNStart fv i tv (depth + 1) with
+                                    | Some children -> foundTree <- Some(Node(nt, [ children ]))
+                                    | None -> ()
+
+                        match foundTree with
+                        | Some _ -> foundTree
+                        | None -> Some(Node(nt, []))
+                    | PathIndexEntry.PIntermediate(state, pos) ->
+                        let leftTree = extract fs fv state pos (depth + 1)
+                        let rightTree = extract state pos ts tv (depth + 1)
+
+                        match leftTree, rightTree with
+                        | Some l, Some r ->
+                            let nt = stateInfo.[fs].blockNonterminal
+                            Some(Node(nt, [ l; r ]))
+                        | Some t, None -> Some t
+                        | None, Some t -> Some t
+                        | None, None -> None)
+
+        match extract fromState fromVertex toState toVertex 0 with
+        | Some tree -> tree
+        | None -> Leaf Symbol.Epsilon
+
+    /// Extracts a single derivation tree from an SPPF root.
+    /// For ambiguous grammars, picks the first alternative at each packed node.
+    /// Uses a visited set to break cycles in the Nonterminal-SingleChild-Range-PackedAlternative loop.
+    /// Book reference: sec:CFPQ_GLL.
+    let extractDerivationTreeFromSppf (sppf: SPPF<'t, 'nt>) (rootIdx: int) : DerivationTree<'t, 'nt> =
+        let vertexCount = Graph.vertexCount sppf.graph
+
+        let allEdgesTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int list =
+            [ for toIdx in 0 .. vertexCount - 1 do
+                  let edgeLabel = Matrix.get sppf.graph.edges nodeIdx toIdx
+
+                  if predicate edgeLabel then
+                      toIdx ]
+
+        let rec edgeTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int option =
+            let mutable result = None
+
+            for toIdx in 0 .. vertexCount - 1 do
+                match result with
+                | Some _ -> ()
+                | None ->
+                    let edgeLabel = Matrix.get sppf.graph.edges nodeIdx toIdx
+
+                    if predicate edgeLabel then
+                        result <- Some toIdx
+
+            result
+
+        let rec extractChildren
+            (visited: System.Collections.Generic.HashSet<int>)
+            (nodeIdx: int)
+            : DerivationTree<'t, 'nt> list =
+            if not (visited.Add(nodeIdx)) then
+                []
+            else
+                let info = Graph.getVertex nodeIdx sppf.graph
+
+                match info with
+                | SppfNodeInfo.SppfTerminal(t, _, _) -> [ Leaf(Symbol.T t) ]
+                | SppfNodeInfo.SppfEpsilon _ -> [ Leaf Symbol.Epsilon ]
+                | SppfNodeInfo.SppfNonterminal(nt, _, _) ->
+                    match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.SingleChild) with
+                    | Some rangeIdx ->
+                        let alternatives =
+                            allEdgesTo rangeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative)
+
+                        let child = alternatives |> List.tryFind (fun alt -> alt <> nodeIdx)
+
+                        match child with
+                        | Some childIdx ->
+                            let children = extractChildren visited childIdx
+                            [ Node(nt, children) ]
+                        | None -> [ Node(nt, []) ]
+                    | None -> [ Node(nt, []) ]
+                | SppfNodeInfo.SppfIntermediate(_, _) ->
+                    let left =
+                        match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.LeftChild) with
+                        | Some idx -> extractChildren visited idx
+                        | None -> []
+
+                    let right =
+                        match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.RightChild) with
+                        | Some idx -> extractChildren visited idx
+                        | None -> []
+
+                    left @ right
+                | SppfNodeInfo.SppfRange(_, _, _, _) ->
+                    match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative) with
+                    | Some childIdx -> extractChildren visited childIdx
+                    | None -> [ Leaf Symbol.Epsilon ]
+
+        extractChildren (System.Collections.Generic.HashSet<int>()) rootIdx
+        |> List.tryHead
+        |> Option.defaultValue (Leaf Symbol.Epsilon)
