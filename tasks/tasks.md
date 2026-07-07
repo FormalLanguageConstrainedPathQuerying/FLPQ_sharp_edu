@@ -201,5 +201,38 @@
           3. Extracted tree yield. For accepted strings: DerivationTree.leaves = input string chars.
           4. Acceptance fact tests. Specific grammar + input pairs: basic shift-only, epsilon, right-nullable chain (S -> A B, A -> a A | eps, B -> b B | eps), left-recursive, ambiguous.
           5. Reduction cascade test. Verify that reductions at a layer can trigger further reductions at the same layer (e.g., A → eps reduce triggers B → A reduce, both at layer 0 without consuming input).
+     
+139.  Help on 138. 
+      1.    Use exended grammar to simplify and RSM (reuse code form GLL, move this code to RSM)
+      2.    Layer handled with fixpoint logik: while new nodes appears (as results of reductions), continue reductions.
+      3.    Add simple property tests
+            1.    S -> a* must accepts and rejects same strings as DFA constructed for a*
+            2.    S -> a* a*  must accepts and rejects same strings as DFA constructed for a* a*
+            3.    S -> (a | b)* must accepts and rejects same strings as DFA constructed for (a | b)*
+             4.    S -> (a | b)* (a | c)* must accepts and rejects same strings as DFA constructed for (a | b)* (a | c)*
 
+140. Refactor RNGLR findPredecessors to classical automata intersection and fix passing mechanism.
+      Rework the ad-hoc BFS in findPredecessors into a standard automaton intersection algorithm (simultaneous traversal over (gssIdx, invState) pairs). Both the GSS (over Symbol<'t,'nt>) and inverted RSM blocks (over RsmSymbol<'t,'nt>) are automata — implement the product construction as a standalone function and replace the current BFS with it. Fix the passing reduction mechanism to align with this model and resolve the 2 remaining right-nullable test failures.
+      1.   Precompute inverted RSM blocks once — build invBlocks: Map<Nonterminal<'nt>, DFA<RsmSymbol<'t,'nt>, int>> at the start of buildPathIndex, not per findPredecessors call.
+      2.   Reuse intersectrion from Automaton.intersection to find predcessors. To do it represent GSS as an automaton.
+      3.   Replace storedReductions with storedStates: Set<(Nonterminal<'nt>, int)> array:
+           - Per GSS vertex: flat set of (nonterminal, invState) pairs. The pair is a unique key — nonterminal identifies which inverted block, invState is the state within it.
+           - During intersection, store ALL reachable intermediate (nonterminal, invState) pairs at the corresponding GSS vertex.
+      4.   Rewrite findPredecessors:
+           - let reachable = intersectAutomata
+           - Store intermediate configs for passing: for each (g, inv) in inersection automata, add (nt, inv) to storedStates.[g].
+           - Return predecessors: reachable |> filter (_, invState = blockStartState) |> map to (lrState, gssIdx, v).
+      5.   Rewrite addEdge passing:
+           - Consume storedStates.[toIdx], clear it.
+           - For each (nt, invState) consumed: continue intersection from (fromIdx, invState) using invBlocks.[nt].
+           - Store new intermediate configs in storedStates. Find new predecessors at block start states.
+           - For each new predecessor: look up goto, create GSS edge, enqueue.
+      6.   Add Task 139 simple regex-DFA equivalence tests first (before refactoring) — use as debug safety net:
+           - S -> a* ≡ DFA for a* ([<Property>])
+           - S -> a* a* ≡ DFA for a* a* ([<Property>])
+           - S -> (a | b)* ≡ DFA for (a | b)* ([<Property>])
+           - S -> (a | b)* (a | c)* ≡ DFA for (a | b)* (a | c)* ([<Property>])
+           - For each regex, build RSM from single EBNF rule S -> <regex>. Build DFA for the same regex independently. Property-test: for random strings, rnglrAccepts rsm str = dfaAccepts dfa str.
+      7.   Equivalence requirement: after refactoring, ALL existing RNGLR tests must pass (21/21), and the 2 currently failing right-nullable tests must be resolved. Equivalence with the pre-refactoring implementation must be verified for all existing passing tests.
 
+141. [done] Refactor Automaton.intersection. Output tyme mast be NFA<'t, 's * 'v>: States in resulting automaton is a product of states of intut automata.
