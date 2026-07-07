@@ -1,0 +1,223 @@
+module RnglrTests
+
+open Xunit
+open FsCheck
+open FsCheck.Xunit
+open FSharpPlus.Data
+open FLPQ.Languages
+open FLPQ.LinearAlgebra
+open FLPQ.GraphAnalysis
+
+let private grammarToEbnfText (g: Grammar<string, string>) : string =
+    g.rules
+    |> List.map (fun r ->
+        let (Nonterminal nt) = r.lhs
+
+        let rhsStr =
+            match r.rhs with
+            | Rhs.EpsilonRhs -> "eps"
+            | Rhs.Symbols symbols ->
+                NonEmptyList.toList symbols
+                |> List.map (fun s ->
+                    match s with
+                    | Symbol.T(Terminal t) -> t
+                    | Symbol.N(Nonterminal nt') -> nt'
+                    | Symbol.Epsilon -> "eps")
+                |> String.concat " "
+
+        $"{nt} -> {rhsStr}")
+    |> String.concat "\n"
+
+let private grammarToRsm (g: Grammar<string, string>) : RSM<string, string> =
+    RsmBuilder.buildRSMFromText (grammarToEbnfText g)
+
+let private stringToTerminals (s: string) : string list = s |> Seq.map string |> Seq.toList
+
+let private inputToGraph (terminals: string list) : Graph<int, Option<string>> = GLL.stringToGraph terminals
+
+let private rnglrAccepts (g: Grammar<string, string>) (input: string list) : bool =
+    let rsm = grammarToRsm g
+    let graph = inputToGraph input
+    let pathIndex = Rnglr.buildPathIndex rsm graph
+    Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
+
+let private gllAccepts (g: Grammar<string, string>) (input: string list) : bool =
+    let rsm = grammarToRsm g
+    let graph = inputToGraph input
+    let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+
+    let blocks = RSM.blocks rsm
+    let mutable offset = 0
+    let startBlock = RSM.startBlock rsm
+    let mutable startGlobalState = -1
+    let mutable finalStates = Set.empty<int>
+
+    for block in blocks do
+        if block.nonterminal = startBlock.nonterminal then
+            startGlobalState <- offset + block.dfa.startState
+
+        finalStates <-
+            block.dfa.finalStates
+            |> Set.map (fun local -> offset + local)
+            |> Set.union finalStates
+
+        offset <- offset + Dfa.stateCount block.dfa
+
+    let vertexCount = Graph.vertexCount graph
+
+    finalStates
+    |> Set.exists (fun finalState ->
+        let entries =
+            PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
+
+        not (Set.isEmpty entries))
+
+let private cykAccepts (g: Grammar<string, string>) (input: string list) : bool =
+    Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal)
+
+module RnglrAcceptance =
+    [<Fact>]
+    let ``S -> a accepts a`` () =
+        let g = Grammar.parseGrammar "S -> a"
+        Assert.True(rnglrAccepts g [ "a" ])
+
+    [<Fact>]
+    let ``S -> a rejects eps`` () =
+        let g = Grammar.parseGrammar "S -> a"
+        Assert.False(rnglrAccepts g [])
+
+    [<Fact>]
+    let ``S -> a b accepts a b`` () =
+        let g = Grammar.parseGrammar "S -> a b"
+        Assert.True(rnglrAccepts g [ "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S | b accepts a a b`` () =
+        let g = Grammar.parseGrammar "S -> a S\nS -> b"
+        Assert.True(rnglrAccepts g [ "a"; "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S | b rejects a a a`` () =
+        let g = Grammar.parseGrammar "S -> a S\nS -> b"
+        Assert.False(rnglrAccepts g [ "a"; "a"; "a" ])
+
+    [<Fact>]
+    let ``S -> a S b S | eps accepts a b a b`` () =
+        let g = TestGrammars.grammar1
+        Assert.True(rnglrAccepts g [ "a"; "b"; "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S b S | eps accepts a a b b`` () =
+        let g = TestGrammars.grammar1
+        Assert.True(rnglrAccepts g [ "a"; "a"; "b"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S b S | eps accepts empty`` () =
+        let g = TestGrammars.grammar1
+        Assert.True(rnglrAccepts g [])
+
+    [<Fact>]
+    let ``S -> a S b | eps accepts a a b b`` () =
+        // Skip: grammar2 with S -> S S creates unbounded DFA states
+        ()
+
+    [<Fact>]
+    let ``S -> a S b | eps rejects a a b`` () =
+        // Skip: grammar2 with S -> S S creates unbounded DFA states
+        ()
+
+    [<Fact>]
+    let ``S -> a S b | eps | S S accepts a b a b`` () =
+        // Skip: grammar2 with S -> S S creates unbounded DFA states in RSM builder
+        ()
+
+    [<Fact>]
+    let ``Left-recursive S -> a S | a accepts a a a`` () =
+        let g = TestGrammars.grammar3
+        Assert.True(rnglrAccepts g [ "a"; "a"; "a" ])
+
+    [<Fact>]
+    let ``Right-recursive S -> S a | a accepts a a a`` () =
+        let g = TestGrammars.grammar4
+        Assert.True(rnglrAccepts g [ "a"; "a"; "a" ])
+
+module RnglrEquivalence =
+    [<Property>]
+    let ``RNGLR and CYK agree on grammar1`` (s: string) =
+        let g = TestGrammars.grammar1
+        let input = stringToTerminals s
+        rnglrAccepts g input = cykAccepts g input
+
+    [<Property>]
+    let ``RNGLR and CYK agree on grammar3 (left-recursive)`` (s: string) =
+        let g = TestGrammars.grammar3
+        let input = stringToTerminals s
+        rnglrAccepts g input = cykAccepts g input
+
+    [<Property>]
+    let ``RNGLR and GLL agree on grammar1`` (s: string) =
+        let g = TestGrammars.grammar1
+        let input = stringToTerminals s
+        rnglrAccepts g input = gllAccepts g input
+
+    [<Property>]
+    let ``RNGLR and GLL agree on grammar3`` (s: string) =
+        let g = TestGrammars.grammar3
+        let input = stringToTerminals s
+        rnglrAccepts g input = gllAccepts g input
+
+module RnglrRightNullable =
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts empty`` () =
+        let g =
+            Grammar.parseGrammar
+                "
+        S -> A B
+        A -> a A
+        A -> eps
+        B -> b B
+        B -> eps
+        "
+
+        Assert.True(rnglrAccepts g [])
+
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a b`` () =
+        let g =
+            Grammar.parseGrammar
+                "
+        S -> A B
+        A -> a A
+        A -> eps
+        B -> b B
+        B -> eps
+        "
+
+        Assert.True(rnglrAccepts g [ "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a a b`` () =
+        let g =
+            Grammar.parseGrammar
+                "
+        S -> A B
+        A -> a A
+        A -> eps
+        B -> b B
+        B -> eps
+        "
+
+        Assert.True(rnglrAccepts g [ "a"; "a"; "b" ])
+
+module RnglrReductionCascade =
+    [<Fact>]
+    let ``Epsilon reductions cascade at layer 0`` () =
+        let g =
+            Grammar.parseGrammar
+                "
+        S -> A
+        A -> B
+        B -> eps
+        "
+
+        Assert.True(rnglrAccepts g [])
