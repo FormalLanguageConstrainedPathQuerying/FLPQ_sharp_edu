@@ -148,10 +148,10 @@ Element-wise set intersection of two optional non-empty sets of automaton labels
 ### `Nfa.intersect`
 
 ```fsharp
-val intersect: NFA<'t, 's> -> NFA<'t, 'v> -> NFA<'t, int * int>
+val intersect: NFA<'t, 's> -> NFA<'t, 'v> -> NFA<'t, 's * 'v>
 ```
 
-Intersect two NFAs without epsilon transitions using linear algebra. Returns an NFA whose language is `L(a) ∩ L(b)`.
+Intersect two NFAs without epsilon transitions using linear algebra. Returns an NFA whose language is `L(a) ∩ L(b)` with product state labels `('s * 'v)` — each state label is a pair of the original state labels from the input automata.
 
 Algorithm:
 1. Single Kronecker product of transition matrices with `intersectEdgeSets` → `productTransitions`.

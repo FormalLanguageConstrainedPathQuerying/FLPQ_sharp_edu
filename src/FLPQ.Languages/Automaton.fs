@@ -196,10 +196,13 @@ module Nfa =
     /// 3. Backward MS-BFS from final pairs on transposed boolean mask.
     /// 4. Intersect forward and backward visited (via reduceByColumn) to find useful product states.
     /// 5. Keep only useful product states via Graph.keepVertices.
-    /// Returns an NFA whose language is L(a) ∩ L(b).
-    let intersect (a: NFA<'t, 's>) (b: NFA<'t, 'v>) : NFA<'t, int * int> =
+    /// Returns an NFA whose language is L(a) ∩ L(b) with product state labels ('s * 'v).
+    let intersect (a: NFA<'t, 's>) (b: NFA<'t, 'v>) : NFA<'t, 's * 'v> =
         let nA = stateCount a
         let nB = stateCount b
+
+        let labelsA = a.graph |> Graph.vertices |> List.map snd |> Array.ofList
+        let labelsB = b.graph |> Graph.vertices |> List.map snd |> Array.ofList
 
         if nA = 0 || nB = 0 then
             { graph = Graph.fromEdges [] (buildMatrix 0 [])
@@ -261,7 +264,7 @@ module Nfa =
 
             { graph =
                 [ 0 .. n - 1 ]
-                |> List.map (fun p -> (p / nB, p % nB))
+                |> List.map (fun p -> (labelsA.[p / nB], labelsB.[p % nB]))
                 |> fun labels -> Graph.fromEdges labels productTransitions
                 |> Graph.keepVertices usefulSet
               startStates = resultStartStates
