@@ -153,6 +153,11 @@ Concrete rules:
         - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls").
         - What you've tried and what remains unresolved.
      3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task.
+     4. Update `tasks/detailed_plan.md` with a section listing:
+        - Which subtasks are blocked and why.
+        - What was tried and what failed.
+        - What specific help is needed from the user.
+        Commit this update so the plan serves as a persistent record of the blocking state.
   * **Duplication check**: before considering a module done, scan the codebase for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
   * **Genericity check**: verify that new types use generic parameters (`'t`, `'nt`) where applicable and that non-empty collections use `NonEmptyList`/`NonEmptySet`.
   * **Equivalence test check**: if the module is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
