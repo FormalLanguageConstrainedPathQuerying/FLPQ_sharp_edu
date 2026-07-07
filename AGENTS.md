@@ -153,6 +153,8 @@ Concrete rules:
 * If additional information, that not presented in the book was required for implementation, it must be recorded in `fixes_for_book.md` with a clear description and suggested improvements, and the user should be notified.
 * Move changes to `dev`
 * Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description. The task text in `tasks.md` is user-authored and immutable.**
+  - **CRITICAL: Never run `git checkout tasks/tasks.md`, `git restore tasks/tasks.md`, or any git reset/checkout command on `tasks.md`.** The working-tree version of this file is authoritative — it may contain user-authored task details not yet committed. Git operations that revert to a committed version will destroy uncommitted task descriptions.
+  - **Verify before editing**: always read the current working-tree version with the Read tool first. Do not rely on the last committed version from git history.
 * Go to first step
 
 ## Task authoring guidelines
@@ -176,6 +178,7 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Before each commit: 
   * Format code.
   * Check that compilation is successful.
+  * **Verify tasks.md is not staged.** Run `git diff --cached --name-only | grep -q tasks.md` — if it matches, unstage it with `git reset HEAD tasks.md`. tasks.md must never be committed from a feature branch.
 * Before moving changes from feature-branch to dev:
   * Format code.
   * Check that compilation is successful.
@@ -184,3 +187,11 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Use `Squash and Rebase` strategy to move changes from feature-branch to dev. History of `dev` must be linear.
 * No emergency fixes.
 * All work is local, no `push`-es.
+
+## Git safety
+
+**Before running `git checkout <file>` or `git restore <file>`, always verify with `git diff <file>` that you won't lose uncommitted user-authored content.** This applies especially to:
+- `tasks/tasks.md` — user adds task details without committing
+- `tasks/fixes_for_book.md` — user may add notes interactively
+
+If `git diff <file>` shows additions (not just modifications you made), do NOT revert. The working-tree version is authoritative for these files.

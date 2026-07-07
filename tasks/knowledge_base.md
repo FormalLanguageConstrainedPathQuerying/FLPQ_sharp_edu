@@ -439,3 +439,18 @@ Low-coverage modules requiring attention:
 - `FLPQ.Cli.Helpers` — 36% (CLI helper functions)
 - `FLPQ.Cli.ValiantRunner` — 46.8% (Valiant algorithm runner)
 
+## Git Checkout Danger
+
+**Problem**: `git checkout <file>` or `git restore <file>` reverts the file to its last committed version, destroying any uncommitted changes in the working tree.
+
+**Files at risk**:
+- `tasks/tasks.md` — user adds task details (sub-items, descriptions) without committing; working-tree version is authoritative
+- `tasks/fixes_for_book.md` — user may add notes interactively without committing
+
+**Safe procedure before reverting any file**:
+1. Run `git diff <file>` to inspect uncommitted changes
+2. If the diff shows additions or content you didn't author, do NOT revert
+3. The working-tree version is authoritative for task-tracking files
+
+**tasks.md is never committed from a feature branch.** It is modified only on `dev` after merging, with a separate `docs:` commit. Never include `tasks.md` in `git add .` from a feature branch.
+
