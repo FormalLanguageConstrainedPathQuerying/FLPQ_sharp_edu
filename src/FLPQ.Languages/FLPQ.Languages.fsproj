@@ -21,9 +21,6 @@
     <Compile Include="LRParser.fs" />
     <Compile Include="GllTypes.fs" />
     <Compile Include="Gll.fs" />
-    <Compile Include="RnglrTypes.fs" />
-    <Compile Include="RnglrLR.fs" />
-    <Compile Include="Rnglr.fs" />
   </ItemGroup>
 
   <ItemGroup>

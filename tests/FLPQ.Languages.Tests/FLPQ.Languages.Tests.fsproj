@@ -20,7 +20,6 @@
     <Compile Include="LRParserTests.fs" />
     <Compile Include="StressTests.fs" />
     <Compile Include="GllTests.fs" />
-    <Compile Include="RnglrTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
