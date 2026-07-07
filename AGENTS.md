@@ -143,8 +143,16 @@ Concrete rules:
   * Write code
   * When creating a new project, add it to `FLPQ.slnx`.
   * Check formatting and compilation
-  * Check tests  
-  * Repeat until all tests pass
+   * Check tests — run `dotnet test` on the full solution. Every new and existing test must pass.
+   * Repeat until all tests pass.
+   * **Hard gate**: a task is ready to move to dev ONLY when every test in the entire solution passes (zero failures). Run `dotnet test` on the whole solution, not just the new test file. A single failing test is a blocker.
+   * **Blocked work protocol**: if you encounter an algorithmic problem that you cannot resolve to 100% correctness, STOP. Do not merge. Do not mark done. Do not comment out or weaken failing tests to make the suite green. Instead:
+     1. Stay on the feature branch.
+     2. Report the problem concretely to the user:
+        - Which tests fail and why.
+        - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls").
+        - What you've tried and what remains unresolved.
+     3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task.
   * **Duplication check**: before considering a module done, scan the codebase for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
   * **Genericity check**: verify that new types use generic parameters (`'t`, `'nt`) where applicable and that non-empty collections use `NonEmptyList`/`NonEmptySet`.
   * **Equivalence test check**: if the module is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
@@ -152,9 +160,15 @@ Concrete rules:
 * If a book error is found, it must be recorded in `fixes_for_book.md` with a clear description and suggested correction, and the user should be notified.
 * If additional information, that not presented in the book was required for implementation, it must be recorded in `fixes_for_book.md` with a clear description and suggested improvements, and the user should be notified.
 * Move changes to `dev`
+* **Completion verification**: before marking a task as done, confirm:
+   - ALL subtasks from the task description in `tasks.md` are implemented.
+   - ALL tests across the entire solution pass (zero failures).
+   - There are zero known algorithmic gaps, partial implementations, or skipped test cases.
+   - Equivalence tests pass against the reference implementation if the task requires it.
 * Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description. The task text in `tasks.md` is user-authored and immutable.**
-  - **CRITICAL: Never run `git checkout tasks/tasks.md`, `git restore tasks/tasks.md`, or any git reset/checkout command on `tasks.md`.** The working-tree version of this file is authoritative — it may contain user-authored task details not yet committed. Git operations that revert to a committed version will destroy uncommitted task descriptions.
-  - **Verify before editing**: always read the current working-tree version with the Read tool first. Do not rely on the last committed version from git history.
+   - **CRITICAL: Never run `git checkout tasks/tasks.md`, `git restore tasks/tasks.md`, or any git reset/checkout command on `tasks.md`.** The working-tree version of this file is authoritative — it may contain user-authored task details not yet committed. Git operations that revert to a committed version will destroy uncommitted task descriptions.
+   - **Verify before editing**: always read the current working-tree version with the Read tool first. Do not rely on the last committed version from git history.
+   - **The `[done]` tag means COMPLETE**: every requirement met, every test passing, every edge case handled. Never mark a task as `[done]` with known failures or unresolved limitations.
 * Go to first step
 
 ## Task authoring guidelines
@@ -180,10 +194,11 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
   * Check that compilation is successful.
   * **Verify tasks.md is not staged.** Run `git diff --cached --name-only | grep -q tasks.md` — if it matches, unstage it with `git reset HEAD tasks.md`. tasks.md must never be committed from a feature branch.
 * Before moving changes from feature-branch to dev:
-  * Format code.
-  * Check that compilation is successful.
-  * Check that all tests are turned on.
-  * Check that all tests passed successfully.
+   * Format code.
+   * Check that compilation is successful.
+   * Run `dotnet test` on the FULL solution (all projects, Debug configuration). Every test must pass — zero failures. Never merge with known failures.
+   * Never comment out, weaken, or `()`-stub failing tests to make the suite green. If a test fails, fix the code or escalate via the blocked work protocol above.
+   * If the task specifies equivalence with a reference implementation (e.g., "must produce identical results as CYK"), the equivalence property tests MUST pass with zero counterexamples.
 * Use `Squash and Rebase` strategy to move changes from feature-branch to dev. History of `dev` must be linear.
 * No emergency fixes.
 * All work is local, no `push`-es.
