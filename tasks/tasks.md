@@ -164,7 +164,7 @@
           2. Extracted tree yield. For accepted strings: DerivationTree.leaves (extractDerivationTree sppf rootIdx) = input string (as list of characters).
            3. Comparison with classical LL. For an unambiguous grammar without left recursion, the number of nonterminal nodes in the GLL-SPPF-extracted tree equals the number in the classical LLParser tree, adjusted for the extended RSM (the S' block adds exactly one extra nonterminal node S' above the original start symbol).
 
-138. Implement RNGLR (Right-Nulled Generalized LR) for RSM. Book reference: sec:CFPQ_RNGLR. RNGLR is the LR-based counterpart to GLL (task 137), sharing SPPF, PathIndex, and tree extraction infrastructure. RNGLR builds a path index during execution; SPPF is built as a separate step from the index.
+138. [done] Implement RNGLR (Right-Nulled Generalized LR) for RSM. Book reference: sec:CFPQ_RNGLR. RNGLR is the LR-based counterpart to GLL (task 137), sharing SPPF, PathIndex, and tree extraction infrastructure. RNGLR builds a path index during execution; SPPF is built as a separate step from the index.
      1.   Reuse SPPF types from GLL (SppfNodeInfo, SppfEdgeLabel, SPPF from GllTypes.fs). Reuse PathIndex, RangeKey, RangeDescriptor, PathIndexEntry types. Reuse buildSppfFromIndex and extractDerivationTree from Gll.fs (adapt to RNGLR's entry format if needed).
      2.   Extend LR items and LR table construction to operate over RSM blocks (not Grammar rules).
           - An LR item over RSM: { blockNonterminal: Nonterminal<'nt>; rsmState: int } — a local state in one RSM block DFA, plus a lookahead symbol for LR(1).
@@ -202,7 +202,7 @@
           4. Acceptance fact tests. Specific grammar + input pairs: basic shift-only, epsilon, right-nullable chain (S -> A B, A -> a A | eps, B -> b B | eps), left-recursive, ambiguous.
           5. Reduction cascade test. Verify that reductions at a layer can trigger further reductions at the same layer (e.g., A → eps reduce triggers B → A reduce, both at layer 0 without consuming input).
      
-139.  Help on 138. 
+139. [done] Help on 138. 
       1.    Use exended grammar to simplify and RSM (reuse code form GLL, move this code to RSM)
       2.    Layer handled with fixpoint logik: while new nodes appears (as results of reductions), continue reductions.
       3.    Add simple property tests
@@ -211,7 +211,7 @@
             3.    S -> (a | b)* must accepts and rejects same strings as DFA constructed for (a | b)*
              4.    S -> (a | b)* (a | c)* must accepts and rejects same strings as DFA constructed for (a | b)* (a | c)*
 
-140. Refactor RNGLR findPredecessors to classical automata intersection and fix passing mechanism.
+140. [done] Refactor RNGLR findPredecessors to classical automata intersection and fix passing mechanism.
       Rework the ad-hoc BFS in findPredecessors into a standard automaton intersection algorithm (simultaneous traversal over (gssIdx, invState) pairs). Both the GSS (over Symbol<'t,'nt>) and inverted RSM blocks (over RsmSymbol<'t,'nt>) are automata — implement the product construction as a standalone function and replace the current BFS with it. Fix the passing reduction mechanism to align with this model and resolve the 2 remaining right-nullable test failures.
       1.   Precompute inverted RSM blocks once — build invBlocks: Map<Nonterminal<'nt>, DFA<RsmSymbol<'t,'nt>, int>> at the start of buildPathIndex, not per findPredecessors call.
       2.   Reuse intersectrion from Automaton.intersection to find predcessors. To do it represent GSS as an automaton.

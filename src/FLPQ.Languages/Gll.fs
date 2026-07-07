@@ -5,13 +5,6 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
-/// Mapping from global RSM state index to block information.
-[<Struct>]
-type RsmStateInfo<'nt when 'nt: comparison> =
-    { blockNonterminal: Nonterminal<'nt>
-      localState: int
-      isFinal: bool }
-
 /// Descriptor in the GLL worklist: current RSM state, input graph vertex,
 /// current GSS node, and the range matched so far.
 /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
@@ -51,67 +44,6 @@ module GLL =
                 m
 
         Graph.fromEdges vertices edges
-
-    /// Collects all global state information, terminal transitions, and nonterminal transitions
-    /// from the RSM's DFA blocks. Returns:
-    /// - stateInfo: global state → (nonterminal, localState, isFinal)
-    /// - termTrans: global state → list of (terminal, nextGlobalState)
-    /// - nontermTrans: global state → list of (nonterminal, nextGlobalState)
-    /// - blockStart: nonterminal → global start state
-    /// - finalStates: set of global final state indices (across all blocks)
-    let private collectRsmData (rsm: RSM<'t, 'nt>) =
-        let blocks = RSM.blocks rsm
-        let stateCount = RSM.stateCount rsm
-
-        let stateInfo = Array.zeroCreate<RsmStateInfo<'nt>> stateCount
-        let blockStart = Dictionary<Nonterminal<'nt>, int>()
-        let mutable finalStates = Set.empty<int>
-
-        let termTrans = Array.init stateCount (fun _ -> ResizeArray<Terminal<'t> * int>())
-
-        let nontermTrans =
-            Array.init stateCount (fun _ -> ResizeArray<Nonterminal<'nt> * int>())
-
-        let mutable globalOffset = 0
-
-        for block in blocks do
-            let dfa = block.dfa
-            let localSize = Dfa.stateCount dfa
-            let localFinal = dfa.finalStates
-
-            // Register block start state
-            blockStart.[block.nonterminal] <- globalOffset + dfa.startState
-
-            // Collect transitions by iterating the DFA transition matrix directly
-            for localState in 0 .. localSize - 1 do
-                let globalState = globalOffset + localState
-                let isFinal = Set.contains localState localFinal
-
-                stateInfo.[globalState] <-
-                    { blockNonterminal = block.nonterminal
-                      localState = localState
-                      isFinal = isFinal }
-
-                if isFinal then
-                    finalStates <- Set.add globalState finalStates
-
-                // Iterate all possible targets
-                for localTarget in 0 .. localSize - 1 do
-                    match Matrix.get dfa.transitions localState localTarget with
-                    | Some labels ->
-                        let targetGlobal = globalOffset + localTarget
-
-                        for label in NonEmptySet.toSeq labels do
-                            match label with
-                            | AutomatonLabel.ATerm(RsmSymbol.RTerm t) -> termTrans.[globalState].Add(t, targetGlobal)
-                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) ->
-                                nontermTrans.[globalState].Add(nt, targetGlobal)
-                            | AutomatonLabel.AEpsilon -> ()
-                    | None -> ()
-
-            globalOffset <- globalOffset + localSize
-
-        stateInfo, blockStart, finalStates, termTrans, nontermTrans
 
     /// Maps graph vertex → list of outgoing (terminal, targetVertex) edges.
     let private collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
@@ -164,7 +96,12 @@ module GLL =
               stateCount = stateCount
               vertexCount = vertexCount }
 
-        let stateInfo, blockStart, finalStates, termTrans, nontermTrans = collectRsmData rsm
+        let flat = RSM.flattenRsm rsm
+        let stateInfo = flat.stateInfo
+        let blockStart = flat.blockStart
+        let finalStates = flat.finalStates
+        let termTrans = flat.termTrans
+        let nontermTrans = flat.nontermTrans
         let graphEdges = collectGraphEdges inputGraph
 
         let gss = GSS.init stateCount vertexCount
