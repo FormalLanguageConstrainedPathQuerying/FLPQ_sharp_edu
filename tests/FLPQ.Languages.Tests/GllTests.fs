@@ -31,9 +31,11 @@ let private grammarToEbnfText (g: Grammar<string, string>) : string =
     |> String.concat "\n"
 
 /// Build an RSM from a Grammar<string,string> via EBNF text conversion.
+/// Fixes the start block to match the grammar's start symbol.
 let private grammarToRsm (g: Grammar<string, string>) : RSM<string, string> =
     let ebnfText = grammarToEbnfText g
-    RsmBuilder.buildRSMFromText ebnfText
+    let rsm = RsmBuilder.buildRSMFromText ebnfText
+    { rsm with startBlock = g.start }
 
 /// Convert a string to a list of single-character strings for use with string-based RSM.
 let private stringToChars (s: string) : string list =
@@ -94,11 +96,12 @@ let private cykAccepts (g: Grammar<string, string>) (input: string list) : bool 
     let terminals = input |> List.map Terminal
     Cyk.parse Grammar.freshStringNonterminal g terminals
 
-/// Extract derivation tree from GLL SPPF and collect leaves.
+/// Extract derivation tree from GLL via SPPF (handles nonterminal-first RSM blocks correctly).
 let private gllTree (g: Grammar<string, string>) (input: string list) : DerivationTree<string, string> option =
     let rsm = grammarToRsm g
     let graph = terminalsToGraph input
     let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+    let vc = Graph.vertexCount graph
 
     let startBlock = RSM.startBlock rsm
     let startGlobalState = globalStartState rsm startBlock.nonterminal
@@ -109,8 +112,7 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     for finalLocal in startBlock.dfa.finalStates do
         let fgs = offset + finalLocal
 
-        let entries =
-            PathIndex.get pathIndex startGlobalState 0 fgs (Graph.vertexCount graph - 1)
+        let entries = PathIndex.get pathIndex startGlobalState 0 fgs (vc - 1)
 
         if not (Set.isEmpty entries) then
             finalGlobalState <- fgs
@@ -118,42 +120,19 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     if finalGlobalState = -1 then
         None
     else
-        // Collect state info and block starts for the extractor
-        let blocks = RSM.blocks rsm
-        let stateCount = RSM.stateCount rsm
-        let stateInfo = Array.zeroCreate<RsmStateInfo<string>> stateCount
-        let mutable globalOff = 0
+        let rootRange =
+            { fromState = startGlobalState
+              fromVertex = 0
+              toState = finalGlobalState
+              toVertex = vc - 1 }
 
-        for block in blocks do
-            let localSize = Dfa.stateCount block.dfa
+        let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
 
-            for localState in 0 .. localSize - 1 do
-                stateInfo.[globalOff + localState] <-
-                    { blockNonterminal = block.nonterminal
-                      localState = localState
-                      isFinal = Set.contains localState block.dfa.finalStates }
-
-            globalOff <- globalOff + localSize
-
-        let blockStart = System.Collections.Generic.Dictionary<Nonterminal<string>, int>()
-
-        let mutable goff = 0
-
-        for block in blocks do
-            blockStart.[block.nonterminal] <- goff + block.dfa.startState
-            goff <- goff + Dfa.stateCount block.dfa
-
-        let tree =
-            GLL.extractDerivationTree
-                pathIndex
-                stateInfo
-                blockStart
-                startGlobalState
-                0
-                finalGlobalState
-                (Graph.vertexCount graph - 1)
-
-        Some tree
+        match sppf.rootIndices with
+        | rootIdx :: _ ->
+            let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
+            Some tree
+        | [] -> None
 
 /// Check if an RSM accepts a string via GLL (without converting from Grammar).
 let private gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
@@ -350,3 +329,314 @@ module GllRegexEquivalence =
         let input = stringToChars s |> List.filter (fun c -> c = "a" || c = "b" || c = "c")
 
         gllAcceptsRsm rsm input = dfaAcceptsRegex dfa input
+
+module GllGrammarAcceptanceAndTree =
+
+    /// Grammar 1: S -> N a* ; N -> (a a) | a
+    /// CFG with inlined terminal-first start.
+    let private grammar1 =
+        Grammar.parseGrammar
+            "
+        S -> a a A
+        S -> a A
+        A -> a A
+        A -> eps
+        "
+
+    /// Grammar 2: S -> a* N ; N -> a | (a a)
+    /// CFG with inlined terminal-first start.
+    let private grammar2 =
+        Grammar.parseGrammar
+            "
+        S -> a
+        S -> a a
+        S -> a a A
+        S -> a a a A
+        A -> a A
+        A -> eps
+        "
+
+    /// Grammar 3: S -> N* ; N -> a | (a a)
+    /// CFG with inlined terminal-first start.
+    let private grammar3 =
+        Grammar.parseGrammar
+            "
+        S -> eps
+        S -> a a S
+        S -> a S
+        "
+
+    /// Grammar 4: S -> a | S S | S S S
+    let private grammar4 = Grammar.parseGrammar "S -> a\nS -> S S\nS -> S S S"
+
+    /// Check that tree is not an epsilon leaf.
+    let private nonEpsilon (tree: DerivationTree<string, string>) : bool =
+        match tree with
+        | Leaf Symbol.Epsilon -> false
+        | _ -> true
+
+    // ---- Grammar 1: S -> N a* ; N -> (a a) | a ----
+    module Grammar1 =
+        [<Fact>]
+        let ``accepts a`` () =
+            Assert.True(gllAccepts grammar1 [ "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(gllAccepts grammar1 [ "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(gllAccepts grammar1 [ "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaaa`` () =
+            Assert.True(gllAccepts grammar1 [ "a"; "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(gllAccepts grammar1 [])
+
+        [<Fact>]
+        let ``rejects b`` () =
+            Assert.False(gllAccepts grammar1 [ "b" ])
+
+        [<Fact>]
+        let ``rejects ab`` () =
+            Assert.False(gllAccepts grammar1 [ "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aab`` () =
+            Assert.False(gllAccepts grammar1 [ "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aaab`` () =
+            Assert.False(gllAccepts grammar1 [ "a"; "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects abaa`` () =
+            Assert.False(gllAccepts grammar1 [ "a"; "b"; "a"; "a" ])
+
+        [<Fact>]
+        let ``tree non-epsilon for a`` () =
+            match gllTree grammar1 [ "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aa`` () =
+            match gllTree grammar1 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaa`` () =
+            match gllTree grammar1 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaaa`` () =
+            match gllTree grammar1 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+    // ---- Grammar 2: S -> a* N ; N -> a | (a a) ----
+    module Grammar2 =
+        [<Fact>]
+        let ``accepts a`` () =
+            Assert.True(gllAccepts grammar2 [ "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(gllAccepts grammar2 [ "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(gllAccepts grammar2 [ "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaaa`` () =
+            Assert.True(gllAccepts grammar2 [ "a"; "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(gllAccepts grammar2 [])
+
+        [<Fact>]
+        let ``rejects b`` () =
+            Assert.False(gllAccepts grammar2 [ "b" ])
+
+        [<Fact>]
+        let ``rejects ab`` () =
+            Assert.False(gllAccepts grammar2 [ "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aab`` () =
+            Assert.False(gllAccepts grammar2 [ "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aaab`` () =
+            Assert.False(gllAccepts grammar2 [ "a"; "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects abaa`` () =
+            Assert.False(gllAccepts grammar2 [ "a"; "b"; "a"; "a" ])
+
+        [<Fact>]
+        let ``tree non-epsilon for a`` () =
+            match gllTree grammar2 [ "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aa`` () =
+            match gllTree grammar2 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaa`` () =
+            match gllTree grammar2 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaaa`` () =
+            match gllTree grammar2 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+    // ---- Grammar 3: S -> N* ; N -> a | (a a) ----
+    module Grammar3 =
+        [<Fact>]
+        let ``accepts empty`` () = Assert.True(gllAccepts grammar3 [])
+
+        [<Fact>]
+        let ``accepts a`` () =
+            Assert.True(gllAccepts grammar3 [ "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(gllAccepts grammar3 [ "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(gllAccepts grammar3 [ "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaaa`` () =
+            Assert.True(gllAccepts grammar3 [ "a"; "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``rejects b`` () =
+            Assert.False(gllAccepts grammar3 [ "b" ])
+
+        [<Fact>]
+        let ``rejects ab`` () =
+            Assert.False(gllAccepts grammar3 [ "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aab`` () =
+            Assert.False(gllAccepts grammar3 [ "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aaab`` () =
+            Assert.False(gllAccepts grammar3 [ "a"; "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects abaa`` () =
+            Assert.False(gllAccepts grammar3 [ "a"; "b"; "a"; "a" ])
+
+        [<Fact>]
+        let ``tree exists for empty`` () =
+            match gllTree grammar3 [] with
+            | Some _ -> Assert.True(true)
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for a`` () =
+            match gllTree grammar3 [ "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aa`` () =
+            match gllTree grammar3 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaa`` () =
+            match gllTree grammar3 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaaa`` () =
+            match gllTree grammar3 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+    // ---- Grammar 4: S -> a | S S | S S S ----
+    module Grammar4 =
+        [<Fact>]
+        let ``accepts a`` () =
+            Assert.True(gllAccepts grammar4 [ "a" ])
+
+        [<Fact>]
+        let ``accepts aa`` () =
+            Assert.True(gllAccepts grammar4 [ "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaa`` () =
+            Assert.True(gllAccepts grammar4 [ "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``accepts aaaa`` () =
+            Assert.True(gllAccepts grammar4 [ "a"; "a"; "a"; "a" ])
+
+        [<Fact>]
+        let ``rejects empty`` () = Assert.False(gllAccepts grammar4 [])
+
+        [<Fact>]
+        let ``rejects b`` () =
+            Assert.False(gllAccepts grammar4 [ "b" ])
+
+        [<Fact>]
+        let ``rejects ab`` () =
+            Assert.False(gllAccepts grammar4 [ "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aab`` () =
+            Assert.False(gllAccepts grammar4 [ "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects aaab`` () =
+            Assert.False(gllAccepts grammar4 [ "a"; "a"; "a"; "b" ])
+
+        [<Fact>]
+        let ``rejects abaa`` () =
+            Assert.False(gllAccepts grammar4 [ "a"; "b"; "a"; "a" ])
+
+        [<Fact>]
+        let ``tree non-epsilon for a`` () =
+            match gllTree grammar4 [ "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aa`` () =
+            match gllTree grammar4 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaa`` () =
+            match gllTree grammar4 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
+
+        [<Fact>]
+        let ``tree non-epsilon for aaaa`` () =
+            match gllTree grammar4 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree, "Should not be epsilon tree")
+            | None -> Assert.True(false, "Should produce a tree")
