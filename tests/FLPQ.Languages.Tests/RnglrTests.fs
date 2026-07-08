@@ -80,6 +80,8 @@ let private cykAccepts (g: Grammar<string, string>) (input: string list) : bool 
     Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal)
 
 /// Extract derivation tree from RNGLR via SPPF construction from path index.
+/// Scans the path index matrix to find the actual acceptance range (like Rnglr.isAccepted does),
+/// then builds SPPF from that range rather than assuming states 0→1.
 let private rnglrTree (g: Grammar<string, string>) (input: string list) : DerivationTree<string, string> option =
     let rsm = grammarToRsm g
     let startNt = (RSM.startBlock rsm).nonterminal
@@ -92,19 +94,42 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
     if not (Rnglr.isAccepted pathIndex vertexCount) then
         None
     else
-        let rootRange =
-            { fromState = 0
-              fromVertex = 0
-              toState = 1
-              toVertex = vertexCount - 1 }
+        // Scan matrix for acceptance range like Rnglr.isAccepted does
+        let K = pathIndex.stateCount * pathIndex.vertexCount
 
-        let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
+        let found =
+            seq {
+                for i in 0 .. K - 1 do
+                    if i % vertexCount = 0 then
+                        let fs = i / vertexCount
 
-        match sppf.rootIndices with
-        | rootIdx :: _ ->
-            let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
-            Some tree
-        | [] -> None
+                        for j in 0 .. K - 1 do
+                            if j % vertexCount = vertexCount - 1 then
+                                let ts = j / vertexCount
+
+                                for entry in Matrix.get pathIndex.matrix i j do
+                                    match entry with
+                                    | PathIndexEntry.PNonterminal _ -> yield (fs, ts)
+                                    | _ -> ()
+            }
+            |> Seq.tryHead
+
+        match found with
+        | None -> None
+        | Some(foundFromState, foundToState) ->
+            let rootRange =
+                { fromState = foundFromState
+                  fromVertex = 0
+                  toState = foundToState
+                  toVertex = vertexCount - 1 }
+
+            let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
+
+            match sppf.rootIndices with
+            | rootIdx :: _ ->
+                let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
+                Some tree
+            | [] -> None
 
 module RnglrAcceptance =
     [<Fact>]
@@ -401,13 +426,22 @@ module RnglrGrammarAcceptanceAndTree =
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () = ()
+        let ``tree non-epsilon for aa`` () =
+            match rnglrTree grammar1 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () = ()
+        let ``tree non-epsilon for aaa`` () =
+            match rnglrTree grammar1 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () = ()
+        let ``tree non-epsilon for aaaa`` () =
+            match rnglrTree grammar1 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 2 ----
     module Grammar2 =
@@ -457,13 +491,22 @@ module RnglrGrammarAcceptanceAndTree =
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () = ()
+        let ``tree non-epsilon for aa`` () =
+            match rnglrTree grammar2 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () = ()
+        let ``tree non-epsilon for aaa`` () =
+            match rnglrTree grammar2 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () = ()
+        let ``tree non-epsilon for aaaa`` () =
+            match rnglrTree grammar2 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 3 ----
     module Grammar3 =
@@ -519,13 +562,22 @@ module RnglrGrammarAcceptanceAndTree =
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () = ()
+        let ``tree non-epsilon for aa`` () =
+            match rnglrTree grammar3 [ "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () = ()
+        let ``tree non-epsilon for aaa`` () =
+            match rnglrTree grammar3 [ "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () = ()
+        let ``tree non-epsilon for aaaa`` () =
+            match rnglrTree grammar3 [ "a"; "a"; "a"; "a" ] with
+            | Some tree -> Assert.True(nonEpsilon tree)
+            | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 4: acceptance only (RSM builder can't handle S->S S) ----
     module Grammar4 =

@@ -169,6 +169,7 @@ Concrete rules:
    - ALL subtasks from the task description in `tasks.md` are implemented.
    - ALL tests across the entire solution pass (zero failures).
    - There are zero known algorithmic gaps, partial implementations, or skipped test cases.
+   - `dotnet test` output shows `Skipped: 0` for all test projects (or skips are explicitly approved and documented in `detailed_plan.md`).
    - Equivalence tests pass against the reference implementation if the task requires it.
 * Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description. The task text in `tasks.md` is user-authored and immutable.**
    - **CRITICAL: Never run `git checkout tasks/tasks.md`, `git restore tasks/tasks.md`, or any git reset/checkout command on `tasks.md`.** The working-tree version of this file is authoritative — it may contain user-authored task details not yet committed. Git operations that revert to a committed version will destroy uncommitted task descriptions.
@@ -201,8 +202,9 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Before moving changes from feature-branch to dev:
    * Format code.
    * Check that compilation is successful.
-   * Run `dotnet test` on the FULL solution (all projects, Debug configuration). Every test must pass — zero failures. Never merge with known failures.
-   * Never comment out, weaken, or `()`-stub failing tests to make the suite green. If a test fails, fix the code or escalate via the blocked work protocol above.
+* Run `dotnet test` on the FULL solution (all projects, Debug configuration). Every test must pass — zero failures. Never merge with known failures.
+   * **Verify Skip count**: `dotnet test` output must show `Skipped: 0` for all test projects. A non-zero Skip count is a blocker. If a Skip is intentional, it must be documented in `detailed_plan.md` with justification before merge.
+* If a test cannot be made to pass, use `[<Fact(Skip="explanation")>]` with a clear reason — never an empty body `()`, tautological assertions, or commented-out asserts. A Skip is visible in test output; an empty body silently produces a false positive.
    * If the task specifies equivalence with a reference implementation (e.g., "must produce identical results as CYK"), the equivalence property tests MUST pass with zero counterexamples.
 * Use `Squash and Rebase` strategy to move changes from feature-branch to dev. History of `dev` must be linear.
 * No emergency fixes.
