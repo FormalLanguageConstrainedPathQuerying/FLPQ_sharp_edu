@@ -9,8 +9,8 @@ module LRStepVisualizer =
     let renderStep (symbolVisualizer: Symbol<'t, 'nt> -> string) (step: LRParsingStep<'t, 'nt>) : VisualizationStep =
         let termPrinter = TeXRenderer.termPrinterFromSymbolVisualizer symbolVisualizer
 
-        { treeAndStack = DerivationTreeDot.toDotWithLRStack symbolVisualizer step.stack
-          input = TeXRenderer.inputRow termPrinter step.input.tokens step.input.position }
+        { treeAndStack = DerivationTreeDot.toDotWithLRStack symbolVisualizer step.Stack
+          input = TeXRenderer.inputRow termPrinter step.Input.Tokens step.Input.Position }
 
     /// Render a list of LR parsing steps to visualization steps.
     let renderSteps

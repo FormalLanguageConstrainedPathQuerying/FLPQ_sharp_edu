@@ -308,7 +308,7 @@ module RsmBuilder =
         let dfa =
             Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
 
-        { RsmBlock.nonterminal = nt; dfa = dfa }
+        { Nonterminal = nt; Dfa = dfa }
 
     let buildRSM (grouped: Map<Nonterminal<string>, Regexp<string, string>>) : RSM<string, string> =
         if Map.isEmpty grouped then
@@ -319,8 +319,8 @@ module RsmBuilder =
         let blocks =
             grouped |> Map.toList |> List.map (fun (nt, regexp) -> buildBlockDfa nt regexp)
 
-        { RSM.blocks = blocks
-          startBlock = firstNt }
+        { Blocks = blocks
+          StartBlock = firstNt }
 
     let buildRSMFromText (text: string) : RSM<string, string> =
         let rules = EbnfParser.parseEbnf text

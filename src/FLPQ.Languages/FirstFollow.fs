@@ -68,11 +68,11 @@ module FirstFollow =
                 let initials =
                     rules
                     |> List.choose (fun r ->
-                        if r.lhs = nt then
-                            if Rhs.isEpsilon r.rhs then
+                        if r.Lhs = nt then
+                            if Rhs.isEpsilon r.Rhs then
                                 Some [ Symbol.Epsilon ]
                             else
-                                match Rhs.toNonEpsilonList r.rhs with
+                                match Rhs.toNonEpsilonList r.Rhs with
                                 | (Symbol.T _ as t) :: _ -> Some(truncate [ t ] k)
                                 | _ -> None
                         else
@@ -93,8 +93,8 @@ module FirstFollow =
                 let additions =
                     rules
                     |> List.choose (fun r ->
-                        if r.lhs = nt && not (Rhs.isEpsilon r.rhs) then
-                            Some(Rhs.toNonEpsilonList r.rhs)
+                        if r.Lhs = nt && not (Rhs.isEpsilon r.Rhs) then
+                            Some(Rhs.toNonEpsilonList r.Rhs)
                         else
                             None)
                     |> List.collect (fun rhs -> firstOfSymbols firstMap k rhs |> Set.toList)
@@ -111,23 +111,23 @@ module FirstFollow =
     /// first_k(A) = set of terminal strings of length ≤ k that can begin strings derived from A.
     /// Epsilon is represented as [Epsilon] (a singleton list).
     let firstK (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>> =
-        let allNt = g.rules |> List.map (fun r -> r.lhs) |> List.distinct
+        let allNt = g.Rules |> List.map (fun r -> r.Lhs) |> List.distinct
 
-        computeFirstK g.rules allNt k
+        computeFirstK g.Rules allNt k
 
     /// Compute follow_k sets for all nonterminals of a grammar.
     /// follow_k(A) = set of terminal strings of length ≤ k that can appear immediately after A
     /// in some derivation starting from the start symbol.
     /// Epsilon is represented as [Epsilon] (a singleton list).
     let followK (g: Grammar<'t, 'nt>) (k: int) : Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>> =
-        let allNt = g.rules |> List.map (fun r -> r.lhs) |> List.distinct
+        let allNt = g.Rules |> List.map (fun r -> r.Lhs) |> List.distinct
 
-        let firstMap = computeFirstK g.rules allNt k
+        let firstMap = computeFirstK g.Rules allNt k
 
         let mutable followMap =
             allNt
             |> List.map (fun nt ->
-                if nt = g.start then
+                if nt = g.Start then
                     (nt, set [ [ Symbol.Epsilon ] ])
                 else
                     (nt, Set.empty))
@@ -138,8 +138,8 @@ module FirstFollow =
         while changed do
             changed <- false
 
-            for rule in g.rules do
-                let rhs = Rhs.toNonEpsilonList rule.rhs
+            for rule in g.Rules do
+                let rhs = Rhs.toNonEpsilonList rule.Rhs
 
                 for idx in 0 .. rhs.Length - 1 do
                     match rhs.[idx] with
@@ -156,7 +156,7 @@ module FirstFollow =
                             followMap <- Map.add bNt (Set.union currentF additions) followMap
 
                         if Set.contains [ Symbol.Epsilon ] firstBeta then
-                            let aFollow = Map.find rule.lhs followMap
+                            let aFollow = Map.find rule.Lhs followMap
 
                             let more = aFollow |> Set.filter (fun s -> not (Set.contains s currentF))
 

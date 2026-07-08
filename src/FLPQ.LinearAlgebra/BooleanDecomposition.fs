@@ -11,16 +11,17 @@ module BooleanDecomposition =
     /// iff the element is in the original set at that position.
     let decompose (matrix: Matrix<Set<'a>>) : Map<'a, Matrix<bool>> =
         let allElements =
-            [ for i in 0 .. matrix.rows - 1 do
-                  for j in 0 .. matrix.cols - 1 do
-                      yield! matrix.data.[i, j] ]
+            [ for i in 0 .. Matrix.rows matrix - 1 do
+                  for j in 0 .. Matrix.cols matrix - 1 do
+                      yield! Matrix.get matrix i j ]
             |> Set.ofList
 
         allElements
         |> Set.toList
         |> List.map (fun elem ->
             let boolMatrix =
-                Matrix.create matrix.rows matrix.cols (fun i j -> Set.contains elem matrix.data.[i, j])
+                Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j ->
+                    Set.contains elem (Matrix.get matrix i j))
 
             (elem, boolMatrix))
         |> Map.ofList
@@ -31,9 +32,9 @@ module BooleanDecomposition =
     /// None cells are treated as empty sets.
     let decomposeNonEmptySet (matrix: Matrix<Option<NonEmptySet<'a>>>) : Map<'a, Matrix<bool>> =
         let allElements =
-            [ for i in 0 .. matrix.rows - 1 do
-                  for j in 0 .. matrix.cols - 1 do
-                      match matrix.data.[i, j] with
+            [ for i in 0 .. Matrix.rows matrix - 1 do
+                  for j in 0 .. Matrix.cols matrix - 1 do
+                      match Matrix.get matrix i j with
                       | Some nes -> yield! NonEmptySet.toSeq nes
                       | None -> () ]
             |> Set.ofList
@@ -42,8 +43,8 @@ module BooleanDecomposition =
         |> Set.toList
         |> List.map (fun elem ->
             let boolMatrix =
-                Matrix.create matrix.rows matrix.cols (fun i j ->
-                    match matrix.data.[i, j] with
+                Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j ->
+                    match Matrix.get matrix i j with
                     | Some nes -> NonEmptySet.contains elem nes
                     | None -> false)
 
@@ -57,8 +58,8 @@ module BooleanDecomposition =
             invalidArg (nameof decomp) "Decomposition must contain at least one element"
 
         let first = decomp |> Map.values |> Seq.head
-        let rows = first.rows
-        let cols = first.cols
+        let rows = Matrix.rows first
+        let cols = Matrix.cols first
 
         Matrix.create rows cols (fun i j ->
-            decomp |> Map.filter (fun _ mat -> mat.data.[i, j]) |> Map.keys |> Set.ofSeq)
+            decomp |> Map.filter (fun _ mat -> Matrix.get mat i j) |> Map.keys |> Set.ofSeq)

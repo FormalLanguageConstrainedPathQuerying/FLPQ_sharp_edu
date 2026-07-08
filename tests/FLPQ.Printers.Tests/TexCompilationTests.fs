@@ -18,7 +18,7 @@ let ``CYK table TeX compiles with lualatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     let step = trace.[0]
-    let tex = CykTeX.tableToTeX string step.table
+    let tex = CykTeX.tableToTeX string step.Table
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -30,7 +30,7 @@ let ``CYK all steps TeX compile with lualatex`` () =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     for step in trace do
-        let tex = CykTeX.tableToTeX string step.table
+        let tex = CykTeX.tableToTeX string step.Table
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -51,7 +51,7 @@ let ``LL step input TeX compiles with lualatex`` () =
 [<Trait("Category", "TeX")>]
 let ``LR step input TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
@@ -74,7 +74,7 @@ let ``Valiant trace TeX compiles with lualatex`` () =
 
     for step in trace do
         let tex =
-            MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.table
+            MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.Table
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
@@ -183,7 +183,7 @@ T -> c
 [<Trait("Category", "TeX")>]
 let ``SLR(1) table TeX compiles for grammar1`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 
@@ -200,7 +200,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
 [<Trait("Category", "TeX")>]
 let ``LR(0) table TeX shows shift-reduce conflicts`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildLR0Table aug
 
@@ -208,13 +208,13 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tabularTemplatePath tex)
 
-    Assert.True(table.conflicts.Length > 0)
+    Assert.True(table.Conflicts.Length > 0)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``CLR(1) table TeX compiles for grammar1`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildCLR1Table aug
 
@@ -236,7 +236,7 @@ F -> ( E )
 F -> x
 "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
 

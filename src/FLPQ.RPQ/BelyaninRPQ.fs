@@ -27,10 +27,9 @@ module BelyaninRPQ =
             let mutable m = Matrix.init qCount vCount false
             let mutable p = Matrix.init qCount vCount false
 
-            Matrix.set m dfa.startState source true
+            Matrix.set m dfa.StartState source true
 
-            let isZero (matrix: Matrix<bool>) : bool =
-                not (Matrix.fold (fun acc x -> acc || x) false matrix)
+            let isZero (matrix: Matrix<bool>) : bool = not (Matrix.fold (||) false matrix)
 
             while not (isZero m) do
                 m <- MsBfs.maskFilter m p
@@ -47,7 +46,7 @@ module BelyaninRPQ =
 
                         for i in 0 .. qCount - 1 do
                             for j in 0 .. qCount - 1 do
-                                match Matrix.get dfa.transitions i j with
+                                match Matrix.get dfa.Transitions i j with
                                 | Some nes when NonEmptySet.contains (ATerm t) nes -> Matrix.set nMat i j true
                                 | _ -> ()
 
@@ -60,7 +59,7 @@ module BelyaninRPQ =
 
             let f = Matrix.init 1 qCount false
 
-            for qf in dfa.finalStates do
+            for qf in dfa.FinalStates do
                 Matrix.set f 0 qf true
 
             let result = MsBfs.boolMul f p
@@ -70,8 +69,8 @@ module BelyaninRPQ =
     /// Input: a DFA (query automaton) and a graph NFA.
     /// Output: |sources| × |V| boolean matrix indicating reachable vertices from each source.
     let evaluate (dfa: DFA<'t, int>) (graph: NFA<'t, int>) : Matrix<bool> =
-        let sources = graph.startStates |> Set.toArray
-        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.transitions
+        let sources = graph.StartStates |> Set.toArray
+        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.Transitions
         let vCount = Nfa.stateCount graph
 
         let result = Matrix.init sources.Length vCount false

@@ -277,7 +277,7 @@
              1.    FL0085 — Local Function Naming: in our project we use camelCase
              2.    FL0069 — Type Parameter Naming: in our project we use camelCase
              3.    Regenerate report. Place it in tasks/linter_report.md. Align it with previous version of report.
-148.  Fix preblems detected by linter.
+ 148. [done]  Fix preblems detected by linter.
       1.    Fix all problems detected by fsharplint. Ensure that all problems fixed.
             1.    Fix it one-by one. Linter reports position of error. Use it to fix. Do the same with compilation errors. Do not try to invent general solution (do not try to write renaming script, do not try to rename with sed, etc)
       2.    Update AGENTS.md with instructions to use linter to check whether all ready for commit. You must not commit code with problems detected by linter. Run linter only if F#-related files were chenged. Add instructions how to run linter. Linet must be run on slnx file, not on projects or sources individually.

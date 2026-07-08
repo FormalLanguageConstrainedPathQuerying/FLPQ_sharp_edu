@@ -6,17 +6,17 @@ open FLPQ.LinearAlgebra
 /// LR(0) item: A -> α·β
 /// Dot position tracks how much of the RHS has been consumed.
 type LR0Item<'t, 'nt> =
-    { lhs: Nonterminal<'nt>
-      rhs: Symbol<'t, 'nt> list
-      dot: int }
+    { Lhs: Nonterminal<'nt>
+      Rhs: Symbol<'t, 'nt> list
+      Dot: int }
 
 /// LR(1) item: A -> α·β, l
 /// Adds a lookahead symbol to each item for more precise reduce decisions.
 type LR1Item<'t, 'nt> =
-    { lhs: Nonterminal<'nt>
-      rhs: Symbol<'t, 'nt> list
-      dot: int
-      lookahead: Symbol<'t, 'nt> }
+    { Lhs: Nonterminal<'nt>
+      Rhs: Symbol<'t, 'nt> list
+      Dot: int
+      Lookahead: Symbol<'t, 'nt> }
 
 /// Action in an LR parsing table.
 type LRAction =
@@ -36,10 +36,10 @@ type LRAutomaton<'t, 'nt when 't: comparison and 'nt: comparison> =
 
 /// LR parsing table with action and goto maps, detected conflicts, and the automaton used to build it.
 type LRTable<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { action: Map<int * Symbol<'t, 'nt>, LRAction>
-      goto: Map<int * Nonterminal<'nt>, int>
-      conflicts: LRConflict<'t, 'nt> list
-      automaton: LRAutomaton<'t, 'nt> }
+    { Action: Map<int * Symbol<'t, 'nt>, LRAction>
+      GoTo: Map<int * Nonterminal<'nt>, int>
+      Conflicts: LRConflict<'t, 'nt> list
+      Automaton: LRAutomaton<'t, 'nt> }
 
 /// Frame on the unified LR parser stack.
 /// Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols.
@@ -51,8 +51,8 @@ type LRStackFrame<'t, 'nt> =
 /// Data for a single LR parser visualization step.
 [<Struct>]
 type LRParsingStep<'t, 'nt> =
-    { stack: LRStackFrame<'t, 'nt> list
-      input: StepInput<'t> }
+    { Stack: LRStackFrame<'t, 'nt> list
+      Input: StepInput<'t> }
 
 /// Construction of LR(0) and LR(1) automata as deterministic finite automata.
 /// Functions take an already-augmented grammar (with fresh start nonterminal).
@@ -61,11 +61,11 @@ module LRAutomaton =
     /// Augment a grammar with a fresh start nonterminal.
     /// The augmented grammar has S' -> S as the first rule.
     let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
-        { rules =
-            { lhs = freshStart
-              rhs = NonEmptyList.create (Symbol.N g.start) [] |> Symbols }
-            :: g.rules
-          start = freshStart }
+        { Rules =
+            { Lhs = freshStart
+              Rhs = NonEmptyList.create (Symbol.N g.Start) [] |> Symbols }
+            :: g.Rules
+          Start = freshStart }
 
     let private closureLR0 (rules: Rule<'t, 'nt> list) (items: Set<LR0Item<'t, 'nt>>) : Set<LR0Item<'t, 'nt>> =
         let mutable closure = items
@@ -75,16 +75,16 @@ module LRAutomaton =
             changed <- false
 
             for item in closure |> Set.toSeq |> Seq.toList do
-                if item.dot < item.rhs.Length then
-                    match item.rhs.[item.dot] with
+                if item.Dot < item.Rhs.Length then
+                    match item.Rhs.[item.Dot] with
                     | Symbol.N nt ->
                         let newItems =
                             rules
-                            |> List.filter (fun r -> r.lhs = nt)
+                            |> List.filter (fun r -> r.Lhs = nt)
                             |> List.map (fun r ->
-                                { lhs = r.lhs
-                                  rhs = Rhs.toNonEpsilonList r.rhs
-                                  dot = 0 })
+                                { Lhs = r.Lhs
+                                  Rhs = Rhs.toNonEpsilonList r.Rhs
+                                  Dot = 0 })
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -100,8 +100,8 @@ module LRAutomaton =
         (sym: Symbol<'t, 'nt>)
         : Set<LR0Item<'t, 'nt>> =
         items
-        |> Set.filter (fun item -> item.dot < item.rhs.Length && item.rhs.[item.dot] = sym)
-        |> Set.map (fun item -> { item with dot = item.dot + 1 })
+        |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
+        |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
         |> closureLR0 rules
 
     let private closureLR1
@@ -116,33 +116,33 @@ module LRAutomaton =
             changed <- false
 
             for item in closure |> Set.toSeq |> Seq.toList do
-                if item.dot < item.rhs.Length then
-                    match item.rhs.[item.dot] with
+                if item.Dot < item.Rhs.Length then
+                    match item.Rhs.[item.Dot] with
                     | Symbol.N nt ->
                         let beta =
-                            if item.dot + 1 < item.rhs.Length then
-                                item.rhs |> List.skip (item.dot + 1)
+                            if item.Dot + 1 < item.Rhs.Length then
+                                item.Rhs |> List.skip (item.Dot + 1)
                             else
                                 []
 
                         let lookaheads =
                             if beta.IsEmpty then
-                                set [ [ item.lookahead ] ]
+                                set [ [ item.Lookahead ] ]
                             else
                                 FirstFollow.firstKOfString firstMap 1 beta
                                 |> Set.filter (fun s -> s <> [ Symbol.Epsilon ])
 
                         let newItems =
                             rules
-                            |> List.filter (fun r -> r.lhs = nt)
+                            |> List.filter (fun r -> r.Lhs = nt)
                             |> List.collect (fun r ->
                                 lookaheads
                                 |> Set.toList
                                 |> List.map (fun la ->
-                                    { lhs = r.lhs
-                                      rhs = Rhs.toNonEpsilonList r.rhs
-                                      dot = 0
-                                      lookahead = List.head la }))
+                                    { Lhs = r.Lhs
+                                      Rhs = Rhs.toNonEpsilonList r.Rhs
+                                      Dot = 0
+                                      Lookahead = List.head la }))
 
                         for ni in newItems do
                             if not (Set.contains ni closure) then
@@ -159,8 +159,8 @@ module LRAutomaton =
         (firstMap: Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>)
         : Set<LR1Item<'t, 'nt>> =
         items
-        |> Set.filter (fun item -> item.dot < item.rhs.Length && item.rhs.[item.dot] = sym)
-        |> Set.map (fun item -> { item with dot = item.dot + 1 })
+        |> Set.filter (fun item -> item.Dot < item.Rhs.Length && item.Rhs.[item.Dot] = sym)
+        |> Set.map (fun item -> { item with Dot = item.Dot + 1 })
         |> (fun filtered -> closureLR1 rules filtered firstMap)
 
     let private getSymbolsOf
@@ -198,55 +198,55 @@ module LRAutomaton =
     /// Build the LR(0) automaton for an augmented grammar.
     /// States are sets of LR(0) items. Transitions are labeled with grammar symbols.
     let buildLR0 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR0Item<'t, 'nt>>> =
-        let augmentedRule = aug.rules.[0]
+        let augmentedRule = aug.Rules.[0]
 
         buildLR
-            aug.rules
+            aug.Rules
             augmentedRule
             (fun r ->
-                { lhs = r.lhs
-                  rhs = Rhs.toNonEpsilonList r.rhs
-                  dot = 0 })
+                { Lhs = r.Lhs
+                  Rhs = Rhs.toNonEpsilonList r.Rhs
+                  Dot = 0 })
             (fun r ->
-                { lhs = r.lhs
-                  rhs = Rhs.toNonEpsilonList r.rhs
-                  dot = Rhs.toNonEpsilonList r.rhs |> List.length })
-            (fun i -> i.dot)
-            (fun i -> i.rhs)
-            (closureLR0 aug.rules)
-            (gotoLR0 aug.rules)
+                { Lhs = r.Lhs
+                  Rhs = Rhs.toNonEpsilonList r.Rhs
+                  Dot = Rhs.toNonEpsilonList r.Rhs |> List.length })
+            (fun i -> i.Dot)
+            (fun i -> i.Rhs)
+            (closureLR0 aug.Rules)
+            (gotoLR0 aug.Rules)
 
     /// Build the LR(1) automaton for an augmented grammar.
     /// States are sets of LR(1) items. Transitions are labeled with grammar symbols.
     let buildLR1 (aug: Grammar<'t, 'nt>) : DFA<Symbol<'t, 'nt>, Set<LR1Item<'t, 'nt>>> =
-        let augmentedRule = aug.rules.[0]
+        let augmentedRule = aug.Rules.[0]
         let firstMap = FirstFollow.firstK aug 1
 
         buildLR
-            aug.rules
+            aug.Rules
             augmentedRule
             (fun r ->
-                { lhs = r.lhs
-                  rhs = Rhs.toNonEpsilonList r.rhs
-                  dot = 0
-                  lookahead = Symbol.Epsilon })
+                { Lhs = r.Lhs
+                  Rhs = Rhs.toNonEpsilonList r.Rhs
+                  Dot = 0
+                  Lookahead = Symbol.Epsilon })
             (fun r ->
-                { lhs = r.lhs
-                  rhs = Rhs.toNonEpsilonList r.rhs
-                  dot = Rhs.toNonEpsilonList r.rhs |> List.length
-                  lookahead = Symbol.Epsilon })
-            (fun i -> i.dot)
-            (fun i -> i.rhs)
-            (fun items -> closureLR1 aug.rules items firstMap)
-            (fun items sym -> gotoLR1 aug.rules items sym firstMap)
+                { Lhs = r.Lhs
+                  Rhs = Rhs.toNonEpsilonList r.Rhs
+                  Dot = Rhs.toNonEpsilonList r.Rhs |> List.length
+                  Lookahead = Symbol.Epsilon })
+            (fun i -> i.Dot)
+            (fun i -> i.Rhs)
+            (fun items -> closureLR1 aug.Rules items firstMap)
+            (fun items sym -> gotoLR1 aug.Rules items sym firstMap)
 
 /// LR parsing table construction and parser.
 /// All table builders and parse take an already-augmented grammar.
 module LRParser =
 
-    let private isCompletedLR0 (item: LR0Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
+    let private isCompletedLR0 (item: LR0Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
 
-    let private isCompletedLR1 (item: LR1Item<'t, 'nt>) : bool = item.dot = item.rhs.Length
+    let private isCompletedLR1 (item: LR1Item<'t, 'nt>) : bool = item.Dot = item.Rhs.Length
 
     let private populateShiftGoto
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<Symbol<'t, 'nt>>>>>)
@@ -274,30 +274,30 @@ module LRParser =
 
     /// Build the LR(0) parsing table from an augmented grammar.
     let buildLR0Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
-        let augmentedRule = aug.rules.[0]
+        let augmentedRule = aug.Rules.[0]
         let lr0 = LRAutomaton.buildLR0 aug
-        let states = lr0.states
+        let states = lr0.States
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
         let mutable conflicts: LRConflict<'t, 'nt> list = []
 
         let allTerminals =
-            [ for rule in aug.rules do
-                  for sym in Rhs.toNonEpsilonList rule.rhs do
+            [ for rule in aug.Rules do
+                  for sym in Rhs.toNonEpsilonList rule.Rhs do
                       match sym with
                       | Symbol.T _ as tSym -> yield tSym
                       | _ -> () ]
             |> List.distinct
 
-        populateShiftGoto lr0.transitions &action &goto &conflicts
+        populateShiftGoto lr0.Transitions &action &goto &conflicts
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
                 if isCompletedLR0 item then
-                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
+                    if item.Lhs = augmentedRule.Lhs && item.Dot = 1 then
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
@@ -307,8 +307,8 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
+                            aug.Rules
+                            |> List.findIndex (fun r -> r.Lhs = item.Lhs && Rhs.toNonEpsilonList r.Rhs = item.Rhs)
 
                         for t in Symbol.Epsilon :: allTerminals do
                             let key = (stateIdx, t)
@@ -319,30 +319,30 @@ module LRParser =
                             | Some Accept -> conflicts <- ShiftReduce(stateIdx, t, -1, ruleIdx) :: conflicts
                             | None -> action <- Map.add key (Reduce ruleIdx) action
 
-        { action = action
-          goto = goto
-          conflicts = List.rev conflicts
-          automaton = LR0 lr0 }
+        { Action = action
+          GoTo = goto
+          Conflicts = List.rev conflicts
+          Automaton = LR0 lr0 }
 
     /// Build the SLR(1) parsing table from an augmented grammar.
     let buildSLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
-        let augmentedRule = aug.rules.[0]
+        let augmentedRule = aug.Rules.[0]
         let lr0 = LRAutomaton.buildLR0 aug
-        let states = lr0.states
+        let states = lr0.States
         let followMap = FirstFollow.followK aug 1
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
         let mutable conflicts: LRConflict<'t, 'nt> list = []
 
-        populateShiftGoto lr0.transitions &action &goto &conflicts
+        populateShiftGoto lr0.Transitions &action &goto &conflicts
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
                 if isCompletedLR0 item then
-                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
+                    if item.Lhs = augmentedRule.Lhs && item.Dot = 1 then
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
@@ -352,10 +352,10 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
+                            aug.Rules
+                            |> List.findIndex (fun r -> r.Lhs = item.Lhs && Rhs.toNonEpsilonList r.Rhs = item.Rhs)
 
-                        let followSet = followMap |> Map.find item.lhs
+                        let followSet = followMap |> Map.find item.Lhs
 
                         for t in followSet do
                             let la = List.head t
@@ -367,29 +367,29 @@ module LRParser =
                             | Some Accept -> conflicts <- ShiftReduce(stateIdx, la, -1, ruleIdx) :: conflicts
                             | None -> action <- Map.add key (Reduce ruleIdx) action
 
-        { action = action
-          goto = goto
-          conflicts = List.rev conflicts
-          automaton = LR0 lr0 }
+        { Action = action
+          GoTo = goto
+          Conflicts = List.rev conflicts
+          Automaton = LR0 lr0 }
 
     /// Build the CLR(1) (canonical LR(1)) parsing table from an augmented grammar.
     let buildCLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
-        let augmentedRule = aug.rules.[0]
+        let augmentedRule = aug.Rules.[0]
         let lr1 = LRAutomaton.buildLR1 aug
-        let states = lr1.states
+        let states = lr1.States
 
         let mutable action = Map.empty
         let mutable goto = Map.empty
         let mutable conflicts: LRConflict<'t, 'nt> list = []
 
-        populateShiftGoto lr1.transitions &action &goto &conflicts
+        populateShiftGoto lr1.Transitions &action &goto &conflicts
 
         for stateIdx in 0 .. states.Length - 1 do
             let state = states.[stateIdx]
 
             for item in state do
                 if isCompletedLR1 item then
-                    if item.lhs = augmentedRule.lhs && item.dot = 1 then
+                    if item.Lhs = augmentedRule.Lhs && item.Dot = 1 then
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
@@ -399,10 +399,10 @@ module LRParser =
                         | None -> action <- Map.add key Accept action
                     else
                         let ruleIdx =
-                            aug.rules
-                            |> List.findIndex (fun r -> r.lhs = item.lhs && Rhs.toNonEpsilonList r.rhs = item.rhs)
+                            aug.Rules
+                            |> List.findIndex (fun r -> r.Lhs = item.Lhs && Rhs.toNonEpsilonList r.Rhs = item.Rhs)
 
-                        let t = item.lookahead
+                        let t = item.Lookahead
 
                         let key = (stateIdx, t)
 
@@ -417,10 +417,10 @@ module LRParser =
                         | Some _ -> ()
                         | None -> action <- Map.add key (Reduce ruleIdx) action
 
-        { action = action
-          goto = goto
-          conflicts = List.rev conflicts
-          automaton = LR1 lr1 }
+        { Action = action
+          GoTo = goto
+          Conflicts = List.rev conflicts
+          Automaton = LR1 lr1 }
 
     /// Parse pre-tokenized input using an LR parsing table, building a derivation tree.
     /// Also collects visualization steps as structured data.
@@ -444,8 +444,8 @@ module LRParser =
 
         let recordStep () =
             steps <-
-                { stack = stack
-                  input = { tokens = terminals; position = pos } }
+                { Stack = stack
+                  Input = { Tokens = terminals; Position = pos } }
                 :: steps
 
         let popFrames count =
@@ -470,21 +470,21 @@ module LRParser =
 
             let lookahead = if pos < tokens.Length then tokens.[pos] else Symbol.Epsilon
 
-            match Map.tryFind (currentState, lookahead) table.action with
+            match Map.tryFind (currentState, lookahead) table.Action with
             | Some(Shift nextState) ->
                 stack <- LRSymbol(Leaf(tokens.[pos])) :: stack
                 stack <- LRState nextState :: stack
                 pos <- pos + 1
                 recordStep ()
             | Some(Reduce ruleIdx) ->
-                let rule = aug.rules.[ruleIdx]
-                let popCount = Rhs.toNonEpsilonList rule.rhs |> List.length
+                let rule = aug.Rules.[ruleIdx]
+                let popCount = Rhs.toNonEpsilonList rule.Rhs |> List.length
 
                 let children = popFrames popCount
-                let newNode = Node(rule.lhs, children)
+                let newNode = Node(rule.Lhs, children)
 
                 let gotoState =
-                    match Map.tryFind (topState (), rule.lhs) table.goto with
+                    match Map.tryFind (topState (), rule.Lhs) table.GoTo with
                     | Some gs -> gs
                     | None -> failwith "Goto not found"
 
@@ -496,7 +496,7 @@ module LRParser =
                 accepted <- true
             | None ->
                 if pos = tokens.Length && lookahead = Symbol.Epsilon then
-                    match Map.tryFind (currentState, Symbol.Epsilon) table.action with
+                    match Map.tryFind (currentState, Symbol.Epsilon) table.Action with
                     | Some Accept ->
                         finished <- true
                         accepted <- true

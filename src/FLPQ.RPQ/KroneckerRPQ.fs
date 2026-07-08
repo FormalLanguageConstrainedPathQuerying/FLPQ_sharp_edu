@@ -19,7 +19,7 @@ module KroneckerRPQ =
     /// Input: DFA query and graph NFA.
     /// Output: |sources| × |V| boolean reachability matrix.
     let evaluate (dfa: DFA<'t, int>) (graph: NFA<'t, int>) : Matrix<bool> =
-        let sources = graph.startStates |> Set.toArray
+        let sources = graph.StartStates |> Set.toArray
         let qCount = Dfa.stateCount dfa
         let vCount = Nfa.stateCount graph
 
@@ -31,11 +31,11 @@ module KroneckerRPQ =
             let qvToIndex (q: int) (v: int) : int = q * vCount + v
 
             let product =
-                LinearAlgebra.kron dfa.transitions graph.transitions Nfa.intersectEdgeSets None
+                LinearAlgebra.kron dfa.Transitions graph.Transitions Nfa.intersectEdgeSets None
 
             let k = Matrix.map Option.isSome product
 
-            let startPairs = sources |> Array.map (fun v -> qvToIndex dfa.startState v)
+            let startPairs = sources |> Array.map (fun v -> qvToIndex dfa.StartState v)
 
             let forwardVisited = MsBfs.msBfs startPairs k
 
@@ -46,7 +46,7 @@ module KroneckerRPQ =
                 for v in 0 .. vCount - 1 do
                     let mutable reachable = false
 
-                    for qf in dfa.finalStates do
+                    for qf in dfa.FinalStates do
                         if Matrix.get forwardVisited i (qvToIndex qf v) then
                             reachable <- true
 

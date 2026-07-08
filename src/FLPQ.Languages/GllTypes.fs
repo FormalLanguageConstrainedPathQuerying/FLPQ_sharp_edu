@@ -27,17 +27,17 @@ type SppfEdgeLabel =
 /// Built once from the path index after GLL execution.
 /// rootIndices points to SppfRange nodes corresponding to ranges of interest.
 type SPPF<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { graph: Graph<SppfNodeInfo<'t, 'nt>, Option<SppfEdgeLabel>>
-      rootIndices: int list }
+    { Graph: Graph<SppfNodeInfo<'t, 'nt>, Option<SppfEdgeLabel>>
+      RootIndices: int list }
 
 /// A range in the path index: from (fromState, fromVertex) to (toState, toVertex).
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
 type RangeKey =
-    { fromState: int
-      fromVertex: int
-      toState: int
-      toVertex: int }
+    { FromState: int
+      FromVertex: int
+      ToState: int
+      ToVertex: int }
 
 /// Describes a matched range (possibly empty) during GLL execution.
 /// Book reference: sec:CFPQ_GLL.
@@ -59,14 +59,14 @@ type PathIndexEntry<'t, 'nt when 't: comparison and 'nt: comparison> =
 /// Linear index: idx(state, vertex) = state * vertexCount + vertex.
 /// Book reference: sec:CFPQ_GLL.
 type PathIndex<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { matrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
-      stateCount: int
-      vertexCount: int }
+    { Matrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
+      StateCount: int
+      VertexCount: int }
 
 module PathIndex =
 
     /// Maps (state, vertex) to a linear index in the PathIndex matrix.
-    let linearIndex (pi: PathIndex<'t, 'nt>) (state: int) (vertex: int) : int = state * pi.vertexCount + vertex
+    let linearIndex (pi: PathIndex<'t, 'nt>) (state: int) (vertex: int) : int = state * pi.VertexCount + vertex
 
     /// Adds an entry to the path index at range (fromState, fromVertex) → (toState, toVertex).
     let add
@@ -79,8 +79,8 @@ module PathIndex =
         : unit =
         let fromIdx = linearIndex pi fromState fromVertex
         let toIdx = linearIndex pi toState toVertex
-        let current = Matrix.get pi.matrix fromIdx toIdx
-        Matrix.set pi.matrix fromIdx toIdx (Set.add entry current)
+        let current = Matrix.get pi.Matrix fromIdx toIdx
+        Matrix.set pi.Matrix fromIdx toIdx (Set.add entry current)
 
     /// Gets the set of entries at range (fromState, fromVertex) → (toState, toVertex).
     let get
@@ -92,22 +92,22 @@ module PathIndex =
         : Set<PathIndexEntry<'t, 'nt>> =
         let fromIdx = linearIndex pi fromState fromVertex
         let toIdx = linearIndex pi toState toVertex
-        Matrix.get pi.matrix fromIdx toIdx
+        Matrix.get pi.Matrix fromIdx toIdx
 
 /// Vertex in the Graph-Structured Stack (GSS).
 /// storedPops is stored in a separate array inside GSS to allow efficient mutation
 /// (struct fields in immutable Maps cannot be mutated in-place).
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
-type GssVertexInfo = { state: int; vertex: int }
+type GssVertexInfo = { State: int; Vertex: int }
 
 /// Edge in the Graph-Structured Stack (GSS).
 /// Records the return state and the matched range before the nonterminal call.
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
 type GssEdgeInfo =
-    { returnState: int
-      matchedRange: RangeDescriptor }
+    { ReturnState: int
+      MatchedRange: RangeDescriptor }
 
 /// Graph-Structured Stack — a graph encoding all active call stacks during GLL execution.
 /// Vertices are all possible (state, vertex) pairs (|Q|*|V| vertices), pre-allocated.
@@ -115,8 +115,8 @@ type GssEdgeInfo =
 /// storedPops[i] holds the ranges recognized at GSS vertex i.
 /// Book reference: sec:CFPQ_GLL.
 type GSS =
-    { graph: Graph<GssVertexInfo, Option<NonEmptySet<GssEdgeInfo>>>
-      storedPops: Set<RangeDescriptor> array }
+    { Graph: Graph<GssVertexInfo, Option<NonEmptySet<GssEdgeInfo>>>
+      StoredPops: Set<RangeDescriptor> array }
 
 module GSS =
 
@@ -129,38 +129,38 @@ module GSS =
 
         let vertices =
             [ for s in 0 .. stateCount - 1 do
-                  for v in 0 .. vertexCount - 1 -> { state = s; vertex = v } ]
+                  for v in 0 .. vertexCount - 1 -> { State = s; Vertex = v } ]
 
         let edges = Matrix.init k k None
         let pops = Array.create k Set.empty
 
-        { graph = Graph.fromEdges vertices edges
-          storedPops = pops }
+        { Graph = Graph.fromEdges vertices edges
+          StoredPops = pops }
 
     /// Adds an edge from source GSS vertex to target GSS vertex.
     /// Returns the storedPops from the target vertex (ranges already recognized at that vertex),
     /// and clears them.
     let addEdge (gss: GSS) (fromIdx: int) (toIdx: int) (edgeInfo: GssEdgeInfo) : Set<RangeDescriptor> =
         let current =
-            match Matrix.get gss.graph.edges fromIdx toIdx with
+            match Matrix.get gss.Graph.Edges fromIdx toIdx with
             | Some nes -> NonEmptySet.add edgeInfo nes
             | None -> NonEmptySet.singleton edgeInfo
 
-        Matrix.set gss.graph.edges fromIdx toIdx (Some current)
+        Matrix.set gss.Graph.Edges fromIdx toIdx (Some current)
 
-        let pops = gss.storedPops.[toIdx]
-        gss.storedPops.[toIdx] <- Set.empty
+        let pops = gss.StoredPops.[toIdx]
+        gss.StoredPops.[toIdx] <- Set.empty
         pops
 
     /// Saves the recognized range to the storedPops of the GSS vertex.
     /// Returns all outgoing edges from this vertex.
     let pop (gss: GSS) (gssIdx: int) (recognizedRange: RangeDescriptor) : (int * GssEdgeInfo) list =
-        gss.storedPops.[gssIdx] <- Set.add recognizedRange gss.storedPops.[gssIdx]
+        gss.StoredPops.[gssIdx] <- Set.add recognizedRange gss.StoredPops.[gssIdx]
 
-        let n = gss.graph.vertexMap.Count
+        let n = gss.Graph.VertexMap.Count
 
         [ for toIdx in 0 .. n - 1 do
-              match Matrix.get gss.graph.edges gssIdx toIdx with
+              match Matrix.get gss.Graph.Edges gssIdx toIdx with
               | Some nes ->
                   for ei in NonEmptySet.toSeq nes do
                       (toIdx, ei)

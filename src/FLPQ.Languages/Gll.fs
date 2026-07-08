@@ -10,22 +10,22 @@ open FLPQ.GraphAnalysis
 /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
 [<Struct; CustomEquality; NoComparison>]
 type Descriptor =
-    { rsmState: int
-      vertex: int
-      gssIdx: int
-      range: RangeDescriptor }
+    { RsmState: int
+      Vertex: int
+      GssIdx: int
+      MatchedRange: RangeDescriptor }
 
     override this.Equals(obj: obj) =
         match obj with
         | :? Descriptor as other ->
-            this.rsmState = other.rsmState
-            && this.vertex = other.vertex
-            && this.gssIdx = other.gssIdx
-            && this.range = other.range
+            this.RsmState = other.RsmState
+            && this.Vertex = other.Vertex
+            && this.GssIdx = other.GssIdx
+            && this.MatchedRange = other.MatchedRange
         | _ -> false
 
     override this.GetHashCode() =
-        hash (this.rsmState, this.vertex, this.gssIdx, this.range)
+        hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
 
 module GLL =
 
@@ -52,7 +52,7 @@ module GLL =
 
         for i in 0 .. vc - 1 do
             for j in 0 .. vc - 1 do
-                match Matrix.get g.edges i j with
+                match Matrix.get g.Edges i j with
                 | Some t -> edges.[i].Add(t, j)
                 | None -> ()
 
@@ -70,15 +70,15 @@ module GLL =
         match range with
         | RangeDescriptor.EmptyRange ->
             RangeDescriptor.NonEmptyRange
-                { fromState = fromState
-                  fromVertex = fromVertex
-                  toState = newState
-                  toVertex = newVertex }
+                { FromState = fromState
+                  FromVertex = fromVertex
+                  ToState = newState
+                  ToVertex = newVertex }
         | RangeDescriptor.NonEmptyRange rk ->
             RangeDescriptor.NonEmptyRange
                 { rk with
-                    toState = newState
-                    toVertex = newVertex }
+                    ToState = newState
+                    ToVertex = newVertex }
 
     /// Builds the path index for the given RSM over the input graph, starting from the specified vertices.
     /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
@@ -89,19 +89,19 @@ module GLL =
         : PathIndex<'t, 'nt> =
         let stateCount = RSM.stateCount rsm
         let vertexCount = Graph.vertexCount inputGraph
-        let K = stateCount * vertexCount
+        let k = stateCount * vertexCount
 
         let pathIndex =
-            { matrix = Matrix.init K K Set.empty
-              stateCount = stateCount
-              vertexCount = vertexCount }
+            { Matrix = Matrix.init k k Set.empty
+              StateCount = stateCount
+              VertexCount = vertexCount }
 
         let flat = RSM.flattenRsm rsm
-        let stateInfo = flat.stateInfo
-        let blockStart = flat.blockStart
-        let finalStates = flat.finalStates
-        let termTrans = flat.termTrans
-        let nontermTrans = flat.nontermTrans
+        let stateInfo = flat.StateInfo
+        let blockStart = flat.BlockStart
+        let finalStates = flat.FinalStates
+        let termTrans = flat.TermTrans
+        let nontermTrans = flat.NontermTrans
         let graphEdges = collectGraphEdges inputGraph
 
         let gss = GSS.init stateCount vertexCount
@@ -119,10 +119,10 @@ module GLL =
             =
             let fromIdx = PathIndex.linearIndex pathIndex fromState fromVertex
             let toIdx = PathIndex.linearIndex pathIndex toState toVertex
-            let current = Matrix.get pathIndex.matrix fromIdx toIdx
+            let current = Matrix.get pathIndex.Matrix fromIdx toIdx
 
             if not (Set.contains entry current) then
-                Matrix.set pathIndex.matrix fromIdx toIdx (Set.add entry current)
+                Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
 
         // Helper: try to enqueue a descriptor
         let tryEnqueue (d: Descriptor) =
@@ -133,28 +133,28 @@ module GLL =
         let startBlock = RSM.startBlock rsm
 
         let startGlobalState =
-            match blockStart.TryGetValue(startBlock.nonterminal) with
+            match blockStart.TryGetValue(startBlock.Nonterminal) with
             | true, gs -> gs
-            | false, _ -> failwithf "Start block %A not found" startBlock.nonterminal
+            | false, _ -> failwithf "Start block %A not found" startBlock.Nonterminal
 
         for vs in startVertices do
             let gssIdx = GSS.linearIndex vertexCount startGlobalState vs
 
             let desc =
-                { rsmState = startGlobalState
-                  vertex = vs
-                  gssIdx = gssIdx
-                  range = RangeDescriptor.EmptyRange }
+                { RsmState = startGlobalState
+                  Vertex = vs
+                  GssIdx = gssIdx
+                  MatchedRange = RangeDescriptor.EmptyRange }
 
             tryEnqueue desc
 
         // Main loop
         while queue.Count > 0 do
             let desc = queue.Dequeue()
-            let q0 = desc.rsmState
-            let v0 = desc.vertex
-            let s0 = desc.gssIdx
-            let range = desc.range
+            let q0 = desc.RsmState
+            let v0 = desc.Vertex
+            let s0 = desc.GssIdx
+            let MatchedRange = desc.MatchedRange
 
             // Case 1: Terminal transitions
             for (Terminal tVal, q1) in termTrans.[q0] do
@@ -163,20 +163,20 @@ module GLL =
                         // Add PTerminal to index
                         addToIndex q0 v0 q1 v1 (PathIndexEntry.PTerminal(Terminal tVal))
 
-                        // Add PIntermediate if we have a non-empty range
-                        match range with
+                        // Add PIntermediate if we have a non-empty desc.MatchedRange
+                        match desc.MatchedRange with
                         | RangeDescriptor.NonEmptyRange rk ->
-                            addToIndex rk.fromState rk.fromVertex q1 v1 (PathIndexEntry.PIntermediate(q0, v0))
+                            addToIndex rk.FromState rk.FromVertex q1 v1 (PathIndexEntry.PIntermediate(q0, v0))
                         | RangeDescriptor.EmptyRange -> ()
 
-                        // Create new descriptor with extended range
-                        let newRange = extendRange range q0 v0 q1 v1
+                        // Create new descriptor with extended desc.MatchedRange
+                        let newRange = extendRange desc.MatchedRange q0 v0 q1 v1
 
                         let newDesc =
-                            { rsmState = q1
-                              vertex = v1
-                              gssIdx = s0
-                              range = newRange }
+                            { RsmState = q1
+                              Vertex = v1
+                              GssIdx = s0
+                              MatchedRange = newRange }
 
                         tryEnqueue newDesc
 
@@ -190,8 +190,8 @@ module GLL =
 
                     // Add GSS edge from target (callee's GSS node for N's start) to current (caller's GSS node)
                     let edgeInfo: GssEdgeInfo =
-                        { returnState = qRet
-                          matchedRange = range }
+                        { ReturnState = qRet
+                          MatchedRange = desc.MatchedRange }
 
                     let storedPops = GSS.addEdge gss gssTarget s0 edgeInfo
 
@@ -200,36 +200,36 @@ module GLL =
                         match storedPop with
                         | RangeDescriptor.EmptyRange -> ()
                         | RangeDescriptor.NonEmptyRange popRange ->
-                            // block N matched from (qNStart, v0) to (popRange.toState, popRange.toVertex)
-                            let vFinal = popRange.toVertex
-                            let qNFinal = popRange.toState
+                            // block N matched from (qNStart, v0) to (popRange.ToState, popRange.ToVertex)
+                            let vFinal = popRange.ToVertex
+                            let qNFinal = popRange.ToState
 
                             // Add PNonterminal entry
                             addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
 
                             // Add PIntermediate and create continuation
-                            match range with
+                            match desc.MatchedRange with
                             | RangeDescriptor.EmptyRange ->
                                 addToIndex qNStart v0 qRet vFinal (PathIndexEntry.PIntermediate(qNStart, v0))
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
-                                        { fromState = qNStart
-                                          fromVertex = v0
-                                          toState = qRet
-                                          toVertex = vFinal }
+                                        { FromState = qNStart
+                                          FromVertex = v0
+                                          ToState = qRet
+                                          ToVertex = vFinal }
 
                                 let contDesc =
-                                    { rsmState = qRet
-                                      vertex = vFinal
-                                      gssIdx = s0
-                                      range = newRange }
+                                    { RsmState = qRet
+                                      Vertex = vFinal
+                                      GssIdx = s0
+                                      MatchedRange = newRange }
 
                                 tryEnqueue contDesc
                             | RangeDescriptor.NonEmptyRange rk ->
                                 addToIndex
-                                    rk.fromState
-                                    rk.fromVertex
+                                    rk.FromState
+                                    rk.FromVertex
                                     qRet
                                     vFinal
                                     (PathIndexEntry.PIntermediate(qNStart, v0))
@@ -237,62 +237,62 @@ module GLL =
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
                                         { rk with
-                                            toState = qRet
-                                            toVertex = vFinal }
+                                            ToState = qRet
+                                            ToVertex = vFinal }
 
                                 let contDesc =
-                                    { rsmState = qRet
-                                      vertex = vFinal
-                                      gssIdx = s0
-                                      range = newRange }
+                                    { RsmState = qRet
+                                      Vertex = vFinal
+                                      GssIdx = s0
+                                      MatchedRange = newRange }
 
                                 tryEnqueue contDesc
 
                     // Create descriptor for the start state of the called nonterminal
                     let callDesc =
-                        { rsmState = qNStart
-                          vertex = v0
-                          gssIdx = gssTarget
-                          range = RangeDescriptor.EmptyRange }
+                        { RsmState = qNStart
+                          Vertex = v0
+                          GssIdx = gssTarget
+                          MatchedRange = RangeDescriptor.EmptyRange }
 
                     tryEnqueue callDesc
 
             // Case 3: Final state (return)
-            if stateInfo.[q0].isFinal then
+            if stateInfo.[q0].IsFinal then
                 let recognizedRange =
-                    match range with
+                    match desc.MatchedRange with
                     | RangeDescriptor.EmptyRange ->
-                        // Empty range means we entered this block at v0 and immediately finished (epsilon-like)
-                        // Create a range from the block's start state at v0 to the final state at v0
-                        let nt = stateInfo.[q0].blockNonterminal
+                        // Empty desc.MatchedRange means we entered this block at v0 and immediately finished (epsilon-like)
+                        // Create a desc.MatchedRange from the block's start state at v0 to the final state at v0
+                        let nt = stateInfo.[q0].BlockNonterminal
 
                         match blockStart.TryGetValue(nt) with
                         | true, qNStart ->
                             RangeDescriptor.NonEmptyRange
-                                { fromState = qNStart
-                                  fromVertex = v0
-                                  toState = q0
-                                  toVertex = v0 }
-                        | false, _ -> range
-                    | _ -> range
+                                { FromState = qNStart
+                                  FromVertex = v0
+                                  ToState = q0
+                                  ToVertex = v0 }
+                        | false, _ -> desc.MatchedRange
+                    | _ -> desc.MatchedRange
 
                 let outgoingEdges = GSS.pop gss s0 recognizedRange
 
                 match recognizedRange with
                 | RangeDescriptor.EmptyRange -> ()
                 | RangeDescriptor.NonEmptyRange recRange ->
-                    let qNStart = recRange.fromState
-                    let vStart = recRange.fromVertex
-                    let qNFinal = recRange.toState
-                    let vFinal = recRange.toVertex
-                    let nt = stateInfo.[qNStart].blockNonterminal
+                    let qNStart = recRange.FromState
+                    let vStart = recRange.FromVertex
+                    let qNFinal = recRange.ToState
+                    let vFinal = recRange.ToVertex
+                    let nt = stateInfo.[qNStart].BlockNonterminal
 
                     if List.isEmpty outgoingEdges then
                         addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
                     else
                         for (parentGssIdx, edgeInfo) in outgoingEdges do
-                            let qRet = edgeInfo.returnState
-                            let parentRange = edgeInfo.matchedRange
+                            let qRet = edgeInfo.ReturnState
+                            let parentRange = edgeInfo.MatchedRange
 
                             addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
 
@@ -303,22 +303,22 @@ module GLL =
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
-                                        { fromState = qNStart
-                                          fromVertex = vStart
-                                          toState = qRet
-                                          toVertex = vFinal }
+                                        { FromState = qNStart
+                                          FromVertex = vStart
+                                          ToState = qRet
+                                          ToVertex = vFinal }
 
                                 let contDesc =
-                                    { rsmState = qRet
-                                      vertex = vFinal
-                                      gssIdx = parentGssIdx
-                                      range = newRange }
+                                    { RsmState = qRet
+                                      Vertex = vFinal
+                                      GssIdx = parentGssIdx
+                                      MatchedRange = newRange }
 
                                 tryEnqueue contDesc
                             | RangeDescriptor.NonEmptyRange rk ->
                                 addToIndex
-                                    rk.fromState
-                                    rk.fromVertex
+                                    rk.FromState
+                                    rk.FromVertex
                                     qRet
                                     vFinal
                                     (PathIndexEntry.PIntermediate(qNStart, vStart))
@@ -326,14 +326,14 @@ module GLL =
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
                                         { rk with
-                                            toState = qRet
-                                            toVertex = vFinal }
+                                            ToState = qRet
+                                            ToVertex = vFinal }
 
                                 let contDesc =
-                                    { rsmState = qRet
-                                      vertex = vFinal
-                                      gssIdx = parentGssIdx
-                                      range = newRange }
+                                    { RsmState = qRet
+                                      Vertex = vFinal
+                                      GssIdx = parentGssIdx
+                                      MatchedRange = newRange }
 
                                 tryEnqueue contDesc
 
@@ -389,10 +389,10 @@ module GLL =
 
         let getOrCreateRangeNode (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
             let rk =
-                { fromState = fromState
-                  fromVertex = fromPos
-                  toState = toState
-                  toVertex = toPos }
+                { FromState = fromState
+                  FromVertex = fromPos
+                  ToState = toState
+                  ToVertex = toPos }
 
             match rangeNodeMap.TryGetValue(rk) with
             | true, idx -> idx
@@ -413,10 +413,10 @@ module GLL =
             let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
 
             let rk =
-                { fromState = fromState
-                  fromVertex = fromPos
-                  toState = toState
-                  toVertex = toPos }
+                { FromState = fromState
+                  FromVertex = fromPos
+                  ToState = toState
+                  ToVertex = toPos }
 
             if processedRanges.Add(rk) then
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
@@ -447,7 +447,7 @@ module GLL =
         let rootIndices =
             rootRanges
             |> List.map (fun rk ->
-                let idx = processRange rk.fromState rk.fromVertex rk.toState rk.toVertex
+                let idx = processRange rk.FromState rk.FromVertex rk.ToState rk.ToVertex
                 idx)
 
         let n = vertices.Length
@@ -458,8 +458,8 @@ module GLL =
         for (fromIdx, label, toIdx) in sortedEdges do
             Matrix.set edgeMatrix fromIdx toIdx label
 
-        { graph = Graph.fromEdges vertices edgeMatrix
-          rootIndices = rootIndices }
+        { Graph = Graph.fromEdges vertices edgeMatrix
+          RootIndices = rootIndices }
 
     /// Extracts a single derivation tree from a path index starting from (fromState, fromVertex) to (toState, toVertex).
     /// Works directly with the path index entries, bypassing the SPPF.
@@ -493,8 +493,8 @@ module GLL =
 
                         let mutable foundTree = None
 
-                        for i in 0 .. pathIndex.stateCount - 1 do
-                            if stateInfo.[i].blockNonterminal = nt && stateInfo.[i].isFinal && foundTree.IsNone then
+                        for i in 0 .. pathIndex.StateCount - 1 do
+                            if stateInfo.[i].BlockNonterminal = nt && stateInfo.[i].IsFinal && foundTree.IsNone then
                                 let innerEntries = PathIndex.get pathIndex qNStart fv i tv
 
                                 if not (Set.isEmpty innerEntries) then
@@ -511,7 +511,7 @@ module GLL =
 
                         match leftTree, rightTree with
                         | Some l, Some r ->
-                            let nt = stateInfo.[fs].blockNonterminal
+                            let nt = stateInfo.[fs].BlockNonterminal
                             Some(Node(nt, [ l; r ]))
                         | Some t, None -> Some t
                         | None, Some t -> Some t
@@ -526,11 +526,11 @@ module GLL =
     /// Uses a visited set to break cycles in the Nonterminal-SingleChild-Range-PackedAlternative loop.
     /// Book reference: sec:CFPQ_GLL.
     let extractDerivationTreeFromSppf (sppf: SPPF<'t, 'nt>) (rootIdx: int) : DerivationTree<'t, 'nt> =
-        let vertexCount = Graph.vertexCount sppf.graph
+        let vertexCount = Graph.vertexCount sppf.Graph
 
         let allEdgesTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int list =
             [ for toIdx in 0 .. vertexCount - 1 do
-                  let edgeLabel = Matrix.get sppf.graph.edges nodeIdx toIdx
+                  let edgeLabel = Matrix.get sppf.Graph.Edges nodeIdx toIdx
 
                   if predicate edgeLabel then
                       toIdx ]
@@ -542,7 +542,7 @@ module GLL =
                 match result with
                 | Some _ -> ()
                 | None ->
-                    let edgeLabel = Matrix.get sppf.graph.edges nodeIdx toIdx
+                    let edgeLabel = Matrix.get sppf.Graph.Edges nodeIdx toIdx
 
                     if predicate edgeLabel then
                         result <- Some toIdx
@@ -556,7 +556,7 @@ module GLL =
             if not (visited.Add(nodeIdx)) then
                 []
             else
-                let info = Graph.getVertex nodeIdx sppf.graph
+                let info = Graph.getVertex nodeIdx sppf.Graph
 
                 match info with
                 | SppfNodeInfo.SppfTerminal(t, _, _) -> [ Leaf(Symbol.T t) ]
@@ -575,7 +575,7 @@ module GLL =
                             [ Node(nt, children) ]
                         | None -> [ Node(nt, []) ]
                     | None -> [ Node(nt, []) ]
-                | SppfNodeInfo.SppfIntermediate(_, _) ->
+                | SppfNodeInfo.SppfIntermediate _ ->
                     let left =
                         match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.LeftChild) with
                         | Some idx -> extractChildren visited idx
@@ -587,7 +587,7 @@ module GLL =
                         | None -> []
 
                     left @ right
-                | SppfNodeInfo.SppfRange(_, _, _, _) ->
+                | SppfNodeInfo.SppfRange _ ->
                     match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative) with
                     | Some childIdx -> extractChildren visited childIdx
                     | None -> [ Leaf Symbol.Epsilon ]

@@ -12,7 +12,7 @@ module SummaryTeX =
         | LL
         | LR
 
-        member this.toString =
+        override this.ToString() =
             match this with
             | TablePerStep -> "table"
             | LL -> "ll"

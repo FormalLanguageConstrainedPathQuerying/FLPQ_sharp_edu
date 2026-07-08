@@ -11,12 +11,12 @@ open FLPQ.GraphAnalysis
 /// Convert a Grammar<string,string> to EBNF text format accepted by RsmBuilder.
 /// Only works for grammars where terminals are single alphabetic characters (a-z).
 let private grammarToEbnfText (g: Grammar<string, string>) : string =
-    g.rules
+    g.Rules
     |> List.map (fun r ->
-        let (Nonterminal nt) = r.lhs
+        let (Nonterminal nt) = r.Lhs
 
         let rhsStr =
-            match r.rhs with
+            match r.Rhs with
             | Rhs.EpsilonRhs -> "eps"
             | Rhs.Symbols symbols ->
                 NonEmptyList.toList symbols
@@ -35,7 +35,7 @@ let private grammarToEbnfText (g: Grammar<string, string>) : string =
 let private grammarToRsm (g: Grammar<string, string>) : RSM<string, string> =
     let ebnfText = grammarToEbnfText g
     let rsm = RsmBuilder.buildRSMFromText ebnfText
-    { rsm with startBlock = g.start }
+    { rsm with StartBlock = g.Start }
 
 /// Convert a string to a list of single-character strings for use with string-based RSM.
 let private stringToChars (s: string) : string list =
@@ -49,10 +49,10 @@ let private blockOffset (rsm: RSM<'t, 'nt>) (target: Nonterminal<'nt>) : int =
     let mutable offset = 0
 
     for block in RSM.blocks rsm do
-        if block.nonterminal = target then
+        if block.Nonterminal = target then
             ()
         else
-            offset <- offset + Dfa.stateCount block.dfa
+            offset <- offset + Dfa.stateCount block.Dfa
 
     offset
 
@@ -61,7 +61,7 @@ let private globalStartState (rsm: RSM<'t, 'nt>) (nt: Nonterminal<'nt>) : int =
     let offset = blockOffset rsm nt
 
     match RSM.blockOf nt rsm with
-    | Some block -> offset + block.dfa.startState
+    | Some block -> offset + block.Dfa.StartState
     | None -> -1
 
 /// Check if a grammar accepts a string via GLL.
@@ -71,15 +71,15 @@ let private gllAccepts (g: Grammar<string, string>) (input: string list) : bool 
     let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
 
     let startBlock = RSM.startBlock rsm
-    let startGlobalState = globalStartState rsm startBlock.nonterminal
+    let startGlobalState = globalStartState rsm startBlock.Nonterminal
 
     let blocks = RSM.blocks rsm
 
     let finalStates =
         (Set.empty, blocks)
         ||> List.fold (fun acc block ->
-            let offset = blockOffset rsm block.nonterminal
-            let blockFinals = block.dfa.finalStates |> Set.map (fun local -> offset + local)
+            let offset = blockOffset rsm block.Nonterminal
+            let blockFinals = block.Dfa.FinalStates |> Set.map (fun local -> offset + local)
             Set.union acc blockFinals)
 
     let vertexCount = Graph.vertexCount graph
@@ -104,12 +104,12 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     let vc = Graph.vertexCount graph
 
     let startBlock = RSM.startBlock rsm
-    let startGlobalState = globalStartState rsm startBlock.nonterminal
+    let startGlobalState = globalStartState rsm startBlock.Nonterminal
 
     let mutable finalGlobalState = -1
-    let offset = blockOffset rsm startBlock.nonterminal
+    let offset = blockOffset rsm startBlock.Nonterminal
 
-    for finalLocal in startBlock.dfa.finalStates do
+    for finalLocal in startBlock.Dfa.FinalStates do
         let fgs = offset + finalLocal
 
         let entries = PathIndex.get pathIndex startGlobalState 0 fgs (vc - 1)
@@ -121,14 +121,14 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
         None
     else
         let rootRange =
-            { fromState = startGlobalState
-              fromVertex = 0
-              toState = finalGlobalState
-              toVertex = vc - 1 }
+            { FromState = startGlobalState
+              FromVertex = 0
+              ToState = finalGlobalState
+              ToVertex = vc - 1 }
 
         let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
 
-        match sppf.rootIndices with
+        match sppf.RootIndices with
         | rootIdx :: _ ->
             let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
             Some tree
@@ -140,15 +140,15 @@ let private gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool
     let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
 
     let startBlock = RSM.startBlock rsm
-    let startGlobalState = globalStartState rsm startBlock.nonterminal
+    let startGlobalState = globalStartState rsm startBlock.Nonterminal
 
     let blocks = RSM.blocks rsm
 
     let finalStates =
         (Set.empty, blocks)
         ||> List.fold (fun acc block ->
-            let offset = blockOffset rsm block.nonterminal
-            let blockFinals = block.dfa.finalStates |> Set.map (fun local -> offset + local)
+            let offset = blockOffset rsm block.Nonterminal
+            let blockFinals = block.Dfa.FinalStates |> Set.map (fun local -> offset + local)
             Set.union acc blockFinals)
 
     let vertexCount = Graph.vertexCount graph
@@ -290,7 +290,7 @@ module GllRegexEquivalence =
         RsmBuilder.buildRSMFromText $"S -> {regexText}"
 
     let private dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> =
-        (RSM.startBlock rsm).dfa
+        (RSM.startBlock rsm).Dfa
 
     let private dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
         let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))

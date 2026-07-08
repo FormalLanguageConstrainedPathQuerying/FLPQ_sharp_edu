@@ -32,11 +32,11 @@ module FactTests =
 
     let private testNoConflicts builder augGrammar =
         let table = builder augGrammar
-        Assert.Empty(table.conflicts)
+        Assert.Empty(table.Conflicts)
 
     let private testHasConflicts builder augGrammar =
         let table = builder augGrammar
-        Assert.NotEmpty(table.conflicts)
+        Assert.NotEmpty(table.Conflicts)
 
     module Grammar1 =
 
@@ -64,21 +64,21 @@ module FactTests =
             let slr1 = LRParser.buildSLR1Table augGrammar2
             let clr1 = LRParser.buildCLR1Table augGrammar2
 
-            Assert.NotEmpty(lr0.conflicts)
-            Assert.NotEmpty(slr1.conflicts)
-            Assert.NotEmpty(clr1.conflicts)
+            Assert.NotEmpty(lr0.Conflicts)
+            Assert.NotEmpty(slr1.Conflicts)
+            Assert.NotEmpty(clr1.Conflicts)
 
         [<Fact>]
         let ``SLR(1) table can be built for grammar2`` () =
             let table = LRParser.buildSLR1Table augGrammar2
-            Assert.NotNull(table.action)
-            Assert.NotNull(table.goto)
+            Assert.NotNull(table.Action)
+            Assert.NotNull(table.GoTo)
 
         [<Fact>]
         let ``CLR(1) table can be built for grammar2`` () =
             let table = LRParser.buildCLR1Table augGrammar2
-            Assert.NotNull(table.action)
-            Assert.NotNull(table.goto)
+            Assert.NotNull(table.Action)
+            Assert.NotNull(table.GoTo)
 
     module Grammar3 =
 
@@ -170,39 +170,39 @@ module FactTests =
             let slr1 = LRParser.buildSLR1Table augGrammar6
             let clr1 = LRParser.buildCLR1Table augGrammar6
 
-            Assert.NotEmpty(lr0.conflicts)
-            Assert.NotEmpty(slr1.conflicts)
-            Assert.NotEmpty(clr1.conflicts)
+            Assert.NotEmpty(lr0.Conflicts)
+            Assert.NotEmpty(slr1.Conflicts)
+            Assert.NotEmpty(clr1.Conflicts)
 
     module AutomatonTests =
 
         [<Fact>]
         let ``LR(0) automaton for grammar3 has expected structure`` () =
             let aut = LRAutomaton.buildLR0 augGrammar3
-            Assert.True(aut.states.Length > 1)
-            Assert.Equal(0, aut.startState)
-            Assert.Equal(1, aut.finalStates.Count)
+            Assert.True(aut.States.Length > 1)
+            Assert.Equal(0, aut.StartState)
+            Assert.Equal(1, aut.FinalStates.Count)
 
         [<Fact>]
         let ``LR(1) automaton for grammar3 has expected structure`` () =
             let aut = LRAutomaton.buildLR1 augGrammar3
-            Assert.True(aut.states.Length > 1)
-            Assert.Equal(0, aut.startState)
-            Assert.Equal(1, aut.finalStates.Count)
+            Assert.True(aut.States.Length > 1)
+            Assert.Equal(0, aut.StartState)
+            Assert.Equal(1, aut.FinalStates.Count)
 
         [<Fact>]
         let ``LR(0) automaton for grammar7 has expected structure`` () =
             let aut = LRAutomaton.buildLR0 augGrammar7
-            Assert.True(aut.states.Length > 1)
-            Assert.Equal(0, aut.startState)
-            Assert.Equal(1, aut.finalStates.Count)
+            Assert.True(aut.States.Length > 1)
+            Assert.Equal(0, aut.StartState)
+            Assert.Equal(1, aut.FinalStates.Count)
 
         [<Fact>]
         let ``LR(1) automaton for grammar8 has expected structure`` () =
             let aut = LRAutomaton.buildLR1 augGrammar8
-            Assert.True(aut.states.Length > 1)
-            Assert.Equal(0, aut.startState)
-            Assert.Equal(1, aut.finalStates.Count)
+            Assert.True(aut.States.Length > 1)
+            Assert.Equal(0, aut.StartState)
+            Assert.Equal(1, aut.FinalStates.Count)
 
     module CrossParserTests =
 
@@ -369,10 +369,10 @@ module ConflictBehaviorTests =
     let ``LR(0) table for grammar3 has shift-reduce conflicts`` () =
         let table = LRParser.buildLR0Table augGrammar3
 
-        Assert.NotEmpty(table.conflicts)
+        Assert.NotEmpty(table.Conflicts)
 
         let hasShiftReduce =
-            table.conflicts
+            table.Conflicts
             |> List.exists (function
                 | LRConflict.ShiftReduce _ -> true
                 | _ -> false)
@@ -383,10 +383,10 @@ module ConflictBehaviorTests =
     let ``LR(0) table for grammar1 has shift-reduce conflicts`` () =
         let table = LRParser.buildLR0Table augGrammar1
 
-        Assert.NotEmpty(table.conflicts)
+        Assert.NotEmpty(table.Conflicts)
 
         let shiftReduceCount =
-            table.conflicts
+            table.Conflicts
             |> List.filter (function
                 | LRConflict.ShiftReduce _ -> true
                 | _ -> false)
@@ -397,15 +397,15 @@ module ConflictBehaviorTests =
     [<Fact>]
     let ``Ambiguous grammar6 has conflicts in LR(0) table`` () =
         let table = LRParser.buildLR0Table augGrammar6
-        Assert.True(table.conflicts.Length > 0)
+        Assert.True(table.Conflicts.Length > 0)
 
     [<Fact>]
     let ``SLR(1) resolves LR(0) conflicts for grammar3`` () =
         let lr0 = LRParser.buildLR0Table augGrammar3
         let slr1 = LRParser.buildSLR1Table augGrammar3
 
-        let lr0ConflictCount = lr0.conflicts.Length
-        let slr1ConflictCount = slr1.conflicts.Length
+        let lr0ConflictCount = lr0.Conflicts.Length
+        let slr1ConflictCount = slr1.Conflicts.Length
 
         Assert.True(lr0ConflictCount > 0)
         Assert.True(slr1ConflictCount < lr0ConflictCount)
@@ -415,8 +415,8 @@ module ConflictBehaviorTests =
         let lr0 = LRParser.buildLR0Table augGrammar1
         let slr1 = LRParser.buildSLR1Table augGrammar1
 
-        let lr0ConflictCount = lr0.conflicts.Length
-        let slr1ConflictCount = slr1.conflicts.Length
+        let lr0ConflictCount = lr0.Conflicts.Length
+        let slr1ConflictCount = slr1.Conflicts.Length
 
         Assert.True(lr0ConflictCount > 0)
         Assert.True(slr1ConflictCount < lr0ConflictCount)
@@ -429,7 +429,7 @@ module ConflictBehaviorTests =
               LRParser.buildSLR1Table augGrammar8 ]
 
         for table in tables do
-            Assert.Empty(table.conflicts)
+            Assert.Empty(table.Conflicts)
 
     [<Fact>]
     let ``CLR(1) table has no conflicts for LR(1) grammars`` () =
@@ -439,7 +439,7 @@ module ConflictBehaviorTests =
               LRParser.buildCLR1Table augGrammar8 ]
 
         for table in tables do
-            Assert.Empty(table.conflicts)
+            Assert.Empty(table.Conflicts)
 
     [<Fact>]
     let ``Non-LR grammar2 has conflicts in all table types`` () =
@@ -447,34 +447,34 @@ module ConflictBehaviorTests =
         let slr1 = LRParser.buildSLR1Table augGrammar2
         let clr1 = LRParser.buildCLR1Table augGrammar2
 
-        Assert.NotEmpty(lr0.conflicts)
-        Assert.NotEmpty(slr1.conflicts)
-        Assert.NotEmpty(clr1.conflicts)
+        Assert.NotEmpty(lr0.Conflicts)
+        Assert.NotEmpty(slr1.Conflicts)
+        Assert.NotEmpty(clr1.Conflicts)
 
     [<Fact>]
     let ``LR(0) table for grammar7 has shift-reduce on epsilon`` () =
         let table = LRParser.buildLR0Table augGrammar7
 
         let hasEpsilonReduce =
-            table.conflicts
+            table.Conflicts
             |> List.exists (fun c ->
                 match c with
                 | LRConflict.ShiftReduce(state = _; symbol = Symbol.Epsilon) -> true
                 | LRConflict.ReduceReduce(state = _; symbol = Symbol.Epsilon) -> true
                 | _ -> false)
 
-        Assert.True(hasEpsilonReduce || table.conflicts.Length > 0)
+        Assert.True(hasEpsilonReduce || table.Conflicts.Length > 0)
 
     [<Fact>]
     let ``Conflict states reference valid state indices`` () =
         let lr0 = LRParser.buildLR0Table augGrammar6
 
         let autStateCount =
-            match lr0.automaton with
-            | LRAutomaton.LR0 dfa -> dfa.states.Length
-            | LRAutomaton.LR1 dfa -> dfa.states.Length
+            match lr0.Automaton with
+            | LRAutomaton.LR0 dfa -> dfa.States.Length
+            | LRAutomaton.LR1 dfa -> dfa.States.Length
 
-        for conflict in lr0.conflicts do
+        for conflict in lr0.Conflicts do
             match conflict with
             | LRConflict.ShiftReduce(state = s; shiftTo = toIdx) ->
                 Assert.True(s >= 0 && s < autStateCount, $"Invalid state {s}")

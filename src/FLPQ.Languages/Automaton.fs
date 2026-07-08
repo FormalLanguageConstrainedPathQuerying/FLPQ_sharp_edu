@@ -5,7 +5,7 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
 [<Struct>]
-type Config = { state: int; position: int }
+type Config = { State: int; Position: int }
 
 type AutomatonLabel<'t> =
     | ATerm of 't
@@ -15,22 +15,22 @@ type AutomatonLabel<'t> =
 /// Epsilon transitions are stored in the transition matrix as AEpsilon-labeled edges.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type NFA<'t, 's when 't: comparison> =
-    { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
-      startStates: Set<int>
-      finalStates: Set<int> }
+    { Graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
+      StartStates: Set<int>
+      FinalStates: Set<int> }
 
-    member this.states = this.graph |> Graph.vertices |> List.map snd
-    member this.transitions = this.graph.edges
+    member this.States = this.Graph |> Graph.vertices |> List.map snd
+    member this.Transitions = this.Graph.Edges
 
 /// Deterministic finite automaton with exactly one start state and no epsilon transitions.
 /// Wraps a Graph where vertices are state labels and edges are transition symbol sets.
 type DFA<'t, 's when 't: comparison> =
-    { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
-      startState: int
-      finalStates: Set<int> }
+    { Graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
+      StartState: int
+      FinalStates: Set<int> }
 
-    member this.states = this.graph |> Graph.vertices |> List.map snd
-    member this.transitions = this.graph.edges
+    member this.States = this.Graph |> Graph.vertices |> List.map snd
+    member this.Transitions = this.Graph.Edges
 
 module Nfa =
 
@@ -84,23 +84,23 @@ module Nfa =
 
         let allTransitions = termTransitions @ epsT
 
-        { graph = Graph.fromEdges states (buildMatrix states.Length allTransitions)
-          startStates = startStates
-          finalStates = finalStates }
+        { Graph = Graph.fromEdges states (buildMatrix states.Length allTransitions)
+          StartStates = startStates
+          FinalStates = finalStates }
 
     /// Returns the number of states in the NFA.
-    let stateCount (a: NFA<'t, 's>) = Graph.vertexCount a.graph
+    let stateCount (a: NFA<'t, 's>) = Graph.vertexCount a.Graph
 
     /// Returns the alphabet (set of all terminal symbols) of the NFA.
-    let alphabet (a: NFA<'t, 's>) : Set<'t> = collectAlphabet a.transitions
+    let alphabet (a: NFA<'t, 's>) : Set<'t> = collectAlphabet a.Transitions
 
     /// Returns the set of states reachable from the given state via a single transition on the given symbol.
     /// Does not include epsilon-transitions.
     let move (a: NFA<'t, 's>) (stateIdx: int) (symbol: 't) : Set<int> =
         let mutable result = Set.empty
 
-        for j in 0 .. Matrix.cols a.transitions - 1 do
-            match Matrix.get a.transitions stateIdx j with
+        for j in 0 .. Matrix.cols a.Transitions - 1 do
+            match Matrix.get a.Transitions stateIdx j with
             | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Set.add j result
             | _ -> ()
 
@@ -119,7 +119,7 @@ module Nfa =
 
             for fromIdx in closure |> Set.toList do
                 for toIdx in 0 .. n - 1 do
-                    match Matrix.get a.transitions fromIdx toIdx with
+                    match Matrix.get a.Transitions fromIdx toIdx with
                     | Some nes when NonEmptySet.contains AEpsilon nes ->
                         if not (Set.contains toIdx closure) then
                             closure <- Set.add toIdx closure
@@ -142,8 +142,8 @@ module Nfa =
         let rawInput = input |> List.map (fun (Terminal sym) -> sym)
 
         let initConfigs =
-            [ for s in nfa.startStates do
-                  for c in epsilonClosure nfa s -> { state = c; position = 0 } ]
+            [ for s in nfa.StartStates do
+                  for c in epsilonClosure nfa s -> { State = c; Position = 0 } ]
             |> Set.ofList
 
         let mutable currentConfigs = initConfigs
@@ -155,17 +155,17 @@ module Nfa =
             let cfg = currentConfigs |> Set.minElement
             currentConfigs <- Set.remove cfg currentConfigs
 
-            if cfg.position = n && Set.contains cfg.state nfa.finalStates then
+            if cfg.Position = n && Set.contains cfg.State nfa.FinalStates then
                 result <- true
-            elif cfg.position < n then
-                let sym = rawInput.[cfg.position]
-                let targets = move nfa cfg.state sym
+            elif cfg.Position < n then
+                let sym = rawInput.[cfg.Position]
+                let targets = move nfa cfg.State sym
 
                 for t in targets do
                     for ec in epsilonClosure nfa t do
                         let newCfg =
-                            { state = ec
-                              position = cfg.position + 1 }
+                            { State = ec
+                              Position = cfg.Position + 1 }
 
                         if not (Set.contains newCfg visited) then
                             visited <- Set.add newCfg visited
@@ -201,34 +201,34 @@ module Nfa =
         let nA = stateCount a
         let nB = stateCount b
 
-        let labelsA = a.graph |> Graph.vertices |> List.map snd |> Array.ofList
-        let labelsB = b.graph |> Graph.vertices |> List.map snd |> Array.ofList
+        let labelsA = a.Graph |> Graph.vertices |> List.map snd |> Array.ofList
+        let labelsB = b.Graph |> Graph.vertices |> List.map snd |> Array.ofList
 
         if nA = 0 || nB = 0 then
-            { graph = Graph.fromEdges [] (buildMatrix 0 [])
-              startStates = Set.empty
-              finalStates = Set.empty }
+            { Graph = Graph.fromEdges [] (buildMatrix 0 [])
+              StartStates = Set.empty
+              FinalStates = Set.empty }
         else
             let n = nA * nB
 
             let idx iA iB = iA * nB + iB
 
             let productTransitions =
-                LinearAlgebra.kron a.transitions b.transitions intersectEdgeSets None
+                LinearAlgebra.kron a.Transitions b.Transitions intersectEdgeSets None
 
             let k = Matrix.map Option.isSome productTransitions
 
             let startPairs =
-                [| for sA in a.startStates do
-                       for sB in b.startStates -> idx sA sB |]
+                [| for sA in a.StartStates do
+                       for sB in b.StartStates -> idx sA sB |]
 
             let forwardVisited = MsBfs.msBfs startPairs k
 
             let kT = Matrix.transpose k
 
             let finalPairs =
-                [| for fA in a.finalStates do
-                       for fB in b.finalStates -> idx fA fB |]
+                [| for fA in a.FinalStates do
+                       for fB in b.FinalStates -> idx fA fB |]
 
             let backwardVisited = MsBfs.msBfs finalPairs kT
 
@@ -262,13 +262,13 @@ module Nfa =
                 |> Array.choose (fun fp -> Map.tryFind fp usefulStateMap)
                 |> Set.ofArray
 
-            { graph =
+            { Graph =
                 [ 0 .. n - 1 ]
                 |> List.map (fun p -> (labelsA.[p / nB], labelsB.[p % nB]))
                 |> fun labels -> Graph.fromEdges labels productTransitions
                 |> Graph.keepVertices usefulSet
-              startStates = resultStartStates
-              finalStates = resultFinalStates }
+              StartStates = resultStartStates
+              FinalStates = resultFinalStates }
 
 module Dfa =
 
@@ -282,23 +282,23 @@ module Dfa =
         let labeledTransitions =
             transitionsList |> List.map (fun (f, s, t) -> (f, ATerm s, t))
 
-        { graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) labeledTransitions)
-          startState = startState
-          finalStates = finalStates }
+        { Graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) labeledTransitions)
+          StartState = startState
+          FinalStates = finalStates }
 
     /// Returns the number of states in the DFA.
-    let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.graph
+    let stateCount (a: DFA<'t, 's>) = Graph.vertexCount a.Graph
 
     /// Returns the alphabet (set of all terminal symbols) of the DFA.
-    let alphabet (a: DFA<'t, 's>) : Set<'t> = Nfa.collectAlphabet a.transitions
+    let alphabet (a: DFA<'t, 's>) : Set<'t> = Nfa.collectAlphabet a.Transitions
 
     /// Returns Some targetState for a transition on the given symbol, or None if no such transition exists.
     /// In a deterministic automaton, at most one transition per symbol exists from any state.
     let move (a: DFA<'t, 's>) (stateIdx: int) (symbol: 't) : int option =
         let mutable result = None
 
-        for j in 0 .. Matrix.cols a.transitions - 1 do
-            match Matrix.get a.transitions stateIdx j with
+        for j in 0 .. Matrix.cols a.Transitions - 1 do
+            match Matrix.get a.Transitions stateIdx j with
             | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Some j
             | _ -> ()
 
@@ -317,7 +317,7 @@ module Dfa =
                 let mutable count = 0
 
                 for j in 0 .. n - 1 do
-                    match Matrix.get a.transitions i j with
+                    match Matrix.get a.Transitions i j with
                     | Some nes when NonEmptySet.contains (ATerm sym) nes -> count <- count + 1
                     | _ -> ()
 
@@ -329,7 +329,7 @@ module Dfa =
     /// DFA acceptance — sequential state transitions.
     /// Follows the input symbols one by one; accepts iff the final state is accepting.
     let accept (dfa: DFA<'t, 's>) (input: Terminal<'t> list) : bool =
-        let mutable state = dfa.startState
+        let mutable state = dfa.StartState
         let mutable ok = true
 
         let mutable remaining = input
@@ -342,7 +342,7 @@ module Dfa =
             | Some next -> state <- next
             | None -> ok <- false
 
-        ok && Set.contains state dfa.finalStates
+        ok && Set.contains state dfa.FinalStates
 
 /// Generic BFS-based automaton construction.
 /// Explores all reachable states from a start set using a worklist algorithm.
@@ -396,7 +396,7 @@ module Automaton =
     /// Subset construction: convert NFA to DFA using the generic buildAutomaton.
     /// State labels in the resulting DFA are subsets of NFA state indices.
     let toDfa (nfa: NFA<'t, 's>) : DFA<'t, Set<int>> =
-        let syms = Nfa.collectAlphabet nfa.transitions
+        let syms = Nfa.collectAlphabet nfa.Transitions
 
-        buildAutomaton nfa.startStates (fun _ -> Set.toList syms) (Nfa.moveSet nfa) (fun subset ->
-            Set.intersect subset nfa.finalStates |> Set.isEmpty |> not)
+        buildAutomaton nfa.StartStates (fun _ -> Set.toList syms) (Nfa.moveSet nfa) (fun subset ->
+            Set.intersect subset nfa.FinalStates |> Set.isEmpty |> not)

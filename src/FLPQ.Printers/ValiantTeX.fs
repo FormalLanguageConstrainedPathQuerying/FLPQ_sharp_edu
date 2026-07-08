@@ -7,59 +7,61 @@ module ValiantTeX =
 
     let stepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantTraceStep<'nt>) : string =
         let highlights =
-            [ for (i, j) in step.changedCells do
+            [ for (i, j) in step.ChangedCells do
                   let ci = i
                   let cj = j
 
-                  if ci >= 0 && ci < Matrix.rows step.table && cj >= 0 && cj < Matrix.cols step.table then
+                  if ci >= 0 && ci < Matrix.rows step.Table && cj >= 0 && cj < Matrix.cols step.Table then
                       yield
-                          ({ row = ci
-                             col = cj
-                             label = Matrix.CurrentCell }
+                          ({ Row = ci
+                             Col = cj
+                             Label = Matrix.CurrentCell }
                           : Matrix.Highlight) ]
 
-        let startRow = step.target.row - step.target.Size + 1
-        let endRow = step.target.row
-        let startCol = step.target.col
-        let endCol = step.target.col + step.target.Size - 1
+        let startRow = step.Target.Row - step.Target.Size + 1
+        let endRow = step.Target.Row
+        let startCol = step.Target.Col
+        let endCol = step.Target.Col + step.Target.Size - 1
 
         let clippedStartRow = max 0 startRow
-        let clippedEndRow = min (Matrix.rows step.table - 1) endRow
+        let clippedEndRow = min (Matrix.rows step.Table - 1) endRow
         let clippedStartCol = max 0 startCol
-        let clippedEndCol = min (Matrix.cols step.table - 1) endCol
+        let clippedEndCol = min (Matrix.cols step.Table - 1) endCol
 
         let targetBlock =
             if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
-                [ ({ startRow = clippedStartRow
-                     startCol = clippedStartCol
-                     rowCount = clippedEndRow - clippedStartRow + 1
-                     colCount = clippedEndCol - clippedStartCol + 1
-                     label = Matrix.CurrentStepSubmatrix }
-                  : Matrix.SubmatrixBlock) ]
+                let sb: Matrix.SubmatrixBlock =
+                    { StartRow = clippedStartRow
+                      StartCol = clippedStartCol
+                      RowCount = clippedEndRow - clippedStartRow + 1
+                      ColCount = clippedEndCol - clippedStartCol + 1
+                      Label = Matrix.CurrentStepSubmatrix }
+
+                [ sb ]
             else
                 []
 
         let multipliedBlocks =
-            step.multiplied
+            step.Multiplied
             |> List.mapi (fun idx (m1, m2) ->
-                let sr1 = max 0 (m1.row - m1.Size + 1)
-                let sc1 = max 0 m1.col
-                let sr2 = max 0 (m2.row - m2.Size + 1)
-                let sc2 = max 0 m2.col
+                let sr1 = max 0 (m1.Row - m1.Size + 1)
+                let sc1 = max 0 m1.Col
+                let sr2 = max 0 (m2.Row - m2.Size + 1)
+                let sc2 = max 0 m2.Col
 
                 let b1: Matrix.SubmatrixBlock =
-                    { startRow = sr1
-                      startCol = sc1
-                      rowCount = min m1.Size (Matrix.rows step.table - sr1)
-                      colCount = min m1.Size (Matrix.cols step.table - sc1)
-                      label = Matrix.Submatrix(idx * 2 + 1) }
+                    { StartRow = sr1
+                      StartCol = sc1
+                      RowCount = min m1.Size (Matrix.rows step.Table - sr1)
+                      ColCount = min m1.Size (Matrix.cols step.Table - sc1)
+                      Label = Matrix.Submatrix(idx * 2 + 1) }
 
                 let b2: Matrix.SubmatrixBlock =
-                    { startRow = sr2
-                      startCol = sc2
-                      rowCount = min m2.Size (Matrix.rows step.table - sr2)
-                      colCount = min m2.Size (Matrix.cols step.table - sc2)
-                      label = Matrix.Submatrix(idx * 2 + 2) }
+                    { StartRow = sr2
+                      StartCol = sc2
+                      RowCount = min m2.Size (Matrix.rows step.Table - sr2)
+                      ColCount = min m2.Size (Matrix.cols step.Table - sc2)
+                      Label = Matrix.Submatrix(idx * 2 + 2) }
 
                 [ b1; b2 ])
             |> List.concat
@@ -68,7 +70,7 @@ module ValiantTeX =
             true
             true
             (ParsingTableTeX.ntCellToTeX nonterminalPrinter)
-            step.table
+            step.Table
             highlights
             (targetBlock @ multipliedBlocks)
 
@@ -80,10 +82,10 @@ module ValiantTeX =
             let blocks =
                 submatrices
                 |> List.mapi (fun idx m ->
-                    let startRow = m.row - m.Size + 1
-                    let endRow = m.row
-                    let startCol = m.col - 1
-                    let endCol = m.col + m.Size - 2
+                    let startRow = m.Row - m.Size + 1
+                    let endRow = m.Row
+                    let startCol = m.Col - 1
+                    let endCol = m.Col + m.Size - 2
 
                     let clippedStartRow = max 0 startRow
                     let clippedEndRow = min (n - 1) endRow
@@ -92,11 +94,11 @@ module ValiantTeX =
 
                     if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
                         let block: Matrix.SubmatrixBlock =
-                            { startRow = clippedStartRow
-                              startCol = clippedStartCol
-                              rowCount = clippedEndRow - clippedStartRow + 1
-                              colCount = clippedEndCol - clippedStartCol + 1
-                              label = Matrix.Submatrix idx }
+                            { StartRow = clippedStartRow
+                              StartCol = clippedStartCol
+                              RowCount = clippedEndRow - clippedStartRow + 1
+                              ColCount = clippedEndCol - clippedStartCol + 1
+                              Label = Matrix.Submatrix idx }
 
                         Some block
                     else
@@ -111,10 +113,10 @@ module ValiantTeX =
             let blocks =
                 submatrices
                 |> List.mapi (fun idx m ->
-                    let startRow = m.row - m.Size + 1
-                    let endRow = m.row
-                    let startCol = m.col - 1
-                    let endCol = m.col + m.Size - 2
+                    let startRow = m.Row - m.Size + 1
+                    let endRow = m.Row
+                    let startCol = m.Col - 1
+                    let endCol = m.Col + m.Size - 2
 
                     let clippedStartRow = max 0 startRow
                     let clippedEndRow = min (n - 1) endRow
@@ -123,11 +125,11 @@ module ValiantTeX =
 
                     if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
                         let block: Matrix.SubmatrixBlock =
-                            { startRow = clippedStartRow
-                              startCol = clippedStartCol
-                              rowCount = clippedEndRow - clippedStartRow + 1
-                              colCount = clippedEndCol - clippedStartCol + 1
-                              label = Matrix.Submatrix idx }
+                            { StartRow = clippedStartRow
+                              StartCol = clippedStartCol
+                              RowCount = clippedEndRow - clippedStartRow + 1
+                              ColCount = clippedEndCol - clippedStartCol + 1
+                              Label = Matrix.Submatrix idx }
 
                         Some block
                     else
@@ -141,9 +143,9 @@ module ValiantTeX =
 
                       if ci >= 0 && ci < n && cj >= 0 && cj < n then
                           yield
-                              ({ row = ci
-                                 col = cj
-                                 label = Matrix.CurrentCell }
+                              ({ Row = ci
+                                 Col = cj
+                                 Label = Matrix.CurrentCell }
                               : Matrix.Highlight) ]
 
             MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights blocks

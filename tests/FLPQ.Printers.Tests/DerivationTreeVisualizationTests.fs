@@ -49,7 +49,7 @@ let ``epsilon leaf dot compiles`` () =
 [<Trait("Category", "Graphviz")>]
 let ``LR parser tree dot compiles`` () =
     let grammar = Grammar.parseGrammar "S -> a S\nS -> a"
-    let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart grammar
     let table = LRParser.buildSLR1Table aug
 

@@ -24,15 +24,15 @@ module RsmToGrammar =
         let rules = ResizeArray<Rule<string, string>>()
 
         for block in RSM.blocks rsm do
-            let n = Dfa.stateCount block.dfa
+            let n = Dfa.stateCount block.Dfa
 
             for fromIdx in 0 .. n - 1 do
-                let fromNt = Nonterminal(ntName block.nonterminal fromIdx block.dfa.startState)
+                let fromNt = Nonterminal(ntName block.Nonterminal fromIdx block.Dfa.StartState)
 
-                for sym in Dfa.alphabet block.dfa do
-                    match Dfa.move block.dfa fromIdx sym with
+                for sym in Dfa.alphabet block.Dfa do
+                    match Dfa.move block.Dfa fromIdx sym with
                     | Some toIdx ->
-                        let toNt = Nonterminal(ntName block.nonterminal toIdx block.dfa.startState)
+                        let toNt = Nonterminal(ntName block.Nonterminal toIdx block.Dfa.StartState)
 
                         let rhsSymbols =
                             match sym with
@@ -40,17 +40,17 @@ module RsmToGrammar =
                             | RsmSymbol.RNonterm calledNt -> [ Symbol.N calledNt; Symbol.N toNt ]
 
                         rules.Add(
-                            { lhs = fromNt
-                              rhs = NonEmptyList.ofList rhsSymbols |> Symbols }
+                            { Lhs = fromNt
+                              Rhs = NonEmptyList.ofList rhsSymbols |> Symbols }
                         )
                     | None -> ()
 
-            for finalIdx in block.dfa.finalStates do
-                let finalNt = Nonterminal(ntName block.nonterminal finalIdx block.dfa.startState)
+            for finalIdx in block.Dfa.FinalStates do
+                let finalNt = Nonterminal(ntName block.Nonterminal finalIdx block.Dfa.StartState)
 
-                rules.Add { lhs = finalNt; rhs = EpsilonRhs }
+                rules.Add { Lhs = finalNt; Rhs = EpsilonRhs }
 
-        let startNt = (RSM.startBlock rsm).nonterminal
+        let startNt = (RSM.startBlock rsm).Nonterminal
 
-        { Grammar.rules = rules |> Seq.toList
-          start = startNt }
+        { Grammar.Rules = rules |> Seq.toList
+          Start = startNt }

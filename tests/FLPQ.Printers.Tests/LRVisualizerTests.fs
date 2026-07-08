@@ -17,7 +17,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
         S -> a
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"
@@ -43,7 +43,7 @@ let ``LR step visualization includes input position marker`` () =
         S -> eps
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
@@ -65,7 +65,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
         F -> x
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "x + x"
@@ -87,7 +87,7 @@ let ``LR step visualization includes state frames with sN labels`` () =
         S -> a
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug
     let tokens = Tokenizer.tokenizeTerminals "a a"

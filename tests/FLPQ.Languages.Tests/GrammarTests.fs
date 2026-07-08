@@ -12,10 +12,10 @@ module FactTests =
         let text = "S -> a S b S"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(1, List.length g.rules)
-        Assert.Equal(Nonterminal "S", g.start)
-        Assert.Equal(Nonterminal "S", g.rules.Head.lhs)
-        Assert.Equal(4, Rhs.length g.rules.Head.rhs)
+        Assert.Equal(1, List.length g.Rules)
+        Assert.Equal(Nonterminal "S", g.Start)
+        Assert.Equal(Nonterminal "S", g.Rules.Head.Lhs)
+        Assert.Equal(4, Rhs.length g.Rules.Head.Rhs)
 
     [<Fact>]
     let ``parseGrammar parses multiple rules`` () =
@@ -28,16 +28,16 @@ module FactTests =
 
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(3, List.length g.rules)
-        Assert.Equal(Nonterminal "S", g.start)
+        Assert.Equal(3, List.length g.Rules)
+        Assert.Equal(Nonterminal "S", g.Start)
 
     [<Fact>]
     let ``parseGrammar parses eps as Epsilon right-hand side`` () =
         let text = "S -> eps"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(1, List.length g.rules)
-        Assert.True(Rhs.isEpsilon g.rules.Head.rhs)
+        Assert.Equal(1, List.length g.Rules)
+        Assert.True(Rhs.isEpsilon g.Rules.Head.Rhs)
 
     [<Fact>]
     let ``parseGrammar ignores empty lines`` () =
@@ -52,14 +52,14 @@ module FactTests =
 
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(2, List.length g.rules)
+        Assert.Equal(2, List.length g.Rules)
 
     [<Fact>]
     let ``parseGrammar classifies terminals and nonterminals`` () =
         let text = "S -> a B c D"
         let g = Grammar.parseGrammar text
 
-        let rhsList = Rhs.toListWithEpsilon g.rules.Head.rhs
+        let rhsList = Rhs.toListWithEpsilon g.Rules.Head.Rhs
         Assert.Equal(4, List.length rhsList)
 
         match rhsList.[0] with
@@ -87,7 +87,7 @@ module FactTests =
         "
 
         let g = Grammar.parseGrammar text
-        Assert.Equal(Nonterminal "A", g.start)
+        Assert.Equal(Nonterminal "A", g.Start)
 
     [<Fact>]
     let ``parseGrammar throws on empty input`` () =
@@ -103,11 +103,11 @@ module FactTests =
 
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(2, List.length g.rules)
-        Assert.Equal(Nonterminal "S", g.start)
+        Assert.Equal(2, List.length g.Rules)
+        Assert.Equal(Nonterminal "S", g.Start)
 
-        let r1 = g.rules.[0]
-        let r1List = Rhs.toListWithEpsilon r1.rhs
+        let r1 = g.Rules.[0]
+        let r1List = Rhs.toListWithEpsilon r1.Rhs
         Assert.Equal(4, List.length r1List)
 
         match r1List.[0] with
@@ -126,31 +126,31 @@ module FactTests =
         | Symbol.N(Nonterminal "S") -> ()
         | _ -> Assert.Fail("Expected 'S'")
 
-        let r2 = g.rules.[1]
-        Assert.True(Rhs.isEpsilon r2.rhs)
+        let r2 = g.Rules.[1]
+        Assert.True(Rhs.isEpsilon r2.Rhs)
 
     [<Fact>]
     let ``parseGrammar handles rule with single symbol`` () =
         let text = "S -> a"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(1, Rhs.length g.rules.Head.rhs)
+        Assert.Equal(1, Rhs.length g.Rules.Head.Rhs)
 
     [<Fact>]
     let ``parseGrammar handles multiple spaces between symbols`` () =
         let text = "S -> a   S    b"
         let g = Grammar.parseGrammar text
 
-        Assert.Equal(3, Rhs.length g.rules.Head.rhs)
+        Assert.Equal(3, Rhs.length g.Rules.Head.Rhs)
 
 
 module CnfTests =
 
     let private isCnf (g: Grammar<string, string>) : bool =
-        g.rules
+        g.Rules
         |> List.forall (fun r ->
-            match r.rhs with
-            | EpsilonRhs -> r.lhs = g.start
+            match r.Rhs with
+            | EpsilonRhs -> r.Lhs = g.Start
             | Symbols nel ->
                 let syms = NonEmptyList.toList nel
 
@@ -160,9 +160,9 @@ module CnfTests =
                 | _ -> false)
 
     let private allRhsSymbolsAreNonterminals (g: Grammar<string, string>) : bool =
-        g.rules
+        g.Rules
         |> List.forall (fun r ->
-            match r.rhs with
+            match r.Rhs with
             | EpsilonRhs -> true
             | Symbols nel ->
                 let syms = NonEmptyList.toList nel
@@ -361,9 +361,9 @@ module CnfTests =
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
         let hasUnit =
-            cnf.rules
+            cnf.Rules
             |> List.exists (fun r ->
-                match r.rhs with
+                match r.Rhs with
                 | Symbols nel ->
                     NonEmptyList.length nel = 1
                     && (match NonEmptyList.head nel with

@@ -156,11 +156,11 @@ module PropertyTests =
                 Set.singleton current
             else
                 let expansionResults =
-                    g.rules
+                    g.Rules
                     |> List.collect (fun r ->
                         match current with
-                        | Symbol.N nt :: rest when nt = r.lhs ->
-                            let rhsSyms = Rhs.toNonEpsilonList r.rhs
+                        | Symbol.N nt :: rest when nt = r.Lhs ->
+                            let rhsSyms = Rhs.toNonEpsilonList r.Rhs
                             derive (rhsSyms @ rest) (depth - 1) |> Set.toList
                         | _ -> [])
                     |> Set.ofList
@@ -170,7 +170,7 @@ module PropertyTests =
                 else
                     expansionResults
 
-        derive [ Symbol.N g.start ] maxDepth
+        derive [ Symbol.N g.Start ] maxDepth
 
     let private prefixes (k: int) (sentences: Set<Symbol<string, string> list>) : Set<Symbol<string, string> list> =
         sentences

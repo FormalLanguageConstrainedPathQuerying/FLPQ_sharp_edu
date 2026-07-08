@@ -4,14 +4,14 @@ open FLPQ.LinearAlgebra
 
 module Valiant =
 
-    type Submatrix = { row: int; col: int; Size: int }
+    type Submatrix = { Row: int; Col: int; Size: int }
 
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
-        { table: ParsingTable<'nt>
-          target: Submatrix
-          multiplied: (Submatrix * Submatrix) list
-          changedCells: (int * int) list }
+        { Table: ParsingTable<'nt>
+          Target: Submatrix
+          Multiplied: (Submatrix * Submatrix) list
+          ChangedCells: (int * int) list }
 
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
@@ -20,57 +20,57 @@ module Valiant =
             table: ParsingTable<'nt> *
             layerSize: int *
             submatrices: Submatrix list *
-            changedCells: (int * int) list
+            ChangedCells: (int * int) list
 
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
-        { table: Matrix<Set<Nonterminal<'nt>>>
-          tokensArr: 't[]
-          tableSize: int
-          n: int
-          binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list
-          terminalRules: Map<'t, Nonterminal<'nt> list> }
+        { Table: Matrix<Set<Nonterminal<'nt>>>
+          TokensArr: 't[]
+          TableSize: int
+          N: int
+          BinaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list
+          TerminalRules: Map<'t, Nonterminal<'nt> list> }
 
     let private submatrixCells (m: Submatrix) : (int * int) list =
-        [ for i in m.row - m.Size + 1 .. m.row do
-              for j in m.col .. m.col + m.Size - 1 do
+        [ for i in m.Row - m.Size + 1 .. m.Row do
+              for j in m.Col .. m.Col + m.Size - 1 do
                   yield (i, j) ]
 
     let private bottomSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
 
-        { row = m.row
-          col = m.col
+        { Row = m.Row
+          Col = m.Col
           Size = half }
 
     let private leftSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
 
-        { row = m.row - half
-          col = m.col
+        { Row = m.Row - half
+          Col = m.Col
           Size = half }
 
     let private rightSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
 
-        { row = m.row
-          col = m.col + half
+        { Row = m.Row
+          Col = m.Col + half
           Size = half }
 
     let private topSubmatrix (m: Submatrix) : Submatrix =
         let half = m.Size / 2
 
-        { row = m.row - half
-          col = m.col + half
+        { Row = m.Row - half
+          Col = m.Col + half
           Size = half }
 
     let private sshift (m: Submatrix) (di: int) (dj: int) : Submatrix =
-        { row = m.row + di
-          col = m.col + dj
+        { Row = m.Row + di
+          Col = m.Col + dj
           Size = m.Size }
 
-    let private rightGrounded (m: Submatrix) : Submatrix = sshift m (m.col - m.row - 1) 0
+    let private rightGrounded (m: Submatrix) : Submatrix = sshift m (m.Col - m.Row - 1) 0
 
-    let private leftGrounded (m: Submatrix) : Submatrix = sshift m 0 (-(m.col - m.row - 1))
+    let private leftGrounded (m: Submatrix) : Submatrix = sshift m 0 (-(m.Col - m.Row - 1))
 
     let private rightNeighbor (m: Submatrix) : Submatrix = sshift m m.Size 0
 
@@ -88,7 +88,7 @@ module Valiant =
               let b = baseB + k * size
 
               if a < tableSize && b + size <= tableSize then
-                  yield { row = a; col = b; Size = size } ]
+                  yield { Row = a; Col = b; Size = size } ]
 
     let private nextPowerOfTwo (n: int) : int =
         let mutable p = 1
@@ -99,7 +99,7 @@ module Valiant =
         p
 
     let private extractSlice (fullMatrix: Matrix<'a>) (m: Submatrix) : Matrix<'a> =
-        Matrix.create m.Size m.Size (fun i j -> Matrix.get fullMatrix (m.row - m.Size + 1 + i) (m.col + j))
+        Matrix.create m.Size m.Size (fun i j -> Matrix.get fullMatrix (m.Row - m.Size + 1 + i) (m.Col + j))
 
     let private writeSliceUnion
         (target: Matrix<Set<Nonterminal<'nt>>>)
@@ -111,8 +111,8 @@ module Valiant =
                 let toAdd = Matrix.get slice i j
 
                 if not (Set.isEmpty toAdd) then
-                    let ti = m.row - m.Size + 1 + i
-                    let tj = m.col + j
+                    let ti = m.Row - m.Size + 1 + i
+                    let tj = m.Col + j
                     let existing = Matrix.get target ti tj
                     Matrix.set target ti tj (Set.union existing toAdd)
 
@@ -132,7 +132,7 @@ module Valiant =
         else
             binaryRules
             |> List.choose (fun (lhs, pair) ->
-                if Set.contains pair.left a && Set.contains pair.right b then
+                if Set.contains pair.Left a && Set.contains pair.Right b then
                     Some lhs
                 else
                     None)
@@ -173,7 +173,7 @@ module Valiant =
                   let newSet = Matrix.get after i j
 
                   if Set.difference newSet oldSet |> (not << Set.isEmpty) then
-                      yield (m.row - m.Size + 1 + i, m.col + j) ]
+                      yield (m.Row - m.Size + 1 + i, m.Col + j) ]
 
     let private doMultiplications
         (init: InitData<'t, 'nt>)
@@ -181,26 +181,26 @@ module Valiant =
         (tasks: (Submatrix * Submatrix * Submatrix) list)
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
-        if List.isEmpty init.binaryRules then
+        if List.isEmpty init.BinaryRules then
             ()
         else
             for (mTarget, m1, m2) in tasks do
                 let before =
                     Matrix.create mTarget.Size mTarget.Size (fun i j ->
-                        let ti = mTarget.row - mTarget.Size + 1 + i
-                        let tj = mTarget.col + j
+                        let ti = mTarget.Row - mTarget.Size + 1 + i
+                        let tj = mTarget.Col + j
                         Matrix.get table ti tj)
 
                 let leftSlice = extractSlice table m1
                 let rightSlice = extractSlice table m2
 
-                let product = mxmSet init.binaryRules leftSlice rightSlice
+                let product = mxmSet init.BinaryRules leftSlice rightSlice
                 writeSliceUnion table mTarget product
 
                 let after =
                     Matrix.create mTarget.Size mTarget.Size (fun i j ->
-                        let ti = mTarget.row - mTarget.Size + 1 + i
-                        let tj = mTarget.col + j
+                        let ti = mTarget.Row - mTarget.Size + 1 + i
+                        let tj = mTarget.Col + j
                         Matrix.get table ti tj)
 
                 let changed = diffCells before after mTarget
@@ -208,10 +208,10 @@ module Valiant =
                 match traceAcc with
                 | Some steps ->
                     steps.Add(
-                        { table = copyFullTable table init.tableSize
-                          target = mTarget
-                          multiplied = [ (m1, m2) ]
-                          changedCells = changed }
+                        { Table = copyFullTable table init.TableSize
+                          Target = mTarget
+                          Multiplied = [ (m1, m2) ]
+                          ChangedCells = changed }
                     )
                 | None -> ()
 
@@ -222,15 +222,15 @@ module Valiant =
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
         if m.Size = 1 then
-            let i = m.row - m.Size + 1
-            let j = m.col
+            let i = m.Row - m.Size + 1
+            let j = m.Col
 
-            if i + 1 = j && i < init.tokensArr.Length then
-                let ch = init.tokensArr.[i]
+            if i + 1 = j && i < init.TokensArr.Length then
+                let ch = init.TokensArr.[i]
 
                 let existing = Matrix.get table i j
 
-                match Map.tryFind ch init.terminalRules with
+                match Map.tryFind ch init.TerminalRules with
                 | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
                 | None -> ()
 
@@ -266,7 +266,7 @@ module Valiant =
         let b = (i + j) / 2
         let size = (j - i) / 2
 
-        let m = { row = a; col = b; Size = size }
+        let m = { Row = a; Col = b; Size = size }
         complete init table m traceAcc
 
     let rec private completeLayerModified
@@ -280,15 +280,15 @@ module Valiant =
         | first :: _ ->
             if first.Size = 1 then
                 for m in mList do
-                    let i = m.row - m.Size + 1
-                    let j = m.col
+                    let i = m.Row - m.Size + 1
+                    let j = m.Col
 
-                    if i + 1 = j && i < init.tokensArr.Length then
-                        let ch = init.tokensArr.[i]
+                    if i + 1 = j && i < init.TokensArr.Length then
+                        let ch = init.TokensArr.[i]
 
                         let existing = Matrix.get table i j
 
-                        match Map.tryFind ch init.terminalRules with
+                        match Map.tryFind ch init.TerminalRules with
                         | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
                         | None -> ()
             else
@@ -313,14 +313,14 @@ module Valiant =
                   yield (m, leftNeighbor m, rightGrounded m) ]
 
         let collectTaskChanges (tasks: (Submatrix * Submatrix * Submatrix) list) : unit =
-            if List.isEmpty init.binaryRules then
+            if List.isEmpty init.BinaryRules then
                 ()
             else
                 for (mTarget, m1, m2) in tasks do
                     let leftSlice = extractSlice table m1
                     let rightSlice = extractSlice table m2
 
-                    let product = mxmSet init.binaryRules leftSlice rightSlice
+                    let product = mxmSet init.BinaryRules leftSlice rightSlice
                     writeSliceUnion table mTarget product
 
         collectTaskChanges firstTasks
@@ -342,20 +342,20 @@ module Valiant =
         completeLayerModified init table topSubLayer traceAcc
 
     let private terminalRulesFromGrammar (cnf: Grammar<'t, 'nt>) : Map<'t, Nonterminal<'nt> list> =
-        cnf.rules
+        cnf.Rules
         |> List.choose (fun r ->
-            match Rhs.toNonEpsilonList r.rhs with
-            | [ Symbol.T(Terminal t) ] -> Some(t, r.lhs)
+            match Rhs.toNonEpsilonList r.Rhs with
+            | [ Symbol.T(Terminal t) ] -> Some(t, r.Lhs)
             | _ -> None)
         |> List.groupBy fst
         |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
         |> Map.ofList
 
     let private binaryRulesFromGrammar (cnf: Grammar<'t, 'nt>) : (Nonterminal<'nt> * BinaryPair<'nt>) list =
-        cnf.rules
+        cnf.Rules
         |> List.choose (fun r ->
-            match Rhs.toNonEpsilonList r.rhs with
-            | [ Symbol.N left; Symbol.N right ] -> Some(r.lhs, { left = left; right = right })
+            match Rhs.toNonEpsilonList r.Rhs with
+            | [ Symbol.N left; Symbol.N right ] -> Some(r.Lhs, { Left = left; Right = right })
             | _ -> None)
 
     let private initValiant (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitData<'t, 'nt> =
@@ -373,12 +373,12 @@ module Valiant =
             | Some nts -> Matrix.set table i (i + 1) (Set.ofList nts)
             | None -> ()
 
-        { table = table
-          tokensArr = tokensArr
-          tableSize = tableSize
-          n = n
-          binaryRules = binaryRules
-          terminalRules = terminalRules }
+        { Table = table
+          TokensArr = tokensArr
+          TableSize = tableSize
+          N = n
+          BinaryRules = binaryRules
+          TerminalRules = terminalRules }
 
     let parseWithTrace
         (freshNonterminal: int -> 'nt)
@@ -394,10 +394,10 @@ module Valiant =
             let init = initValiant cnf tokensArr
 
             let table =
-                Matrix.create init.tableSize init.tableSize (fun i j -> Matrix.get init.table i j)
+                Matrix.create init.TableSize init.TableSize (fun i j -> Matrix.get init.Table i j)
 
             let steps = ResizeArray<ValiantTraceStep<'nt>>()
-            compute init table 0 init.tableSize (Some steps)
+            compute init table 0 init.TableSize (Some steps)
             List.ofSeq steps
 
     let parseWithTable
@@ -416,13 +416,13 @@ module Valiant =
             let init = initValiant cnf tokensArr
 
             let table =
-                Matrix.create init.tableSize init.tableSize (fun i j -> Matrix.get init.table i j)
+                Matrix.create init.TableSize init.TableSize (fun i j -> Matrix.get init.Table i j)
 
-            compute init table 0 init.tableSize None
-            let finalTable = snapshot table init.n
+            compute init table 0 init.TableSize None
+            let finalTable = snapshot table init.N
 
             let accepted =
-                Set.contains cnf.start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+                Set.contains cnf.Start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
 
             (finalTable, accepted)
 
@@ -441,9 +441,9 @@ module Valiant =
             []
         else
             let init = initValiant cnf tokensArr
-            let tableSize = init.tableSize
-            let table = Matrix.create tableSize tableSize (fun i j -> Matrix.get init.table i j)
-            let n = init.n
+            let tableSize = init.TableSize
+            let table = Matrix.create tableSize tableSize (fun i j -> Matrix.get init.Table i j)
+            let n = init.N
 
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
 
@@ -485,7 +485,7 @@ module Valiant =
                 | LayerBackward(table, _, _, _) -> table
 
             let accepted =
-                Set.contains cnf.start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+                Set.contains cnf.Start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
 
             (finalTable, accepted)
 

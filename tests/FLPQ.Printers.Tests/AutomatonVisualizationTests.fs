@@ -33,7 +33,7 @@ let ``DFA from LR(0) automaton dot compiles`` () =
         S -> a
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
@@ -45,12 +45,12 @@ let ``DFA from LR(0) automaton dot compiles`` () =
                     items
                     |> Set.toSeq
                     |> Seq.map (fun (item: LR0Item<string, string>) ->
-                        let lhs = item.lhs |> fun (Nonterminal n) -> n
+                        let lhs = item.Lhs |> fun (Nonterminal n) -> n
 
                         let rhs =
-                            item.rhs
+                            item.Rhs
                             |> List.mapi (fun i sym ->
-                                let prefix = if i = item.dot then "·" else ""
+                                let prefix = if i = item.Dot then "·" else ""
                                 let name = string sym
                                 prefix + name)
                             |> String.concat " "
@@ -195,7 +195,7 @@ let ``LR(0) automaton Tikz compiles`` () =
         S -> a
         "
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
@@ -220,7 +220,7 @@ let ``LR(0) automaton Tikz compiles`` () =
 let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
@@ -244,7 +244,7 @@ let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
 let ``LR(0) automaton Tikz has correct number of states`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
 
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let aut = LRAutomaton.buildLR0 aug
 
@@ -256,7 +256,7 @@ let ``LR(0) automaton Tikz has correct number of states`` () =
     let tikz =
         LRAutomatonTikz.lr0AutomatonToTikz labelPrinter stateVisualizer "rectangle" aut
 
-    for i in 0 .. aut.states.Length - 1 do
+    for i in 0 .. aut.States.Length - 1 do
         Assert.Contains(sprintf "State %d" i, tikz)
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
@@ -300,7 +300,7 @@ module AutomatonGoldenTests =
             Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
-        verifyGolden "nfa_aplus.dot" dot
+        verifyGolden "nfa_aplus.Dot" dot
 
     [<Fact>]
     let ``DFA a+ dot golden`` () =
@@ -308,7 +308,7 @@ module AutomatonGoldenTests =
             Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] 0 (set [ 1 ])
 
         let dot = AutomatonDot.dfaToDot string (fun _i s -> s) aut
-        verifyGolden "dfa_aplus.dot" dot
+        verifyGolden "dfa_aplus.Dot" dot
 
     [<Fact>]
     let ``NFA a+ tikz golden`` () =

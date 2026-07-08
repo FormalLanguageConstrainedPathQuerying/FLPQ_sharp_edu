@@ -90,7 +90,7 @@ module DerivationTreeDot =
         let stackIds =
             stack
             |> List.choose (fun leaf ->
-                match pathToId.TryGetValue(leaf.path) with
+                match pathToId.TryGetValue(leaf.Path) with
                 | true, id -> Some id
                 | false, _ -> None)
             |> List.rev

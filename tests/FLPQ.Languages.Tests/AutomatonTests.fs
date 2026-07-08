@@ -64,14 +64,14 @@ module FactTests =
                 (set [ 2 ])
 
         let dfa = Automaton.toDfa nfa
-        Assert.Equal(0, dfa.startState)
+        Assert.Equal(0, dfa.StartState)
 
     [<Fact>]
     let ``DFA has single start state`` () =
         let dfa =
             Dfa.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1); (1, "b", 0) ] 0 (set [ 1 ])
 
-        Assert.Equal(0, dfa.startState)
+        Assert.Equal(0, dfa.StartState)
 
     [<Fact>]
     let ``alphabet collects all symbols`` () =
@@ -559,7 +559,7 @@ module BackwardCompatibilityTests =
         let nfa =
             Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-        let states = nfa.states
+        let states = nfa.States
         Assert.Equal<string list>([ "q0"; "q1" ], states)
 
     [<Fact>]
@@ -567,15 +567,15 @@ module BackwardCompatibilityTests =
         let nfa =
             Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-        Assert.True((Matrix.get nfa.transitions 0 1).IsSome)
+        Assert.True((Matrix.get nfa.Transitions 0 1).IsSome)
 
     [<Fact>]
     let ``DFA member states provides backward compatibility`` () =
         let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
-        let states = dfa.states
+        let states = dfa.States
         Assert.Equal<string list>([ "q0"; "q1" ], states)
 
     [<Fact>]
     let ``DFA member transitions provides backward compatibility`` () =
         let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
-        Assert.True((Matrix.get dfa.transitions 0 1).IsSome)
+        Assert.True((Matrix.get dfa.Transitions 0 1).IsSome)

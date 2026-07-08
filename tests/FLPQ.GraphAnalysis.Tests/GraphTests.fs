@@ -69,7 +69,7 @@ let ``filterOutgoing all vertices is identity`` () =
     let m = Matrix.create 3 3 (fun i j -> i <> j)
     let g = Graph.fromEdges [ "A"; "B"; "C" ] m
     let filtered = Graph.filterOutgoing (set [ 0; 1; 2 ]) g
-    Assert.Equal(g.edges, filtered.edges)
+    Assert.Equal(g.Edges, filtered.Edges)
 
 [<Fact>]
 let ``filterOutgoing empty set yields no edges`` () =

@@ -69,9 +69,9 @@ module ArroyueloRPQ =
     /// Evaluate a regexp on the given graph and return a |sources| × |V| boolean reachability matrix.
     /// Sources are taken from the NFA's start states.
     let evaluate (graph: NFA<'t, int>) (regexp: Regexp<'t, 'nt>) : Matrix<bool> =
-        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.transitions
+        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.Transitions
         let vCount = Nfa.stateCount graph
-        let sources = graph.startStates |> Set.toArray
+        let sources = graph.StartStates |> Set.toArray
 
         let fullMatrix = evalExpression perLabel vCount regexp
 

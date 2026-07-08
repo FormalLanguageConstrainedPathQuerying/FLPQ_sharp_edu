@@ -79,9 +79,9 @@ module AutomatonDot =
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
-        stateDeclarations nfa.states.Length stateVisualizer nfa.states nfa.startStates nfa.finalStates sb
-        transitionEdges labelPrinter nfa.transitions sb
-        epsEdges nfa.transitions sb
+        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates sb
+        transitionEdges labelPrinter nfa.Transitions sb
+        epsEdges nfa.Transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
@@ -93,8 +93,8 @@ module AutomatonDot =
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
-        stateDeclarations dfa.states.Length stateVisualizer dfa.states (set [ dfa.startState ]) dfa.finalStates sb
-        transitionEdges labelPrinter dfa.transitions sb
+        stateDeclarations dfa.States.Length stateVisualizer dfa.States (set [ dfa.StartState ]) dfa.FinalStates sb
+        transitionEdges labelPrinter dfa.Transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()

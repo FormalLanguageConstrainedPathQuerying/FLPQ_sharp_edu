@@ -128,7 +128,7 @@ module LRStress =
     [<Trait("Category", "Stress")>]
     let ``LR0 automaton for 35-level expression grammar has 100+ states`` () =
         let grammar = multiLevelGrammar 35
-        let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
+        let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let dfa = LRAutomaton.buildLR0 aug
         let stateCount = Dfa.stateCount dfa
@@ -138,8 +138,8 @@ module LRStress =
     [<Trait("Category", "Stress")>]
     let ``LR table for 35-level expression grammar builds successfully`` () =
         let grammar = multiLevelGrammar 35
-        let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
+        let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
         let aug = LRAutomaton.augmentGrammar freshStart grammar
         let table = LRParser.buildLR0Table aug
-        Assert.True(Map.count table.action > 0)
-        Assert.True(Map.count table.goto > 0)
+        Assert.True(Map.count table.Action > 0)
+        Assert.True(Map.count table.GoTo > 0)

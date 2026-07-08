@@ -9,12 +9,12 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
 let private grammarToEbnfText (g: Grammar<string, string>) : string =
-    g.rules
+    g.Rules
     |> List.map (fun r ->
-        let (Nonterminal nt) = r.lhs
+        let (Nonterminal nt) = r.Lhs
 
         let rhsStr =
-            match r.rhs with
+            match r.Rhs with
             | Rhs.EpsilonRhs -> "eps"
             | Rhs.Symbols symbols ->
                 NonEmptyList.toList symbols
@@ -30,7 +30,7 @@ let private grammarToEbnfText (g: Grammar<string, string>) : string =
 
 let private grammarToRsm (g: Grammar<string, string>) : RSM<string, string> =
     let rsm = RsmBuilder.buildRSMFromText (grammarToEbnfText g)
-    { rsm with startBlock = g.start }
+    { rsm with StartBlock = g.Start }
 
 let private stringToTerminals (s: string) : string list = s |> Seq.map string |> Seq.toList
 
@@ -39,9 +39,9 @@ let private inputToGraph (terminals: string list) : Graph<int, Option<string>> =
 let private rnglrAccepts (g: Grammar<string, string>) (input: string list) : bool =
     let rsm = grammarToRsm g
     let graph = inputToGraph input
-    let startNt = g.start
+    let startNt = g.Start
     let freshStart = Nonterminal("S'")
-    let rsmFixed = { rsm with startBlock = startNt }
+    let rsmFixed = { rsm with StartBlock = startNt }
     let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
     Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
 
@@ -57,15 +57,15 @@ let private gllAccepts (g: Grammar<string, string>) (input: string list) : bool 
     let mutable finalStates = Set.empty<int>
 
     for block in blocks do
-        if block.nonterminal = startBlock.nonterminal then
-            startGlobalState <- offset + block.dfa.startState
+        if block.Nonterminal = startBlock.Nonterminal then
+            startGlobalState <- offset + block.Dfa.StartState
 
         finalStates <-
-            block.dfa.finalStates
+            block.Dfa.FinalStates
             |> Set.map (fun local -> offset + local)
             |> Set.union finalStates
 
-        offset <- offset + Dfa.stateCount block.dfa
+        offset <- offset + Dfa.stateCount block.Dfa
 
     let vertexCount = Graph.vertexCount graph
 
@@ -84,10 +84,10 @@ let private cykAccepts (g: Grammar<string, string>) (input: string list) : bool 
 /// then builds SPPF from that range rather than assuming states 0→1.
 let private rnglrTree (g: Grammar<string, string>) (input: string list) : DerivationTree<string, string> option =
     let rsm = grammarToRsm g
-    let startNt = (RSM.startBlock rsm).nonterminal
+    let startNt = (RSM.startBlock rsm).Nonterminal
     let freshStart = Nonterminal("S'")
     let graph = inputToGraph input
-    let rsmFixed = { rsm with startBlock = startNt }
+    let rsmFixed = { rsm with StartBlock = startNt }
     let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
     let vertexCount = Graph.vertexCount graph
 
@@ -95,7 +95,7 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
         None
     else
         // Scan matrix for acceptance range like Rnglr.isAccepted does
-        let K = pathIndex.stateCount * pathIndex.vertexCount
+        let K = pathIndex.StateCount * pathIndex.VertexCount
 
         let found =
             seq {
@@ -107,7 +107,7 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
                             if j % vertexCount = vertexCount - 1 then
                                 let ts = j / vertexCount
 
-                                for entry in Matrix.get pathIndex.matrix i j do
+                                for entry in Matrix.get pathIndex.Matrix i j do
                                     match entry with
                                     | PathIndexEntry.PNonterminal _ -> yield (fs, ts)
                                     | _ -> ()
@@ -118,14 +118,14 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
         | None -> None
         | Some(foundFromState, foundToState) ->
             let rootRange =
-                { fromState = foundFromState
-                  fromVertex = 0
-                  toState = foundToState
-                  toVertex = vertexCount - 1 }
+                { FromState = foundFromState
+                  FromVertex = 0
+                  ToState = foundToState
+                  ToVertex = vertexCount - 1 }
 
             let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
 
-            match sppf.rootIndices with
+            match sppf.RootIndices with
             | rootIdx :: _ ->
                 let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
                 Some tree
@@ -284,7 +284,7 @@ module RnglrRegexEquivalence =
         RsmBuilder.buildRSMFromText $"S -> {regexText}"
 
     let private dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> =
-        (RSM.startBlock rsm).dfa
+        (RSM.startBlock rsm).Dfa
 
     let private dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
         let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))
@@ -297,7 +297,7 @@ module RnglrRegexEquivalence =
 
         let rsmFixed =
             { rsm with
-                startBlock = Nonterminal "S" }
+                StartBlock = Nonterminal "S" }
 
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         Rnglr.isAccepted pathIndex (Graph.vertexCount graph)

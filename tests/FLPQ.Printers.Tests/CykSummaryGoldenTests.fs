@@ -36,10 +36,10 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
             Directory.CreateDirectory stepDir |> ignore
 
             let tex =
-                if step.highlights.IsEmpty then
-                    CykTeX.tableToTeX string step.table
+                if step.Highlights.IsEmpty then
+                    CykTeX.tableToTeX string step.Table
                 else
-                    CykTeX.tableToTeXStyled string step.table step.highlights
+                    CykTeX.tableToTeXStyled string step.Table step.Highlights
 
             File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
 

@@ -17,7 +17,7 @@ module LRRunner =
         let inputTokens = Helpers.readFile inputFile
         let tokens = Tokenizer.tokenizeTerminals inputTokens
 
-        let freshStart = Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
+        let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
 
         let aug = LRAutomaton.augmentGrammar freshStart grammar
 
@@ -30,7 +30,7 @@ module LRRunner =
 
         if useDot then
             let dotContent =
-                match table.automaton with
+                match table.Automaton with
                 | LR0 dfa ->
                     AutomatonDot.dfaToDot (SymbolTeX.toLaTeX string string) (fun idx _ -> sprintf "State %d" idx) dfa
                 | LR1 dfa ->
@@ -39,7 +39,7 @@ module LRRunner =
             Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.dot")) dotContent
         else
             let tikzContent =
-                match table.automaton with
+                match table.Automaton with
                 | LR0 dfa ->
                     let labelPrinter = SymbolTeX.toLaTeX string string
 

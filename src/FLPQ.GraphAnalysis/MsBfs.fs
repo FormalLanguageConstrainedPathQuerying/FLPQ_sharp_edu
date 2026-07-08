@@ -26,8 +26,7 @@ module MsBfs =
         Matrix.map2 (fun nf v -> nf && not v) newFront visited
 
     /// Check if a boolean matrix has any true cell.
-    let private anyTrue (m: Matrix<bool>) : bool =
-        Matrix.fold (fun acc x -> acc || x) false m
+    let private anyTrue (m: Matrix<bool>) : bool = Matrix.fold (||) false m
 
     /// Multiple-source BFS (MS-BFS).
     /// Performs independent BFS traversals from k starting vertices simultaneously.

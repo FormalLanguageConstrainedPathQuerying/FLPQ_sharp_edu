@@ -67,7 +67,7 @@ let exprAccept =
 let exprReject = [ ""; "( )"; "+ x"; "x +"; "x + ( )" ]
 
 let private augmentStringGrammar (g: Grammar<string, string>) =
-    let freshStart = Nonterminal(g.start |> fun (Nonterminal n) -> n + "'")
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     LRAutomaton.augmentGrammar freshStart g
 
 let augGrammar1 = augmentStringGrammar grammar1

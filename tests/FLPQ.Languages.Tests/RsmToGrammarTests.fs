@@ -14,7 +14,7 @@ module ConversionTests =
     let ``RSM to grammar for S -> eps`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> eps"
         let g = RsmToGrammar.convert rsm
-        Assert.Equal(1, List.length g.rules)
+        Assert.Equal(1, List.length g.Rules)
         Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals ""))
         Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
 
@@ -127,7 +127,7 @@ F -> x
     let ``RSM to grammar produces non-empty grammar`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a+"
         let g = RsmToGrammar.convert rsm
-        Assert.NotEmpty(g.rules)
+        Assert.NotEmpty(g.Rules)
         Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
         Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a"))
         Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals ""))

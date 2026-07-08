@@ -122,9 +122,9 @@ module AutomatonTikz =
 
         tikzHeader shape sb
 
-        stateDeclarations nfa.states.Length stateVisualizer nfa.states nfa.startStates nfa.finalStates shape sb
-        transitionEdges labelPrinter nfa.transitions sb
-        epsEdges nfa.transitions sb
+        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates shape sb
+        transitionEdges labelPrinter nfa.Transitions sb
+        epsEdges nfa.Transitions sb
 
         tikzFooter sb
         sb.ToString()
@@ -140,8 +140,8 @@ module AutomatonTikz =
 
         tikzHeader shape sb
 
-        stateDeclarations dfa.states.Length stateVisualizer dfa.states (set [ dfa.startState ]) dfa.finalStates shape sb
-        transitionEdges labelPrinter dfa.transitions sb
+        stateDeclarations dfa.States.Length stateVisualizer dfa.States (set [ dfa.StartState ]) dfa.FinalStates shape sb
+        transitionEdges labelPrinter dfa.Transitions sb
 
         tikzFooter sb
         sb.ToString()

@@ -15,7 +15,7 @@ module GrammarTeX =
         : string =
         let orderedRules =
             let startRules, otherRules =
-                grammar.rules |> List.partition (fun r -> r.lhs = grammar.start)
+                grammar.Rules |> List.partition (fun r -> r.Lhs = grammar.Start)
 
             startRules @ otherRules
 
@@ -24,10 +24,10 @@ module GrammarTeX =
 
         for idx in 0 .. orderedRules.Length - 1 do
             let rule = orderedRules.[idx]
-            let lhs = SymbolTeX.nonterminalContent nonterminalPrinter rule.lhs
+            let lhs = SymbolTeX.nonterminalContent nonterminalPrinter rule.Lhs
 
             let rhs =
-                match rule.rhs with
+                match rule.Rhs with
                 | EpsilonRhs -> @"\varepsilon"
                 | Symbols nel ->
                     NonEmptyList.toList nel

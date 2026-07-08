@@ -249,6 +249,25 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * No emergency fixes.
 * All work is local, no `push`-es.
 
+## CI
+
+CI pipeline is defined in `.github/workflows/ci.yml`. It runs on push to `main`/`dev` and on pull requests.
+The pipeline executes in order: restore → install tools → format check → lint → build → test.
+
+Lint step: `dotnet-fsharplint lint FLPQ.slnx` — linter must be run on the solution file (`.slnx`), not on individual projects. Only run linter when F# source files have changed in the commit.
+
+Lint configuration is in `fsharplint.json` at the repository root.
+
+### Installing linter locally
+```bash
+dotnet tool install -g dotnet-fsharplint
+```
+
+### Running linter locally
+```bash
+DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx
+```
+
 ## Git safety
 
 **Before running `git checkout <file>` or `git restore <file>`, always verify with `git diff <file>` that you won't lose uncommitted user-authored content.** This applies especially to:

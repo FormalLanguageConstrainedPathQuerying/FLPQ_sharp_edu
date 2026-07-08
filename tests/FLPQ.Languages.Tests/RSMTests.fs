@@ -10,11 +10,11 @@ let private makeSBlock () : RsmBlock<string, string> =
     let transitions = [ (0, aSym, 1) ]
     let dfa = Dfa.fromTransitions [ 0; 1 ] transitions 0 (set [ 1 ])
 
-    { RsmBlock.nonterminal = nt; dfa = dfa }
+    { Nonterminal = nt; Dfa = dfa }
 
 let private makeSimpleRSM () : RSM<string, string> =
-    { blocks = [ makeSBlock () ]
-      startBlock = Nonterminal "S" }
+    { Blocks = [ makeSBlock () ]
+      StartBlock = Nonterminal "S" }
 
 
 module RsmBlockTests =
@@ -22,25 +22,25 @@ module RsmBlockTests =
     [<Fact>]
     let ``Block has correct nonterminal`` () =
         let block = makeSBlock ()
-        Assert.Equal(Nonterminal "S", block.nonterminal)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
 
     [<Fact>]
     let ``Block DFA has correct start and final states`` () =
         let block = makeSBlock ()
-        Assert.Equal(0, block.dfa.startState)
-        Assert.Equal<int>(set [ 1 ], block.dfa.finalStates)
+        Assert.Equal(0, block.Dfa.StartState)
+        Assert.Equal<int>(set [ 1 ], block.Dfa.FinalStates)
 
     [<Fact>]
     let ``Block DFA has correct transitions`` () =
         let block = makeSBlock ()
         let aSym = RsmSymbol.RTerm(Terminal "a")
-        let result = Dfa.move block.dfa 0 aSym
+        let result = Dfa.move block.Dfa 0 aSym
         Assert.Equal(Some 1, result)
 
     [<Fact>]
     let ``Block DFA has correct alphabet`` () =
         let block = makeSBlock ()
-        let alphabet = Dfa.alphabet block.dfa
+        let alphabet = Dfa.alphabet block.Dfa
         Assert.Contains(RsmSymbol.RTerm(Terminal "a"), alphabet)
         Assert.Equal(1, Set.count alphabet)
 
@@ -57,14 +57,14 @@ module RSMTests =
     let ``RSM accessor startBlock returns correct block`` () =
         let rsm = makeSimpleRSM ()
         let sb = RSM.startBlock rsm
-        Assert.Equal(Nonterminal "S", sb.nonterminal)
+        Assert.Equal(Nonterminal "S", sb.Nonterminal)
 
     [<Fact>]
     let ``RSM accessor blockOf finds existing block`` () =
         let rsm = makeSimpleRSM ()
         let found = RSM.blockOf (Nonterminal "S") rsm
         Assert.True(found.IsSome)
-        Assert.Equal(Nonterminal "S", found.Value.nonterminal)
+        Assert.Equal(Nonterminal "S", found.Value.Nonterminal)
 
     [<Fact>]
     let ``RSM accessor blockOf returns None for missing block`` () =
@@ -102,19 +102,19 @@ module RSMTests =
         let xSym = RsmSymbol.RTerm(Terminal "x")
 
         let blockA =
-            { RsmBlock.nonterminal = ntA
-              dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
+            { Nonterminal = ntA
+              Dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
 
         let blockB =
-            { RsmBlock.nonterminal = ntB
-              dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
+            { Nonterminal = ntB
+              Dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
 
         let rsm =
-            { RSM.blocks = [ blockA; blockB ]
-              startBlock = ntA }
+            { Blocks = [ blockA; blockB ]
+              StartBlock = ntA }
 
-        Assert.Equal(2, rsm.blocks.Length)
-        Assert.Equal(ntA, rsm.startBlock)
+        Assert.Equal(2, rsm.Blocks.Length)
+        Assert.Equal(ntA, rsm.StartBlock)
         Assert.Equal<int>(set [ 0 ], RSM.startStates rsm)
 
 
@@ -135,7 +135,7 @@ module RsmBuilderPropertyTests =
         |> List.forall (fun text ->
             let rsm = RsmBuilder.buildRSMFromText text
 
-            rsm.blocks |> List.forall (fun block -> Dfa.isDeterministic block.dfa))
+            rsm.Blocks |> List.forall (fun block -> Dfa.isDeterministic block.Dfa))
 
     [<Property>]
     let ``buildRSMFromText blocks match nonterminal count`` () =
@@ -150,10 +150,10 @@ module RsmBuilderPropertyTests =
             let rsm = RsmBuilder.buildRSMFromText text
             let rules = EbnfParser.parseEbnf text
             let grouped = EbnfParser.groupRules rules
-            rsm.blocks.Length = Map.count grouped)
+            rsm.Blocks.Length = Map.count grouped)
 
     [<Fact>]
     let ``buildRSMFromText handles single terminal rule`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a"
-        Assert.Equal(1, rsm.blocks.Length)
-        Assert.True(Dfa.isDeterministic rsm.blocks.Head.dfa)
+        Assert.Equal(1, rsm.Blocks.Length)
+        Assert.True(Dfa.isDeterministic rsm.Blocks.Head.Dfa)

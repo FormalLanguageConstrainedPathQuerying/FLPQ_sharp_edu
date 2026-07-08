@@ -74,11 +74,11 @@ module EbnfParserWhitespaceTests =
         let rsm3 = RsmBuilder.buildRSMFromText "S -> a(a |b)"
 
         let blocksEqual (b1: RsmBlock<string, string>) (b2: RsmBlock<string, string>) =
-            b1.nonterminal = b2.nonterminal
-            && Dfa.stateCount b1.dfa = Dfa.stateCount b2.dfa
-            && b1.dfa.startState = b2.dfa.startState
-            && b1.dfa.finalStates = b2.dfa.finalStates
-            && Dfa.alphabet b1.dfa = Dfa.alphabet b2.dfa
+            b1.Nonterminal = b2.Nonterminal
+            && Dfa.stateCount b1.Dfa = Dfa.stateCount b2.Dfa
+            && b1.Dfa.StartState = b2.Dfa.StartState
+            && b1.Dfa.FinalStates = b2.Dfa.FinalStates
+            && Dfa.alphabet b1.Dfa = Dfa.alphabet b2.Dfa
 
         let b1_2 =
             RSM.blocks rsm1
@@ -101,11 +101,11 @@ module EbnfParserWhitespaceTests =
         let rsm4 = RsmBuilder.buildRSMFromText "S -> a S |eps"
 
         let blocksEqual (b1: RsmBlock<string, string>) (b2: RsmBlock<string, string>) =
-            b1.nonterminal = b2.nonterminal
-            && Dfa.stateCount b1.dfa = Dfa.stateCount b2.dfa
-            && b1.dfa.startState = b2.dfa.startState
-            && b1.dfa.finalStates = b2.dfa.finalStates
-            && Dfa.alphabet b1.dfa = Dfa.alphabet b2.dfa
+            b1.Nonterminal = b2.Nonterminal
+            && Dfa.stateCount b1.Dfa = Dfa.stateCount b2.Dfa
+            && b1.Dfa.StartState = b2.Dfa.StartState
+            && b1.Dfa.FinalStates = b2.Dfa.FinalStates
+            && Dfa.alphabet b1.Dfa = Dfa.alphabet b2.Dfa
 
         let blocks1 = RSM.blocks rsm1
         let blocks2 = RSM.blocks rsm2
@@ -123,11 +123,11 @@ module EbnfParserWhitespaceTests =
         let rsm3 = RsmBuilder.buildRSMFromText "S -> a (a ( a |     b))"
 
         let blocksEqual (b1: RsmBlock<string, string>) (b2: RsmBlock<string, string>) =
-            b1.nonterminal = b2.nonterminal
-            && Dfa.stateCount b1.dfa = Dfa.stateCount b2.dfa
-            && b1.dfa.startState = b2.dfa.startState
-            && b1.dfa.finalStates = b2.dfa.finalStates
-            && Dfa.alphabet b1.dfa = Dfa.alphabet b2.dfa
+            b1.Nonterminal = b2.Nonterminal
+            && Dfa.stateCount b1.Dfa = Dfa.stateCount b2.Dfa
+            && b1.Dfa.StartState = b2.Dfa.StartState
+            && b1.Dfa.FinalStates = b2.Dfa.FinalStates
+            && Dfa.alphabet b1.Dfa = Dfa.alphabet b2.Dfa
 
         let blocks1 = RSM.blocks rsm1
         let blocks2 = RSM.blocks rsm2
@@ -146,38 +146,38 @@ module RsmBuilderTests =
         Assert.Equal(1, List.length blocks)
 
         let block = RSM.startBlock rsm
-        Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.isDeterministic block.dfa)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
+        Assert.True(Dfa.isDeterministic block.Dfa)
 
-        let dfa = block.dfa
-        Assert.Equal(0, dfa.startState)
-        Assert.Equal<int>(set [ 0 ], dfa.finalStates)
+        let dfa = block.Dfa
+        Assert.Equal(0, dfa.StartState)
+        Assert.Equal<int>(set [ 0 ], dfa.FinalStates)
 
     [<Fact>]
     let ``Build RSM for a* grammar`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a*"
         let block = RSM.startBlock rsm
 
-        Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.isDeterministic block.dfa)
-        Assert.Equal(1, Dfa.stateCount block.dfa)
-        Assert.Equal(0, block.dfa.startState)
-        Assert.Equal<int>(set [ 0 ], block.dfa.finalStates)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
+        Assert.True(Dfa.isDeterministic block.Dfa)
+        Assert.Equal(1, Dfa.stateCount block.Dfa)
+        Assert.Equal(0, block.Dfa.StartState)
+        Assert.Equal<int>(set [ 0 ], block.Dfa.FinalStates)
 
         let aSym = RsmSymbol.RTerm(Terminal "a")
-        Assert.True(Dfa.alphabet block.dfa |> Set.contains aSym)
+        Assert.True(Dfa.alphabet block.Dfa |> Set.contains aSym)
 
     [<Fact>]
     let ``Build RSM for a b grammar`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a b"
         let block = RSM.startBlock rsm
 
-        Assert.True(Dfa.isDeterministic block.dfa)
-        Assert.Equal(3, Dfa.stateCount block.dfa)
+        Assert.True(Dfa.isDeterministic block.Dfa)
+        Assert.Equal(3, Dfa.stateCount block.Dfa)
 
         let aSym = RsmSymbol.RTerm(Terminal "a")
         let bSym = RsmSymbol.RTerm(Terminal "b")
-        let alphabet = Dfa.alphabet block.dfa
+        let alphabet = Dfa.alphabet block.Dfa
         Assert.True(Set.contains aSym alphabet)
         Assert.True(Set.contains bSym alphabet)
 
@@ -186,26 +186,26 @@ module RsmBuilderTests =
         let rsm = RsmBuilder.buildRSMFromText "S -> ( a S b )*"
         let block = RSM.startBlock rsm
 
-        Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.isDeterministic block.dfa)
-        Assert.True(block.dfa.finalStates |> Set.contains block.dfa.startState)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
+        Assert.True(Dfa.isDeterministic block.Dfa)
+        Assert.True(block.Dfa.FinalStates |> Set.contains block.Dfa.StartState)
 
     [<Fact>]
     let ``Build RSM for plus and optional operators`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a+ b?"
         let block = RSM.startBlock rsm
 
-        Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.isDeterministic block.dfa)
-        Assert.True(Dfa.stateCount block.dfa >= 1)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
+        Assert.True(Dfa.isDeterministic block.Dfa)
+        Assert.True(Dfa.stateCount block.Dfa >= 1)
 
     [<Fact>]
     let ``Build RSM with multiple rules same LHS`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a\nS -> b"
         let blocks = RSM.blocks rsm
         Assert.Equal(1, List.length blocks)
-        Assert.True(Dfa.isDeterministic rsm.blocks.Head.dfa)
-        Assert.True(Dfa.stateCount rsm.blocks.Head.dfa >= 1)
+        Assert.True(Dfa.isDeterministic rsm.Blocks.Head.Dfa)
+        Assert.True(Dfa.stateCount rsm.Blocks.Head.Dfa >= 1)
 
     [<Fact>]
     let ``Build RSM for expression grammar`` () =
@@ -221,7 +221,7 @@ F -> x
         Assert.Equal(3, List.length blocks)
 
         for block in blocks do
-            Assert.True(Dfa.isDeterministic block.dfa)
+            Assert.True(Dfa.isDeterministic block.Dfa)
 
         let nts = RSM.nonterminals rsm |> Set.ofList
         Assert.True(Set.contains (Nonterminal "E") nts)
@@ -233,26 +233,26 @@ F -> x
         let rsm = RsmBuilder.buildRSMFromText "S -> a* a*"
         let block = RSM.startBlock rsm
 
-        Assert.Equal(Nonterminal "S", block.nonterminal)
-        Assert.True(Dfa.isDeterministic block.dfa)
+        Assert.Equal(Nonterminal "S", block.Nonterminal)
+        Assert.True(Dfa.isDeterministic block.Dfa)
 
-        Assert.Equal(2, Dfa.stateCount block.dfa)
+        Assert.Equal(2, Dfa.stateCount block.Dfa)
 
-        Assert.True(block.dfa.finalStates |> Set.contains 0)
-        Assert.True(block.dfa.finalStates |> Set.contains 1)
-        Assert.Equal(0, block.dfa.startState)
+        Assert.True(block.Dfa.FinalStates |> Set.contains 0)
+        Assert.True(block.Dfa.FinalStates |> Set.contains 1)
+        Assert.Equal(0, block.Dfa.StartState)
 
     [<Fact>]
     let ``RSM built from EBNF has deterministic blocks`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> ( a S b )*"
 
         for block in RSM.blocks rsm do
-            Assert.True(Dfa.isDeterministic block.dfa)
+            Assert.True(Dfa.isDeterministic block.Dfa)
 
     [<Fact>]
     let ``RSM start block is first nonterminal`` () =
         let rsm = RsmBuilder.buildRSMFromText "A -> x\nB -> y"
-        Assert.Equal(Nonterminal "A", rsm.startBlock)
+        Assert.Equal(Nonterminal "A", rsm.StartBlock)
 
 
 module EbnfPropertyTests =

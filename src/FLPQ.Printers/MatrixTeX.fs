@@ -41,7 +41,7 @@ module MatrixTeX =
 
         let highlightSet =
             highlights
-            |> List.map (fun h -> (h.row + dataRowOffset, h.col + dataColOffset, "yellow"))
+            |> List.map (fun h -> (h.Row + dataRowOffset, h.Col + dataColOffset, "yellow"))
             |> Set.ofList
 
         let blockColor idx =
@@ -64,12 +64,12 @@ module MatrixTeX =
         let blockMap =
             blocks
             |> List.map (fun b ->
-                let r = b.startRow + dataRowOffset
-                let c = b.startCol + dataColOffset
+                let r = b.StartRow + dataRowOffset
+                let c = b.StartCol + dataColOffset
 
                 let opts = ResizeArray<string>()
 
-                match b.label with
+                match b.Label with
                 | Matrix.CurrentStepSubmatrix ->
                     opts.Add("draw=red")
                     opts.Add("fill=red!10")
@@ -83,7 +83,7 @@ module MatrixTeX =
                     else
                         "[" + String.concat "," opts + "]"
 
-                (r, c), (blockOptions, b.rowCount, b.colCount))
+                (r, c), (blockOptions, b.RowCount, b.ColCount))
             |> List.groupBy fst
             |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
             |> Map.ofList

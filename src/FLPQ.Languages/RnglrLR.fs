@@ -11,12 +11,12 @@ module RnglrLR =
 
     /// Maps (localState, Nonterminal) to next state in the same block.
     let private transitionsForBlock (block: RsmBlock<'t, 'nt>) : Map<int * Symbol<'t, 'nt>, int> =
-        let localSize = Dfa.stateCount block.dfa
+        let localSize = Dfa.stateCount block.Dfa
         let mutable result = Map.empty
 
         for localState in 0 .. localSize - 1 do
             for localTarget in 0 .. localSize - 1 do
-                match Matrix.get block.dfa.transitions localState localTarget with
+                match Matrix.get block.Dfa.Transitions localState localTarget with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with
@@ -121,17 +121,17 @@ module RnglrLR =
         // Build per-block transition maps and start state maps
         let blockTransitions =
             blocks
-            |> List.map (fun b -> (b.nonterminal, transitionsForBlock b))
+            |> List.map (fun b -> (b.Nonterminal, transitionsForBlock b))
             |> Map.ofList
 
         let blockStartStates =
-            blocks |> List.map (fun b -> (b.nonterminal, b.dfa.startState)) |> Map.ofList
+            blocks |> List.map (fun b -> (b.Nonterminal, b.Dfa.StartState)) |> Map.ofList
 
         let blockFinalStates =
-            blocks |> List.map (fun b -> (b.nonterminal, b.dfa.finalStates)) |> Map.ofList
+            blocks |> List.map (fun b -> (b.Nonterminal, b.Dfa.FinalStates)) |> Map.ofList
 
         // Build augmented start state
-        let augNonterm = startBlock.nonterminal
+        let augNonterm = startBlock.Nonterminal
         let augStartState = blockStartStates.[augNonterm]
 
         let startItems =
@@ -160,7 +160,7 @@ module RnglrLR =
         let mutable goTo = Map.empty
 
         for lrState in 0 .. stateCount - 1 do
-            let items = lrAutomaton.states.[lrState]
+            let items = lrAutomaton.States.[lrState]
 
             // Shift actions for terminal transitions
             for sym in getSymbols blockTransitions items do
@@ -185,7 +185,7 @@ module RnglrLR =
                         action <- Map.add (lrState, Symbol.Epsilon) RnglrAction.Accept action
                     else
                         // Reduce by nonterminal for all possible lookaheads (LR(0): reduce on everything)
-                        let block = blocks |> List.find (fun b -> b.nonterminal = item.blockNonterminal)
+                        let block = blocks |> List.find (fun b -> b.Nonterminal = item.blockNonterminal)
 
                         let allTerminals =
                             RSM.terminals rsm |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))

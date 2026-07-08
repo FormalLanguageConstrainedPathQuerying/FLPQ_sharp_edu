@@ -8,12 +8,12 @@ open FLPQ.GraphAnalysis
 module Rnglr =
 
     let private invertRsmTransitions (block: RsmBlock<'t, 'nt>) : Map<int * RsmSymbol<'t, 'nt>, int list> =
-        let n = Dfa.stateCount block.dfa
+        let n = Dfa.stateCount block.Dfa
         let mutable result = Map.empty
 
         for fromIdx in 0 .. n - 1 do
             for toIdx in 0 .. n - 1 do
-                match Matrix.get block.dfa.transitions fromIdx toIdx with
+                match Matrix.get block.Dfa.Transitions fromIdx toIdx with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with
@@ -28,9 +28,9 @@ module Rnglr =
 
     [<Struct>]
     type private InvBlockData<'t, 'nt when 't: comparison and 'nt: comparison> =
-        { start: int
-          finals: Set<int>
-          invTrans: Map<int * RsmSymbol<'t, 'nt>, int list> }
+        { Start: int
+          Finals: Set<int>
+          InvTrans: Map<int * RsmSymbol<'t, 'nt>, int list> }
 
     let private collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
         let vc = Graph.vertexCount g
@@ -38,7 +38,7 @@ module Rnglr =
 
         for i in 0 .. vc - 1 do
             for j in 0 .. vc - 1 do
-                match Matrix.get g.edges i j with
+                match Matrix.get g.Edges i j with
                 | Some t -> edges.[i].Add(t, j)
                 | None -> ()
 
@@ -53,18 +53,18 @@ module Rnglr =
         let lrTable = RnglrLR.buildLR0Table extRsm
         let lrStateCount = Dfa.stateCount lrTable.automaton
         let vertexCount = Graph.vertexCount inputGraph
-        let K = lrStateCount * vertexCount
+        let k = lrStateCount * vertexCount
 
         let pathIndex =
-            { matrix = Matrix.init K K Set.empty
-              stateCount = lrStateCount
-              vertexCount = vertexCount }
+            { Matrix = Matrix.init k k Set.empty
+              StateCount = lrStateCount
+              VertexCount = vertexCount }
 
         let gss = RnglrGSS.init lrStateCount vertexCount
         let graphEdges = collectGraphEdges inputGraph
 
         let blocks = RSM.blocks extRsm
-        let blockMap = blocks |> List.map (fun b -> (b.nonterminal, b)) |> Map.ofList
+        let blockMap = blocks |> List.map (fun b -> (b.Nonterminal, b)) |> Map.ofList
 
         let invBlockData =
             blocks
@@ -72,11 +72,11 @@ module Rnglr =
                 let invTrans = invertRsmTransitions b
 
                 let invData =
-                    { InvBlockData.start = b.dfa.startState
-                      finals = b.dfa.finalStates
-                      invTrans = invTrans }
+                    { Start = b.Dfa.StartState
+                      Finals = b.Dfa.FinalStates
+                      InvTrans = invTrans }
 
-                (b.nonterminal, invData))
+                (b.Nonterminal, invData))
             |> Map.ofList
 
         let linearIdx (state: int) (vertex: int) = state * vertexCount + vertex
@@ -90,13 +90,13 @@ module Rnglr =
             =
             let fromIdx = linearIdx fromState fromVertex
             let toIdx = linearIdx toState toVertex
-            let current = Matrix.get pathIndex.matrix fromIdx toIdx
+            let current = Matrix.get pathIndex.Matrix fromIdx toIdx
 
             if not (Set.contains entry current) then
-                Matrix.set pathIndex.matrix fromIdx toIdx (Set.add entry current)
+                Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
 
         let getReduceNts (lrState: int) : Nonterminal<'nt> list =
-            let items = lrTable.automaton.states.[lrState]
+            let items = lrTable.automaton.States.[lrState]
 
             items
             |> Set.toList
@@ -106,7 +106,7 @@ module Rnglr =
                 else
                     match Map.tryFind item.blockNonterminal blockMap with
                     | Some block ->
-                        if Set.contains item.rsmState block.dfa.finalStates then
+                        if Set.contains item.rsmState block.Dfa.FinalStates then
                             Some item.blockNonterminal
                         else
                             None
@@ -143,10 +143,10 @@ module Rnglr =
                 for (nextGss, sym) in RnglrGSS.outgoingEdges gss currGss do
                     match toRsmSym sym with
                     | Some rSym ->
-                        match Map.tryFind (currInv, rSym) invData.invTrans with
+                        match Map.tryFind (currInv, rSym) invData.InvTrans with
                         | Some nextInvList ->
                             for nextInv in nextInvList do
-                                let isStart = nextInv = invData.start
+                                let isStart = nextInv = invData.Start
 
                                 if isStart then
                                     let vx = Graph.getVertex nextGss gss.graph
@@ -174,7 +174,7 @@ module Rnglr =
             match Map.tryFind nt invBlockData with
             | Some invData ->
                 let starts =
-                    invData.finals
+                    invData.Finals
                     |> Set.toList
                     |> List.map (fun finalState -> (gssIdx, finalState))
 
@@ -184,7 +184,7 @@ module Rnglr =
                     let cur = RnglrGSS.getStoredStates gss gssIx
                     RnglrGSS.setStoredStates gss gssIx (Set.add (nt, inv) cur)
 
-                if invData.finals |> Set.contains invData.start && preds.IsEmpty then
+                if invData.Finals |> Set.contains invData.Start && preds.IsEmpty then
                     let vx = Graph.getVertex gssIdx gss.graph
                     [ (gssIdx, vx.lrState, vx.inputVertex) ]
                 else
@@ -193,7 +193,7 @@ module Rnglr =
 
         let pending = Array.init vertexCount (fun _ -> Queue<int * int>())
 
-        let processedGotos: Set<Nonterminal<'nt> * int> array = Array.create K Set.empty
+        let processedGotos: Set<Nonterminal<'nt> * int> array = Array.create k Set.empty
 
         let rec processReduction
             (intermediateState: int)
@@ -285,24 +285,23 @@ module Rnglr =
         pathIndex
 
     let isAccepted (pathIndex: PathIndex<'t, 'nt>) (vertexCount: int) : bool =
-        let K = pathIndex.stateCount * pathIndex.vertexCount
+        let k = pathIndex.StateCount * pathIndex.VertexCount
         let mutable result = false
 
-        for i in 0 .. K - 1 do
+        for i in 0 .. k - 1 do
             if not result then
                 let fromVertex = i % vertexCount
 
-                if fromVertex = 0 then
-                    for j in 0 .. K - 1 do
-                        if not result then
-                            let toVertex = j % vertexCount
+                for j in 0 .. k - 1 do
+                    if not result then
+                        let toVertex = j % vertexCount
 
-                            if toVertex = vertexCount - 1 then
-                                let entries = Matrix.get pathIndex.matrix i j
+                        if toVertex = vertexCount - 1 then
+                            let entries = Matrix.get pathIndex.Matrix i j
 
-                                for entry in entries do
-                                    match entry with
-                                    | PathIndexEntry.PNonterminal _ -> result <- true
-                                    | _ -> ()
+                            for entry in entries do
+                                match entry with
+                                | PathIndexEntry.PNonterminal _ -> result <- true
+                                | _ -> ()
 
         result

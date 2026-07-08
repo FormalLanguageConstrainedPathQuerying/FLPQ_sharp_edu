@@ -14,12 +14,12 @@ module LRTableTeX =
 
     let private allActionsFor (table: LRTable<'t, 'nt>) (state: int) (sym: Symbol<'t, 'nt>) : LRAction list =
         let fromMap =
-            match Map.tryFind (state, sym) table.action with
+            match Map.tryFind (state, sym) table.Action with
             | Some a -> [ a ]
             | None -> []
 
         let fromConflicts =
-            table.conflicts
+            table.Conflicts
             |> List.collect (fun c ->
                 match c with
                 | ShiftReduce(s, sym', shiftTo, reduceRule) when s = state && sym' = sym ->
@@ -38,17 +38,17 @@ module LRTableTeX =
         | _ -> actions |> List.map actionStr |> String.concat ", "
 
     let private gotoCell (table: LRTable<'t, 'nt>) (state: int) (nt: Nonterminal<'nt>) : string =
-        match Map.tryFind (state, nt) table.goto with
+        match Map.tryFind (state, nt) table.GoTo with
         | Some n -> string n
         | None -> ""
 
     let private stateCount (table: LRTable<'t, 'nt>) : int =
         let mutable maxState = -1
 
-        for (s, _) in Map.keys table.action do
+        for (s, _) in Map.keys table.Action do
             maxState <- max maxState s
 
-        for (s, _) in Map.keys table.goto do
+        for (s, _) in Map.keys table.GoTo do
             maxState <- max maxState s
 
         maxState + 1
@@ -61,12 +61,12 @@ module LRTableTeX =
         : string =
         let sb = System.Text.StringBuilder()
 
-        let augmentedStart = aug.rules.[0].lhs
+        let augmentedStart = aug.Rules.[0].Lhs
 
         let terminals =
-            aug.rules
+            aug.Rules
             |> List.collect (fun r ->
-                Rhs.toNonEpsilonList r.rhs
+                Rhs.toNonEpsilonList r.Rhs
                 |> List.choose (fun sym ->
                     match sym with
                     | Symbol.T t -> Some t
@@ -74,8 +74,8 @@ module LRTableTeX =
             |> List.distinct
 
         let nonterminals =
-            aug.rules
-            |> List.map (fun r -> r.lhs)
+            aug.Rules
+            |> List.map (fun r -> r.Lhs)
             |> List.distinct
             |> List.filter (fun nt -> nt <> augmentedStart)
 

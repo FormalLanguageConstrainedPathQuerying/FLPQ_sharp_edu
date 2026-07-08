@@ -331,7 +331,7 @@
             "additionalPartials": []
         }
     },
-    "ensureTailCallDiagnosticsInRecursiveFunctions": { "enabled": true },
+    "ensureTailCallDiagnosticsInRecursiveFunctions": { "enabled": false },
     "favourAsKeyword": { "enabled": true },
     "interpolatedStringWithNoSubstitution": { "enabled": true },
     "indexerAccessorStyleConsistency": {

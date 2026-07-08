@@ -3,22 +3,22 @@ namespace FLPQ.Languages
 /// Input state for LL/LR parser step visualization.
 [<Struct>]
 type StepInput<'t> =
-    { tokens: Terminal<'t> list
-      position: int }
+    { Tokens: Terminal<'t> list
+      Position: int }
 
 /// A stack leaf node in an LL parsing step.
 /// Contains the immutable snapshot of the leaf and its path from the tree root.
 [<Struct>]
 type LLStackLeaf<'t, 'nt> =
-    { tree: DerivationTree<'t, 'nt>
-      path: int list }
+    { Tree: DerivationTree<'t, 'nt>
+      Path: int list }
 
 /// Data for a single LL parser visualization step.
 [<Struct>]
 type LLParsingStep<'t, 'nt> =
-    { tree: DerivationTree<'t, 'nt>
-      stack: LLStackLeaf<'t, 'nt> list
-      input: StepInput<'t> }
+    { Tree: DerivationTree<'t, 'nt>
+      Stack: LLStackLeaf<'t, 'nt> list
+      Input: StepInput<'t> }
 
 module LLParser =
 
@@ -30,18 +30,18 @@ module LLParser =
 
         let mutable table = Map.empty
 
-        for ruleIdx in 0 .. g.rules.Length - 1 do
-            let rule = g.rules.[ruleIdx]
+        for ruleIdx in 0 .. g.Rules.Length - 1 do
+            let rule = g.Rules.[ruleIdx]
 
             let lookahead =
-                if Rhs.isEpsilon rule.rhs then
-                    followMap |> Map.find rule.lhs
+                if Rhs.isEpsilon rule.Rhs then
+                    followMap |> Map.find rule.Lhs
                 else
                     let firstOfRhs =
-                        FirstFollow.firstKOfString firstMap k (Rhs.toListWithEpsilon rule.rhs)
+                        FirstFollow.firstKOfString firstMap k (Rhs.toListWithEpsilon rule.Rhs)
 
                     let withoutEps = Set.remove [ Symbol.Epsilon ] firstOfRhs
-                    let followOfA = followMap |> Map.find rule.lhs
+                    let followOfA = followMap |> Map.find rule.Lhs
 
                     if Set.contains [ Symbol.Epsilon ] firstOfRhs then
                         Set.union withoutEps followOfA
@@ -50,7 +50,7 @@ module LLParser =
 
             for w in lookahead do
                 if w.Length <= k then
-                    let key = (rule.lhs, w)
+                    let key = (rule.Lhs, w)
 
                     match Map.tryFind key table with
                     | Some existing ->
@@ -58,7 +58,7 @@ module LLParser =
                             failwithf
                                 "LL(%d) conflict: %A with lookahead %A has rules %d and %d"
                                 k
-                                rule.lhs
+                                rule.Lhs
                                 w
                                 existing
                                 ruleIdx
@@ -85,7 +85,7 @@ module LLParser =
         : Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list =
         let tokens = terminals |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))
 
-        let root = MutableTree(Symbol.N g.start)
+        let root = MutableTree(Symbol.N g.Start)
         let mutable steps: LLParsingStep<'t, 'nt> list = []
 
         let recordStep (stack: MutableTree<'t, 'nt> list) (pos: int) =
@@ -95,13 +95,13 @@ module LLParser =
                 let stackSnapshots =
                     stack
                     |> List.map (fun n ->
-                        { tree = n.ToImmutable()
-                          path = n.GetPath() })
+                        { Tree = n.ToImmutable()
+                          Path = n.GetPath() })
 
                 steps <-
-                    { tree = treeSnapshot
-                      stack = stackSnapshots
-                      input = { tokens = terminals; position = pos } }
+                    { Tree = treeSnapshot
+                      Stack = stackSnapshots
+                      Input = { Tokens = terminals; Position = pos } }
                     :: steps
 
         let expandNonterminal
@@ -114,8 +114,8 @@ module LLParser =
 
             match Map.tryFind key table with
             | Some ruleIdx ->
-                let rule = g.rules.[ruleIdx]
-                let rhsSyms = Rhs.toListWithEpsilon rule.rhs
+                let rule = g.Rules.[ruleIdx]
+                let rhsSyms = Rhs.toListWithEpsilon rule.Rhs
                 let rhsNodes = rhsSyms |> List.map (fun sym -> MutableTree(sym))
 
                 for child in rhsNodes do

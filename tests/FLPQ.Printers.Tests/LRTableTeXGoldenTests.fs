@@ -13,7 +13,7 @@ module private Grammars =
         Grammar.parseGrammar "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x"
 
     let private freshStart grammar =
-        Nonterminal(grammar.start |> fun (Nonterminal n) -> n + "'")
+        Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
 
     let private augGrammar1 =
         LRAutomaton.augmentGrammar (freshStart grammar1Bnf) grammar1Bnf

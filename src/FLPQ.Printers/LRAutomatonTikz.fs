@@ -13,16 +13,16 @@ module LRAutomatonTikz =
         (item: LR0Item<'t, 'nt>)
         : string =
         let beforeDot =
-            item.rhs
-            |> List.take item.dot
+            item.Rhs
+            |> List.take item.Dot
             |> List.map (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter)
 
         let afterDot =
-            item.rhs
-            |> List.skip item.dot
+            item.Rhs
+            |> List.skip item.Dot
             |> List.map (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter)
 
-        let lhs = SymbolTeX.nonterminalContent nonterminalPrinter item.lhs
+        let lhs = SymbolTeX.nonterminalContent nonterminalPrinter item.Lhs
         let rhsParts = (beforeDot @ [ @"\cdot" ] @ afterDot) |> String.concat "\\ "
         sprintf "%s &\\to %s" lhs rhsParts
 
@@ -55,11 +55,11 @@ module LRAutomatonTikz =
                 renderRhsWithDot
                     terminalPrinter
                     nonterminalPrinter
-                    { lhs = item.lhs
-                      rhs = item.rhs
-                      dot = item.dot }
+                    { Lhs = item.Lhs
+                      Rhs = item.Rhs
+                      Dot = item.Dot }
 
-            let lookahead = SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter item.lookahead
+            let lookahead = SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter item.Lookahead
             sb.AppendLine(sprintf "%s,\\ %s \\\\" baseLine lookahead) |> ignore
 
         sb.ToString().TrimEnd('\n')

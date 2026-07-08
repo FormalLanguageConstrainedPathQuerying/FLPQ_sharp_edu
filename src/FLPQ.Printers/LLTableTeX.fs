@@ -25,13 +25,13 @@ module LLTableTeX =
             @"$\{ " + elements + @" \}$"
 
     let private renderRule (symbolPrinter: Symbol<'t, 'nt> -> string) (rule: Rule<'t, 'nt>) : string =
-        let lhs = symbolPrinter (Symbol.N rule.lhs)
+        let lhs = symbolPrinter (Symbol.N rule.Lhs)
 
         let rhs =
-            if Rhs.isEpsilon rule.rhs then
+            if Rhs.isEpsilon rule.Rhs then
                 @"\varepsilon"
             else
-                Rhs.toNonEpsilonList rule.rhs
+                Rhs.toNonEpsilonList rule.Rhs
                 |> List.map (fun sym ->
                     match sym with
                     | Symbol.Epsilon -> @"\varepsilon"
@@ -81,7 +81,7 @@ module LLTableTeX =
 
                 let cell =
                     match Map.tryFind key table with
-                    | Some ruleIdx -> renderRule symbolPrinter grammar.rules.[ruleIdx]
+                    | Some ruleIdx -> renderRule symbolPrinter grammar.Rules.[ruleIdx]
                     | None -> ""
 
                 sb.Append(@" & " + cell) |> ignore
@@ -90,7 +90,7 @@ module LLTableTeX =
 
             let endCell =
                 match Map.tryFind endKey table with
-                | Some ruleIdx -> renderRule symbolPrinter grammar.rules.[ruleIdx]
+                | Some ruleIdx -> renderRule symbolPrinter grammar.Rules.[ruleIdx]
                 | None -> ""
 
             sb.Append(@" & " + endCell + @" \\ \hline") |> ignore

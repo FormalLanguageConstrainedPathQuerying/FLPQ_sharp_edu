@@ -8,16 +8,16 @@ module Cyk =
     /// Data for a single CYK algorithm trace step.
     [<Struct>]
     type CykTraceStep<'nt when 'nt: comparison> =
-        { table: ParsingTable<'nt>
-          highlights: Matrix.Highlight list }
+        { Table: ParsingTable<'nt>
+          Highlights: Matrix.Highlight list }
 
     let private findTerminalRules (rules: Rule<'t, 'nt> list) (t: Terminal<'t>) : Nonterminal<'nt> list =
         rules
         |> List.choose (fun rule ->
-            match rule.rhs with
+            match rule.Rhs with
             | Symbols nel when NonEmptyList.length nel = 1 ->
                 match NonEmptyList.head nel with
-                | Symbol.T t' when t' = t -> Some rule.lhs
+                | Symbol.T t' when t' = t -> Some rule.Lhs
                 | _ -> None
             | _ -> None)
 
@@ -28,12 +28,12 @@ module Cyk =
         : Nonterminal<'nt> list =
         rules
         |> List.choose (fun rule ->
-            match rule.rhs with
+            match rule.Rhs with
             | Symbols nel when NonEmptyList.length nel = 2 ->
                 let syms = NonEmptyList.toList nel
 
                 match syms.[0], syms.[1] with
-                | Symbol.N l, Symbol.N r when l = left && r = right -> Some rule.lhs
+                | Symbol.N l, Symbol.N r when l = left && r = right -> Some rule.Lhs
                 | _ -> None
             | _ -> None)
 
@@ -68,7 +68,7 @@ module Cyk =
         let table = Matrix.init n n Set.empty
 
         for i in 0 .. n - 1 do
-            let producing = findTerminalRules cnf.rules terminals.[i]
+            let producing = findTerminalRules cnf.Rules terminals.[i]
 
             if not (List.isEmpty producing) then
                 let ntSet = Set.ofList producing
@@ -80,7 +80,7 @@ module Cyk =
         for len in 2..n do
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let accumulated = computeCell cnf.rules table i j
+                let accumulated = computeCell cnf.Rules table i j
 
                 if not (Set.isEmpty accumulated) then
                     Matrix.set table i j accumulated
@@ -100,25 +100,25 @@ module Cyk =
 
         let onDiagonalCell i _ =
             let h: Matrix.Highlight =
-                { row = i
-                  col = i
-                  label = Matrix.CurrentCell }
+                { Row = i
+                  Col = i
+                  Label = Matrix.CurrentCell }
 
             stepHighlights <- h :: stepHighlights
 
         let onCellFound i j accumulated =
             if not (Set.isEmpty accumulated) then
                 let h: Matrix.Highlight =
-                    { row = i
-                      col = j
-                      label = Matrix.CurrentCell }
+                    { Row = i
+                      Col = j
+                      Label = Matrix.CurrentCell }
 
                 stepHighlights <- h :: stepHighlights
 
         let onLengthDone table _len =
             steps.Add(
-                { table = Matrix.create (Matrix.rows table) (Matrix.cols table) (fun i j -> Matrix.get table i j)
-                  highlights = List.rev stepHighlights }
+                { Table = Matrix.create (Matrix.rows table) (Matrix.cols table) (fun i j -> Matrix.get table i j)
+                  Highlights = List.rev stepHighlights }
             )
 
             stepHighlights <- []
@@ -132,7 +132,7 @@ module Cyk =
         if n = 0 then
             false
         else
-            Set.contains cnf.start (Matrix.get table 0 (n - 1))
+            Set.contains cnf.Start (Matrix.get table 0 (n - 1))
 
     /// Parse pre-tokenized input using CYK algorithm.
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =

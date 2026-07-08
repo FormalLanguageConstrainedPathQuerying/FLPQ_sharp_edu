@@ -48,24 +48,25 @@ let ``GraphReader: no start vertices specified, all vertices as sources`` () =
     let text = "0 a 1\n1 b 2"
     let g = GraphReader.parseGraph text
     Assert.Equal(3, Nfa.stateCount g)
-    Assert.True(Set.ofList [ 0; 1; 2 ] = g.startStates)
-    Assert.True((Matrix.get g.transitions 0 1).IsSome)
-    Assert.True((Matrix.get g.transitions 1 2).IsSome)
+    Assert.True(Set.ofList [ 0; 1; 2 ] = g.StartStates)
+    Assert.True((Matrix.get g.Transitions 0 1).IsSome)
+
+    Assert.True((Matrix.get g.Transitions 1 2).IsSome)
 
 [<Fact>]
 let ``GraphReader: explicit start vertices`` () =
     let text = "0 2\n0 a 1\n1 b 2"
     let g = GraphReader.parseGraph text
     Assert.Equal(3, Nfa.stateCount g)
-    Assert.True(Set.ofList [ 0; 2 ] = g.startStates)
+    Assert.True(Set.ofList [ 0; 2 ] = g.StartStates)
 
 [<Fact>]
 let ``GraphReader: per-label adjacency`` () =
     let text = "0 a 1\n0 b 2"
     let g = GraphReader.parseGraph text
     Assert.True(Set.ofList [ "a"; "b" ] = Nfa.alphabet g)
-    Assert.True((Matrix.get g.transitions 0 1).IsSome)
-    Assert.True((Matrix.get g.transitions 0 2).IsSome)
+    Assert.True((Matrix.get g.Transitions 0 1).IsSome)
+    Assert.True((Matrix.get g.Transitions 0 2).IsSome)
 
 // --- Belyanin tests (task 59, updated for task 64) ---
 

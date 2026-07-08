@@ -192,8 +192,8 @@ module ModifiedValiantTests =
             let cells =
                 submatrices
                 |> List.collect (fun m ->
-                    [ for i in m.row - m.Size + 1 .. m.row do
-                          for j in m.col .. m.col + m.Size - 1 do
+                    [ for i in m.Row - m.Size + 1 .. m.Row do
+                          for j in m.Col .. m.Col + m.Size - 1 do
                               yield (i, j) ])
 
             let uniqueCells = Set.ofList cells
