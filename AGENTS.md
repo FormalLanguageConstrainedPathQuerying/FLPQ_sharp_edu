@@ -48,7 +48,7 @@ dotnet fsi Script.fsx
 ```
 
 ## Basic code style
-* Use PascalCase for types and modules, camelCase for functions and values.
+* Use PascalCase for types, modules, record fields, and union case fields; camelCase for functions and values.
 * Prefer `let` bindings over mutable state.
 * Use XML documentation comments (///) for public APIs.
 * Use units of measure
