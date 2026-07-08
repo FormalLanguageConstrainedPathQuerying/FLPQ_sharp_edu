@@ -1,5 +1,5 @@
 * This file contains user-defined tasks. Do not modify them. Only track status of tasks in this file.
-* **Strict rule: When marking a task as done, ONLY prepend `[done] ` to the existing task line. NEVER rewrite, reformulate, shorten, or replace the task description itself. The task text is immutable — only the status tag may change.**
+* **Strict rule: When marking a task as done, ONLY prepend `[done] ` to the existing task line (between task number and task formulation). NEVER rewrite, reformulate, shorten, or replace the task description itself. The task text is immutable — only the status tag may change.**
 * The book is in TeX. Root of the book in `../../`.
 * In some tasks Russian may be used to simplify references to the book that is in Russian.
 
@@ -236,3 +236,48 @@
       7.   Equivalence requirement: after refactoring, ALL existing RNGLR tests must pass (21/21), and the 2 currently failing right-nullable tests must be resolved. Equivalence with the pre-refactoring implementation must be verified for all existing passing tests.
 
 141. [done] Refactor Automaton.intersection. Output tyme mast be NFA<'t, 's * 'v>: States in resulting automaton is a product of states of intut automata.
+142.  [done] Add GLL proerty tests:
+            - S -> a* ≡ DFA for a* ([<Property>])
+            - S -> a* a* ≡ DFA for a* a* ([<Property>])
+            - S -> (a | b)* ≡ DFA for (a | b)* ([<Property>])
+            - S -> (a | b)* (a | c)* ≡ DFA for (a | b)* (a | c)* ([<Property>])
+            - For random strings, gllAccepts rsm str = dfaAccepts dfa str.
+143.  [done] Add tests for GLL and GLR. Check acceptance and crone of derivation tree.
+      1.    Grammar: S -> N a*; N -> (a a) | a  Accept: a, aa, aaa, aaaa . Reject: <empty string>, b, ab, aab, aaab, abaa
+      2.    Grammar: S -> a* N; N -> a | (a a)  Accept: a, aa, aaa, aaaa . Reject: <empty string>, b, ab, aab, aaab, abaa
+      3.    Grammar: S -> N*; N -> a | (a a)  Accept: <empty string>, a, aa, aaa, aaaa . Reject: b, ab, aab, aaab, abaa
+      4.    Grammar: S -> a | S S | S S S  Accept: a, aa, aaa, aaaa . Reject: <empty string>, b, ab, aab, aaab, abaa
+144.  [done] For all grammars from task 143 add property tests: for random string acceptGLL str == acceptGLR str == acceptCYK  str
+145.  [done] Fix test that fails on CI. Fix locally. Do not try to pysh and run CI. Log:
+          ```
+               Test run for /Users/runner/work/FLPQ_sharp_edu/FLPQ_sharp_edu/tests/FLPQ.Printers.Tests/bin/Release/net10.0/FLPQ.Printers.Tests.dll (.NETCoreApp,Version=v10.0)
+               A total of 1 test files matched the specified pattern.
+               [xUnit.net 00:00:00.55]     AutomatonVisualizationTests+AutomatonGoldenTests.NFA a+ tikz golden [FAIL]
+               Failed AutomatonVisualizationTests+AutomatonGoldenTests.NFA a+ tikz golden [46 ms]
+               Error Message:
+               Golden file 'nfa_aplus.tikz' was created in output/GoldenData/.
+               Copy it to tests/FLPQ.Printers.Tests/GoldenData/ and re-run tests.
+               Stack Trace:
+                    at GoldenHelpers.verifyGolden(String goldenFileName, String actualContent) in /Users/runner/work/FLPQ_sharp_edu/FLPQ_sharp_edu/tests/FLPQ.Printers.Tests/GoldenHelpers.fs:line 20
+               at AutomatonVisualizationTests.AutomatonGoldenTests.NFA a+ tikz golden() in /Users/runner/work/FLPQ_sharp_edu/FLPQ_sharp_edu/tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs:line 319
+               at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+               at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+               Failed!  - Failed:     1, Passed:    47, Skipped:     0, Total:    48, Duration: 410 ms - FLPQ.Printers.Tests.dll (net10.0)
+
+          ```
+146.  [done] Set FSharp lint up (https://fsprojects.github.io/FSharpLint/).
+      1.    Install dotnet tool: https://fsprojects.github.io/FSharpLint/how-tos/install-dotnet-tool.html
+      2.    Run with default config and generate detailed structured report to `linter_report.md`. Group problems by types. Add brief summary.
+      3.    Do not try for fix problems detected by linter. Just generate report.
+147.  [done] Linter tuning.
+       1.    Move linter report linter_report.md to tasks/ 
+       2.    Create project-specific linetr config: https://fsprojects.github.io/FSharpLint/how-tos/rule-configuration.html   It must be based on default config: https://github.com/fsprojects/FSharpLint/blob/master/src/FSharpLint.Core/fsharplint.json 
+       3.    Tune config. 
+             1.    FL0085 — Local Function Naming: in our project we use camelCase
+             2.    FL0069 — Type Parameter Naming: in our project we use camelCase
+             3.    Regenerate report. Place it in tasks/linter_report.md. Align it with previous version of report.
+148.  Fix preblems detected by linter.
+      1.    Fix problems from tasks/linter_report.md Ensure that all problems fixed.
+      2.    Update AGENTS.md with instructions to use linter to check whether all ready for commit. You must not commit code with problems detected by linter. Run linter only if F#-related files were chenged. Add instructions how to run linter.
+      3.    Update CI. Linter must be executed on CI.
