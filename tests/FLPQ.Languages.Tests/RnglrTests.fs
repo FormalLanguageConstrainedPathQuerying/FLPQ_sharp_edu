@@ -567,3 +567,61 @@ module RnglrGrammarAcceptanceAndTree =
         [<Fact>]
         let ``rejects abaa`` () =
             Assert.False(rnglrAccepts grammar4 [ "a"; "b"; "a"; "a" ])
+
+    /// Cross-algorithm equivalence: GLL ≡ RNGLR ≡ CYK for all 4 grammars.
+    module CrossAlgorithmEquivalence =
+
+        [<Property>]
+        let ``Grammar 1: GLL == CYK`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar1 input = cykAccepts grammar1 input
+
+        [<Property>]
+        let ``Grammar 1: RNGLR == CYK`` (s: string) =
+            let input = stringToTerminals s
+            rnglrAccepts grammar1 input = cykAccepts grammar1 input
+
+        [<Property>]
+        let ``Grammar 1: GLL == RNGLR`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar1 input = rnglrAccepts grammar1 input
+
+        [<Property>]
+        let ``Grammar 2: GLL == CYK`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar2 input = cykAccepts grammar2 input
+
+        [<Property>]
+        let ``Grammar 2: RNGLR == CYK`` (s: string) =
+            let input = stringToTerminals s
+            rnglrAccepts grammar2 input = cykAccepts grammar2 input
+
+        [<Property>]
+        let ``Grammar 2: GLL == RNGLR`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar2 input = rnglrAccepts grammar2 input
+
+        [<Property>]
+        let ``Grammar 3: GLL == CYK`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar3 input = cykAccepts grammar3 input
+
+        [<Property>]
+        let ``Grammar 3: RNGLR == CYK`` (s: string) =
+            let input = stringToTerminals s
+            rnglrAccepts grammar3 input = cykAccepts grammar3 input
+
+        [<Property>]
+        let ``Grammar 3: GLL == RNGLR`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar3 input = rnglrAccepts grammar3 input
+
+        [<Property>]
+        let ``Grammar 4: GLL == CYK`` (s: string) =
+            let input = stringToTerminals s
+            gllAccepts grammar4 input = cykAccepts grammar4 input
+
+        [<Property>]
+        let ``Grammar 4: GLL == CYK (filter a chars)`` (s: string) =
+            let input = stringToTerminals s |> List.filter (fun c -> c = "a")
+            gllAccepts grammar4 input = cykAccepts grammar4 input
