@@ -206,7 +206,7 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
    * **Verify Skip count**: `dotnet test` output must show `Skipped: 0` for all test projects. A non-zero Skip count is a blocker. If a Skip is intentional, it must be documented in `detailed_plan.md` with justification before merge.
 * If a test cannot be made to pass, use `[<Fact(Skip="explanation")>]` with a clear reason — never an empty body `()`, tautological assertions, or commented-out asserts. A Skip is visible in test output; an empty body silently produces a false positive.
    * If the task specifies equivalence with a reference implementation (e.g., "must produce identical results as CYK"), the equivalence property tests MUST pass with zero counterexamples.
-* Use `Squash and Rebase` strategy to move changes from feature-branch to dev. History of `dev` must be linear.
+* Use `Squash and Rebase` strategy to move changes from feature-branch to dev. History of `dev` must be linear. The merge commit message on dev must include the full detailed body from the feature branch commit(s) — a bare subject line is insufficient.
 * No emergency fixes.
 * All work is local, no `push`-es.
 
