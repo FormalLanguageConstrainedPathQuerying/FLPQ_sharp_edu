@@ -508,7 +508,7 @@ To suppress only the tail-call diagnostics while keeping naming checks, set `ens
 
 ### Linter Report
 
-Generated after each config change and stored at `tasks/linter_report.md`. The report includes per-rule breakdowns, per-file warning counts, and comparisons with the default config.
+The temporary report (`tasks/linter_report.md`) was removed after task 148 — it served only to introduce fsharplint. Use `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` to generate a fresh report when needed.
 
 ### Current State (post task 147)
 
