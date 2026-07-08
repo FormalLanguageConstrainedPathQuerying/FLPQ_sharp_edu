@@ -60,3 +60,6 @@ nunit-*.xml
 
 #Examples
 viz_output/*
+
+#tmp for agent
+tmp/*
