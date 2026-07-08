@@ -128,6 +128,16 @@ Concrete rules:
   * Documentation must be detailed enough to realize why a particular decision was made in the project.
   * Commit messages must be detailed enough to realize reasons of changes. Anyone must be able to explain why particular changes were required using only commit message.
 
+## Atomic subtasks
+
+* **Detailed plan requirement**: `tasks/detailed_plan.md` MUST decompose the task into atomic subtasks. Each subtask:
+  - Is small enough to complete in a single focused work session (typically 30–90 minutes).
+  - Produces a compilable, testable increment — no partial implementations left uncommitted.
+  - Has a unique identifier (e.g., "S1", "S2") used in commit messages and plan tracking.
+  - States its inputs (dependencies on prior subtasks or existing code) and outputs (new types, functions, tests, docs).
+* **Subtask granularity**: if a subtask cannot be committed as a self-contained increment, it is too large — split it further.
+* **Bounded uncommitted work**: uncommitted work on a feature branch must never exceed one atomic subtask. If a session is interrupted, the loss is bounded to that single subtask.
+
 ## Multi-task planning
 
 * When the user asks to work on a **set of tasks** (several task IDs), do NOT jump directly into implementation. First create a high-level global plan in `tasks/global_plan.md`.
@@ -149,36 +159,44 @@ Concrete rules:
 * Create a feature-branch from `dev` for this single task. One task — one branch.
 * Generate detailed plan for this task to `detailed_plan.md`. Track your progress in detailed plan.
 * Update all respective documentation. Commit updates.
-* Write tests.
-* Development loop
-  * Update documentation. All relevant documentation must be updated: all task-related docs (including `fixes_for_book.md`), all project-related documentation (including `README.md`).
-  * After implementing a module, create or update `docs/<module>.md` describing its design and logic (type definitions, function signatures, design decisions).
-  * Update `tasks/knowledge_base.md` with any non-obvious knowledge gained about libraries, frameworks, or tooling (API quirks, workarounds, best practices discovered during implementation).
-  * Write code
-  * When creating a new project, add it to `FLPQ.slnx`.
-  * Check formatting and compilation
-   * Check tests — run `dotnet test` on the full solution. Every new and existing test must pass.
-   * Repeat until all tests pass.
-   * **Hard gate**: a task is ready to move to dev ONLY when every test in the entire solution passes (zero failures). Run `dotnet test` on the whole solution, not just the new test file. A single failing test is a blocker.
-   * **Blocked work protocol**: if you encounter an algorithmic problem that you cannot resolve to 100% correctness, STOP. Do not merge. Do not mark done. Do not comment out or weaken failing tests to make the suite green. Instead:
-     1. Stay on the feature branch.
-     2. Report the problem concretely to the user:
-        - Which tests fail and why.
-        - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls").
-        - What you've tried and what remains unresolved.
-     3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task.
-     4. Update `tasks/detailed_plan.md` with a section listing:
-        - Which subtasks are blocked and why.
-        - What was tried and what failed.
-        - What specific help is needed from the user.
-        Commit this update so the plan serves as a persistent record of the blocking state.
-  * **Duplication check**: before considering a module done, scan the codebase for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
-  * **Genericity check**: verify that new types use generic parameters (`'t`, `'nt`) where applicable and that non-empty collections use `NonEmptyList`/`NonEmptySet`.
-  * **Equivalence test check**: if the module is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
-  * **Separation check**: verify that algorithm modules do not contain TeX/dot string generation or file I/O.
-* If a book error is found, it must be recorded in `fixes_for_book.md` with a clear description and suggested correction, and the user should be notified.
-* If additional information, that not presented in the book was required for implementation, it must be recorded in `fixes_for_book.md` with a clear description and suggested improvements, and the user should be notified.
-* Move changes to `dev`
+
+## Atomic subtask loop
+
+Each atomic subtask from the detailed plan is executed as a self-contained cycle:
+
+1. **Implement** the subtask's outputs (types, functions, code).
+2. **Write tests** for the subtask's outputs.
+3. **Update documentation**: all task-related docs (including `fixes_for_book.md`), module docs (`docs/<module>.md`), and `tasks/knowledge_base.md` for non-obvious discoveries.
+4. **Quality gates** — run in order:
+   - Format: `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — must pass.
+   - Lint: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — zero warnings.
+   - Build: `dotnet build FLPQ.slnx -c Debug > tmp/build-output.txt 2>&1` — must succeed.
+   - Tests: `dotnet test > tmp/test-output.txt 2>&1` — every test passes, zero failures, `Skipped: 0`.
+5. **Checks**:
+   - **Duplication check**: scan for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
+   - **Genericity check**: verify new types use generic parameters (`'t`, `'nt`) where applicable and non-empty collections use `NonEmptyList`/`NonEmptySet`.
+   - **Equivalence test check**: if the subtask is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
+   - **Separation check**: verify algorithm modules do not contain TeX/dot string generation or file I/O.
+6. **Commit** with message `feat(XXX-SN): description` where `XXX` is the task ID and `SN` is the subtask identifier. Verify `tasks.md` is not staged.
+7. Mark the subtask as completed in `tasks/detailed_plan.md`.
+8. Repeat for the next subtask.
+
+**Hard gate**: a subtask is committed ONLY when every quality gate passes. A single failing test or lint warning is a blocker.
+
+**Blocked work protocol**: if you encounter an algorithmic problem that you cannot resolve to 100% correctness, STOP. Do not commit. Do not merge. Do not comment out or weaken failing tests to make the suite green. Instead:
+1. Stay on the feature branch.
+2. Report the problem concretely to the user:
+   - Which tests fail and why.
+   - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls").
+   - What you've tried and what remains unresolved.
+3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task.
+4. Update `tasks/detailed_plan.md` with a section listing:
+   - Which subtasks are blocked and why.
+   - What was tried and what failed.
+   - What specific help is needed from the user.
+   Commit this update so the plan serves as a persistent record of the blocking state.
+
+**Book errors**: if a book error is found, record it in `fixes_for_book.md` with a clear description and suggested correction, and notify the user. If additional information not presented in the book was required, record it similarly.
 * **Completion verification**: before marking a task as done, confirm:
    - ALL subtasks from the task description in `tasks.md` are implemented.
    - ALL tests across the entire solution pass (zero failures).
@@ -208,7 +226,8 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Use feature-branch for each task. 
   * Branch naming convention: `feature/XXX-short-description` where `XXX` is the task `ID` from `tasks.md`.
   * Never combine multiple task IDs in a single branch. Each task gets its own branch.
-* Commit message format: conventional Commits: feat:, fix:, docs:, test:
+* Commit message format: conventional Commits with subtask identifier: `feat(XXX-SN): description`, `fix(XXX-SN): description`, etc. where `XXX` is the task ID and `SN` is the atomic subtask identifier from `detailed_plan.md`.
+* Each commit corresponds to one completed atomic subtask. Never combine multiple subtasks in a single commit.
 * Before each commit:
   * Format code.
   * Run linters and capture output:
