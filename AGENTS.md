@@ -39,13 +39,27 @@ This project is supplementary materials for the book on formal language constrai
 ## Format
 * To format all F# sources: `dotnet fantomas .`
 * To check formatting without modifying files: `dotnet fantomas . --check`
+* To run F# linter per-project: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint <project-path>`
+* To run F# linter on full solution: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx` (slow, may timeout)
 
-## Prototyping 
+## Prototyping
 
 You can use F# scripts and F# interactive for rapid prototyping.
 ```
 dotnet fsi Script.fsx
 ```
+
+## Tool output capture
+
+* **Mandatory**: every invocation of `dotnet build`, `dotnet test`, `dotnet fantomas --check`, `dotnet-fsharplint lint`, or similar expensive CLI tools MUST redirect all output (stdout + stderr) to a file in `tmp/`.
+* Command pattern: `dotnet test > tmp/test-output.txt 2>&1`
+* After capturing, analyze the output file with the Grep or Read tools — do NOT re-run the tool with a different grep/filter.
+* File naming convention in `tmp/`:
+  * `tmp/build-output.txt` — build output
+  * `tmp/test-output.txt` — test output
+  * `tmp/fantomas-output.txt` — fantomas format check output
+  * `tmp/fsharplint-output.txt` — fsharplint output
+* Re-running the same tool is allowed ONLY when source files changed since the last capture.
 
 ## Basic code style
 * Use PascalCase for types, modules, record fields, and union case fields; camelCase for functions and values.
@@ -195,9 +209,12 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
   * Branch naming convention: `feature/XXX-short-description` where `XXX` is the task `ID` from `tasks.md`.
   * Never combine multiple task IDs in a single branch. Each task gets its own branch.
 * Commit message format: conventional Commits: feat:, fix:, docs:, test:
-* Before each commit: 
+* Before each commit:
   * Format code.
-  * Check that compilation is successful.
+  * Run linters and capture output:
+    * `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — **must pass** (no formatting issues)
+    * `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — **must have zero warnings**
+  * Check that compilation is successful (capture output to `tmp/build-output.txt`).
   * **Verify tasks.md is not staged.** Run `git diff --cached --name-only | grep -q tasks.md` — if it matches, unstage it with `git reset HEAD tasks.md`. tasks.md must never be committed from a feature branch.
 * Before moving changes from feature-branch to dev:
    * Format code.
