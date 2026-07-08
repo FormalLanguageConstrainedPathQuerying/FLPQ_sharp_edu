@@ -52,6 +52,7 @@ dotnet fsi Script.fsx
 ## Tool output capture
 
 * **Mandatory**: every invocation of `dotnet build`, `dotnet test`, `dotnet fantomas --check`, `dotnet-fsharplint lint`, or similar expensive CLI tools MUST redirect all output (stdout + stderr) to a file in `tmp/`.
+* **NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on tool output. Write raw output to `tmp/` first, then use the Grep or Read tools to analyze the captured file.
 * Command pattern: `dotnet test > tmp/test-output.txt 2>&1`
 * After capturing, analyze the output file with the Grep or Read tools — do NOT re-run the tool with a different grep/filter.
 * File naming convention in `tmp/`:
@@ -168,6 +169,7 @@ Each atomic subtask from the detailed plan is executed as a self-contained cycle
 2. **Write tests** for the subtask's outputs.
 3. **Update documentation**: all task-related docs (including `fixes_for_book.md`), module docs (`docs/<module>.md`), and `tasks/knowledge_base.md` for non-obvious discoveries.
 4. **Quality gates** — run in order:
+   - **Output capture check**: every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipes (`|`) or inline filtering are forbidden.
    - Format: `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — must pass.
    - Lint: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — zero warnings.
    - Build: `dotnet build FLPQ.slnx -c Debug > tmp/build-output.txt 2>&1` — must succeed.
@@ -230,6 +232,7 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Each commit corresponds to one completed atomic subtask. Never combine multiple subtasks in a single commit.
 * Before each commit:
   * Format code.
+  * **Output capture check**: every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipes (`|`) or inline filtering are forbidden.
   * Run linters and capture output:
     * `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — **must pass** (no formatting issues)
     * `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — **must have zero warnings**
