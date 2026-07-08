@@ -439,6 +439,86 @@ Low-coverage modules requiring attention:
 - `FLPQ.Cli.Helpers` — 36% (CLI helper functions)
 - `FLPQ.Cli.ValiantRunner` — 46.8% (Valiant algorithm runner)
 
+## FSharpLint
+
+### Installation
+
+Install as a local .NET tool (not project-local like fantomas):
+
+```sh
+dotnet tool install dotnet-fsharplint --tool-path ~/.dotnet/tools
+```
+
+### DOTNET_ROOT Workaround
+
+**Problem**: `dotnet-fsharplint` targets .NET 9, but the tool launcher resolves to `~/.dotnet/` which may only have older runtimes (6.0, 7.0). The system .NET 9+ runtimes live at `/usr/lib/dotnet/shared/`.
+
+**Symptom**: `You must install or update .NET to run this application. Framework: 'Microsoft.NETCore.App', version '9.0.0'`
+
+**Solution**: Always prefix with `DOTNET_ROOT=/usr/lib/dotnet`:
+
+```sh
+DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint <path>
+```
+
+### Running the Linter
+
+**Per-project** (faster, more reliable, preferred):
+
+```sh
+DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint src/FLPQ.Languages/FLPQ.Languages.fsproj
+```
+
+**Full solution** (slow, may time out on large projects):
+
+```sh
+DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx
+```
+
+The solution-level run processes all projects sequentially and can exceed 5 minutes with timeout. Running per-project avoids this.
+
+### Configuration
+
+The project uses a custom `fsharplint.json` at the repository root.
+
+**Critical**: FSharpLint 0.27.0 does **not** support partial configs — the file must contain the **full** default configuration with only the desired rules changed. The reference default config lives at:
+
+```
+https://raw.githubusercontent.com/fsprojects/FSharpLint/master/src/FSharpLint.Core/fsharplint.json
+```
+
+### Tuned Rules
+
+The following rules were changed from FSharpLint defaults to match the project code style (as documented in `AGENTS.md`):
+
+| Rule | Setting | Default | Reason |
+|------|---------|---------|--------|
+| `genericTypesNames` (FL0069) | `naming: CamelCase` | PascalCase | Project uses `'t`, `'nt`, `'a`, `'s`, `'v` |
+| `nestedFunctionNames` (FL0085) | `enabled: true`, `naming: CamelCase` | disabled, PascalCase | Project uses camelCase for `let rec loop`/`derive` etc. |
+| `recordFieldNames` (FL0039) | `naming: PascalCase` | PascalCase | Per AGENTS.md "PascalCase for record fields and union case fields" |
+
+### FL0085 Dual Behavior
+
+When `nestedFunctionNames` is enabled, FL0085 reports **two** categories of warnings:
+
+1. **Naming**: local function names not matching the configured convention (`CamelCase`). Resolved — project already uses camelCase.
+2. **Tail-call diagnostics**: any `let rec` function (local or top-level) missing `[<TailCall>]` attribute. This is from the `ensureTailCallDiagnosticsInRecursiveFunctions` rule. ~50 of these remain, all in the `src/FLPQ.Languages/` project.
+
+To suppress only the tail-call diagnostics while keeping naming checks, set `ensureTailCallDiagnosticsInRecursiveFunctions` to `false` in the config.
+
+### Linter Report
+
+Generated after each config change and stored at `tasks/linter_report.md`. The report includes per-rule breakdowns, per-file warning counts, and comparisons with the default config.
+
+### Current State (post task 147)
+
+| Metric | Value |
+|--------|-------|
+| Enabled rules | 44 of 98 |
+| Total warnings | ~162 |
+| FL0069 eliminated | 1,196 → 0 |
+| Largest remaining category | FL0039 (~110, deliberate project convention) |
+
 ## Git Checkout Danger
 
 **Problem**: `git checkout <file>` or `git restore <file>` reverts the file to its last committed version, destroying any uncommitted changes in the working tree.
