@@ -50,7 +50,7 @@ Supplementary materials for the book on formal language constrained path queryin
 3. Create a feature branch from `dev` for this single task
 4. Generate a detailed plan in `tasks/detailed_plan.md`, decomposing the task into atomic subtasks
 5. Execute each subtask using the `subtask-loop` skill
-6. After all subtasks are done, verify completion (see `subtask-loop` skill) and mark the task `[done]` in `tasks.md`
+6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings. Then verify completion (see `subtask-loop` skill) and mark the task `[done]` in `tasks.md`
 7. Return to step 1
 
 ### Git Safety
@@ -80,3 +80,4 @@ Operational procedures are in standalone skills. Load the relevant skill for eac
 | F# language patterns, quirks, library APIs | `fsharp-coder` |
 | Writing tests (FsCheck, golden, property-based) | `tests-writer` |
 | Generating TeX/LaTeX/Tikz output | `tex-writer` |
+| Code review (detect + fix architecture, duplication, test gaps) | `code-review` |

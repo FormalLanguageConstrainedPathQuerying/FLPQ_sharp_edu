@@ -53,8 +53,7 @@ module TestHelpers =
         | Some block -> offset + block.Dfa.StartState
         | None -> -1
 
-    let gllAccepts (g: Grammar<string, string>) (input: string list) : bool =
-        let rsm = grammarToRsm g
+    let gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
         let graph = terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
 
@@ -79,6 +78,19 @@ module TestHelpers =
 
             not (Set.isEmpty entries))
 
+    let gllAccepts (g: Grammar<string, string>) (input: string list) : bool =
+        let rsm = grammarToRsm g
+        gllAcceptsRsm rsm input
+
+    let buildRegexRsm (regexText: string) : RSM<string, string> =
+        RsmBuilder.buildRSMFromText $"S -> {regexText}"
+
+    let dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> = (RSM.startBlock rsm).Dfa
+
+    let dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
+        let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))
+        Dfa.accept dfa input'
+
     let cykAccepts (g: Grammar<string, string>) (input: string list) : bool =
         Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal)
 
@@ -95,3 +107,17 @@ module TestHelpers =
         match tree with
         | Leaf Symbol.Epsilon -> false
         | _ -> true
+
+    let buildDfa (transitions: (int * string * int) list) (startState: int) (finalStates: int list) =
+        let allStates =
+            transitions
+            |> List.collect (fun (f, _, t) -> [ f; t ])
+            |> List.append (startState :: finalStates)
+            |> List.distinct
+            |> List.sort
+
+        Dfa.fromTransitions (List.map id allStates) transitions startState (Set.ofList finalStates)
+
+    let nfaFromEdges (vCount: int) (edges: (int * string * int) list) (sources: int[]) : NFA<string, int> =
+        let states = [ 0 .. vCount - 1 ]
+        Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty

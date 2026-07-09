@@ -88,6 +88,7 @@ Before marking a task as done, confirm:
 
 - ALL subtasks from the task description in `tasks.md` are implemented
 - Task verification passed (lint + tests + coverage). See `quality-gates` skill.
+- **Code review** passed with zero findings across the entire repo. See `code-review` skill.
 - There are zero known algorithmic gaps, partial implementations, or skipped test cases
 - Equivalence tests pass against the reference implementation if the task requires it
 

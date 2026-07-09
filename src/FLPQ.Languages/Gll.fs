@@ -357,8 +357,8 @@ module GLL =
 
         let nodeKey (info: SppfNodeInfo<'t, 'nt>) : string =
             match info with
-            | SppfNodeInfo.SppfTerminal(Terminal _, l, r) -> $"T({l},{r})"
-            | SppfNodeInfo.SppfNonterminal(Nonterminal _, l, r) -> $"N({l},{r})"
+            | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> $"T({t},{l},{r})"
+            | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r) -> $"N({nt},{l},{r})"
             | SppfNodeInfo.SppfEpsilon p -> $"E({p})"
             | SppfNodeInfo.SppfIntermediate(s, p) -> $"I({s},{p})"
             | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> $"R({fs},{fp},{ts},{tp})"

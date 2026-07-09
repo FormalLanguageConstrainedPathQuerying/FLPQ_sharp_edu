@@ -380,7 +380,7 @@ module PropertyCnfTests =
     open FsCheck.Xunit
     open FLPQ.TestUtilities
 
-    [<Property(MaxTest = 100)>]
+    [<Fact>]
     let ``toCnf preserves language acceptance`` () =
         let grammars =
             [ Grammar.parseGrammar "S -> a S b S\nS -> eps"

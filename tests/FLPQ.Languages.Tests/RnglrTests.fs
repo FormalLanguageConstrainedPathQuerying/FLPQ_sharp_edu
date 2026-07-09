@@ -210,17 +210,6 @@ module RnglrReductionCascade =
 
 module RnglrRegexEquivalence =
 
-    let private buildRegexRsm (regexText: string) : RSM<string, string> =
-        RsmBuilder.buildRSMFromText $"S -> {regexText}"
-
-    let private dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> =
-        (RSM.startBlock rsm).Dfa
-
-    let private dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
-        let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))
-
-        Dfa.accept dfa input'
-
     let private rnglrAcceptsRegex (rsm: RSM<string, string>) (input: string list) : bool =
         let freshStart = Nonterminal("S'")
         let graph = TestHelpers.terminalsToGraph input
@@ -235,41 +224,41 @@ module RnglrRegexEquivalence =
     [<Property(MaxTest = 50)>]
     let ``S -> a* matches DFA for a*`` (s: string) =
         let regexText = "a *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        rnglrAcceptsRegex rsm input = dfaAcceptsRegex dfa input
+        rnglrAcceptsRegex rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> a* a* matches DFA for a* a*`` (s: string) =
         let regexText = "a * a *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        rnglrAcceptsRegex rsm input = dfaAcceptsRegex dfa input
+        rnglrAcceptsRegex rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* matches DFA for (a | b)*`` (s: string) =
         let regexText = "( a | b ) *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
 
         let input =
             TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a" || c = "b")
 
-        rnglrAcceptsRegex rsm input = dfaAcceptsRegex dfa input
+        rnglrAcceptsRegex rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* (a | c)* matches DFA for (a | b)* (a | c)*`` (s: string) =
         let regexText = "( a | b ) * ( a | c ) *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
 
         let input =
             TestHelpers.stringToTerminals s
             |> List.filter (fun c -> c = "a" || c = "b" || c = "c")
 
-        rnglrAcceptsRegex rsm input = dfaAcceptsRegex dfa input
+        rnglrAcceptsRegex rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
 module RnglrGrammarAcceptanceAndTree =
 

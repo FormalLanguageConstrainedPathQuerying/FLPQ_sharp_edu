@@ -18,18 +18,14 @@ let private generateLLTableTeX (grammarStr: string) (k: int) : string =
 
     LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) grammar k first follow table
 
-let private wrapInTemplate (content: string) : string =
-    let template = File.ReadAllText templatePath
-    template.Replace("__CONTENT__", content)
-
 type ``LL table TeX golden tests``() =
 
     [<Fact>]
     member _.``LL(1) table grammar1``() =
         let tex = generateLLTableTeX "S -> a S b S\nS -> eps" 1
-        verifyGolden "ll_grammar1_table.tex" (wrapInTemplate tex)
+        verifyGolden "ll_grammar1_table.tex" (wrapInTemplate templatePath tex)
 
     [<Fact>]
     member _.``LL(2) table for k=2 grammar``() =
         let tex = generateLLTableTeX "S -> a b A\nS -> a a B\nA -> c\nB -> d" 2
-        verifyGolden "ll_k2_table.tex" (wrapInTemplate tex)
+        verifyGolden "ll_k2_table.tex" (wrapInTemplate templatePath tex)

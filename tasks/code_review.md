@@ -3,10 +3,67 @@
 ## Scope
 
 Reviewed all `.fs` source files (31 in `src/`, 61 in `tests/`).
-Report generated: 2026-07-08. Prior reports: 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
-**Status: analysis only — no fixes applied by this task.**
+Report generated: 2026-07-09. Prior reports: 2026-07-08, 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
+**Status: fixes applied for issues marked FIXED below.**
 
 ---
+
+## 2026-07-09 Report — Code Review Skill Creation + Fix Round
+
+### Issues Fixed
+
+#### [FIXED] SPPF nodeKey discards terminal/nonterminal values (Gll.fs:358–364)
+
+`nodeKey` used `Terminal _` / `Nonterminal _` patterns, treating `SppfTerminal(Terminal "a", 0, 1)` and `SppfTerminal(Terminal "b", 0, 1)` as the same node. Fixed by including `t` and `nt` values in the dedup key.
+
+#### [FIXED] Duplicated `buildRegexRsm`, `dfaFromRegexRsm`, `dfaAcceptsRegex` between GllTests and RnglrTests
+
+Moved to `TestHelpers.fs`. Removed private definitions from both test files.
+
+#### [FIXED] Duplicated `gllAcceptsRsm` — ~20 lines of acceptance logic copied from TestHelpers.gllAccepts
+
+Extracted `gllAcceptsRsm` into `TestHelpers.fs`. `gllAccepts` now delegates to it. Removed private copy from GllTests.fs.
+
+#### [FIXED] Duplicated `buildDfa`, `nfaWithSources`, `nfaWithSourcesProp`, `nfaWithSourcesRegex`, `smallGraphNfaFromEdges` across RPQTests.fs and StressTests.fs
+
+Consolidated into `TestHelpers.buildDfa` and `TestHelpers.nfaFromEdges`. Removed ~40 lines of duplicates.
+
+#### [FIXED] Duplicated `wrapInTemplate` across 3 golden test files
+
+Moved to `GoldenHelpers.fs` with `templatePath` parameter. Removed per-file definitions.
+
+#### [FIXED] Mislabeled `[<Property>]` tests using hardcoded data
+
+Changed to `[<Fact>]` in: `FirstFollowTests.fs` (firstK), `RSMTests.fs` (2 tests), `GrammarTests.fs` (toCnf).
+
+### Issues Identified but Not Fixed (Require Larger Refactoring)
+
+| # | Issue | Files | Recommendation |
+|---|-------|-------|----------------|
+| N1 | `DerivationTree.Node` uses `list` instead of `NonEmptyList`; `Node(nt, [])` sentinel at Gll.fs:494,563,564 | `DerivationTree.fs`, `Gll.fs`, `DerivationTreeDot.fs`, `LLParser.fs`, `LRParser.fs`, `LLStepVisualizer.fs`, `LRStepVisualizer.fs`, ~15 test files | Change `Node` to `NonEmptyList<DerivationTree>`, replace sentinels with proper fallbacks |
+| N2 | Twin Grammar1-4 test modules (~400 lines) duplicated across GllTests.fs and RnglrTests.fs | `GllTests.fs:225+`, `RnglrTests.fs:274+` | Parameterize by algorithm function; extract grammar definitions to shared module |
+| N3 | `regexToDfa` in RPQTests.fs duplicates `RsmBuilder.buildBlockDfa` | `RPQTests.fs:271`, `EbnfParser.fs:268` | Make `buildBlockDfa` generic or expose a shared version |
+| N4 | `RsmToGrammar.ntName` hardcoded to `Nonterminal<string>` via `sprintf "%s_q%d"` | `RsmToGrammar.fs:11–17` | Accept a caller-supplied `'nt -> int -> 'nt` function |
+| N5 | `RsmBuilder` module hardcoded to `string` | `EbnfParser.fs:266–331` | Accept identifier-to-`'nt` converter for genericity |
+| N6 | `TokenStringGenerators` in TokenizerTests instead of shared Generators.fs | `TokenizerTests.fs:143–150` | Move to `FLPQ.TestUtilities/Generators.fs` |
+| N7 | `gllTree`/`rnglrTree` share SPPF-extraction logic (~30 lines each) | `GllTests.fs:13–48`, `RnglrTests.fs:15–62` | Extract shared derivation tree extraction |
+| N8 | `System.IO` + file-read functions in core algorithm modules | `Grammar.fs:112`, `EbnfParser.fs:250,330`, `GraphReader.fs:85` | Minor; convenience wrappers, acceptable for now |
+| N9 | Property tests without `[<Properties(Arbitrary=...)>]` produce mostly irrelevant inputs | `GllTests.fs`, `RnglrTests.fs` (equivalence modules) | Add proper `Arbitrary` attributes |
+| N10 | No LL(k>1) property-based equivalence tests against CYK/Valiant | `LLParserTests.fs` | Add `[<Property>]` tests with generated inputs |
+| N11 | Missing LR variant vs CYK property tests for some grammar combinations | `LRParserTests.fs` | Add CLR(1) vs CYK for grammar1, SLR(1) vs CYK for grammar3 |
+
+### Issues from Prior Reports Confirmed Resolved
+
+| Prior ID | Issue | Verified |
+|----------|-------|----------|
+| 1.2 | `collectGraphEdges` duplicated between Gll.fs and Rnglr.fs | RESOLVED — shared in `GraphHelpers` (GllTypes.fs) |
+| N/A | Various from 2026-07-08 report | Existing report below reflects prior state |
+
+---
+
+## 2026-07-08 Report
+
+
 
 ## 1. Architectural Issues
 

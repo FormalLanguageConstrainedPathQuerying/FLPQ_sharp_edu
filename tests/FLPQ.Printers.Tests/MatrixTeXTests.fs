@@ -10,10 +10,6 @@ open GoldenHelpers
 let private templatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_template.tex")
 
-let private wrapInTemplate (content: string) : string =
-    let template = File.ReadAllText templatePath
-    template.Replace("__CONTENT__", content)
-
 [<Fact>]
 let ``toTeX wraps in pNiceMatrix environment`` () =
     let m = Matrix.init 2 2 1
@@ -49,13 +45,13 @@ type ``Matrix TeX golden tests``() =
     member _.``matrix 3x3 numeric``() =
         let m = Matrix.create 3 3 (fun i j -> i * 3 + j + 1)
         let tex = MatrixTeX.toTeX false false string m
-        verifyGolden "matrix_3x3_numeric.tex" (wrapInTemplate tex)
+        verifyGolden "matrix_3x3_numeric.tex" (wrapInTemplate templatePath tex)
 
     [<Fact>]
     member _.``matrix 2x2 with row and col numbers``() =
         let m = Matrix.create 2 2 (fun i j -> sprintf "x_{%d%d}" i j)
         let tex = MatrixTeX.toTeX true true string m
-        verifyGolden "matrix_2x2_labeled.tex" (wrapInTemplate tex)
+        verifyGolden "matrix_2x2_labeled.tex" (wrapInTemplate templatePath tex)
 
     [<Fact>]
     member _.``matrix 4x4 identity pattern``() =
@@ -66,4 +62,4 @@ type ``Matrix TeX golden tests``() =
                 else "<")
 
         let tex = MatrixTeX.toTeX false false string m
-        verifyGolden "matrix_4x4_identity_pattern.tex" (wrapInTemplate tex)
+        verifyGolden "matrix_4x4_identity_pattern.tex" (wrapInTemplate templatePath tex)

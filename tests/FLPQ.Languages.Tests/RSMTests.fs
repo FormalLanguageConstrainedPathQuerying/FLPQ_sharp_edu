@@ -123,7 +123,7 @@ module RsmBuilderPropertyTests =
     open FsCheck
     open FsCheck.Xunit
 
-    [<Property>]
+    [<Fact>]
     let ``buildRSMFromText produces deterministic blocks`` () =
         let ebnfTexts =
             [ "S -> a S b\nS -> eps"
@@ -137,7 +137,7 @@ module RsmBuilderPropertyTests =
 
             rsm.Blocks |> List.forall (fun block -> Dfa.isDeterministic block.Dfa))
 
-    [<Property>]
+    [<Fact>]
     let ``buildRSMFromText blocks match nonterminal count`` () =
         let ebnfTexts =
             [ "S -> a S b\nS -> eps"

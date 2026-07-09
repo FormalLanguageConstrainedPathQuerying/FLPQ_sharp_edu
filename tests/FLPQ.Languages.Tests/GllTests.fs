@@ -47,32 +47,6 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
             Some tree
         | [] -> None
 
-/// Check if an RSM accepts a string via GLL (without converting from Grammar).
-let private gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
-    let graph = TestHelpers.terminalsToGraph input
-    let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-
-    let startBlock = RSM.startBlock rsm
-    let startGlobalState = TestHelpers.globalStartState rsm startBlock.Nonterminal
-
-    let blocks = RSM.blocks rsm
-
-    let finalStates =
-        (Set.empty, blocks)
-        ||> List.fold (fun acc block ->
-            let offset = TestHelpers.blockOffset rsm block.Nonterminal
-            let blockFinals = block.Dfa.FinalStates |> Set.map (fun local -> offset + local)
-            Set.union acc blockFinals)
-
-    let vertexCount = Graph.vertexCount graph
-
-    finalStates
-    |> Set.exists (fun finalState ->
-        let entries =
-            PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
-
-        not (Set.isEmpty entries))
-
 module GllAcceptance =
     [<Fact>]
     let ``S -> a accepts a`` () =
@@ -199,54 +173,44 @@ module GllTreeExtraction =
 
 module GllRegexEquivalence =
 
-    let private buildRegexRsm (regexText: string) : RSM<string, string> =
-        RsmBuilder.buildRSMFromText $"S -> {regexText}"
-
-    let private dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> =
-        (RSM.startBlock rsm).Dfa
-
-    let private dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
-        let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))
-        Dfa.accept dfa input'
-
     [<Property(MaxTest = 50)>]
     let ``S -> a* matches DFA for a*`` (s: string) =
         let regexText = "a *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        gllAcceptsRsm rsm input = dfaAcceptsRegex dfa input
+        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> a* a* matches DFA for a* a*`` (s: string) =
         let regexText = "a * a *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        gllAcceptsRsm rsm input = dfaAcceptsRegex dfa input
+        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* matches DFA for (a | b)*`` (s: string) =
         let regexText = "( a | b ) *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
 
         let input =
             TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a" || c = "b")
 
-        gllAcceptsRsm rsm input = dfaAcceptsRegex dfa input
+        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* (a | c)* matches DFA for (a | b)* (a | c)*`` (s: string) =
         let regexText = "( a | b ) * ( a | c ) *"
-        let rsm = buildRegexRsm regexText
-        let dfa = dfaFromRegexRsm rsm
+        let rsm = TestHelpers.buildRegexRsm regexText
+        let dfa = TestHelpers.dfaFromRegexRsm rsm
 
         let input =
             TestHelpers.stringToTerminals s
             |> List.filter (fun c -> c = "a" || c = "b" || c = "c")
 
-        gllAcceptsRsm rsm input = dfaAcceptsRegex dfa input
+        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
 module GllGrammarAcceptanceAndTree =
 

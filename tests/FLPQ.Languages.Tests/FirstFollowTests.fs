@@ -178,7 +178,7 @@ module PropertyTests =
             let taken = List.truncate k syms
             if List.isEmpty taken then [ Symbol.Epsilon ] else taken)
 
-    [<Property(MaxTest = 200)>]
+    [<Fact>]
     let ``firstK matches brute-force derivation`` () =
         let grammars =
             [ Grammar.parseGrammar "S -> a S b S\nS -> eps"

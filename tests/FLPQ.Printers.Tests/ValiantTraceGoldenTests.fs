@@ -13,10 +13,6 @@ let private templatePath =
 
 let private combineSteps (steps: string list) : string = steps |> String.concat "\n\n"
 
-let private wrapInTemplate (content: string) : string =
-    let template = File.ReadAllText templatePath
-    template.Replace("__CONTENT__", content)
-
 type ``Valiant trace TeX golden tests``() =
 
     [<Fact>]
@@ -30,7 +26,7 @@ type ``Valiant trace TeX golden tests``() =
 
         let combined = combineSteps steps
 
-        verifyGolden "valiant_grammar1_abab.tex" (wrapInTemplate combined)
+        verifyGolden "valiant_grammar1_abab.tex" (wrapInTemplate templatePath combined)
 
     [<Fact>]
     member _.``Modified Valiant trace grammar1 ab``() =
@@ -44,4 +40,4 @@ type ``Valiant trace TeX golden tests``() =
 
         let combined = combineSteps steps
 
-        verifyGolden "valiant_modified_grammar1_ab.tex" (wrapInTemplate combined)
+        verifyGolden "valiant_modified_grammar1_ab.tex" (wrapInTemplate templatePath combined)

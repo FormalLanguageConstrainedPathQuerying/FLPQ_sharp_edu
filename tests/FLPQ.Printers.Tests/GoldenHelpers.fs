@@ -27,3 +27,7 @@ let combineStepsDot (steps: VisualizationStep list) : string =
     steps
     |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i step.treeAndStack)
     |> String.concat "\n\n"
+
+let wrapInTemplate (templatePath: string) (content: string) : string =
+    let template = File.ReadAllText templatePath
+    template.Replace("__CONTENT__", content)
