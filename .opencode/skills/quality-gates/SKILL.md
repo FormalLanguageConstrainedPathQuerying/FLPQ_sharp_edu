@@ -103,13 +103,26 @@ Timeout: 900000 (15 min) per project.
 **Step 3 — verify zero warnings:**
 
 ```bash
-grep "Summary:" tmp/fsharplint-output.txt
+grep "Summary:" tmp/fsharplint-output.txt | grep -v "0 warnings"
 ```
-Must show `Summary: 0 warnings` for every project linted. Any non-zero count is a blocker.
+Must produce **no output**. Any output is a blocker — the project has >0 warnings.
 
-**Step 4 — remediate:**
+If the command produces output, the task is **incomplete**. Do not merge. Do not mark `[done]`. There is no such thing as "pre-existing" — a warning in a modified project is a task defect. Fix it.
 
-Fix all warnings shown in `tmp/fsharplint-output.txt`, re-lint until `Summary: 0 warnings` on every affected project.
+**Step 4 — report status:**
+
+Echo every affected project's status inline in the response. Required format:
+
+```
+src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj: 3 warnings — BLOCKED
+```
+
+A single `BLOCKED` means go back and fix. Continue only when every line says `PASS`.
+
+**Step 5 — remediate:**
+
+Fix all warnings, re-lint until Step 3 produces no output and Step 4 shows all `PASS`.
 
 **Pre-merge full-solution lint** (run once before merging to `dev`):
 
