@@ -168,13 +168,13 @@ Each atomic subtask from the detailed plan is executed as a self-contained cycle
 1. **Implement** the subtask's outputs (types, functions, code).
 2. **Write tests** for the subtask's outputs.
 3. **Update documentation**: all task-related docs (including `fixes_for_book.md`), module docs (`docs/<module>.md`), and `tasks/knowledge_base.md` for non-obvious discoveries.
-4. **Quality gates** — run in order:
+ 4. **Quality gates** — run in order. Every gate MUST pass. Each gate is verified by reading the captured output file (never assume success).
    - **Output capture check**: every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipes (`|`) or inline filtering are forbidden.
-   - Format: `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — must pass.
-   - Lint: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — zero warnings.
-   - Build: `dotnet build FLPQ.slnx -c Debug > tmp/build-output.txt 2>&1` — must succeed.
-   - Tests: `dotnet test > tmp/test-output.txt 2>&1` — every test passes, zero failures, `Skipped: 0`.
-5. **Checks**:
+   - **Format**: `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — must produce zero formatting changes (empty output / "was" count = 0). Verify: `grep "was" tmp/fantomas-output.txt` must produce no output.
+   - **Lint**: `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — must produce zero warnings total. "Zero" means absolute zero across ALL files in the solution. Pre-existing warnings are NOT exempt. Verify: `grep "Summary:" tmp/fsharplint-output.txt` must show `Summary: 0 warnings`. Any non-zero count is a blocker.
+   - **Build**: `dotnet build FLPQ.slnx -c Debug > tmp/build-output.txt 2>&1` — must succeed. Verify: `grep "Build succeeded" tmp/build-output.txt` must match and `grep "Error(s)"` must show `0 Error(s)`.
+   - **Tests**: `dotnet test > tmp/test-output.txt 2>&1` — every test passes, zero failures, `Skipped: 0`. Verify: `grep "Failed\|Skipped" tmp/test-output.txt`. Any `Failed:` with non-zero count or `Skipped:` with non-zero count is a blocker.
+ 5. **Checks**:
    - **Duplication check**: scan for accidental code duplication (same logic under different names, copy-pasted blocks). Consolidate if found.
    - **Genericity check**: verify new types use generic parameters (`'t`, `'nt`) where applicable and non-empty collections use `NonEmptyList`/`NonEmptySet`.
    - **Equivalence test check**: if the subtask is a variant of an existing algorithm, ensure a property-based equivalence test exists comparing it to the reference implementation.
@@ -233,10 +233,10 @@ When writing a new task for `tasks.md`, follow these rules to minimize rework:
 * Before each commit:
   * Format code.
   * **Output capture check**: every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipes (`|`) or inline filtering are forbidden.
-  * Run linters and capture output:
-    * `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — **must pass** (no formatting issues)
-    * `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — **must have zero warnings**
-  * Check that compilation is successful (capture output to `tmp/build-output.txt`).
+  * Run the full **Quality gates** sequence (from "Atomic subtask loop" step 4 above):
+    - `dotnet fantomas . --check > tmp/fantomas-output.txt 2>&1` — verify zero formatting changes.
+    - `DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1` — verify `Summary: 0 warnings` (absolute zero).
+    - `dotnet build FLPQ.slnx -c Debug > tmp/build-output.txt 2>&1` — verify `Build succeeded` and `0 Error(s)`.
   * **Verify tasks.md is not staged.** Run `git diff --cached --name-only | grep -q tasks.md` — if it matches, unstage it with `git reset HEAD tasks.md`. tasks.md must never be committed from a feature branch.
 * Before moving changes from feature-branch to dev:
    * Format code.
