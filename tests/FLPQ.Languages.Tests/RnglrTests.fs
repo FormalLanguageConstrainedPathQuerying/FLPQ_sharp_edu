@@ -174,18 +174,18 @@ module RnglrAcceptance =
 
     [<Fact>]
     let ``S -> a S b | eps accepts a a b b`` () =
-        // Skip: grammar2 with S -> S S creates unbounded DFA states
-        ()
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        Assert.True(rnglrAccepts g [ "a"; "a"; "b"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps rejects a a b`` () =
-        // Skip: grammar2 with S -> S S creates unbounded DFA states
-        ()
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        Assert.False(rnglrAccepts g [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps | S S accepts a b a b`` () =
-        // Skip: grammar2 with S -> S S creates unbounded DFA states in RSM builder
-        ()
+        let g = TestGrammars.grammar2
+        Assert.True(rnglrAccepts g [ "a"; "b"; "a"; "b" ])
 
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =

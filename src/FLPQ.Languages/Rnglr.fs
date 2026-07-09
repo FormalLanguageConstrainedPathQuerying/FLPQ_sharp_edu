@@ -292,16 +292,17 @@ module Rnglr =
             if not result then
                 let fromVertex = i % vertexCount
 
-                for j in 0 .. k - 1 do
-                    if not result then
-                        let toVertex = j % vertexCount
+                if fromVertex = 0 then
+                    for j in 0 .. k - 1 do
+                        if not result then
+                            let toVertex = j % vertexCount
 
-                        if toVertex = vertexCount - 1 then
-                            let entries = Matrix.get pathIndex.Matrix i j
+                            if toVertex = vertexCount - 1 then
+                                let entries = Matrix.get pathIndex.Matrix i j
 
-                            for entry in entries do
-                                match entry with
-                                | PathIndexEntry.PNonterminal _ -> result <- true
-                                | _ -> ()
+                                for entry in entries do
+                                    match entry with
+                                    | PathIndexEntry.PNonterminal _ -> result <- true
+                                    | _ -> ()
 
         result
