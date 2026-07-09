@@ -73,20 +73,14 @@ let ``filterOutgoing all vertices is identity`` () =
 
 [<Fact>]
 let ``filterOutgoing empty set yields no edges`` () =
-    let m = Matrix.create 3 3 (fun i j -> true)
-    let g = Graph.fromEdges [ "A"; "B"; "C" ] m
-    let filtered = Graph.filterOutgoing Set.empty g
+    let filterFilter name filter =
+        let m = Matrix.create 3 3 (fun i j -> true)
+        let g = Graph.fromEdges [ "A"; "B"; "C" ] m
+        let filtered = filter Set.empty g
 
-    for i in 0..2 do
-        for j in 0..2 do
-            Assert.False(Graph.edge filtered i j)
+        for i in 0..2 do
+            for j in 0..2 do
+                Assert.False(Graph.edge filtered i j)
 
-[<Fact>]
-let ``filterIncoming empty set yields no edges`` () =
-    let m = Matrix.create 3 3 (fun i j -> true)
-    let g = Graph.fromEdges [ "A"; "B"; "C" ] m
-    let filtered = Graph.filterIncoming Set.empty g
-
-    for i in 0..2 do
-        for j in 0..2 do
-            Assert.False(Graph.edge filtered i j)
+    filterFilter "outgoing" Graph.filterOutgoing
+    filterFilter "incoming" Graph.filterIncoming

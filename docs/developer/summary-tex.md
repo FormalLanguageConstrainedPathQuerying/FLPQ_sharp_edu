@@ -83,3 +83,5 @@ The `algo` parameter is a string (`"CYK"`, `"Valiant"`, `"LL"`, `"LR"`).
 | String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; module can be reused or tested independently. |
 | File I/O via `readIfExists` | Headers and steps read existing artifact files; module does not create files. Produces only string content. |
 | `\includegraphics` for dot PDFs | The merged TeX references PDFs compiled from dot files by the CLI (via `ExternalTools.compileDotFileToPdf`). The module assumes these PDFs exist at the expected relative paths. |
+
+Tests carry the `Summary` category (require `lualatex`). See [test categories](guides/test-categories.md).

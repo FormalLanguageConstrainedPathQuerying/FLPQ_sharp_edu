@@ -45,19 +45,6 @@ module GLL =
 
         Graph.fromEdges vertices edges
 
-    /// Maps graph vertex → list of outgoing (terminal, targetVertex) edges.
-    let private collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
-        let vc = Graph.vertexCount g
-        let edges = Array.init vc (fun _ -> ResizeArray<'t * int>())
-
-        for i in 0 .. vc - 1 do
-            for j in 0 .. vc - 1 do
-                match Matrix.get g.Edges i j with
-                | Some t -> edges.[i].Add(t, j)
-                | None -> ()
-
-        edges
-
     /// Extends a RangeDescriptor by updating its end to (newState, newVertex).
     /// If the range is EmptyRange, creates a new range from (fromState, fromVertex) to (newState, newVertex).
     let private extendRange
@@ -102,7 +89,7 @@ module GLL =
         let finalStates = flat.FinalStates
         let termTrans = flat.TermTrans
         let nontermTrans = flat.NontermTrans
-        let graphEdges = collectGraphEdges inputGraph
+        let graphEdges = GraphHelpers.collectGraphEdges inputGraph
 
         let gss = GSS.init stateCount vertexCount
 

@@ -22,3 +22,5 @@ Uses `DerivationTree<'t,'nt>` from `DerivationTree.fs` and `LRStackFrame<'t,'nt>
 - Unique node ID generated via mutable counter
 - `toDotWithLLStack` uses full tree as base: renders tree once, then overlays stack chain by locating frontier leaves via path
 - LR state frames visually distinguished (gray fill) from symbol frames
+
+Tests carry the `Graphviz` category (require `dot`). See [test categories](guides/test-categories.md).

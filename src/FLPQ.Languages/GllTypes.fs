@@ -165,3 +165,21 @@ module GSS =
                   for ei in NonEmptySet.toSeq nes do
                       (toIdx, ei)
               | None -> () ]
+
+/// Shared graph utilities for GLL/RNGLR path-index construction.
+module GraphHelpers =
+
+    /// Collects outgoing edges from each vertex of an input graph into adjacency arrays.
+    /// Returns an array of ResizeArray where edges.[i] contains (label, targetVertex) pairs
+    /// for all outgoing edges from vertex i.
+    let collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
+        let vc = Graph.vertexCount g
+        let edges = Array.init vc (fun _ -> ResizeArray<'t * int>())
+
+        for i in 0 .. vc - 1 do
+            for j in 0 .. vc - 1 do
+                match Matrix.get g.Edges i j with
+                | Some t -> edges.[i].Add(t, j)
+                | None -> ()
+
+        edges

@@ -6,14 +6,15 @@ open FSharpPlus.Data
 /// one per distinct element. Based on definition from the book.
 module BooleanDecomposition =
 
-    /// Decompose a matrix of sets into a map from each distinct element
-    /// to a Boolean matrix of the same dimensions where cell[i,j] = true
-    /// iff the element is in the original set at that position.
-    let decompose (matrix: Matrix<Set<'a>>) : Map<'a, Matrix<bool>> =
+    let private decomposeGeneric
+        (extractElements: 'cell -> 'a seq)
+        (containsElement: 'a -> 'cell -> bool)
+        (matrix: Matrix<'cell>)
+        : Map<'a, Matrix<bool>> =
         let allElements =
             [ for i in 0 .. Matrix.rows matrix - 1 do
                   for j in 0 .. Matrix.cols matrix - 1 do
-                      yield! Matrix.get matrix i j ]
+                      yield! extractElements (Matrix.get matrix i j) ]
             |> Set.ofList
 
         allElements
@@ -21,35 +22,32 @@ module BooleanDecomposition =
         |> List.map (fun elem ->
             let boolMatrix =
                 Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j ->
-                    Set.contains elem (Matrix.get matrix i j))
+                    containsElement elem (Matrix.get matrix i j))
 
             (elem, boolMatrix))
         |> Map.ofList
+
+    /// Decompose a matrix of sets into a map from each distinct element
+    /// to a Boolean matrix of the same dimensions where cell[i,j] = true
+    /// iff the element is in the original set at that position.
+    let decompose (matrix: Matrix<Set<'a>>) : Map<'a, Matrix<bool>> =
+        decomposeGeneric Set.toSeq Set.contains matrix
 
     /// Decompose a matrix of option-of-non-empty-sets into a map from each
     /// distinct element to a Boolean matrix where cell[i,j] = true
     /// iff the element is in the non-empty set at that position.
     /// None cells are treated as empty sets.
     let decomposeNonEmptySet (matrix: Matrix<Option<NonEmptySet<'a>>>) : Map<'a, Matrix<bool>> =
-        let allElements =
-            [ for i in 0 .. Matrix.rows matrix - 1 do
-                  for j in 0 .. Matrix.cols matrix - 1 do
-                      match Matrix.get matrix i j with
-                      | Some nes -> yield! NonEmptySet.toSeq nes
-                      | None -> () ]
-            |> Set.ofList
-
-        allElements
-        |> Set.toList
-        |> List.map (fun elem ->
-            let boolMatrix =
-                Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j ->
-                    match Matrix.get matrix i j with
-                    | Some nes -> NonEmptySet.contains elem nes
-                    | None -> false)
-
-            (elem, boolMatrix))
-        |> Map.ofList
+        decomposeGeneric
+            (fun cell ->
+                match cell with
+                | Some nes -> NonEmptySet.toSeq nes
+                | None -> Seq.empty)
+            (fun elem cell ->
+                match cell with
+                | Some nes -> NonEmptySet.contains elem nes
+                | None -> false)
+            matrix
 
     /// Reconstruct a matrix of sets from a decomposition (map from element to Boolean matrix).
     /// All matrices must have the same dimensions.

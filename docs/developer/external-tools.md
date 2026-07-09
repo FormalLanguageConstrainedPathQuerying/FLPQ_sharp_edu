@@ -98,3 +98,5 @@ All external processes are invoked via a shared `runProcess : string -> string -
 - The module lives in `FLPQ.Printers` (not a separate project) because both the CLI and the printer tests already depend on `FLPQ.Printers`. This avoids a new project and a new test project just for two thin process wrappers.
 - The API is split into string-based variants (for tests, which generate strings in memory) and file-based variants (for the CLI, which writes intermediate files and wants to preserve the PDFs).
 - Errors are reported via `bool` return values and `stderr` messages rather than exceptions, so the CLI can continue processing other algorithms and report an aggregate exit code.
+
+Tests carry `Graphviz` and `TeX` categories (require `dot` and `lualatex`). See [test categories](guides/test-categories.md).

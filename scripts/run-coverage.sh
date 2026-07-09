@@ -15,7 +15,6 @@ echo "=== Running tests with coverage collection ==="
 cd "$PROJECT_DIR"
 dotnet dotnet-coverage collect \
   dotnet test FLPQ.slnx \
-    --filter "Category!=Graphviz&Category!=TeX&Category!=Summary" \
     --no-restore \
     -v quiet \
   -o "$COVERAGE_DIR/coverage.cobertura" \

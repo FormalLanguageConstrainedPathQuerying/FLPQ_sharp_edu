@@ -32,18 +32,6 @@ module Rnglr =
           Finals: Set<int>
           InvTrans: Map<int * RsmSymbol<'t, 'nt>, int list> }
 
-    let private collectGraphEdges (g: Graph<int, Option<'t>>) : ResizeArray<'t * int>[] =
-        let vc = Graph.vertexCount g
-        let edges = Array.init vc (fun _ -> ResizeArray<'t * int>())
-
-        for i in 0 .. vc - 1 do
-            for j in 0 .. vc - 1 do
-                match Matrix.get g.Edges i j with
-                | Some t -> edges.[i].Add(t, j)
-                | None -> ()
-
-        edges
-
     let buildPathIndex
         (freshStart: Nonterminal<'nt>)
         (rsm: RSM<'t, 'nt>)
@@ -61,7 +49,7 @@ module Rnglr =
               VertexCount = vertexCount }
 
         let gss = RnglrGSS.init lrStateCount vertexCount
-        let graphEdges = collectGraphEdges inputGraph
+        let graphEdges = GraphHelpers.collectGraphEdges inputGraph
 
         let blocks = RSM.blocks extRsm
         let blockMap = blocks |> List.map (fun b -> (b.Nonterminal, b)) |> Map.ofList

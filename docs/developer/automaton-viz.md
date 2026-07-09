@@ -96,3 +96,5 @@ A &\to \alpha \cdot \beta \\
 - Dot rendered as `\cdot`
 - LR(1) lookahead appended after comma
 - Delegates to `AutomatonTikz.dfaToTikz` with `shape = "rectangle"`
+
+Tests carry `Graphviz` and `TeX` categories (require `dot` and `lualatex`). See [test categories](guides/test-categories.md).

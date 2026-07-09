@@ -12,7 +12,7 @@ Console application for running parsing algorithms with visualization output, in
 
 | Module | Source | Documentation |
 |--------|--------|---------------|
-| `Program` | `Program.fs` | [CLI console application](cli.md) |
+| `Program` | `Program.fs` | [CLI console application](../user/cli.md) |
 
 ## Role
 

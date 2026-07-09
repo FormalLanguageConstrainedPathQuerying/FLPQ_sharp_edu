@@ -8,55 +8,15 @@ Report generated: 2026-07-08. Prior reports: 2026-07-05, 2026-07-01, 2026-06-30,
 
 ---
 
-## Status Changes Since Last Report (2026-07-05)
-
-No issues from the prior report have been resolved. All items remain open. One new high-priority issue discovered (stubbed tests).
-
-| Issue | Status | Notes |
-|-------|--------|-------|
-| FSharpPlus unused in GraphAnalysis | **OPEN** | Still present in `.fsproj` |
-| Submatrix `Size` naming inconsistency | **OPEN** | `Row`, `Col` camelCase, `Size` PascalCase |
-| BooleanDecomposition duplication | **OPEN** | `decompose` / `decomposeNonEmptySet` structurally identical |
-| GraphTests duplicate test blocks | **OPEN** | filterOutgoing/filterIncoming empty-set tests copy-pasted |
-| GraphTests Assert.Equal on Matrix | **OPEN** | Array reference equality fragility |
-| Property tests mislabeled (toCnf, firstK) | **OPEN** | Hardcoded inputs, not true FsCheck generation |
-| LL(k>1) no property tests | **OPEN** | Only Fact tests exist |
-| No property tests for grammars 9/10 | **OPEN** | Only Fact tests exist |
-| No epsilon closure direct test | **OPEN** | Only indirect via accept/toDfa |
-| RPQ alphabet limited to {"a","b"} | **OPEN** | All generators hardcode 2-char alphabet |
-| TeX/DOT runtime guards missing | **OPEN** | Tests fail without external tools |
-
----
-
 ## 1. Architectural Issues
 
-### 1.1 [PREVIOUSLY 1.1] Matrix.data — RESOLVED
-
-`Matrix<'a>.data` is now a private field. All external access goes through `Matrix.get`/`Matrix.set`. Code throughout the project uses these accessors consistently.
-
-### 1.2 [PREVIOUSLY 1.2] Dfa.alphabet — RESOLVED
-
-`Dfa.alphabet` (`Automaton.fs:290`) delegates to `Nfa.collectAlphabet a.Transitions`, which scans all matrix cells and extracts `ATerm` labels (skipping `AEpsilon`). No temporary NFA record is constructed.
-
-### 1.3 [PREVIOUSLY 1.3] LRAutomaton.buildLR0/buildLR1 — RESOLVED
-
-A generic `buildLR` function (`LRParser.fs:181–197`) accepts closure and goto functions as higher-order parameters. Both `buildLR0` (lines 200–217) and `buildLR1` (lines 221–241) are thin wrappers that delegate to `buildLR`.
-
-### 1.4 [PREVIOUSLY 1.4] Valiant init block — RESOLVED
-
-`initValiant` (`Valiant.fs:361`) is called by both `parseWithTrace` (line 394) and `parseModifiedWithTrace` (line 443). Initialization is fully shared.
-
-### 1.5 [PREVIOUSLY 1.5] RsmBlock state type — RESOLVED
-
-`RsmDfa<'t,'nt>` type alias defined at `RSM.fs:16` as `DFA<RsmSymbol<'t,'nt>, int>`.
-
-### 1.6 [OPEN] FSharpPlus listed as dependency for GraphAnalysis but not used
+### 1.1 [OPEN] FSharpPlus listed as dependency for GraphAnalysis but not used
 
 `FLPQ.GraphAnalysis.fsproj` includes `<PackageReference Include="FSharpPlus" Version="1.9.1" />` but neither `Graph.fs` nor `MsBfs.fs` uses any FSharpPlus types (no `NonEmptyList`, `NonEmptySet`, etc.).
 
 **Suggested fix**: Remove the unused package reference.
 
-### 1.7 [NEW] collectGraphEdges duplicated between Gll.fs and Rnglr.fs
+### 1.2 [NEW] collectGraphEdges duplicated between Gll.fs and Rnglr.fs
 
 Identical function `collectGraphEdges` (`Graph<int, Option<'t>> -> ResizeArray<'t * int>[]`) is defined in both:
 - `Gll.fs:49–58` (inside `module GLL`)
@@ -66,7 +26,7 @@ Both iterate over the edge matrix and collect `(terminal, targetVertex)` pairs p
 
 **Suggested fix**: Extract to a shared module (e.g., `GraphAnalysis.Graph` or a new `FLPQ.Languages.GraphUtils` module).
 
-### 1.8 [NEW] Test helpers duplicated between RnglrTests.fs and GllTests.fs
+### 1.3 [NEW] Test helpers duplicated between RnglrTests.fs and GllTests.fs
 
 Two substantial helper functions are copy-pasted:
 - `grammarToEbnfText` (`RnglrTests.fs:11–29`, `GllTests.fs:13–31`) — converts a BNF grammar to EBNF text for RSM builder
@@ -75,6 +35,10 @@ Two substantial helper functions are copy-pasted:
 Additionally, supporting functions `stringToTerminals`/`stringToChars`, `inputToGraph`/`terminalsToGraph`, `rnglrAccepts`/`gllAccepts`, `cykAccepts`, and `nonEpsilon` are duplicated or near-duplicated.
 
 **Suggested fix**: Move to `FLPQ.TestUtilities` or a shared `TestHelpers.fs` in `FLPQ.Languages.Tests`.
+
+### 1.4 [NEW] GraphReader in FLPQ.RPQ — questionable placement
+
+`GraphReader.fs` parses graph files into `NFA<string, int>`. It lives in `FLPQ.RPQ` but its output type (`NFA`) is from `FLPQ.Languages`. The graph-reading concern could arguably belong in `FLPQ.GraphAnalysis` or `FLPQ.Languages`.
 
 ---
 
@@ -120,31 +84,23 @@ Module names `Nfa`/`Dfa` (lowercase 'a') chosen to avoid conflicting with type n
 
 ### 3.2 Trace type locations
 
-All trace types are colocated with their respective algorithm files:
-| Trace type | Defined in |
-|-----------|-----------|
-| `LLParsingStep` | `FLPQ.Languages/LLParser.fs` |
-| `LRParsingStep` | `FLPQ.Languages/LRParser.fs` |
-| `CykTraceStep` | `FLPQ.Languages/Cyk.fs` |
-| `ValiantTraceStep` | `FLPQ.Languages/Valiant.fs` |
-
-`VisualizationStep` (bridge type) lives in `FLPQ.Printers/VisualizationTypes.fs`. Consistent convention.
+All trace types are colocated with their respective algorithm files (`LLParser.fs`, `LRParser.fs`, `Cyk.fs`, `Valiant.fs`). `VisualizationStep` (bridge type) lives in `FLPQ.Printers/VisualizationTypes.fs`. Consistent convention.
 
 ### 3.3 RsmSymbol uses RequireQualifiedAccess
 
 `RsmSymbol` uses `[<RequireQualifiedAccess>]` with `RTerm`/`RNonterm` prefixes, while `Symbol<'t,'nt>` uses unqualified `T`/`N`/`Epsilon`. Deliberate — `Symbol` is used pervasively in pattern matching.
 
-### 3.4 [NEW] Inconsistent field casing across RnglrItem
+### 3.4 [NEW] LR0Item/LR1Item field casing inconsistent with RnglrItem
 
-`RnglrItem<'nt>` (`RnglrTypes.fs:10–12`) uses camelCase fields: `{ blockNonterminal; rsmState }`. This is consistent with project conventions. However, `RnglrGssVertex` (`RnglrTypes.fs:34`) also uses camelCase: `{ lrState; inputVertex }`. These are consistent with each other but differ from the PascalCase used in `LR0Item`/`LR1Item` (`LRParser.fs:8–19`: `{ Lhs; Rhs; Dot }`).
+`RnglrItem<'nt>` (`RnglrTypes.fs:10–12`) uses camelCase fields: `{ blockNonterminal; rsmState }`. However, `LR0Item`/`LR1Item` (`LRParser.fs:8–19`) use PascalCase: `{ Lhs; Rhs; Dot }`.
 
-**Suggested fix**: Rename `LR0Item`/`LR1Item` fields to camelCase (`lhs`, `rhs`, `dot`, `lookahead`) for consistency. Note: task 44 in the resolved section claims this was done, but current code still uses PascalCase.
+**Suggested fix**: Rename `LR0Item`/`LR1Item` fields to camelCase (`lhs`, `rhs`, `dot`, `lookahead`). Note: task 44 claims this was done, but current code still uses PascalCase.
 
 ---
 
 ## 4. Test Coverage Gaps
 
-### 4.1 [HIGH] Stubbed tests in RnglrTests.fs (3 empty-body tests)
+### 4.1 [CRITICAL] Stubbed tests in RnglrTests.fs (3 empty-body tests)
 
 `RnglrTests.fs` lines 175–188 contain three `[<Fact>]` tests with empty bodies `()`:
 - Line 176: ``S -> a S b | eps accepts a a b b`` — comment: "grammar2 with S -> S S creates unbounded DFA states"
@@ -203,91 +159,39 @@ All RPQ generators hardcode labels as `[ "a"; "b" ]`. No tests with larger alpha
 
 ### 5.2 [NEW] GoldenHelpers.verifyGolden creates golden files on first run
 
-`GoldenHelpers.fs:13–28`: `verifyGolden` writes the generated output to the golden file if it doesn't exist, then compares. This means the first test run _creates_ the golden file and passes. Subsequent runs compare against it. This is a reasonable pattern but means golden files are not committed initially — they're generated by the test runner.
+`GoldenHelpers.fs:13–28`: `verifyGolden` writes the generated output to the golden file if it doesn't exist, then compares. First test run _creates_ the golden file and passes.
 
 **Risk**: If the first run produces incorrect output (e.g., from a bug), the golden file captures the buggy output and all subsequent tests pass silently.
 
 ---
 
-## 6. Separation of Concerns
+## 6. Genericity and Type Safety
 
-### 6.1 [NEW] Algorithm modules do not contain rendering logic — GOOD
+### 6.1 [NEW] RsmToGrammar.convert hardcoded to string
 
-Verified: `Cyk.fs`, `Valiant.fs`, `LLParser.fs`, `LRParser.fs`, `Gll.fs`, `Rnglr.fs` return structured data (tables, traces, trees). All TeX/DOT generation lives in `FLPQ.Printers`. CLI runners (`CykRunner.fs`, etc.) orchestrate the pipeline. Separation is clean.
+`RsmToGrammar.convert` (`RsmToGrammar.fs:23`) has signature `RSM<string, string> -> Grammar<string, string>`. The `ntName` helper uses `sprintf` to construct nonterminal names. Cannot work with generic `'t`, `'nt` types.
 
-### 6.2 [NEW] GraphReader in FLPQ.RPQ — questionable placement
+**Impact**: RSM-to-grammar conversion cannot be used in a generic parsing pipeline.
 
-`GraphReader.fs` parses graph files into `NFA<string, int>`. It lives in `FLPQ.RPQ` but its output type (`NFA`) is from `FLPQ.Languages`. This creates a dependency: `FLPQ.RPQ` → `FLPQ.Languages`. Since `FLPQ.RPQ` already depends on `FLPQ.Languages` (for `DFA`, `Nfa.intersectEdgeSets`), this is not a circular dependency, but the graph-reading concern could arguably belong in `FLPQ.GraphAnalysis` or `FLPQ.Languages`.
+### 6.2 [NEW] EbnfParser and RsmBuilder hardcoded to string
 
----
+`EbnfParser.parseEbnf` returns `(Nonterminal<string> * Regexp<string, string>) list`. `RsmBuilder.buildRSM` takes `Map<Nonterminal<string>, Regexp<string, string>>`. Inherently string-bound because they parse text input — acceptable for text parsers, but means the EBNF→RSM pipeline cannot be composed with generic grammars.
 
-## 7. Genericity and Type Safety
+### 6.3 [NEW] Grammar.parseGrammar hardcoded to string
 
-### 7.1 [NEW] RsmToGrammar.convert hardcoded to string
-
-`RsmToGrammar.convert` (`RsmToGrammar.fs:23`) has signature `RSM<string, string> -> Grammar<string, string>`. The `ntName` helper function uses `sprintf` to construct nonterminal names. This is the only function in the module and it cannot work with generic `'t`, `'nt` types because it constructs string-based nonterminal identifiers.
-
-**Impact**: RSM-to-grammar conversion cannot be used in a generic parsing pipeline. Only usable for string-based grammars.
-
-### 7.2 [NEW] EbnfParser and RsmBuilder hardcoded to string
-
-`EbnfParser.parseEbnf` returns `(Nonterminal<string> * Regexp<string, string>) list`. `RsmBuilder.buildRSM` takes `Map<Nonterminal<string>, Regexp<string, string>>`. These are inherently string-bound because they parse text input. This is acceptable — text parsers must operate on strings — but it means the EBNF→RSM pipeline cannot be composed with generic grammars.
-
-### 7.3 [NEW] Grammar.parseGrammar hardcoded to string
-
-`Grammar.parseGrammar` (`Grammar.fs:97`) returns `Grammar<string, string>`. The `classifyToken` helper uses `System.Char.IsUpper` to distinguish terminals from nonterminals. This is inherently string-bound and cannot be generic. Acceptable for a text parser.
+`Grammar.parseGrammar` (`Grammar.fs:97`) returns `Grammar<string, string>`. The `classifyToken` helper uses `System.Char.IsUpper`. Inherently string-bound — acceptable for a text parser.
 
 ---
 
-## 8. Issues Resolved (from prior reports)
-
-These issues from prior reports are confirmed resolved:
-
-| Task | Issue | Resolution |
-|------|-------|------------|
-| 40 | CYK/Valiant hardcoded to `string` | Made generic over `'t, 'nt`; accept pre-tokenized input |
-| 41 | LR table builder duplication | Extracted shared `populateShiftGoto` helper |
-| 42 | Valiant bypasses BooleanDecomposition | Uses `decompose`/`recompose` |
-| 43 | checkDotCompiles duplication | `checkDotCompiles` delegates to `checkDotCompilesWithInfo` |
-| 44 | LR0Item/LR1Item field casing | **NOT RESOLVED** — still PascalCase (`Lhs`, `Rhs`, `Dot`) |
-| 45 | LRParserTests submodule duplication | Extracted parameterized test helpers |
-| 64 | RPQ in separate modules | Moved to own project, unified `evaluate` interface |
-| 65 | Various refactoring | Parsing input types, LR code duplication, FsCheck generators |
-| 66 | Printers separation | Moved to separate `FLPQ.Printers` project |
-| 111 | Valiant Seq.head crash, deduplicate init | `initValiant` shared, guard for empty decomposition |
-| 112 | SymbolTeX hardcoded string | Uses printer functions |
-| 113 | CYK core deduplication | Parameterized `cykCore` helper with callbacks |
-| 114 | Shared Generators.fs | Created `FLPQ.TestUtilities` with all FsCheck generators |
-| 115 | RPQ cross-algorithm equivalence tests | `RegexPropertyTests` module with random regex DFAs |
-| 116 | Tokenizer unit tests | Dedicated `TokenizerTests.fs` with property tests |
-| 117 | CLI tests project | Created `FLPQ.Cli.Tests`, moved tests, added runner tests |
-| 118 | Large-input stress tests | Stress tests across all algorithm families |
-| 119 | Deduplicate automaton infrastructure | `collectAlphabet`, `toDfa`, shared LR BFS |
-| 120 | Reuse LR automaton in CLI runners | LR runners use `LRAutomaton` types |
-| 121 | Naming and style fixes | `lr0AutomatonToTikz`, `isCompleted`, etc. |
-| 122 | Matrix.data private | Get/set accessor functions, semantic color labels |
-| 123 | Deduplicate miscellaneous helpers | `readIfExists`, `collectSteps`, `termPrinter`, `escapeLabel` |
-| 124 | Rhs.toList/toSymbols ambiguity | `toListWithEpsilon` / `toNonEpsilonList` |
-| 125 | VisualizationStep location | Moved to `FLPQ.Printers/VisualizationTypes.fs` |
-| 126 | XML documentation comments | Added to undocumented public APIs |
-| 127 | Refactor SummaryTeX | From mutable to functional pipelines |
-| 128 | Property-based equivalence tests | toCnf, FirstFollow, NFA→DFA (exists but mislabeled) |
-| 129 | Fill golden test gaps | LL table, Matrix, Automaton, Derivation tree, Valiant trace |
-| 130 | LR conflict behavior tests | Added conflict detection and resolution tests |
-| 131 | BinaryPair named struct, RsmDfa alias | Completed |
-| 132 | LL(k>1) tests, modified Valiant empty-input | Completed (Fact tests only, no properties) |
-
----
-
-## 9. Suggestions Prioritized
+## 7. Suggestions Prioritized
 
 | Priority | Issue | Section | Effort |
 |----------|-------|---------|--------|
 | **Critical** | Fix 3 stubbed tests in RnglrTests.fs (empty body) | 4.1 | Small |
 | **High** | Fix `GrammarTests.toCnf` property test: convert to `[<Fact>]` or use true FsCheck | 4.2 | Medium |
 | **High** | Fix `FirstFollowTests.firstK` property test: same; check exact equality | 4.2 | Medium |
-| **High** | Deduplicate `collectGraphEdges` between Gll.fs and Rnglr.fs | 1.7 | Small |
-| **High** | Deduplicate test helpers between RnglrTests.fs and GllTests.fs | 1.8 | Medium |
+| **High** | Deduplicate `collectGraphEdges` between Gll.fs and Rnglr.fs | 1.2 | Small |
+| **High** | Deduplicate test helpers between RnglrTests.fs and GllTests.fs | 1.3 | Medium |
 | **Medium** | Fix Submatrix `Size` → `size` naming inconsistency | 2.3 | Small |
 | **Medium** | Fix LR0Item/LR1Item field casing (PascalCase → camelCase) | 3.4 | Small |
 | **Medium** | Define LR parse behavior when conflicts exist | 4.3 | Small |
@@ -295,7 +199,7 @@ These issues from prior reports are confirmed resolved:
 | **Medium** | Add property tests for grammars 9 and 10 equivalence | 4.5 | Medium |
 | **Medium** | Add FsCheck string generator for `{a,b,c,x,y}` alphabet | 4.5 | Small |
 | **Medium** | Add property-based tests for Graph operations | 4.8 | Medium |
-| **Low** | Remove unused `FSharpPlus` from `FLPQ.GraphAnalysis.fsproj` | 1.6 | Small |
+| **Low** | Remove unused `FSharpPlus` from `FLPQ.GraphAnalysis.fsproj` | 1.1 | Small |
 | **Low** | Fix `GraphTests.fs` `Assert.Equal(g.Edges, ...)` — element-by-element | 2.2 | Small |
 | **Low** | Deduplicate `GraphTests.fs` empty-set filter test body | 2.1 | Small |
 | **Low** | Deduplicate `BooleanDecomposition.decompose` / `decomposeNonEmptySet` | 2.4 | Medium |
@@ -304,3 +208,45 @@ These issues from prior reports are confirmed resolved:
 | **Low** | Extend RPQ test alphabet beyond `{"a","b"}` | 4.7 | Medium |
 | **Low** | Add dimension-consistency property test for BooleanDecomposition | 4.9 | Small |
 | **Low** | Document GoldenHelpers.verifyGolden risk (captures buggy output) | 5.2 | Small |
+
+---
+
+## 8. Issues Resolved
+
+Brief summary of issues confirmed resolved from prior reports:
+
+| Task | Issue | Status |
+|------|-------|--------|
+| 40 | CYK/Valiant hardcoded to `string` | RESOLVED — generic over `'t, 'nt` |
+| 41 | LR table builder duplication | RESOLVED — shared `populateShiftGoto` |
+| 42 | Valiant bypasses BooleanDecomposition | RESOLVED — uses `decompose`/`recompose` |
+| 43 | checkDotCompiles duplication | RESOLVED — delegates to `checkDotCompilesWithInfo` |
+| 44 | LR0Item/LR1Item field casing | **NOT RESOLVED** — still PascalCase (see §3.4) |
+| 45 | LRParserTests submodule duplication | RESOLVED — parameterized test helpers |
+| 64 | RPQ in separate modules | RESOLVED — own project, unified `evaluate` |
+| 65 | Various refactoring | RESOLVED — input types, LR dedup, generators |
+| 66 | Printers separation | RESOLVED — separate `FLPQ.Printers` project |
+| 111 | Valiant Seq.head crash, deduplicate init | RESOLVED — shared `initValiant` |
+| 112 | SymbolTeX hardcoded string | RESOLVED — printer functions |
+| 113 | CYK core deduplication | RESOLVED — parameterized `cykCore` |
+| 114 | Shared Generators.fs | RESOLVED — `FLPQ.TestUtilities` |
+| 115 | RPQ cross-algorithm equivalence tests | RESOLVED — `RegexPropertyTests` |
+| 116 | Tokenizer unit tests | RESOLVED — property tests added |
+| 117 | CLI tests project | RESOLVED — `FLPQ.Cli.Tests` created |
+| 118 | Large-input stress tests | RESOLVED — all algorithm families |
+| 119 | Deduplicate automaton infrastructure | RESOLVED — shared `collectAlphabet`, `toDfa` |
+| 120 | Reuse LR automaton in CLI runners | RESOLVED — uses `LRAutomaton` types |
+| 121 | Naming and style fixes | RESOLVED — `lr0AutomatonToTikz`, etc. |
+| 122 | Matrix.data private | RESOLVED — get/set accessors |
+| 123 | Deduplicate miscellaneous helpers | RESOLVED — `readIfExists`, `collectSteps`, etc. |
+| 124 | Rhs.toList/toSymbols ambiguity | RESOLVED — `toListWithEpsilon` / `toNonEpsilonList` |
+| 125 | VisualizationStep location | RESOLVED — `FLPQ.Printers/VisualizationTypes.fs` |
+| 126 | XML documentation comments | RESOLVED — added to public APIs |
+| 127 | Refactor SummaryTeX | RESOLVED — functional pipelines |
+| 128 | Property-based equivalence tests | PARTIAL — exist but mislabeled (see §4.2) |
+| 129 | Fill golden test gaps | RESOLVED — LL, Matrix, Automaton, etc. |
+| 130 | LR conflict behavior tests | RESOLVED — conflict detection/resolution |
+| 131 | BinaryPair struct, RsmDfa alias | RESOLVED |
+| 132 | LL(k>1) tests, modified Valiant empty-input | PARTIAL — Fact tests only, no properties (see §4.4) |
+
+Additional resolved items: CYK uses immutable `Set` (no mutable `HashSet`), `Submatrix` fields renamed from `A`/`B` to `Row`/`Col`, `buildLR0`/`buildLR1` delegate to generic `buildLR`, `Dfa.alphabet` delegates to `Nfa.collectAlphabet`.

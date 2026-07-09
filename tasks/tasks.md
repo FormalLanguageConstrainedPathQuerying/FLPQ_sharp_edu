@@ -277,8 +277,32 @@
              1.    FL0085 — Local Function Naming: in our project we use camelCase
              2.    FL0069 — Type Parameter Naming: in our project we use camelCase
              3.    Regenerate report. Place it in tasks/linter_report.md. Align it with previous version of report.
- 148. [done]  Fix preblems detected by linter.
+148. [done]  Fix preblems detected by linter.
       1.    Fix all problems detected by fsharplint. Ensure that all problems fixed.
             1.    Fix it one-by one. Linter reports position of error. Use it to fix. Do the same with compilation errors. Do not try to invent general solution (do not try to write renaming script, do not try to rename with sed, etc)
       2.    Update AGENTS.md with instructions to use linter to check whether all ready for commit. You must not commit code with problems detected by linter. Run linter only if F#-related files were chenged. Add instructions how to run linter. Linet must be run on slnx file, not on projects or sources individually.
       3.    Update CI. Linter must be executed on CI.
+149. [done]  `RnglrTests.fs` lines 175–188 contain three `[<Fact>]` tests with empty bodies `()`. It is critical problem. Make these tests meaningful. Fix code such taht all tests pass. 
+      1.    Line 176: ``S -> a S b | eps accepts a a b b`` — comment: "grammar2 with S -> S S creates unbounded DFA states"
+      2.    Line 180: ``S -> a S b | eps rejects a a b`` — same comment
+      3.    Line 185: ``S -> a S b | eps | S S accepts a b a b`` — similar comment
+      Comments are worng. Two first gramars do not contain S -> S S rule at all. Third grammar contains. But it must not be a problem. Right part of production is a valid regular expression, DFA must be constructed correctly by derivatives.
+150. Refactoring
+     1.   Fix ALL fsharplint problems
+     2.   `FLPQ.GraphAnalysis.fsproj` includes `<PackageReference Include="FSharpPlus" Version="1.9.1" />` but neither `Graph.fs` nor `MsBfs.fs` uses any FSharpPlus types (no `NonEmptyList`, `NonEmptySet`, etc.). Remove the unused package reference.
+     3.   Identical function `collectGraphEdges` (`Graph<int, Option<'t>> -> ResizeArray<'t * int>[]`) is defined in both:
+          1.   `Gll.fs:49–58` (inside `module GLL`)
+          2.   `Rnglr.fs:35–44` (inside `module Rnglr`)
+          Create common function and use in both places.
+     4.   Two substantial helper functions are copy-pasted:
+          1.    `grammarToEbnfText` (`RnglrTests.fs:11–29`, `GllTests.fs:13–31`) — converts a BNF grammar to EBNF text for RSM builder
+          2.    `grammarToRsm` (`RnglrTests.fs:31–33`, `GllTests.fs:35–37`) — wraps `grammarToEbnfText` + `RsmBuilder.buildRSMFromText`
+          Create common function and use in both places.
+     5. Helper functions `stringToTerminals`/`stringToChars`, `inputToGraph`/`terminalsToGraph`, `rnglrAccepts`/`gllAccepts`, `cykAccepts`, and `nonEpsilon` are duplicated or near-duplicated.
+        Create common function and use in both places.
+     6. `GraphTests.fs` lines 63–72 (`filterOutgoing empty set`) and lines 74–83 (`filterIncoming empty set`) are structurally identical, differing only in the function called. The verification loop is copy-pasted. Create one generic parametrizable function.
+     7. `BooleanDecomposition.fs`: `decompose` (lines 12–27) and `decomposeNonEmptySet` (lines 32–52) share the same structure. Create one generic parametrizable function.
+151. Refactoring. RnglaTypes.
+     1.   RnglrAction is similar to LRAction. Use one common type
+     2.   storedStates
+152. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs

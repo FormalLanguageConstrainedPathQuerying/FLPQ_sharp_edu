@@ -105,13 +105,13 @@ Each project has a hub documentation file grouping its modules. Design and logic
 
 | Project | Hub Document |
 |---------|-------------|
-| FLPQ.LinearAlgebra | [FLPQ.LinearAlgebra.md](FLPQ.LinearAlgebra.md) |
-| FLPQ.GraphAnalysis | [FLPQ.GraphAnalysis.md](FLPQ.GraphAnalysis.md) |
-| FLPQ.Languages | [FLPQ.Languages.md](FLPQ.Languages.md) |
-| FLPQ.RPQ | [FLPQ.RPQ.md](FLPQ.RPQ.md) |
-| FLPQ.Printers | [FLPQ.Printers.md](FLPQ.Printers.md) |
-| FLPQ.Cli | [FLPQ.Cli.md](FLPQ.Cli.md) |
+| FLPQ.LinearAlgebra | [FLPQ.LinearAlgebra.md](../developer/FLPQ.LinearAlgebra.md) |
+| FLPQ.GraphAnalysis | [FLPQ.GraphAnalysis.md](../developer/FLPQ.GraphAnalysis.md) |
+| FLPQ.Languages | [FLPQ.Languages.md](../developer/FLPQ.Languages.md) |
+| FLPQ.RPQ | [FLPQ.RPQ.md](../developer/FLPQ.RPQ.md) |
+| FLPQ.Printers | [FLPQ.Printers.md](../developer/FLPQ.Printers.md) |
+| FLPQ.Cli | [FLPQ.Cli.md](../developer/FLPQ.Cli.md) |
 
-See [main.md](main.md) for the full documentation index including the flat module listing.
+See [main.md](../main.md) for the full documentation index including the flat module listing.
 
-When adding a new module, create a corresponding `docs/<module>.md` file and update the respective project hub.
+When adding a new module, create a corresponding `docs/developer/<module>.md` file and update the respective project hub.
