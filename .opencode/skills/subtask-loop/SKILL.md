@@ -1,6 +1,6 @@
 ---
 name: subtask-loop
-description: Use when executing an atomic subtask from the detailed plan: implement → test → document → quality gates → checks → commit → mark done. Covers the full execution cycle, code quality checks, commit rules, and completion tracking.
+description: Use when executing an atomic subtask from the detailed plan: implement → test → document → pre-commit checks → quality checks → commit → mark done. Covers the full execution cycle, code quality checks, commit rules, and completion tracking.
 ---
 
 # Subtask Execution Loop
@@ -10,6 +10,22 @@ Each atomic subtask from `tasks/detailed_plan.md` is executed as a self-containe
 ## Cycle Steps
 
 Execute these steps in order. **Do not skip steps. Do not proceed past a step until it is verified complete.**
+
+## Documentation-Only Subtasks
+
+When a subtask modifies only `.md` files (no `.fs` files), the following cycle steps are adapted:
+
+| Step | Action |
+|------|--------|
+| 1. Implement | Write documentation |
+| 2. Write Tests | **Skip** — no code to test |
+| 3. Update Docs | The implementation IS the documentation; verify navigation links are updated |
+| 4. Pre-Commit Check | **Skip** — no source files to format or build |
+| 5. Code Quality Checks | **Skip** — no code to check |
+| 6. Commit | **Follow exactly** — one commit per subtask, single SN identifier |
+| 7. Mark Done | **Follow exactly** |
+
+The absence of code changes **never** justifies batching multiple subtasks into a single commit.
 
 ### 1. Implement
 
@@ -49,9 +65,9 @@ Update all task-related documentation per the `documentation` skill. The skill r
 - [ ] At least one documentation file was created or updated for this subtask
 - [ ] Documentation completeness is verified per the `documentation` skill's procedure
 
-### 4. Commit Gate
+### 4. Pre-Commit Check
 
-Run commit gate (format + build). See `quality-gates` skill for the exact commands.
+Run format + build. See `quality-gates` skill for the exact commands.
 
 **Hard gate — do not proceed to step 5 unless this passes.**
 
@@ -64,7 +80,12 @@ Run commit gate (format + build). See `quality-gates` skill for the exact comman
 
 ### 6. Commit
 
-Commit with message `feat(XXX-SN): description` where `XXX` is the task ID and `SN` is the subtask identifier.
+**Hard gate — before committing, verify:**
+
+- [ ] Exactly ONE subtask's worth of changes is being committed. If multiple subtasks have been completed since the last commit, STOP. Unstage all files. Commit each subtask individually, one at a time.
+- [ ] The commit message uses a single subtask identifier: `feat(XXX-SN): ...`, not ranges like `S1-S6`.
+
+Commit with message `feat(XXX-SN): description` where `XXX` is the task ID and `SN` is the **single** subtask identifier.
 
 **Before commit:**
 
@@ -101,10 +122,20 @@ Example for subtask S1:
 - "S1: Implement" → in_progress → completed
 - "S1: Write tests" → in_progress → completed
 - "S1: Update documentation" → in_progress → completed
-- "S1: Commit gate (format + build)" → in_progress → completed
+- "S1: Pre-Commit Check (format + build)" → in_progress → completed
 - "S1: Quality checks" → in_progress → completed
 - "S1: Commit" → in_progress → completed
 ```
+
+## Multi-Subtask Discipline
+
+When a task has multiple subtasks (S1, S2, S3, ...), execute them **strictly sequentially**:
+
+1. Complete all cycle steps for S1 (Implement → Tests → Docs → Pre-Commit Check → Quality → Commit → Mark Done)
+2. Only after S1 is committed, start S2
+3. Never mark multiple subtasks `completed` in `todowrite` before committing each individually
+
+A `todowrite` listing "S1: Implement [completed], S2: Implement [completed], S1: Write tests [completed]" indicates skipped commits — each subtask must be fully committed before the next begins.
 
 ## Blocked Work Protocol
 
@@ -133,7 +164,7 @@ After ALL subtasks are committed, run these gates in order. Each references the 
 
 | Gate | Owned by | Description |
 |------|----------|-------------|
-| Commit gate (per subtask) | `subtask-loop` | Tests written, docs updated — verified at steps 2-3 above |
+| Subtask completeness | (per subtask cycle) | Tests written, docs updated — verified at steps 2-3 above |
 | Lint gate | `quality-gates` | `dotnet-fsharplint lint` — 0 warnings in modified projects |
 | Test gate | `quality-gates` | `dotnet dotnet-coverage collect dotnet test` — 0 failures, 0 skipped |
 | Coverage gate | `quality-gates` | Parse `tmp/coverage.cobertura`, verify FLPQ source ≥ 80% |

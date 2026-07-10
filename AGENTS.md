@@ -41,6 +41,7 @@ Supplementary materials for the book on formal language constrained path queryin
 - Do tasks strictly **one at a time**. Each task gets its own feature branch, its own detailed plan, and its own merge to dev. Never combine multiple tasks in a single feature branch
 - Each decision must be documented before implementation. Documentation must be detailed enough to reproduce the project from scratch and understand why each decision was made
 - Commit messages must be detailed enough to understand the reasons for changes
+- Documentation-only tasks (no `.fs` files changed) skip code-specific gates (tests, lint, format, build) but still follow all other workflow rules: one task per branch, one commit per subtask, code review
 
 ### Working Loop
 

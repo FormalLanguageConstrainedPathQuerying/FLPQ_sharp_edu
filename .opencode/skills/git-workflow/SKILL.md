@@ -16,7 +16,7 @@ description: Use when doing git operations: branching, committing, merging, reba
 
 ### Message format
 
-Conventional Commits with subtask identifier:
+Conventional Commits with **exactly one** subtask identifier:
 
 ```
 feat(XXX-SN): description
@@ -25,8 +25,10 @@ docs(XXX-SN): description
 ```
 
 - `XXX` — task ID from `tasks.md`
-- `SN` — atomic subtask identifier from `tasks/detailed_plan.md`
+- `SN` — a **single** atomic subtask identifier from `tasks/detailed_plan.md` (e.g., `S1`, `S4`). Ranges (`S1-S6`), lists (`S1,S3`), or commas are forbidden
 - One commit per completed atomic subtask — never combine subtasks in one commit
+
+**Pre-commit validation**: before running `git commit`, verify the message contains exactly one `SN` by checking the prepared message. If the message mentions multiple subtask identifiers, STOP — split the changes into individual commits.
 
 ### Pre-commit checklist
 
