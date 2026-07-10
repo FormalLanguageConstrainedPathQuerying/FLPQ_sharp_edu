@@ -91,6 +91,32 @@ If a subtask cannot be committed as a self-contained increment, it is too large 
 
 Uncommitted work on a feature branch must never exceed one atomic subtask. If a session is interrupted, the loss is bounded to that single subtask.
 
+## Post-Implementation Design Notes
+
+When a task hits algorithmic limitations — partially completed, with skipped tests or remaining work — append a `## Design Notes` section to `tasks/detailed_plan.md`. This serves as persistent design knowledge for future task refinement. The section must be structured as follows:
+
+```
+## Design Notes (discovered during implementation)
+
+### <Topic Title>
+
+Design rationale, coordinate spaces, invariants — as confirmed by the user.
+
+### <Failure Topic Title>
+
+- Root causes with concrete examples (e.g., "for input `aa`, range (5,0)→(7,2) has no entries because...")
+- What was attempted and why it didn't fully work
+- Remaining work: concrete, actionable items
+- Skipped tests: list `[<Fact(Skip="...")>]` and the reason
+```
+
+Requirements:
+
+- Every algorithmic limitation MUST be traceable to a concrete input, a concrete range/cell in the data structure, and a concrete execution path in the code
+- Never write vague descriptions like "PIntermediate entries are missing" — specify which range, which RSM state coordinates, and which reduction path should produce them
+- Remaining work items must be actionable (e.g., "Track origin final RSM state through BFS queue by adding a field to the BFS node tuple") — not vague goals
+- If the user provided design guidance (e.g., decomposition schema, coordinate system), record it verbatim in the `### <Topic>` section as the authoritative reference
+
 ## Task Authoring Guidelines
 
 When writing a new task for `tasks/tasks.md`, follow these rules:

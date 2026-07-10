@@ -121,11 +121,16 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
    - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls")
    - What you've tried and what remains unresolved
 3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task
-4. Update `tasks/detailed_plan.md` with a section listing:
-   - Which subtasks are blocked and why
-   - What was tried and what failed
-   - What specific help is needed from the user
-   Commit this update so the plan serves as a persistent record of the blocking state
+4. Append a `## Design Notes` section to `tasks/detailed_plan.md`. See the `planning` skill for the full template. Minimum required content:
+
+   - **Correct Design**: algorithmic design as confirmed by the user — coordinate spaces, invariants, decomposition schema. Quote the user's design guidance verbatim where available.
+   - **Blocked Subtasks**: which subtasks are blocked and why
+   - **Root Causes**: why each failure occurs, with concrete examples. Every limitation MUST be traceable to a concrete input string, a concrete range/cell in the data structure, and a concrete execution path in the code. Never write vague descriptions.
+   - **Approaches Tried**: what was attempted and why it didn't fully work
+   - **Remaining Work**: concrete, actionable items (e.g., "Track origin final RSM state through BFS queue by adding a third field to the BFS node tuple") — not vague goals
+   - **Skipped Tests**: list any tests skipped with `[<Fact(Skip="...")>]` and the reason
+
+   Commit this summary so the plan serves as a persistent design record for future task refinement.
 
 ## Task Completion Verification
 

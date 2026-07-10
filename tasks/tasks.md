@@ -302,7 +302,24 @@
         Create common function and use in both places.
      6. `GraphTests.fs` lines 63–72 (`filterOutgoing empty set`) and lines 74–83 (`filterIncoming empty set`) are structurally identical, differing only in the function called. The verification loop is copy-pasted. Create one generic parametrizable function.
      7. `BooleanDecomposition.fs`: `decompose` (lines 12–27) and `decomposeNonEmptySet` (lines 32–52) share the same structure. Create one generic parametrizable function.
-151. Refactoring. RnglaTypes.
-     1.   RnglrAction is similar to LRAction. Use one common type
-     2.   storedStates
-152. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
+ 151. [done] Fix GLL anf GLR
+      1.   Fix tree tests. all tests must check that crone of tree is exactly the input tree. 
+      2.   Fix code if some tests mail
+ 152. [done] Add GLL/RNGLR visualization: SPPF DOT, PathIndex TeX, RSM DOT, CLI runners.
+      1.   Add SPPF DOT visualization. Render SPPF graph (GllTypes.fs) to DOT format.
+      2.   Add PathIndex TeX visualization. Render GLL/RNGLR path index matrix to TeX.
+      3.   Add RSM DOT visualization. Render RSM automaton structure to DOT format.
+      4.   Add GLL CLI runner. Support -a gll, step-by-step output.
+      5.   Add RNGLR CLI runner and RnglrTableTeX. Support -a rnglr + LR table tee.
+      6.   Add GLL/RNGLR to CLI Algorithm enum, Summary module, and Program dispatch.
+      7.   Fix pre-existing FSharpLint warnings in modified projects.
+ [done] 153. SPPF refactoring
+      1.   Add tests on path index to tex rendering and tex compilation.
+      2.   GLL and GLR tree tests contains workaround to collect terminals. It is illigable. Tusts must check the algorithm. If SPPF construction incorrect, fix it. If necessary, ask me to assist with sppf structure.
+      3.   Improve path index printing
+           1.   Print pairs (rsm_state, input_positions) as indexes for rows and colunms. Make matrix printer parametrizable by index printer
+           2.   In summary Wrap path index matrix with resizebox  0.9/textxwidth
+ 154. Refactoring. RnglaTypes.
+      1.   RnglrAction is similar to LRAction. Use one common type
+      2.   storedStates
+ 155. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
