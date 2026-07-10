@@ -42,17 +42,12 @@ FsCheck generators:
 
 ### 3. Update Documentation
 
-Update all task-related docs including `fixes_for_book.md` and module docs (`docs/<module>.md`). See the `documentation` skill for content requirements.
+Update all task-related documentation per the `documentation` skill. The skill references `docs/developer/guides/documentation-conventions.md` for the complete mapping of source changes to required doc updates and the completeness verification criteria.
 
 **Hard gate — this step is not complete until:**
 
 - [ ] At least one documentation file was created or updated for this subtask
-- [ ] For new modules: a corresponding `docs/developer/<module>.md` file exists
-- [ ] Modified public APIs are reflected in their existing module docs
-- [ ] New CLI features are reflected in `docs/user/cli.md`
-- [ ] New files are listed in `docs/developer/FLPQ.<Project>.md` and `docs/project/architecture.md`
-- [ ] New doc pages are linked from `docs/main.md`
-- [ ] If a book error was found, it is recorded in `tasks/fixes_for_book.md`
+- [ ] Documentation completeness is verified per the `documentation` skill's procedure
 
 ### 4. Commit Gate
 

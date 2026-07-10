@@ -40,8 +40,9 @@ Each subtask in `tasks/detailed_plan.md` MUST include these four sections. **A s
 **Code:** <files to create or modify, types and functions to add>
 **Tests:** <test files to create or modify, specific test approaches:
           golden, property-based, [<Fact>], etc.>
-**Docs:** <doc files to create or update. Use the mapping table below
-         to determine which docs are affected.>
+**Docs:** <doc files to create or update. Use the mapping table in
+         `docs/developer/guides/documentation-conventions.md` to
+         determine which docs are affected.>
 
 **Spec:**
 - <detailed implementation specification>
@@ -62,26 +63,9 @@ Example:
 - Terminal/nonterminal nodes: shape=oval...
 ```
 
-### Documentation Mapping Table
+### Documentation Mapping
 
-Use this table when writing the **Docs** section of each subtask. For every source change, the corresponding doc changes are **mandatory** — if you cannot list them, the plan is incomplete.
-
-| Source change | Required doc actions |
-|---|---|
-| New module in `src/FLPQ.Printers/` | New `docs/developer/<module-name>.md` — describe types, functions, design decisions, book references |
-| New module in `src/FLPQ.Languages/` | New `docs/developer/<module-name>.md` |
-| New module in `src/FLPQ.LinearAlgebra/` | New `docs/developer/<module-name>.md` |
-| New module in `src/FLPQ.GraphAnalysis/` | New `docs/developer/<module-name>.md` |
-| New module in `src/FLPQ.RPQ/` | New `docs/developer/<module-name>.md` |
-| New file in any `src/` project | Update `docs/developer/FLPQ.<Project>.md` — add module to list |
-| New file in any `src/` project | Update `docs/project/architecture.md` — add file to project file listing |
-| New CLI runner | Update `docs/developer/FLPQ.Cli.md` — add runner description |
-| New CLI runner with new output format | Update `docs/user/cli.md` — add algorithm to listing, describe output |
-| New Algorithm DU case | Update `docs/user/cli.md` — add to algorithm list |
-| Changed public API (new parameter, renamed function) | Update existing `docs/developer/<module>.md` — reflect API change |
-| New doc page | Update `docs/main.md` — add link under appropriate section |
-| New visualization module | Update the corresponding algorithm doc to cross-reference the visualizer |
-| Book discrepancy found | Update `tasks/fixes_for_book.md` |
+For the full mapping of source changes to required doc actions, see [`docs/developer/guides/documentation-conventions.md`](/docs/developer/guides/documentation-conventions.md). This table is the single source of truth — use it when writing the **Docs** section of each subtask.
 
 ### Granularity
 

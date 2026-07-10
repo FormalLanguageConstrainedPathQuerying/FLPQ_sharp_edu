@@ -16,6 +16,7 @@ What our standards and principles are, and why we chose them.
 - [Coding conventions](developer/guides/coding-conventions.md) — naming, genericity, functional style
 - [Design guides](developer/guides/design-guides.md) — architecture principles, separation of concerns
 - [Quality standards](developer/guides/quality-standards.md) — coverage, lint, formatting, equivalence testing
+- [Documentation conventions](developer/guides/documentation-conventions.md) — module doc structure, decision docs, mapping table, review criteria
 
 ### Project Hubs
 

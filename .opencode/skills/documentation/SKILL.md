@@ -1,38 +1,34 @@
 ---
 name: documentation
-description: Use when writing or updating documentation: module docs in docs/, recording book errors in fixes_for_book.md, or documenting design decisions. Covers content requirements, format, and protocols.
+description: Use when writing or updating documentation: module docs in docs/, recording book errors in fixes_for_book.md, or documenting design decisions. Covers the procedure for identifying, writing, and linking documentation.
 ---
 
 # Documentation
 
-## Module Documentation
+## Content Requirements
 
-Each implemented module must have a dedicated documentation file in `docs/` (e.g., `docs/matrix.md`). The file must describe:
+All documentation content requirements — module doc structure, decision docs format, book error recording format, commit message standards, and the source-change-to-doc-action mapping table — live in [`docs/developer/guides/documentation-conventions.md`](/docs/developer/guides/documentation-conventions.md). Load that document for the authoritative specification of *what* documentation must contain.
 
-- **Type definitions with design rationale** — why each type exists and what problem it solves
-- **All function signatures** with behavior, preconditions, and postconditions
-- **Key design decisions** and their justification
-- **Relationship to the book** (section/figure references) where applicable
+## Procedure
 
-Root documentation entry point is [`docs/main.md`](/docs/main.md). Use it for navigation.
+### 1. Identify affected docs
 
-## Decision Documentation
+For every source change, determine which doc files are affected using the mapping table in `docs/developer/guides/documentation-conventions.md`.
 
-Each decision point and decision must be documented before implementation:
+### 2. Write or update docs
 
-- Documentation must be detailed enough to reproduce an identical project from scratch without intermediate steps — anyone must be able to reimplement the project in another language using the documentation only
-- Documentation must make it clear **why** a particular decision was made
+- For new modules: create `docs/developer/<module-name>.md` following the module documentation structure in the conventions doc
+- For changed public APIs: update the existing module doc to reflect the change
+- For new CLI features: update `docs/user/cli.md`
+- For new files: update `docs/developer/FLPQ.<Project>.md` and `docs/project/architecture.md`
+- For new doc pages: update `docs/main.md` with navigation links
+- For book errors: record in `tasks/fixes_for_book.md`
 
-## Commit Messages
+### 3. Verify completeness
 
-Commit messages must be detailed enough to understand the reasons for changes. Anyone must be able to explain why particular changes were required using only the commit message.
+After writing, verify against the documentation completeness criteria in the conventions doc:
 
-## Book Errors
-
-If a book error is found, record it in `tasks/fixes_for_book.md` with:
-
-- Clear description of the error
-- Suggested correction
-- Notification to the user
-
-If additional information not presented in the book was required, record it similarly.
+- Every new `.fs` file has a corresponding `docs/developer/` entry
+- Every new module appears in its project hub doc
+- Every new page is linked from `docs/main.md`
+- Every new CLI feature is documented in `docs/user/cli.md`

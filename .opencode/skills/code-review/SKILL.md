@@ -57,12 +57,7 @@ Review → Detect problems → Fix all → Commit fixes → Repeat until zero fi
 
 ### 4. Documentation
 
-- **Module doc completeness**: every `.fs` file in `src/` must have a corresponding entry in `docs/developer/`. New modules without docs are a finding
-- **Hub doc updates**: new files must appear in the project hub doc (`docs/developer/FLPQ.<Project>.md`)
-- **Architecture doc updates**: new files must appear in `docs/project/architecture.md`
-- **CLI user doc updates**: new CLI features (algorithms, flags, output formats) must appear in `docs/user/cli.md`
-- **Cross-references**: new visualization modules must be referenced from their corresponding algorithm docs
-- **Navigation**: new doc pages must be linked from `docs/main.md`
+Verify doc completeness per `docs/developer/guides/documentation-conventions.md` — module doc entries, hub doc updates, architecture doc updates, CLI user doc updates, cross-references, and navigation links.
 
 ### 5. Genericity and Type Safety
 
