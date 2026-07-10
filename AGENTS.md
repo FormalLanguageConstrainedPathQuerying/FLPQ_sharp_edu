@@ -50,9 +50,18 @@ Supplementary materials for the book on formal language constrained path queryin
 3. Create a feature branch from `dev` for this single task
 4. Generate a detailed plan in `tasks/detailed_plan.md`, decomposing the task into atomic subtasks
 5. Execute each subtask using the `subtask-loop` skill
+5a. Verify all subtasks are complete and unblocked. Check `tasks/detailed_plan.md`:
+    - If any subtask is marked `[blocked]` or `[deferred]`, STOP immediately.
+      The task is NOT complete. Do NOT proceed to code review or merge.
+      Report blocking subtasks to the user and await guidance.
+    - If a subtask was attempted, not committed, and its work reverted, the subtask
+      is NOT complete. Do not silently skip it.
 6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings
 7. Merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
-8. Mark the task `[done]` in `tasks.md`
+8. Mark the task `[done]` in `tasks.md`. The `[done]` tag means COMPLETE:
+   every subtask committed, every requirement met, every test passing, zero
+   known failures or unresolved limitations. Never mark a task `[done]` if
+   any subtask was skipped, reverted, or blocked.
 9. Return to step 1
 
 ### Git Safety

@@ -15,10 +15,10 @@ module RnglrTableTeX =
     let private stateCount (table: RnglrTable<'t, 'nt>) : int =
         let mutable maxState = -1
 
-        for (s, _) in Map.keys table.action do
+        for (s, _) in Map.keys table.Action do
             maxState <- max maxState s
 
-        for (s, _) in Map.keys table.goto do
+        for (s, _) in Map.keys table.Goto do
             maxState <- max maxState s
 
         maxState + 1
@@ -32,7 +32,7 @@ module RnglrTableTeX =
         let sb = System.Text.StringBuilder()
 
         let terminals =
-            table.action
+            table.Action
             |> Map.keys
             |> Seq.choose (fun (_, sym) ->
                 match sym with
@@ -42,7 +42,7 @@ module RnglrTableTeX =
             |> List.ofSeq
 
         let nonterminals =
-            table.goto |> Map.keys |> Seq.map snd |> Seq.distinct |> List.ofSeq
+            table.Goto |> Map.keys |> Seq.map snd |> Seq.distinct |> List.ofSeq
 
         let nStates = stateCount table
 
@@ -80,14 +80,14 @@ module RnglrTableTeX =
 
             for t in terminals do
                 let cell =
-                    match Map.tryFind (state, Symbol.T(Terminal t)) table.action with
+                    match Map.tryFind (state, Symbol.T(Terminal t)) table.Action with
                     | Some a -> actionStr a nonterminalPrinter
                     | None -> ""
 
                 sb.Append(@" & " + cell) |> ignore
 
             let endCell =
-                match Map.tryFind (state, Symbol.Epsilon) table.action with
+                match Map.tryFind (state, Symbol.Epsilon) table.Action with
                 | Some a -> actionStr a nonterminalPrinter
                 | None -> ""
 
@@ -95,7 +95,7 @@ module RnglrTableTeX =
 
             for nt in nonterminals do
                 let cell =
-                    match Map.tryFind (state, nt) table.goto with
+                    match Map.tryFind (state, nt) table.Goto with
                     | Some n -> string n
                     | None -> ""
 

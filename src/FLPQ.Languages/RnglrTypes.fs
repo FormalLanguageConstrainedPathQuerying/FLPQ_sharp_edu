@@ -8,8 +8,8 @@ open FLPQ.GraphAnalysis
 /// Book reference: sec:CFPQ_RNGLR.
 [<Struct>]
 type RnglrItem<'nt when 'nt: comparison> =
-    { blockNonterminal: Nonterminal<'nt>
-      rsmState: int }
+    { BlockNonterminal: Nonterminal<'nt>
+      RsmState: int }
 
 /// LR action in the RNGLR parsing table.
 /// Book reference: sec:CFPQ_RNGLR.
@@ -24,21 +24,21 @@ type RnglrAction<'nt when 'nt: comparison> =
 /// Goto maps (automatonState, nonterminal) to an automaton state.
 /// Book reference: sec:CFPQ_RNGLR.
 type RnglrTable<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { action: Map<int * Symbol<'t, 'nt>, RnglrAction<'nt>>
-      goto: Map<int * Nonterminal<'nt>, int>
-      automaton: DFA<Symbol<'t, 'nt>, Set<RnglrItem<'nt>>> }
+    { Action: Map<int * Symbol<'t, 'nt>, RnglrAction<'nt>>
+      Goto: Map<int * Nonterminal<'nt>, int>
+      Automaton: DFA<Symbol<'t, 'nt>, Set<RnglrItem<'nt>>> }
 
 /// Vertex in the RNGLR Graph-Structured Stack.
 /// Represents a parser position: (LR automaton state, input graph vertex).
 /// Book reference: sec:CFPQ_RNGLR.
 [<Struct>]
-type RnglrGssVertex = { lrState: int; inputVertex: int }
+type RnglrGssVertex = { LrState: int; InputVertex: int }
 
 /// Edge in the RNGLR Graph-Structured Stack.
 /// Labeled with the grammar symbol that was recognized at this step.
 /// Book reference: sec:CFPQ_RNGLR.
 [<Struct>]
-type RnglrGssEdge<'t, 'nt> = { symbol: Symbol<'t, 'nt> }
+type RnglrGssEdge<'t, 'nt> = { EdgeSymbol: Symbol<'t, 'nt> }
 
 /// RNGLR Graph-Structured Stack — a labeled directed graph encoding all parsing paths.
 /// Vertices are (lrState, inputVertex) pairs, pre-allocated as |Q_lr| * |V|.
@@ -49,8 +49,8 @@ type RnglrGssEdge<'t, 'nt> = { symbol: Symbol<'t, 'nt> }
 /// each (nt, invState) pair is continued via product BFS through the inverted RSM block of nt.
 /// Book reference: sec:CFPQ_RNGLR.
 type RnglrGSS<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { graph: Graph<RnglrGssVertex, Option<NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      storedStates: Set<Nonterminal<'nt> * int> array }
+    { GssGraph: Graph<RnglrGssVertex, Option<NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
+      StoredStates: Set<Nonterminal<'nt> * int> array }
 
 module RnglrGSS =
 
@@ -63,12 +63,12 @@ module RnglrGSS =
 
         let vertices =
             [ for s in 0 .. lrStateCount - 1 do
-                  for v in 0 .. vertexCount - 1 -> { lrState = s; inputVertex = v } ]
+                  for v in 0 .. vertexCount - 1 -> { LrState = s; InputVertex = v } ]
 
         let edges = Matrix.init k k None
 
-        { graph = Graph.fromEdges vertices edges
-          storedStates = Array.create k Set.empty }
+        { GssGraph = Graph.fromEdges vertices edges
+          StoredStates = Array.create k Set.empty }
 
     /// Adds an edge from source GSS vertex to target GSS vertex.
     /// Returns the storedStates from the source vertex, clearing them.
@@ -78,34 +78,34 @@ module RnglrGSS =
         (toIdx: int)
         (label: Symbol<'t, 'nt>)
         : Set<Nonterminal<'nt> * int> =
-        let edge = { symbol = label }
+        let edge = { EdgeSymbol = label }
 
         let current =
-            match Matrix.get gss.graph.Edges fromIdx toIdx with
+            match Matrix.get gss.GssGraph.Edges fromIdx toIdx with
             | Some nes -> NonEmptySet.add edge nes
             | None -> NonEmptySet.singleton edge
 
-        Matrix.set gss.graph.Edges fromIdx toIdx (Some current)
+        Matrix.set gss.GssGraph.Edges fromIdx toIdx (Some current)
 
-        let states = gss.storedStates.[fromIdx]
-        gss.storedStates.[fromIdx] <- Set.empty
+        let states = gss.StoredStates.[fromIdx]
+        gss.StoredStates.[fromIdx] <- Set.empty
 
         states
 
     /// Returns the stored intermediate intersection states for a GSS vertex without clearing them.
-    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int> = gss.storedStates.[gssIdx]
+    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int> = gss.StoredStates.[gssIdx]
 
     /// Sets the stored intermediate intersection states for a GSS vertex.
     let setStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) (states: Set<Nonterminal<'nt> * int>) : unit =
-        gss.storedStates.[gssIdx] <- states
+        gss.StoredStates.[gssIdx] <- states
 
     /// Returns all outgoing edges from a GSS vertex as (targetIdx, symbol) pairs.
     let outgoingEdges (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : (int * Symbol<'t, 'nt>) list =
-        let n = gss.graph.VertexMap.Count
+        let n = gss.GssGraph.VertexMap.Count
 
         [ for toIdx in 0 .. n - 1 do
-              match Matrix.get gss.graph.Edges gssIdx toIdx with
+              match Matrix.get gss.GssGraph.Edges gssIdx toIdx with
               | Some nes ->
                   for edge in NonEmptySet.toSeq nes do
-                      (toIdx, edge.symbol)
+                      (toIdx, edge.EdgeSymbol)
               | None -> () ]

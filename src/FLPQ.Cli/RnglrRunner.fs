@@ -15,7 +15,7 @@ module RnglrRunner =
         let freshStart = Nonterminal("S'")
         let extRsm = RSM.extendWithStart freshStart rsm
         let lrTable = RnglrLR.buildLR0Table extRsm
-        let lrStateCount = Dfa.stateCount lrTable.automaton
+        let lrStateCount = Dfa.stateCount lrTable.Automaton
 
         let inputText = Helpers.readFile inputFile
         let inputTokens = Tokenizer.tokenizeTerminals inputText

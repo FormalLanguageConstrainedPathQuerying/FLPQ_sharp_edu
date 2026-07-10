@@ -85,6 +85,17 @@ See the `git-workflow` skill for the full git workflow.
 
 Mark the subtask as completed in `tasks/detailed_plan.md`.
 
+If at any point in steps 1–7 you hit an unresolvable problem that prevents 100% completion, **STOP the cycle immediately** and follow the Blocked Work Protocol below. Do NOT attempt to "complete" the subtask with partial results, reverted work, or known limitations. Do NOT proceed to the next subtask.
+
+## Subtask Outcome
+
+A subtask has exactly two valid outcomes:
+
+- **Resolved**: implemented, tested, docs updated, committed. Record the commit hash in `tasks/detailed_plan.md`.
+- **Blocked**: an algorithmic or design problem prevents 100% completion. Do NOT commit partial work. Do NOT proceed to the next subtask. Follow the Blocked Work Protocol.
+
+There is no third state. "Reverted and left as a known limitation" is not a valid outcome — it means the subtask is blocked. Report it.
+
 ## Per-Subtask Execution Tracking
 
 For each subtask, use the `todowrite` tool to track cycle steps as separate items. **No subtask may be committed with any step still `pending`.**

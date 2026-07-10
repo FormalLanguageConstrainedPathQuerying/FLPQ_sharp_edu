@@ -13,19 +13,30 @@ module MatrixTeX =
         (matrix: Matrix<'a>)
         (highlights: Matrix.Highlight list)
         (blocks: Matrix.SubmatrixBlock list)
+        (rowLabelPrinter: (int -> string) option)
+        (colLabelPrinter: (int -> string) option)
         : string =
         let pniceOptions = ResizeArray<string>()
 
         if not (List.isEmpty highlights) then
             pniceOptions.Add("color-inside")
 
-        if showColNumbers then
-            pniceOptions.Add("first-row")
-            pniceOptions.Add(@"code-for-first-row = \arabic{jCol}")
+        let hasRowHdr = showRowNumbers || rowLabelPrinter.IsSome
+        let hasColHdr = showColNumbers || colLabelPrinter.IsSome
 
-        if showRowNumbers then
+        if hasColHdr then
+            pniceOptions.Add("first-row")
+
+            match colLabelPrinter with
+            | Some _ -> ()
+            | None -> pniceOptions.Add(@"code-for-first-row = \arabic{jCol}")
+
+        if hasRowHdr then
             pniceOptions.Add("first-col")
-            pniceOptions.Add(@"code-for-first-col = \arabic{iRow}")
+
+            match rowLabelPrinter with
+            | Some _ -> ()
+            | None -> pniceOptions.Add(@"code-for-first-col = \arabic{iRow}")
 
         let options =
             if pniceOptions.Count = 0 then
@@ -89,16 +100,31 @@ module MatrixTeX =
             |> Map.ofList
 
         let sb = System.Text.StringBuilder()
+
+        if totalCols > 10 then
+            sb.Append(sprintf @"\setcounter{MaxMatrixCols}{%d}" totalCols).AppendLine()
+            |> ignore
+
         sb.Append(sprintf @"\begin{pNiceMatrix}%s" options).AppendLine() |> ignore
 
         for row in 0 .. totalRows - 1 do
             let cells =
                 [ for col in 0 .. totalCols - 1 do
+                      let isCorner = (hasColHdr || hasRowHdr) && row = 0 && col = 0
+                      let isColHdr = hasColHdr && row = 0 && col > 0
+                      let isRowHdr = hasRowHdr && col = 0 && row > 0
+
                       let content =
-                          if showColNumbers && row = 0 then
+                          if isCorner then
                               ""
-                          elif showRowNumbers && col = 0 then
-                              ""
+                          elif isColHdr then
+                              match colLabelPrinter with
+                              | Some printer -> sprintf @"\text{%s}" (printer (col - 1))
+                              | None -> ""
+                          elif isRowHdr then
+                              match rowLabelPrinter with
+                              | Some printer -> sprintf @"\text{%s}" (printer (row - 1))
+                              | None -> ""
                           else
                               let dataRow = row - dataRowOffset
                               let dataCol = col - dataColOffset
@@ -130,4 +156,4 @@ module MatrixTeX =
         sb.ToString()
 
     let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (matrix: Matrix<'a>) : string =
-        toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] []
+        toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] [] None None

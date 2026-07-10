@@ -193,8 +193,12 @@ module GLL =
                             let qNFinal = popRange.ToState
 
                             // Add PNonterminal entries
-                            addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
-                            addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
+                            if v0 = vFinal then
+                                addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                                addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                            else
+                                addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                                addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
 
                             // Add PIntermediate and create continuation
                             match desc.MatchedRange with
@@ -272,20 +276,34 @@ module GLL =
                     let nt = stateInfo.[qNStart].BlockNonterminal
 
                     if List.isEmpty outgoingEdges then
-                        addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                        if vStart = vFinal then
+                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                        else
+                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
                     else
                         for (parentGssIdx, edgeInfo) in outgoingEdges do
                             let qRet = edgeInfo.ReturnState
                             let parentRange = edgeInfo.MatchedRange
 
-                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                            if vStart = vFinal then
+                                addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                            else
+                                addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
 
-                            addToIndex
-                                edgeInfo.PreCallState
-                                edgeInfo.PreCallVertex
-                                qRet
-                                vFinal
-                                (PathIndexEntry.PNonterminal nt)
+                            if vStart = vFinal then
+                                addToIndex
+                                    edgeInfo.PreCallState
+                                    edgeInfo.PreCallVertex
+                                    qRet
+                                    vFinal
+                                    (PathIndexEntry.PEpsilonNonterminal nt)
+                            else
+                                addToIndex
+                                    edgeInfo.PreCallState
+                                    edgeInfo.PreCallVertex
+                                    qRet
+                                    vFinal
+                                    (PathIndexEntry.PNonterminal nt)
 
                             // Add PIntermediate and create continuation descriptor
                             match parentRange with
@@ -429,6 +447,10 @@ module GLL =
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
                         addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
 
+                    | PathIndexEntry.PEpsilonNonterminal _ ->
+                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon fromPos)
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative epsNode
+
                     | PathIndexEntry.PIntermediate(state, pos) ->
                         let interNode = getOrCreateNode (SppfNodeInfo.SppfIntermediate(state, pos))
                         let leftChild = processRange fromState fromPos state pos
@@ -465,11 +487,12 @@ module GLL =
         (pathIndex: PathIndex<'t, 'nt>)
         (stateInfo: RsmStateInfo<'nt> array)
         (blockStart: System.Collections.Generic.Dictionary<Nonterminal<'nt>, int>)
+        (blockFinals: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Set<int>>)
         (fromState: int)
         (fromVertex: int)
         (toState: int)
         (toVertex: int)
-        : DerivationTree<'t, 'nt> =
+        : DerivationTree<'t, 'nt> option =
         let rec extract
             (fs: int)
             (fv: int)
@@ -489,7 +512,7 @@ module GLL =
                 if Set.isEmpty entries then
                     None
                 else
-                    // Priority: PIntermediate > PTerminal > PNonterminal (epsilon only)
+                    // Priority: PIntermediate > PTerminal > PEpsilonNonterminal > PNonterminal
                     entries
                     |> Set.toList
                     |> List.tryPick (fun entry ->
@@ -502,9 +525,7 @@ module GLL =
                             | Some l, Some r ->
                                 let nt = stateInfo.[fs].BlockNonterminal
                                 Some(Node(nt, [ l; r ]))
-                            | Some t, None -> Some t
-                            | None, Some t -> Some t
-                            | None, None -> None
+                            | _ -> None
                         | _ -> None)
                     |> Option.orElseWith (fun () ->
                         entries
@@ -514,59 +535,36 @@ module GLL =
                             | PathIndexEntry.PTerminal(Terminal t) -> Some(Leaf(Symbol.T(Terminal t)))
                             | _ -> None))
                     |> Option.orElseWith (fun () ->
-                        // PNonterminal for epsilon ranges (fv = tv)
-                        if fv = tv then
-                            entries
-                            |> Set.toList
-                            |> List.tryPick (fun entry ->
-                                match entry with
-                                | PathIndexEntry.PNonterminal nt -> Some(Node(nt, []))
-                                | _ -> None)
-                        else
-                            // PNonterminal for non-epsilon ranges: look inside the block
-                            entries
-                            |> Set.toList
-                            |> List.tryPick (fun entry ->
-                                match entry with
-                                | PathIndexEntry.PNonterminal nt ->
-                                    match blockStart.TryGetValue(nt) with
-                                    | true, qNStart ->
-                                        extract qNStart fv ts tv (depth + 1) nextVisited
-                                        |> Option.map (fun children -> Node(nt, [ children ]))
-                                    | false, _ -> None
-                                | _ -> None)
-                            |> Option.orElseWith (fun () -> None))
+                        entries
+                        |> Set.toList
+                        |> List.tryPick (fun entry ->
+                            match entry with
+                            | PathIndexEntry.PEpsilonNonterminal nt -> Some(Node(nt, []))
+                            | _ -> None))
+                    |> Option.orElseWith (fun () ->
+                        entries
+                        |> Set.toList
+                        |> List.tryPick (fun entry ->
+                            match entry with
+                            | PathIndexEntry.PNonterminal nt ->
+                                match blockStart.TryGetValue(nt) with
+                                | true, qNStart ->
+                                    let qNFinals =
+                                        match blockFinals.TryGetValue(nt) with
+                                        | true, finals -> finals
+                                        | false, _ -> Set.empty
+
+                                    qNFinals
+                                    |> Set.toList
+                                    |> List.tryPick (fun qNFinal ->
+                                        extract qNStart fv qNFinal tv (depth + 1) nextVisited
+                                        |> Option.map (fun children -> Node(nt, [ children ])))
+                                | false, _ -> None
+                            | _ -> None))
 
         match extract fromState fromVertex toState toVertex 0 Set.empty with
-        | Some tree ->
-            let treeLeaves = DerivationTree.leaves tree
-
-            if List.length treeLeaves = toVertex - fromVertex then
-                tree
-            else
-                // Partial decomposition: collect terminal leaves directly from path index
-                let vc = pathIndex.VertexCount
-                let sc = pathIndex.StateCount
-
-                let leaves =
-                    [ for v in fromVertex .. toVertex - 1 do
-                          [ for fs in 0 .. sc - 1 do
-                                for ts in 0 .. sc - 1 do
-                                    let entries = PathIndex.get pathIndex fs v ts (v + 1)
-
-                                    for entry in entries do
-                                        match entry with
-                                        | PathIndexEntry.PTerminal(Terminal t) -> yield t
-                                        | _ -> () ]
-                          |> List.distinct ]
-                    |> List.concat
-
-                match leaves with
-                | [] -> Leaf Symbol.Epsilon
-                | _ ->
-                    let nt = stateInfo.[fromState].BlockNonterminal
-                    Node(nt, leaves |> List.map (Terminal >> Symbol.T >> Leaf))
-        | None -> Leaf Symbol.Epsilon
+        | Some tree -> Some tree
+        | None -> None
 
     /// Extracts a single derivation tree from an SPPF root.
     /// For ambiguous grammars, picks the first alternative at each packed node.

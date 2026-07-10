@@ -26,6 +26,17 @@ module SummaryTeX =
     let wrapMath (tex: string) : string =
         [ @"\begin{center}"; @"\["; tex; @"\]"; @"\end{center}" ] |> String.concat "\n"
 
+    /// Wraps TeX content in a centered display math environment with resizing.
+    let wrapMathResized (tex: string) : string =
+        [ @"\begin{center}"
+          @"\resizebox{0.9\textwidth}{!}{%%"
+          @"\["
+          tex
+          @"\]"
+          "}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
     /// Wraps TeX content in a centered environment.
     let wrapCenter (tex: string) : string =
         [ @"\begin{center}"; tex; @"\end{center}" ] |> String.concat "\n"
@@ -104,14 +115,14 @@ module SummaryTeX =
                 maybe "input.tex" "Input String" wrapMath
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
-                @ maybe "path_index.tex" "Path Index" wrapMath
+                @ maybe "path_index.tex" "Path Index" wrapMathResized
 
             | SummaryKind.RNGLR ->
                 maybe "input.tex" "Input String" wrapMath
                 @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapCenter
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
-                @ maybe "path_index.tex" "Path Index" wrapMath
+                @ maybe "path_index.tex" "Path Index" wrapMathResized
 
         grammar @ algoLines
 

@@ -22,6 +22,20 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     let stateInfo = flat.StateInfo
     let blockStart = flat.BlockStart
 
+    let blockFinals =
+        System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
+
+    for i in 0 .. stateInfo.Length - 1 do
+        if stateInfo.[i].IsFinal then
+            let nt = stateInfo.[i].BlockNonterminal
+
+            let current =
+                match blockFinals.TryGetValue(nt) with
+                | true, s -> s
+                | false, _ -> Set.empty
+
+            blockFinals.[nt] <- Set.add i current
+
     let mutable finalGlobalState = -1
     let offset = TestHelpers.blockOffset rsm startBlock.Nonterminal
 
@@ -36,10 +50,15 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     if finalGlobalState = -1 then
         None
     else
-        let tree =
-            GLL.extractDerivationTree pathIndex stateInfo blockStart startGlobalState 0 finalGlobalState (vc - 1)
-
-        Some tree
+        GLL.extractDerivationTree
+            pathIndex
+            stateInfo
+            blockStart
+            blockFinals
+            startGlobalState
+            0
+            finalGlobalState
+            (vc - 1)
 
 module GllAcceptance =
     [<Fact>]

@@ -20,6 +20,7 @@
     <Compile Include="LRStepsGoldenTests.fs" />
     <Compile Include="LLTableTeXGoldenTests.fs" />
     <Compile Include="ValiantTraceGoldenTests.fs" />
+    <Compile Include="PathIndexTeXTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
   </ItemGroup>
 

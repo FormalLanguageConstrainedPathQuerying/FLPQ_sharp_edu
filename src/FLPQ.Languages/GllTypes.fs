@@ -52,6 +52,7 @@ type RangeDescriptor =
 type PathIndexEntry<'t, 'nt when 't: comparison and 'nt: comparison> =
     | PTerminal of Terminal<'t>
     | PNonterminal of Nonterminal<'nt>
+    | PEpsilonNonterminal of Nonterminal<'nt>
     | PIntermediate of state: int * pos: int
 
 /// Path index built by GLL: a K×K matrix where K = stateCount * vertexCount.

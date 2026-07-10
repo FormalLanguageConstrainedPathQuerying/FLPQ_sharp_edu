@@ -73,6 +73,8 @@ module ValiantTeX =
             step.Table
             highlights
             (targetBlock @ multipliedBlocks)
+            None
+            None
 
     let modifiedStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
         match step with
@@ -105,7 +107,7 @@ module ValiantTeX =
                         None)
                 |> List.choose id
 
-            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table [] blocks
+            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table [] blocks None None
 
         | Valiant.LayerBackward(table, _layerSize, submatrices, changedCells) ->
             let n = Matrix.rows table
@@ -148,4 +150,12 @@ module ValiantTeX =
                                  Label = Matrix.CurrentCell }
                               : Matrix.Highlight) ]
 
-            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights blocks
+            MatrixTeX.toTeXStyled
+                false
+                false
+                (ParsingTableTeX.ntCellToTeX nonterminalPrinter)
+                table
+                highlights
+                blocks
+                None
+                None

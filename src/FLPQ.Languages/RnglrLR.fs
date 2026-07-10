@@ -45,19 +45,19 @@ module RnglrLR =
 
             for item in Set.toList result do
                 let trans =
-                    match blockTransitions.TryGetValue(item.blockNonterminal) with
+                    match blockTransitions.TryGetValue(item.BlockNonterminal) with
                     | true, t -> t
                     | false, _ -> Map.empty
 
                 for (fromState, sym) in Map.keys trans do
-                    if fromState = item.rsmState then
+                    if fromState = item.RsmState then
                         match sym with
                         | Symbol.N nt ->
                             match blockStartStates.TryGetValue(nt) with
                             | true, startState ->
                                 let newItem =
-                                    { blockNonterminal = nt
-                                      rsmState = startState }
+                                    { BlockNonterminal = nt
+                                      RsmState = startState }
 
                                 if not (Set.contains newItem result) then
                                     result <- Set.add newItem result
@@ -80,14 +80,14 @@ module RnglrLR =
         let mutable advanced = Set.empty
 
         for item in items do
-            match blockTransitions.TryGetValue(item.blockNonterminal) with
+            match blockTransitions.TryGetValue(item.BlockNonterminal) with
             | true, trans ->
-                match Map.tryFind (item.rsmState, sym) trans with
+                match Map.tryFind (item.RsmState, sym) trans with
                 | Some nextState ->
                     advanced <-
                         Set.add
-                            { blockNonterminal = item.blockNonterminal
-                              rsmState = nextState }
+                            { BlockNonterminal = item.BlockNonterminal
+                              RsmState = nextState }
                             advanced
                 | None -> ()
             | false, _ -> ()
@@ -102,10 +102,10 @@ module RnglrLR =
         let mutable syms = Set.empty
 
         for item in items do
-            match blockTransitions.TryGetValue(item.blockNonterminal) with
+            match blockTransitions.TryGetValue(item.BlockNonterminal) with
             | true, trans ->
                 for (fromState, sym) in Map.keys trans do
-                    if fromState = item.rsmState then
+                    if fromState = item.RsmState then
                         syms <- Set.add sym syms
             | false, _ -> ()
 
@@ -136,8 +136,8 @@ module RnglrLR =
 
         let startItems =
             Set.singleton
-                { blockNonterminal = augNonterm
-                  rsmState = augStartState }
+                { BlockNonterminal = augNonterm
+                  RsmState = augStartState }
             |> closure blocks blockTransitions blockStartStates
 
         // Build the LR automaton via BFS
@@ -149,8 +149,8 @@ module RnglrLR =
         let isAccept (items: Set<RnglrItem<'nt>>) : bool =
             items
             |> Set.exists (fun item ->
-                item.blockNonterminal = augNonterm
-                && Set.contains item.rsmState blockFinalStates.[augNonterm])
+                item.BlockNonterminal = augNonterm
+                && Set.contains item.RsmState blockFinalStates.[augNonterm])
 
         let lrAutomaton = Automaton.buildAutomaton startItems getSyms go isAccept
 
@@ -177,20 +177,20 @@ module RnglrLR =
 
             // Reduce actions for items at final positions
             for item in items do
-                let finals = blockFinalStates.[item.blockNonterminal]
+                let finals = blockFinalStates.[item.BlockNonterminal]
 
-                if Set.contains item.rsmState finals then
-                    if item.blockNonterminal = augNonterm then
+                if Set.contains item.RsmState finals then
+                    if item.BlockNonterminal = augNonterm then
                         // Accept action for augmented start nonterminal at final state
                         action <- Map.add (lrState, Symbol.Epsilon) RnglrAction.Accept action
                     else
                         // Reduce by nonterminal for all possible lookaheads (LR(0): reduce on everything)
-                        let block = blocks |> List.find (fun b -> b.Nonterminal = item.blockNonterminal)
+                        let block = blocks |> List.find (fun b -> b.Nonterminal = item.BlockNonterminal)
 
                         let allTerminals =
                             RSM.terminals rsm |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))
 
-                        let reduceAction = RnglrAction.Reduce item.blockNonterminal
+                        let reduceAction = RnglrAction.Reduce item.BlockNonterminal
 
                         for term in allTerminals do
                             let key = (lrState, term)
@@ -206,6 +206,6 @@ module RnglrLR =
                         | Some _ -> ()
                         | None -> action <- Map.add epsKey reduceAction action
 
-        { action = action
-          goto = goTo
-          automaton = lrAutomaton }
+        { Action = action
+          Goto = goTo
+          Automaton = lrAutomaton }
