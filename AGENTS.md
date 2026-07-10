@@ -100,3 +100,4 @@ Operational procedures are in standalone skills. Load the relevant skill for eac
 | Writing tests (FsCheck, golden, property-based) | `tests-writer` |
 | Generating TeX/LaTeX/Tikz output | `tex-writer` |
 | Code review (detect + fix architecture, duplication, test gaps) | `code-review` |
+| Persist user guidance from blocked tasks back into task descriptions | `user-guidance-transfer` |

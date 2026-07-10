@@ -30,6 +30,8 @@ After the global plan is created, proceed with the normal working loop: one task
 - Produces a compilable, testable increment — no partial implementations left uncommitted
 - Has a unique identifier (e.g., "S1", "S2") used in commit messages and plan tracking
 
+If a task is ambiguous or underspecified **during planning** (conflicting requirements, unclear scope, missing constraints), do not guess. Ask the user for clarification, then transfer the guidance to the task per the `user-guidance-transfer` skill before proceeding with decomposition.
+
 ### Subtask Format
 
 Each subtask in `tasks/detailed_plan.md` MUST include these four sections. **A subtask with missing Code, Tests, or Docs sections is incomplete and must not be executed.**

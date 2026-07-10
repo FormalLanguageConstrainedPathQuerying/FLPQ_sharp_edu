@@ -147,7 +147,8 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
    - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls")
    - What you've tried and what remains unresolved
 3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task
-4. Append a `## Design Notes` section to `tasks/detailed_plan.md`. See the `planning` skill for the full template. Minimum required content:
+4. **Transfer user guidance to the task** per the `user-guidance-transfer` skill — append `**[USER GUIDANCE]**` annotation to the task in `tasks/tasks.md`
+5. Append a `## Design Notes` section to `tasks/detailed_plan.md`. See the `planning` skill for the full template. Minimum required content:
 
    - **Correct Design**: algorithmic design as confirmed by the user — coordinate spaces, invariants, decomposition schema. Quote the user's design guidance verbatim where available.
    - **Blocked Subtasks**: which subtasks are blocked and why

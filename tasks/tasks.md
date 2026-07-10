@@ -1,5 +1,6 @@
 * This file contains user-defined tasks. Do not modify them. Only track status of tasks in this file.
 * **Strict rule: When marking a task as done, ONLY prepend `[done] ` to the existing task line (between task number and task formulation). NEVER rewrite, reformulate, shorten, or replace the task description itself. The task text is immutable — only the status tag may change.**
+* **User guidance annotations**: When a task requires user clarification (Blocked Work Protocol), guidance may be appended after the task's full formulation as `**[USER GUIDANCE]**: <text>` on an indented line. These are the only permitted additive changes to task descriptions. See the `user-guidance-transfer` skill.
 * The book is in TeX. Root of the book in `../../`.
 * In some tasks Russian may be used to simplify references to the book that is in Russian.
 
@@ -323,3 +324,5 @@
       1.   RnglrAction is similar to LRAction. Use one common type
       2.   storedStates
  155. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
+ 156. [done] Fix skills and documentation violating no-duplicates principle. Multiple skills describe documentation process. Some skills describe documentation structure ("what") instead of procedures ("how"). Create single canonical source for documentation requirements in docs/, trim all skills to reference it.
+ 157. [done] Strengthen subtask-loop and git-workflow skills to prevent subtask batching. Add hard gate before commit (verify single SN, no ranges), rename "Commit Gate" → "Pre-Commit Check" to disambiguate from final merge gates, add multi-subtask sequential discipline, add documentation-only subtask section, strengthen git commit message format rules. Add doc-only task note to AGENTS.md.
