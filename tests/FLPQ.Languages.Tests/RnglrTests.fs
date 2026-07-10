@@ -442,7 +442,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR path index lacks PIntermediate for direct terminal-only productions in Grammar2 S block")>]
+        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
@@ -450,7 +450,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR path index lacks PIntermediate for direct terminal-only productions in Grammar2 S block")>]
+        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
@@ -458,7 +458,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR path index lacks PIntermediate for direct terminal-only productions in Grammar2 S block")>]
+        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 

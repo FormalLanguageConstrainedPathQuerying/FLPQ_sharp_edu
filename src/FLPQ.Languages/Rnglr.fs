@@ -252,7 +252,7 @@ module Rnglr =
                             addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
 
                             for (interState, interVertex) in intermediates do
-                                if interVertex >= vPre && interVertex <= vEnd then
+                                if interVertex <> vPre then
                                     addToIndex
                                         globalStart
                                         vPre
