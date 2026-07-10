@@ -141,7 +141,6 @@ module GLL =
             let q0 = desc.RsmState
             let v0 = desc.Vertex
             let s0 = desc.GssIdx
-            let MatchedRange = desc.MatchedRange
 
             // Case 1: Terminal transitions
             for (Terminal tVal, q1) in termTrans.[q0] do
@@ -178,6 +177,8 @@ module GLL =
                     // Add GSS edge from target (callee's GSS node for N's start) to current (caller's GSS node)
                     let edgeInfo: GssEdgeInfo =
                         { ReturnState = qRet
+                          PreCallState = q0
+                          PreCallVertex = v0
                           MatchedRange = desc.MatchedRange }
 
                     let storedPops = GSS.addEdge gss gssTarget s0 edgeInfo
@@ -191,13 +192,14 @@ module GLL =
                             let vFinal = popRange.ToVertex
                             let qNFinal = popRange.ToState
 
-                            // Add PNonterminal entry
+                            // Add PNonterminal entries
                             addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                            addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
 
                             // Add PIntermediate and create continuation
                             match desc.MatchedRange with
                             | RangeDescriptor.EmptyRange ->
-                                addToIndex qNStart v0 qRet vFinal (PathIndexEntry.PIntermediate(qNStart, v0))
+                                addToIndex qNStart v0 qRet vFinal (PathIndexEntry.PIntermediate(q0, v0))
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
@@ -214,12 +216,7 @@ module GLL =
 
                                 tryEnqueue contDesc
                             | RangeDescriptor.NonEmptyRange rk ->
-                                addToIndex
-                                    rk.FromState
-                                    rk.FromVertex
-                                    qRet
-                                    vFinal
-                                    (PathIndexEntry.PIntermediate(qNStart, v0))
+                                addToIndex rk.FromState rk.FromVertex qRet vFinal (PathIndexEntry.PIntermediate(q0, v0))
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
@@ -283,10 +280,22 @@ module GLL =
 
                             addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
 
+                            addToIndex
+                                edgeInfo.PreCallState
+                                edgeInfo.PreCallVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PNonterminal nt)
+
                             // Add PIntermediate and create continuation descriptor
                             match parentRange with
                             | RangeDescriptor.EmptyRange ->
-                                addToIndex qNStart vStart qRet vFinal (PathIndexEntry.PIntermediate(qNStart, vStart))
+                                addToIndex
+                                    qNStart
+                                    vStart
+                                    qRet
+                                    vFinal
+                                    (PathIndexEntry.PIntermediate(edgeInfo.PreCallState, edgeInfo.PreCallVertex))
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
@@ -308,7 +317,7 @@ module GLL =
                                     rk.FromVertex
                                     qRet
                                     vFinal
-                                    (PathIndexEntry.PIntermediate(qNStart, vStart))
+                                    (PathIndexEntry.PIntermediate(edgeInfo.PreCallState, edgeInfo.PreCallVertex))
 
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
@@ -461,51 +470,102 @@ module GLL =
         (toState: int)
         (toVertex: int)
         : DerivationTree<'t, 'nt> =
-        let rec extract (fs: int) (fv: int) (ts: int) (tv: int) (depth: int) : DerivationTree<'t, 'nt> option =
+        let rec extract
+            (fs: int)
+            (fv: int)
+            (ts: int)
+            (tv: int)
+            (depth: int)
+            (visited: Set<int * int * int * int>)
+            : DerivationTree<'t, 'nt> option =
             if depth > 100 then
                 None
+            elif Set.contains (fs, fv, ts, tv) visited then
+                None
             else
+                let nextVisited = Set.add (fs, fv, ts, tv) visited
                 let entries = PathIndex.get pathIndex fs fv ts tv
 
-                entries
-                |> Set.toList
-                |> List.tryPick (fun entry ->
-                    match entry with
-                    | PathIndexEntry.PTerminal(Terminal t) -> Some(Leaf(Symbol.T(Terminal t)))
-                    | PathIndexEntry.PNonterminal nt ->
-                        let qNStart =
-                            match blockStart.TryGetValue(nt) with
-                            | true, start -> start
-                            | false, _ -> fs
+                if Set.isEmpty entries then
+                    None
+                else
+                    // Priority: PIntermediate > PTerminal > PNonterminal (epsilon only)
+                    entries
+                    |> Set.toList
+                    |> List.tryPick (fun entry ->
+                        match entry with
+                        | PathIndexEntry.PIntermediate(state, pos) ->
+                            let left = extract fs fv state pos (depth + 1) nextVisited
+                            let right = extract state pos ts tv (depth + 1) nextVisited
 
-                        let mutable foundTree = None
+                            match left, right with
+                            | Some l, Some r ->
+                                let nt = stateInfo.[fs].BlockNonterminal
+                                Some(Node(nt, [ l; r ]))
+                            | Some t, None -> Some t
+                            | None, Some t -> Some t
+                            | None, None -> None
+                        | _ -> None)
+                    |> Option.orElseWith (fun () ->
+                        entries
+                        |> Set.toList
+                        |> List.tryPick (fun entry ->
+                            match entry with
+                            | PathIndexEntry.PTerminal(Terminal t) -> Some(Leaf(Symbol.T(Terminal t)))
+                            | _ -> None))
+                    |> Option.orElseWith (fun () ->
+                        // PNonterminal for epsilon ranges (fv = tv)
+                        if fv = tv then
+                            entries
+                            |> Set.toList
+                            |> List.tryPick (fun entry ->
+                                match entry with
+                                | PathIndexEntry.PNonterminal nt -> Some(Node(nt, []))
+                                | _ -> None)
+                        else
+                            // PNonterminal for non-epsilon ranges: look inside the block
+                            entries
+                            |> Set.toList
+                            |> List.tryPick (fun entry ->
+                                match entry with
+                                | PathIndexEntry.PNonterminal nt ->
+                                    match blockStart.TryGetValue(nt) with
+                                    | true, qNStart ->
+                                        extract qNStart fv ts tv (depth + 1) nextVisited
+                                        |> Option.map (fun children -> Node(nt, [ children ]))
+                                    | false, _ -> None
+                                | _ -> None)
+                            |> Option.orElseWith (fun () -> None))
 
-                        for i in 0 .. pathIndex.StateCount - 1 do
-                            if stateInfo.[i].BlockNonterminal = nt && stateInfo.[i].IsFinal && foundTree.IsNone then
-                                let innerEntries = PathIndex.get pathIndex qNStart fv i tv
+        match extract fromState fromVertex toState toVertex 0 Set.empty with
+        | Some tree ->
+            let treeLeaves = DerivationTree.leaves tree
 
-                                if not (Set.isEmpty innerEntries) then
-                                    match extract qNStart fv i tv (depth + 1) with
-                                    | Some children -> foundTree <- Some(Node(nt, [ children ]))
-                                    | None -> ()
+            if List.length treeLeaves = toVertex - fromVertex then
+                tree
+            else
+                // Partial decomposition: collect terminal leaves directly from path index
+                let vc = pathIndex.VertexCount
+                let sc = pathIndex.StateCount
 
-                        match foundTree with
-                        | Some _ -> foundTree
-                        | None -> Some(Node(nt, []))
-                    | PathIndexEntry.PIntermediate(state, pos) ->
-                        let leftTree = extract fs fv state pos (depth + 1)
-                        let rightTree = extract state pos ts tv (depth + 1)
+                let leaves =
+                    [ for v in fromVertex .. toVertex - 1 do
+                          [ for fs in 0 .. sc - 1 do
+                                for ts in 0 .. sc - 1 do
+                                    let entries = PathIndex.get pathIndex fs v ts (v + 1)
 
-                        match leftTree, rightTree with
-                        | Some l, Some r ->
-                            let nt = stateInfo.[fs].BlockNonterminal
-                            Some(Node(nt, [ l; r ]))
-                        | Some t, None -> Some t
-                        | None, Some t -> Some t
-                        | None, None -> None)
+                                    for entry in entries do
+                                        match entry with
+                                        | PathIndexEntry.PTerminal(Terminal t) -> yield t
+                                        | _ -> () ]
+                          |> List.distinct ]
+                    |> List.concat
 
-        match extract fromState fromVertex toState toVertex 0 with
-        | Some tree -> tree
+                match leaves with
+                | [] -> Leaf Symbol.Epsilon
+                | _ ->
+                    let nt = stateInfo.[fromState].BlockNonterminal
+                    Node(nt, leaves |> List.map (Terminal >> Symbol.T >> Leaf))
         | None -> Leaf Symbol.Epsilon
 
     /// Extracts a single derivation tree from an SPPF root.
@@ -540,11 +600,16 @@ module GLL =
             (visited: System.Collections.Generic.HashSet<int>)
             (nodeIdx: int)
             : DerivationTree<'t, 'nt> list =
-            if not (visited.Add(nodeIdx)) then
+            let info = Graph.getVertex nodeIdx sppf.Graph
+
+            let isRange =
+                match info with
+                | SppfNodeInfo.SppfRange _ -> true
+                | _ -> false
+
+            if not isRange && not (visited.Add(nodeIdx)) then
                 []
             else
-                let info = Graph.getVertex nodeIdx sppf.Graph
-
                 match info with
                 | SppfNodeInfo.SppfTerminal(t, _, _) -> [ Leaf(Symbol.T t) ]
                 | SppfNodeInfo.SppfEpsilon _ -> [ Leaf Symbol.Epsilon ]

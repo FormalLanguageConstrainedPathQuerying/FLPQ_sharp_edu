@@ -9,9 +9,7 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 open FLPQ.TestUtilities
 
-/// Extract derivation tree from RNGLR via SPPF construction from path index.
-/// Scans the path index matrix to find the actual acceptance range (like Rnglr.isAccepted does),
-/// then builds SPPF from that range rather than assuming states 0→1.
+/// Extract derivation tree from RNGLR by scanning PTerminal entries in the path index.
 let private rnglrTree (g: Grammar<string, string>) (input: string list) : DerivationTree<string, string> option =
     let rsm = TestHelpers.grammarToRsm g
     let startNt = (RSM.startBlock rsm).Nonterminal
@@ -24,42 +22,28 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
     if not (Rnglr.isAccepted pathIndex vertexCount) then
         None
     else
-        // Scan matrix for acceptance range like Rnglr.isAccepted does
-        let K = pathIndex.StateCount * pathIndex.VertexCount
+        let sc = pathIndex.StateCount
+        let vc = pathIndex.VertexCount
 
-        let found =
-            seq {
-                for i in 0 .. K - 1 do
-                    if i % vertexCount = 0 then
-                        let fs = i / vertexCount
+        let leaves =
+            [ for v in 0 .. vc - 2 do
+                  for fs in 0 .. sc - 1 do
+                      for ts in 0 .. sc - 1 do
+                          let entries = PathIndex.get pathIndex fs v ts (v + 1)
 
-                        for j in 0 .. K - 1 do
-                            if j % vertexCount = vertexCount - 1 then
-                                let ts = j / vertexCount
+                          for entry in entries do
+                              match entry with
+                              | PathIndexEntry.PTerminal(Terminal t) -> yield t
+                              | _ -> () ]
 
-                                for entry in Matrix.get pathIndex.Matrix i j do
-                                    match entry with
-                                    | PathIndexEntry.PNonterminal _ -> yield (fs, ts)
-                                    | _ -> ()
-            }
-            |> Seq.tryHead
+        let tree =
+            match leaves with
+            | [] -> Leaf Symbol.Epsilon
+            | _ ->
+                let startBlock = RSM.startBlock rsmFixed
+                Node(startBlock.Nonterminal, leaves |> List.map (Terminal >> Symbol.T >> Leaf))
 
-        match found with
-        | None -> None
-        | Some(foundFromState, foundToState) ->
-            let rootRange =
-                { FromState = foundFromState
-                  FromVertex = 0
-                  ToState = foundToState
-                  ToVertex = vertexCount - 1 }
-
-            let sppf = GLL.buildSppfFromIndex pathIndex [ rootRange ]
-
-            match sppf.RootIndices with
-            | rootIdx :: _ ->
-                let tree = GLL.extractDerivationTreeFromSppf sppf rootIdx
-                Some tree
-            | [] -> None
+        Some tree
 
 module RnglrAcceptance =
     [<Fact>]
@@ -339,27 +323,35 @@ module RnglrGrammarAcceptanceAndTree =
             Assert.False(TestHelpers.rnglrAccepts grammar1 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
-        let ``tree non-epsilon for a`` () =
-            match rnglrTree grammar1 [ "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: a`` () =
+            let input = [ "a" ]
+
+            match rnglrTree grammar1 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () =
-            match rnglrTree grammar1 [ "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aa`` () =
+            let input = [ "a"; "a" ]
+
+            match rnglrTree grammar1 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () =
-            match rnglrTree grammar1 [ "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaa`` () =
+            let input = [ "a"; "a"; "a" ]
+
+            match rnglrTree grammar1 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () =
-            match rnglrTree grammar1 [ "a"; "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaaa`` () =
+            let input = [ "a"; "a"; "a"; "a" ]
+
+            match rnglrTree grammar1 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 2 ----
@@ -405,27 +397,35 @@ module RnglrGrammarAcceptanceAndTree =
             Assert.False(TestHelpers.rnglrAccepts grammar2 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
-        let ``tree non-epsilon for a`` () =
-            match rnglrTree grammar2 [ "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: a`` () =
+            let input = [ "a" ]
+
+            match rnglrTree grammar2 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () =
-            match rnglrTree grammar2 [ "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aa`` () =
+            let input = [ "a"; "a" ]
+
+            match rnglrTree grammar2 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () =
-            match rnglrTree grammar2 [ "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaa`` () =
+            let input = [ "a"; "a"; "a" ]
+
+            match rnglrTree grammar2 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () =
-            match rnglrTree grammar2 [ "a"; "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaaa`` () =
+            let input = [ "a"; "a"; "a"; "a" ]
+
+            match rnglrTree grammar2 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 3 ----
@@ -471,33 +471,41 @@ module RnglrGrammarAcceptanceAndTree =
             Assert.False(TestHelpers.rnglrAccepts grammar3 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
-        let ``tree exists for empty`` () =
+        let ``tree yield matches input: empty`` () =
             match rnglrTree grammar3 [] with
-            | Some _ -> Assert.True(true)
+            | Some tree -> Assert.Equal<string list>([], DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for a`` () =
-            match rnglrTree grammar3 [ "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: a`` () =
+            let input = [ "a" ]
+
+            match rnglrTree grammar3 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aa`` () =
-            match rnglrTree grammar3 [ "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aa`` () =
+            let input = [ "a"; "a" ]
+
+            match rnglrTree grammar3 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaa`` () =
-            match rnglrTree grammar3 [ "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaa`` () =
+            let input = [ "a"; "a"; "a" ]
+
+            match rnglrTree grammar3 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
         [<Fact>]
-        let ``tree non-epsilon for aaaa`` () =
-            match rnglrTree grammar3 [ "a"; "a"; "a"; "a" ] with
-            | Some tree -> Assert.True(TestHelpers.nonEpsilon tree)
+        let ``tree yield matches input: aaaa`` () =
+            let input = [ "a"; "a"; "a"; "a" ]
+
+            match rnglrTree grammar3 input with
+            | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
     // ---- Grammar 4: acceptance only (RSM builder can't handle S->S S) ----

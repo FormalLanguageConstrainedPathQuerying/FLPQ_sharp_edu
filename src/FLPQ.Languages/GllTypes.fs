@@ -102,11 +102,13 @@ module PathIndex =
 type GssVertexInfo = { State: int; Vertex: int }
 
 /// Edge in the Graph-Structured Stack (GSS).
-/// Records the return state and the matched range before the nonterminal call.
+/// Records the return state, pre-call context, and the matched range before the nonterminal call.
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
 type GssEdgeInfo =
     { ReturnState: int
+      PreCallState: int
+      PreCallVertex: int
       MatchedRange: RangeDescriptor }
 
 /// Graph-Structured Stack — a graph encoding all active call stacks during GLL execution.
