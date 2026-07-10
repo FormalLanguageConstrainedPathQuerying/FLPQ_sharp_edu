@@ -44,13 +44,15 @@ type RnglrGssEdge<'t, 'nt> = { EdgeSymbol: Symbol<'t, 'nt> }
 /// Vertices are (lrState, inputVertex) pairs, pre-allocated as |Q_lr| * |V|.
 /// Edges carry the recognized grammar symbol.
 /// storedStates[i] holds cached intermediate automaton intersection states:
-/// Set of (nonterminal, invState) pairs for the product construction.
+/// Set of (nonterminal, invState, rangeEndState, rangeEndVertex) tuples for the product construction.
+/// rangeEndState and rangeEndVertex identify the block's final state and its vertex position,
+/// propagated through the BFS to enable correct PIntermediate entry placement at each step.
 /// When a shift creates a new edge from a GSS vertex, its storedStates are consumed and
-/// each (nt, invState) pair is continued via product BFS through the inverted RSM block of nt.
+/// each tuple is continued via product BFS through the inverted RSM block of nt.
 /// Book reference: sec:CFPQ_RNGLR.
 type RnglrGSS<'t, 'nt when 't: comparison and 'nt: comparison> =
     { GssGraph: Graph<RnglrGssVertex, Option<NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      StoredStates: Set<Nonterminal<'nt> * int> array }
+      StoredStates: Set<Nonterminal<'nt> * int * int * int> array }
 
 module RnglrGSS =
 
@@ -77,7 +79,7 @@ module RnglrGSS =
         (fromIdx: int)
         (toIdx: int)
         (label: Symbol<'t, 'nt>)
-        : Set<Nonterminal<'nt> * int> =
+        : Set<Nonterminal<'nt> * int * int * int> =
         let edge = { EdgeSymbol = label }
 
         let current =
@@ -93,10 +95,15 @@ module RnglrGSS =
         states
 
     /// Returns the stored intermediate intersection states for a GSS vertex without clearing them.
-    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int> = gss.StoredStates.[gssIdx]
+    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int * int * int> =
+        gss.StoredStates.[gssIdx]
 
     /// Sets the stored intermediate intersection states for a GSS vertex.
-    let setStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) (states: Set<Nonterminal<'nt> * int>) : unit =
+    let setStoredStates
+        (gss: RnglrGSS<'t, 'nt>)
+        (gssIdx: int)
+        (states: Set<Nonterminal<'nt> * int * int * int>)
+        : unit =
         gss.StoredStates.[gssIdx] <- states
 
     /// Returns all outgoing edges from a GSS vertex as (targetIdx, symbol) pairs.

@@ -162,7 +162,7 @@ module PropertyTests =
             let rejoined = String.concat " " tokens
 
             if s.Trim().Length = 0 then
-                Tokenizer.tokenizeStrings rejoined = []
+                List.isEmpty (Tokenizer.tokenizeStrings rejoined)
             else
                 Tokenizer.tokenizeStrings rejoined = tokens
 

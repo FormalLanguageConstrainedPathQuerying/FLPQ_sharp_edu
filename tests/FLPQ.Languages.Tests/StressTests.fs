@@ -113,7 +113,7 @@ module LRStress =
 
     let private multiLevelGrammar levelCount =
         let nonterms = [ for i in 1..levelCount -> sprintf "E%d" i ]
-        let start = sprintf "E1"
+        let start = "E1"
 
         let productions =
             [ for i in 1 .. levelCount - 1 do

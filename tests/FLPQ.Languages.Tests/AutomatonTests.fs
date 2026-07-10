@@ -467,7 +467,7 @@ module IntersectionTests =
         (starts: int list)
         (finals: int list)
         =
-        Nfa.fromTransitions (states |> List.map id) edges Set.empty (Set.ofList starts) (Set.ofList finals)
+        Nfa.fromTransitions states edges Set.empty (Set.ofList starts) (Set.ofList finals)
 
     [<Fact>]
     let ``Intersection of a+ and a* equals a+`` () =

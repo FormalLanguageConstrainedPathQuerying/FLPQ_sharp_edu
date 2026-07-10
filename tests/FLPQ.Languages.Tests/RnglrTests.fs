@@ -23,36 +23,6 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
         None
     else
         let extRsm = RSM.extendWithStart freshStart rsmFixed
-
-        let originalStartBlock =
-            RSM.blocks extRsm |> List.find (fun b -> b.Nonterminal = startNt)
-
-        let originalStartOffset =
-            let mutable off = 0
-            let mutable found = false
-
-            for b in RSM.blocks extRsm do
-                if b.Nonterminal = startNt then
-                    found <- true
-                elif not found then
-                    off <- off + Dfa.stateCount b.Dfa
-
-            off
-
-        let rootRanges =
-            [ for finalLocal in originalStartBlock.Dfa.FinalStates do
-                  let fromState = originalStartOffset + originalStartBlock.Dfa.StartState
-                  let toState = originalStartOffset + finalLocal
-                  let fromIdx = fromState * vc + 0
-                  let toIdx = toState * vc + (vc - 1)
-                  let entries = Matrix.get pathIndex.Matrix fromIdx toIdx
-
-                  if not (Set.isEmpty entries) then
-                      { FromState = fromState
-                        FromVertex = 0
-                        ToState = toState
-                        ToVertex = vc - 1 } ]
-
         let flat = RSM.flattenRsm extRsm
         let stateInfo = flat.StateInfo
         let blockStart = flat.BlockStart
@@ -70,6 +40,12 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
                     | false, _ -> Set.empty
 
                 blockFinals.[nt] <- Set.add i current
+
+        let rootRanges =
+            [ { FromState = 0
+                FromVertex = 0
+                ToState = 1
+                ToVertex = vc - 1 } ]
 
         rootRanges
         |> List.tryPick (fun rk ->
@@ -442,7 +418,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
+        [<Fact>]
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
@@ -450,7 +426,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
+        [<Fact>]
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
@@ -458,7 +434,7 @@ module RnglrGrammarAcceptanceAndTree =
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
-        [<Fact(Skip = "RNGLR: PIntermediate sub-range entries missing for multi-final-state S block decompositions")>]
+        [<Fact>]
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 

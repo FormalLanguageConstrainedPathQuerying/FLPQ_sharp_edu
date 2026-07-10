@@ -28,7 +28,8 @@ module Rnglr =
 
     [<Struct>]
     type private InvBlockData<'t, 'nt when 't: comparison and 'nt: comparison> =
-        { Start: int
+        { Nonterminal: Nonterminal<'nt>
+          Start: int
           Finals: Set<int>
           InvTrans: Map<int * RsmSymbol<'t, 'nt>, int list>
           GlobalOffset: int }
@@ -73,7 +74,8 @@ module Rnglr =
                 let invTrans = invertRsmTransitions b
 
                 let invData =
-                    { Start = b.Dfa.StartState
+                    { Nonterminal = b.Nonterminal
+                      Start = b.Dfa.StartState
                       Finals = b.Dfa.FinalStates
                       InvTrans = invTrans
                       GlobalOffset = blockGlobalOffset.[b.Nonterminal] }
@@ -121,26 +123,32 @@ module Rnglr =
             | Symbol.N nt -> Some(RsmSymbol.RNonterm nt)
             | Symbol.Epsilon -> None
 
-        /// Performs product BFS over (gssIdx, invState) pairs, filling path index entries.
+        /// Performs product BFS over (gssIdx, invState) pairs with propagated range-end coordinates.
+        /// Each BFS node carries (gssIdx, invState, rangeEndState, rangeEndVertex) where
+        /// rangeEnd identifies the block's final state and position for which this BFS was started.
+        /// At each forward step, adds PTerminal entries and PIntermediate entries at the correct granularity.
+        /// Also updates storedStates at intermediate GSS vertices for the passing mechanism.
         let productBfs
             (invData: InvBlockData<'t, 'nt>)
-            (starts: (int * int) list)
-            : (int * int * int * int) list * (int * int) list =
+            (starts: (int * int * int * int) list)
+            : (int * int * int * int) list =
             let visited = HashSet<int * int>()
-            let queue = Queue<int * int>()
+            let startSet = starts |> List.map (fun (g, i, _, _) -> (g, i)) |> set
+            let queue = Queue<int * int * int * int>()
             let mutable predecessors = []
-            let mutable intermediates = []
 
-            for (gssIdx, invState) in starts do
+            for (gssIdx, invState, endState, endVertex) in starts do
                 let p = (gssIdx, invState)
 
                 if visited.Add(p) then
-                    queue.Enqueue(p)
+                    queue.Enqueue(gssIdx, invState, endState, endVertex)
 
             while queue.Count > 0 do
-                let (currGss, currInv) = queue.Dequeue()
+                let (currGss, currInv, endState, endVertex) = queue.Dequeue()
                 let currVx = Graph.getVertex currGss gss.GssGraph
                 let vCurr = currVx.InputVertex
+                let globalCurrInv = invData.GlobalOffset + currInv
+                let globalEnd = invData.GlobalOffset + endState
 
                 for (nextGss, sym) in RnglrGSS.outgoingEdges gss currGss do
                     match toRsmSym sym with
@@ -153,7 +161,6 @@ module Rnglr =
                             for nextInv in nextInvList do
                                 match rSym with
                                 | RsmSymbol.RTerm(Terminal t) ->
-                                    let globalCurrInv = invData.GlobalOffset + currInv
                                     let globalNextInv = invData.GlobalOffset + nextInv
 
                                     addToIndex
@@ -166,55 +173,57 @@ module Rnglr =
 
                                 let isStart = nextInv = invData.Start
 
+                                if (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
+                                    let globalNextInv = invData.GlobalOffset + nextInv
+
+                                    addToIndex
+                                        globalNextInv
+                                        vNext
+                                        globalEnd
+                                        endVertex
+                                        (PathIndexEntry.PIntermediate(globalCurrInv, vCurr))
+
                                 if isStart then
                                     predecessors <- (nextGss, nextVx.LrState, vNext, currInv) :: predecessors
 
-                                    let np = (nextGss, nextInv)
+                                let np = (nextGss, nextInv)
 
-                                    if visited.Add(np) then
-                                        intermediates <- np :: intermediates
-                                        queue.Enqueue(np)
-                                else
-                                    let np = (nextGss, nextInv)
+                                if visited.Add(np) then
+                                    if not (Set.contains np startSet) then
+                                        let cur = RnglrGSS.getStoredStates gss nextGss
 
-                                    if visited.Add(np) then
-                                        intermediates <- np :: intermediates
-                                        queue.Enqueue(np)
+                                        RnglrGSS.setStoredStates
+                                            gss
+                                            nextGss
+                                            (Set.add (invData.Nonterminal, nextInv, endState, endVertex) cur)
+
+                                    queue.Enqueue(nextGss, nextInv, endState, endVertex)
                         | None -> ()
                     | None -> ()
 
-            (predecessors, intermediates)
+            predecessors
 
         /// Finds predecessors by running product BFS from (gssIdx, block final states).
-        /// Returns (predecessors, intermediateGlobalPoints) where intermediateGlobalPoints are
-        /// (globalRsmState, vertex) for each intermediate node visited in the BFS.
-        let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : (int * int * int * int) list * (int * int) list =
+        /// Each BFS node carries the range end (final state, final vertex) coordinates
+        /// so that PIntermediate entries are added at the correct granularity during traversal.
+        /// StoredStates updates are handled inside productBfs.
+        let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : (int * int * int * int) list =
             match Map.tryFind nt invBlockData with
             | Some invData ->
+                let vx = Graph.getVertex gssIdx gss.GssGraph
+
                 let starts =
                     invData.Finals
                     |> Set.toList
-                    |> List.map (fun finalState -> (gssIdx, finalState))
+                    |> List.map (fun finalState -> (gssIdx, finalState, finalState, vx.InputVertex))
 
-                let (preds, intermediates) = productBfs invData starts
+                let preds = productBfs invData starts
 
-                let globalIntermediates =
-                    intermediates
-                    |> List.map (fun (gssIx, inv) ->
-                        let vx = Graph.getVertex gssIx gss.GssGraph
-                        let cur = RnglrGSS.getStoredStates gss gssIx
-                        RnglrGSS.setStoredStates gss gssIx (Set.add (nt, inv) cur)
-                        (invData.GlobalOffset + inv, vx.InputVertex))
-
-                let resultPreds =
-                    if invData.Finals |> Set.contains invData.Start && preds.IsEmpty then
-                        let vx = Graph.getVertex gssIdx gss.GssGraph
-                        [ (gssIdx, vx.LrState, vx.InputVertex, invData.GlobalOffset + invData.Start) ]
-                    else
-                        preds
-
-                (resultPreds, globalIntermediates)
-            | None -> ([], [])
+                if invData.Finals |> Set.contains invData.Start && preds.IsEmpty then
+                    [ (gssIdx, vx.LrState, vx.InputVertex, invData.GlobalOffset + invData.Start) ]
+                else
+                    preds
+            | None -> []
 
 
         let pending = Array.init vertexCount (fun _ -> Queue<int * int>())
@@ -229,7 +238,6 @@ module Rnglr =
             (vPre: int)
             (vEnd: int)
             (depth: int)
-            (intermediates: (int * int) list)
             : unit =
             match Map.tryFind (lrStatePre, reduceNt) lrTable.Goto with
             | Some gotoTarget ->
@@ -251,50 +259,40 @@ module Rnglr =
                         else
                             addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
 
-                            for (interState, interVertex) in intermediates do
-                                if interVertex <> vPre then
-                                    addToIndex
-                                        globalStart
-                                        vPre
-                                        finalRsmState
-                                        vEnd
-                                        (PathIndexEntry.PIntermediate(interState, interVertex))
-
                         let callerItems = lrTable.Automaton.States.[lrStatePre]
 
                         for callerItem in callerItems do
-                            if callerItem.BlockNonterminal <> freshStart then
-                                match Map.tryFind callerItem.BlockNonterminal blockMap with
-                                | Some callerBlock ->
-                                    let trans = callerBlock.Dfa.Transitions
+                            match Map.tryFind callerItem.BlockNonterminal blockMap with
+                            | Some callerBlock ->
+                                let trans = callerBlock.Dfa.Transitions
 
-                                    for callTarget in 0 .. Dfa.stateCount callerBlock.Dfa - 1 do
-                                        match Matrix.get trans callerItem.RsmState callTarget with
-                                        | Some labels ->
-                                            for label in NonEmptySet.toSeq labels do
-                                                match label with
-                                                | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) when nt = reduceNt ->
-                                                    let callerOffset = blockGlobalOffset.[callerItem.BlockNonterminal]
-                                                    let callGlobalState = callerOffset + callerItem.RsmState
-                                                    let returnGlobalState = callerOffset + callTarget
+                                for callTarget in 0 .. Dfa.stateCount callerBlock.Dfa - 1 do
+                                    match Matrix.get trans callerItem.RsmState callTarget with
+                                    | Some labels ->
+                                        for label in NonEmptySet.toSeq labels do
+                                            match label with
+                                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) when nt = reduceNt ->
+                                                let callerOffset = blockGlobalOffset.[callerItem.BlockNonterminal]
+                                                let callGlobalState = callerOffset + callerItem.RsmState
+                                                let returnGlobalState = callerOffset + callTarget
 
-                                                    if vPre = vEnd then
-                                                        addToIndex
-                                                            callGlobalState
-                                                            vPre
-                                                            returnGlobalState
-                                                            vEnd
-                                                            (PathIndexEntry.PEpsilonNonterminal reduceNt)
-                                                    else
-                                                        addToIndex
-                                                            callGlobalState
-                                                            vPre
-                                                            returnGlobalState
-                                                            vEnd
-                                                            (PathIndexEntry.PNonterminal reduceNt)
-                                                | _ -> ()
-                                        | None -> ()
-                                | None -> ()
+                                                if vPre = vEnd then
+                                                    addToIndex
+                                                        callGlobalState
+                                                        vPre
+                                                        returnGlobalState
+                                                        vEnd
+                                                        (PathIndexEntry.PEpsilonNonterminal reduceNt)
+                                                else
+                                                    addToIndex
+                                                        callGlobalState
+                                                        vPre
+                                                        returnGlobalState
+                                                        vEnd
+                                                        (PathIndexEntry.PNonterminal reduceNt)
+                                            | _ -> ()
+                                    | None -> ()
+                            | None -> ()
                     | false, _ -> ()
 
                     processNode gotoTarget vEnd (depth + 1)
@@ -307,10 +305,10 @@ module Rnglr =
 
             for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
                 let gssIdx = linearIdx lrState v
-                let (predecessors, intermediates) = findPredecessors gssIdx reduceNt
+                let predecessors = findPredecessors gssIdx reduceNt
 
                 for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in predecessors do
-                    processReduction reduceNt finalRsmState lrStatePre gssIdxPre vPre v depth intermediates
+                    processReduction reduceNt finalRsmState lrStatePre gssIdxPre vPre v depth
 
             if v < vertexCount - 1 then
                 for (tVal, vNext) in graphEdges.[v] do
@@ -324,30 +322,14 @@ module Rnglr =
                         let consumedStates =
                             RnglrGSS.addEdge gss targetGssIdx gssIdx (Symbol.T(Terminal tVal))
 
-                        for (storedNt, storedInv) in consumedStates do
+                        for (storedNt, storedInv, storedEndState, storedEndVertex) in consumedStates do
                             match Map.tryFind storedNt invBlockData with
                             | Some invData ->
-                                let (extPredecessors, extIntermediates) =
-                                    productBfs invData [ (targetGssIdx, storedInv) ]
-
-                                let globalExtIntermediates =
-                                    extIntermediates
-                                    |> List.map (fun (gssIx, inv) ->
-                                        let vx = Graph.getVertex gssIx gss.GssGraph
-                                        let cur = RnglrGSS.getStoredStates gss gssIx
-                                        RnglrGSS.setStoredStates gss gssIx (Set.add (storedNt, inv) cur)
-                                        (invData.GlobalOffset + inv, vx.InputVertex))
+                                let extPredecessors =
+                                    productBfs invData [ (targetGssIdx, storedInv, storedEndState, storedEndVertex) ]
 
                                 for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in extPredecessors do
-                                    processReduction
-                                        storedNt
-                                        storedInv
-                                        lrStatePre
-                                        gssIdxPre
-                                        vPre
-                                        vNext
-                                        depth
-                                        globalExtIntermediates
+                                    processReduction storedNt storedInv lrStatePre gssIdxPre vPre vNext depth
                             | None -> ()
 
                         pending.[vNext].Enqueue(targetLrState, targetGssIdx)
@@ -367,25 +349,5 @@ module Rnglr =
         pathIndex
 
     let isAccepted (pathIndex: PathIndex<'t, 'nt>) (vertexCount: int) : bool =
-        let k = pathIndex.StateCount * pathIndex.VertexCount
-        let mutable result = false
-
-        for i in 0 .. k - 1 do
-            if not result then
-                let fromVertex = i % vertexCount
-
-                if fromVertex = 0 then
-                    for j in 0 .. k - 1 do
-                        if not result then
-                            let toVertex = j % vertexCount
-
-                            if toVertex = vertexCount - 1 then
-                                let entries = Matrix.get pathIndex.Matrix i j
-
-                                for entry in entries do
-                                    match entry with
-                                    | PathIndexEntry.PNonterminal _ -> result <- true
-                                    | PathIndexEntry.PEpsilonNonterminal _ -> result <- true
-                                    | _ -> ()
-
-        result
+        let entries = PathIndex.get pathIndex 0 0 1 (vertexCount - 1)
+        not (Set.isEmpty entries)
