@@ -25,7 +25,7 @@ let verifyGolden (goldenFileName: string) (actualContent: string) =
 
 let combineStepsDot (steps: VisualizationStep list) : string =
     steps
-    |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i step.treeAndStack)
+    |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i step.TreeAndStack)
     |> String.concat "\n\n"
 
 let wrapInTemplate (templatePath: string) (content: string) : string =

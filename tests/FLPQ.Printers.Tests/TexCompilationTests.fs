@@ -45,7 +45,7 @@ let ``LL step input TeX compiles with lualatex`` () =
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
-        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.input)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.Input)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -60,7 +60,7 @@ let ``LR step input TeX compiles with lualatex`` () =
     let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
 
     for step in vizSteps do
-        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.input)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.Input)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -283,5 +283,5 @@ let ``Derivation tree dot compiles with graphviz`` () =
 
     let dot = DerivationTreeDot.toDot string tree
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.True(info.nodeCount > 0)
-    Assert.True(info.edgeCount > 0)
+    Assert.True(info.NodeCount > 0)
+    Assert.True(info.EdgeCount > 0)

@@ -29,7 +29,59 @@ After the global plan is created, proceed with the normal working loop: one task
 - Is small enough to complete in a single focused work session (typically 30–90 minutes)
 - Produces a compilable, testable increment — no partial implementations left uncommitted
 - Has a unique identifier (e.g., "S1", "S2") used in commit messages and plan tracking
-- States its **inputs** (dependencies on prior subtasks or existing code) and **outputs** (new types, functions, tests, docs)
+
+### Subtask Format
+
+Each subtask in `tasks/detailed_plan.md` MUST include these four sections. **A subtask with missing Code, Tests, or Docs sections is incomplete and must not be executed.**
+
+```
+### SN: <title>
+
+**Code:** <files to create or modify, types and functions to add>
+**Tests:** <test files to create or modify, specific test approaches:
+          golden, property-based, [<Fact>], etc.>
+**Docs:** <doc files to create or update. Use the mapping table below
+         to determine which docs are affected.>
+
+**Spec:**
+- <detailed implementation specification>
+```
+
+Example:
+
+```
+### S1: Add SPPF DOT visualization
+
+**Code:** New file `src/FLPQ.Printers/SppfDot.fs` with `SppfDot.toDot` function
+**Tests:** New `SppfDotTests` section in an existing Printers test file or new
+          test file; golden test comparing SPPF DOT output against reference
+**Docs:** New `docs/developer/sppf-dot.md`; update `docs/developer/FLPQ.Printers.md`;
+        update `docs/main.md`
+
+**Spec:**
+- Terminal/nonterminal nodes: shape=oval...
+```
+
+### Documentation Mapping Table
+
+Use this table when writing the **Docs** section of each subtask. For every source change, the corresponding doc changes are **mandatory** — if you cannot list them, the plan is incomplete.
+
+| Source change | Required doc actions |
+|---|---|
+| New module in `src/FLPQ.Printers/` | New `docs/developer/<module-name>.md` — describe types, functions, design decisions, book references |
+| New module in `src/FLPQ.Languages/` | New `docs/developer/<module-name>.md` |
+| New module in `src/FLPQ.LinearAlgebra/` | New `docs/developer/<module-name>.md` |
+| New module in `src/FLPQ.GraphAnalysis/` | New `docs/developer/<module-name>.md` |
+| New module in `src/FLPQ.RPQ/` | New `docs/developer/<module-name>.md` |
+| New file in any `src/` project | Update `docs/developer/FLPQ.<Project>.md` — add module to list |
+| New file in any `src/` project | Update `docs/project/architecture.md` — add file to project file listing |
+| New CLI runner | Update `docs/developer/FLPQ.Cli.md` — add runner description |
+| New CLI runner with new output format | Update `docs/user/cli.md` — add algorithm to listing, describe output |
+| New Algorithm DU case | Update `docs/user/cli.md` — add to algorithm list |
+| Changed public API (new parameter, renamed function) | Update existing `docs/developer/<module>.md` — reflect API change |
+| New doc page | Update `docs/main.md` — add link under appropriate section |
+| New visualization module | Update the corresponding algorithm doc to cross-reference the visualizer |
+| Book discrepancy found | Update `tasks/fixes_for_book.md` |
 
 ### Granularity
 

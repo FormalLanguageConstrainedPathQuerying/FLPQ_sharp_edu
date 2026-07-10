@@ -20,8 +20,8 @@ let ``simple automaton dot compiles`` () =
     Assert.Contains("peripheries=2", dot)
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(2, info.nodeCount)
-    Assert.Equal(3, info.edgeCount)
+    Assert.Equal(2, info.NodeCount)
+    Assert.Equal(3, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -65,8 +65,8 @@ let ``DFA from LR(0) automaton dot compiles`` () =
     Assert.Contains("digraph Automaton", dot)
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.True(info.nodeCount > 0)
-    Assert.True(info.edgeCount > 0)
+    Assert.True(info.NodeCount > 0)
+    Assert.True(info.EdgeCount > 0)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -76,8 +76,8 @@ let ``automaton with no transitions compiles`` () =
     let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(1, info.nodeCount)
-    Assert.Equal(0, info.edgeCount)
+    Assert.Equal(1, info.NodeCount)
+    Assert.Equal(0, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -90,8 +90,8 @@ let ``multiple start and final states`` () =
     Assert.Contains("peripheries=2", dot)
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(3, info.nodeCount)
-    Assert.Equal(2, info.edgeCount)
+    Assert.Equal(3, info.NodeCount)
+    Assert.Equal(2, info.EdgeCount)
 
 let private tikzTemplatePath =
     System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
@@ -279,7 +279,7 @@ module DotParseabilityPropertyTests =
             Assert.Contains("{", dot)
             Assert.Contains("}", dot)
             let info = ExternalTools.compileDotStringToInfo dot
-            info.nodeCount >= 0 && info.edgeCount >= 0
+            info.NodeCount >= 0 && info.EdgeCount >= 0
 
         [<Property(MaxTest = 50)>]
         [<Trait("Category", "Graphviz")>]

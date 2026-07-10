@@ -13,8 +13,8 @@ let ``compileDotStringToInfo parses a simple graph`` () =
     let dot = "digraph G {\n  a -> b;\n  a -> c;\n}\n"
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(3, info.nodeCount)
-    Assert.Equal(2, info.edgeCount)
+    Assert.Equal(3, info.NodeCount)
+    Assert.Equal(2, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]

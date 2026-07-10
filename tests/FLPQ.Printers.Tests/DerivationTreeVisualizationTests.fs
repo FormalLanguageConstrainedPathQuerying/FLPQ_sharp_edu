@@ -15,8 +15,8 @@ let ``leaf tree dot compiles`` () =
     Assert.Contains("shape=box", dot)
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(1, info.nodeCount)
-    Assert.Equal(0, info.edgeCount)
+    Assert.Equal(1, info.NodeCount)
+    Assert.Equal(0, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -32,8 +32,8 @@ let ``node with children dot compiles`` () =
     Assert.Contains("digraph DerivationTree", dot)
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(4, info.nodeCount)
-    Assert.Equal(3, info.edgeCount)
+    Assert.Equal(4, info.NodeCount)
+    Assert.Equal(3, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -42,8 +42,8 @@ let ``epsilon leaf dot compiles`` () =
     let dot = DerivationTreeDot.toDot string tree
 
     let info = ExternalTools.compileDotStringToInfo dot
-    Assert.Equal(2, info.nodeCount)
-    Assert.Equal(1, info.edgeCount)
+    Assert.Equal(2, info.NodeCount)
+    Assert.Equal(1, info.EdgeCount)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -58,8 +58,8 @@ let ``LR parser tree dot compiles`` () =
         let dot = DerivationTreeDot.toDot string tree
 
         let info = ExternalTools.compileDotStringToInfo dot
-        Assert.True(info.nodeCount > 0)
-        Assert.True(info.edgeCount > 0)
+        Assert.True(info.NodeCount > 0)
+        Assert.True(info.EdgeCount > 0)
     | None -> Assert.Fail("Failed to parse")
 
 

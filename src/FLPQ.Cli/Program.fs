@@ -29,6 +29,8 @@ module Program =
             | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
+            | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output
+            | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output
 
             if summary then
                 let templatePath = Helpers.findSummaryTemplate ()

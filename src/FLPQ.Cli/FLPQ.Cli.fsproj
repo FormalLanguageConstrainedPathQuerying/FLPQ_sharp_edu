@@ -12,6 +12,8 @@
     <Compile Include="ValiantRunner.fs" />
     <Compile Include="LLRunner.fs" />
     <Compile Include="LRRunner.fs" />
+    <Compile Include="GllRunner.fs" />
+    <Compile Include="RnglrRunner.fs" />
     <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

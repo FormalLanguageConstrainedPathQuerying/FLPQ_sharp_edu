@@ -10,8 +10,11 @@
     <Compile Include="SymbolTeX.fs" />
     <Compile Include="ParsingTableTeX.fs" />
     <Compile Include="MatrixTeX.fs" />
+    <Compile Include="PathIndexTeX.fs" />
     <Compile Include="TeXRenderer.fs" />
     <Compile Include="DerivationTreeDot.fs" />
+    <Compile Include="SppfDot.fs" />
+    <Compile Include="RsmDot.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />
     <Compile Include="LRAutomatonTikz.fs" />
@@ -20,6 +23,7 @@
     <Compile Include="ValiantTeX.fs" />
     <Compile Include="LLTableTeX.fs" />
     <Compile Include="LRTableTeX.fs" />
+    <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="VisualizationTypes.fs" />
     <Compile Include="LLStepVisualizer.fs" />
     <Compile Include="LRStepVisualizer.fs" />

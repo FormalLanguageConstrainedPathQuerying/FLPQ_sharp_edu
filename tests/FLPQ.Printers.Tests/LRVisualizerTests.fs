@@ -27,12 +27,12 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
-        Assert.Contains("digraph StackTree", step.treeAndStack)
-        Assert.Contains(@"\begin{pNiceMatrix}", step.input)
-        let info = ExternalTools.compileDotStringToInfo step.treeAndStack
-        Assert.True(info.nodeCount > 0)
+        Assert.Contains("digraph StackTree", step.TreeAndStack)
+        Assert.Contains(@"\begin{pNiceMatrix}", step.Input)
+        let info = ExternalTools.compileDotStringToInfo step.TreeAndStack
+        Assert.True(info.NodeCount > 0)
 
-    Assert.True(vizSteps |> List.exists (fun s -> s.treeAndStack.Contains("{rank=same")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.TreeAndStack.Contains("{rank=same")))
 
 [<Fact>]
 let ``LR step visualization includes input position marker`` () =
@@ -50,7 +50,7 @@ let ``LR step visualization includes input position marker`` () =
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
-    Assert.True(vizSteps |> List.exists (fun s -> s.input.Contains(@"\underbar{")))
+    Assert.True(vizSteps |> List.exists (fun s -> s.Input.Contains(@"\underbar{")))
 
 [<Fact>]
 let ``LR step visualization for accepted string returns success steps`` () =
@@ -75,8 +75,8 @@ let ``LR step visualization for accepted string returns success steps`` () =
     Assert.NotEmpty(vizSteps)
 
     for step in vizSteps do
-        Assert.Contains("digraph StackTree", step.treeAndStack)
-        Assert.Contains(@"\begin{pNiceMatrix}", step.input)
+        Assert.Contains("digraph StackTree", step.TreeAndStack)
+        Assert.Contains(@"\begin{pNiceMatrix}", step.Input)
 
 [<Fact>]
 let ``LR step visualization includes state frames with sN labels`` () =
@@ -96,5 +96,5 @@ let ``LR step visualization includes state frames with sN labels`` () =
 
     Assert.NotEmpty(vizSteps)
     let firstStep = vizSteps.[0]
-    Assert.Contains("s0", firstStep.treeAndStack)
-    Assert.Contains("{rank=same", firstStep.treeAndStack)
+    Assert.Contains("s0", firstStep.TreeAndStack)
+    Assert.Contains("{rank=same", firstStep.TreeAndStack)

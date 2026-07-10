@@ -9,6 +9,8 @@ Each atomic subtask from `tasks/detailed_plan.md` is executed as a self-containe
 
 ## Cycle Steps
 
+Execute these steps in order. **Do not skip steps. Do not proceed past a step until it is verified complete.**
+
 ### 1. Implement
 
 Write the subtask's outputs: types, functions, and code as specified in the detailed plan.
@@ -16,6 +18,11 @@ Write the subtask's outputs: types, functions, and code as specified in the deta
 ### 2. Write Tests
 
 Write tests for the subtask's outputs. See the `tests-writer` skill for FsCheck API, golden test patterns, and generator best practices. For F#-specific FsCheck API quirks (Gen shadowing, naming, overloads), see the `fsharp-coder` skill.
+
+**Hard gate — this step is not complete until:**
+
+- [ ] At least one test file was created or an existing test file was modified for this subtask
+- [ ] The affected test project builds and all tests pass (run `dotnet test` on the affected project)
 
 Property-based tests:
 
@@ -35,11 +42,23 @@ FsCheck generators:
 
 ### 3. Update Documentation
 
-Update all task-related docs including `fixes_for_book.md` and module docs (`docs/<module>.md`). See the `documentation` skill for details.
+Update all task-related docs including `fixes_for_book.md` and module docs (`docs/<module>.md`). See the `documentation` skill for content requirements.
+
+**Hard gate — this step is not complete until:**
+
+- [ ] At least one documentation file was created or updated for this subtask
+- [ ] For new modules: a corresponding `docs/developer/<module>.md` file exists
+- [ ] Modified public APIs are reflected in their existing module docs
+- [ ] New CLI features are reflected in `docs/user/cli.md`
+- [ ] New files are listed in `docs/developer/FLPQ.<Project>.md` and `docs/project/architecture.md`
+- [ ] New doc pages are linked from `docs/main.md`
+- [ ] If a book error was found, it is recorded in `tasks/fixes_for_book.md`
 
 ### 4. Commit Gate
 
-Run commit gate (format + build). See `quality-gates` skill.
+Run commit gate (format + build). See `quality-gates` skill for the exact commands.
+
+**Hard gate — do not proceed to step 5 unless this passes.**
 
 ### 5. Code Quality Checks
 
@@ -66,6 +85,21 @@ See the `git-workflow` skill for the full git workflow.
 
 Mark the subtask as completed in `tasks/detailed_plan.md`.
 
+## Per-Subtask Execution Tracking
+
+For each subtask, use the `todowrite` tool to track cycle steps as separate items. **No subtask may be committed with any step still `pending`.**
+
+Example for subtask S1:
+
+```
+- "S1: Implement" → in_progress → completed
+- "S1: Write tests" → in_progress → completed
+- "S1: Update documentation" → in_progress → completed
+- "S1: Commit gate (format + build)" → in_progress → completed
+- "S1: Quality checks" → in_progress → completed
+- "S1: Commit" → in_progress → completed
+```
+
 ## Blocked Work Protocol
 
 If you encounter an algorithmic problem that you cannot resolve to 100% correctness, **STOP**. Do not commit. Do not merge. Do not comment out or weaken failing tests to make the suite green. Instead:
@@ -82,15 +116,19 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
    - What specific help is needed from the user
    Commit this update so the plan serves as a persistent record of the blocking state
 
-## Completion Verification
+## Task Completion Verification
 
-Before marking a task as done, confirm:
+After ALL subtasks are committed, run these gates in order. Each references the `quality-gates` skill for exact commands — **do not duplicate command recipes here.**
 
-- ALL subtasks from the task description in `tasks.md` are implemented
-- Task verification passed (lint + tests + coverage). See `quality-gates` skill.
-- **Code review** passed with zero findings across the entire repo. See `code-review` skill.
-- There are zero known algorithmic gaps, partial implementations, or skipped test cases
-- Equivalence tests pass against the reference implementation if the task requires it
+| Gate | Owned by | Description |
+|------|----------|-------------|
+| Commit gate (per subtask) | `subtask-loop` | Tests written, docs updated — verified at steps 2-3 above |
+| Lint gate | `quality-gates` | `dotnet-fsharplint lint` — 0 warnings in modified projects |
+| Test gate | `quality-gates` | `dotnet dotnet-coverage collect dotnet test` — 0 failures, 0 skipped |
+| Coverage gate | `quality-gates` | Parse `tmp/coverage.cobertura`, verify FLPQ source ≥ 80% |
+| Code review | `code-review` | Zero findings across entire repo |
+
+**Hard rule: a task is NOT `[done]` until every gate in this table passes.**
 
 ## Marking Complete
 

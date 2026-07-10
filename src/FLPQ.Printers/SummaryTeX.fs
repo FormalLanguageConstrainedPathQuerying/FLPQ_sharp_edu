@@ -11,12 +11,16 @@ module SummaryTeX =
         | TablePerStep
         | LL
         | LR
+        | GLL
+        | RNGLR
 
         override this.ToString() =
             match this with
             | TablePerStep -> "table"
             | LL -> "ll"
             | LR -> "lr"
+            | GLL -> "gll"
+            | RNGLR -> "rnglr"
 
     /// Wraps TeX content in a centered display math environment.
     let wrapMath (tex: string) : string =
@@ -70,6 +74,7 @@ module SummaryTeX =
         (algoKind: SummaryKind)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
+        (rsmSppfPdfs: (string * string) list)
         : string list =
         let maybe (file: string) (label: string) (wrap: string -> string) =
             match readIfExists (Path.Combine(vizDir, file)) with
@@ -94,6 +99,19 @@ module SummaryTeX =
                 @ (match lrAutomatonTikz with
                    | Some tikz -> [ section "LR Automaton"; wrapTikzCenter tikz; "" ]
                    | None -> [])
+
+            | SummaryKind.GLL ->
+                maybe "input.tex" "Input String" wrapMath
+                @ (rsmSppfPdfs
+                   |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
+                @ maybe "path_index.tex" "Path Index" wrapMath
+
+            | SummaryKind.RNGLR ->
+                maybe "input.tex" "Input String" wrapMath
+                @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapCenter
+                @ (rsmSppfPdfs
+                   |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
+                @ maybe "path_index.tex" "Path Index" wrapMath
 
         grammar @ algoLines
 
@@ -130,13 +148,15 @@ module SummaryTeX =
         (stepCount: int)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
+        (rsmSppfPdfs: (string * string) list)
         : string list =
         let prefix =
             [ section ("Algorithm: " + algo)
               sprintf "\\textit{Total steps: %d}\\\\" stepCount
               "" ]
 
-        let headerLines = headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz
+        let headerLines =
+            headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmSppfPdfs
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
 

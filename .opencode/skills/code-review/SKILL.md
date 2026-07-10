@@ -53,14 +53,24 @@ Review → Detect problems → Fix all → Commit fixes → Repeat until zero fi
 - **FsCheck generators**: shared generators live in `FLPQ.TestUtilities/Generators.fs`, not duplicated across test projects
 - **Property test correctness**: `[<Property>]` tests must use FsCheck-generated inputs; tests iterating over hardcoded data with `[<Property>]` are mislabeled and must be converted to `[<Fact>]`
 - **Golden tests**: verify that golden files capture correct output (not buggy first-run output)
+- **Test coverage gaps**: every new public module or function in `src/` must have at least one test targeting it. For each new `.fs` file in `src/`, verify at least one corresponding test file or test function exists in `tests/`
 
-### 4. Genericity and Type Safety
+### 4. Documentation
+
+- **Module doc completeness**: every `.fs` file in `src/` must have a corresponding entry in `docs/developer/`. New modules without docs are a finding
+- **Hub doc updates**: new files must appear in the project hub doc (`docs/developer/FLPQ.<Project>.md`)
+- **Architecture doc updates**: new files must appear in `docs/project/architecture.md`
+- **CLI user doc updates**: new CLI features (algorithms, flags, output formats) must appear in `docs/user/cli.md`
+- **Cross-references**: new visualization modules must be referenced from their corresponding algorithm docs
+- **Navigation**: new doc pages must be linked from `docs/main.md`
+
+### 5. Genericity and Type Safety
 
 - Types use generic parameters (`'t`, `'nt`) where applicable — no hardcoded `string` in algorithm implementations
 - Non-empty collections use `NonEmptyList`/`NonEmptySet` at the type level, not runtime checks
 - Unit tests may instantiate at `string` for readability, but the implementation must never depend on it
 
-### 5. Clarity and Book Alignment
+### 6. Clarity and Book Alignment
 
 - Code is clear, without nontrivial optimizations
 - Every implementation is directly traceable to a specific algorithm or example in the book

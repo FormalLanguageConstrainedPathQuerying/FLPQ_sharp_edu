@@ -16,6 +16,8 @@ module Summary =
         | AlgorithmTypes.LR0
         | AlgorithmTypes.SLR1
         | AlgorithmTypes.CLR1 -> SummaryTeX.SummaryKind.LR
+        | AlgorithmTypes.GLL -> SummaryTeX.SummaryKind.GLL
+        | AlgorithmTypes.RNGLR -> SummaryTeX.SummaryKind.RNGLR
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
@@ -74,7 +76,7 @@ module Summary =
         else
             let steps = SummaryTeX.collectSteps vizDir
 
-            let lrAutomatonPdf, lrAutomatonTikz =
+            let lrAutomatonPdf, lrAutomatonTikz, rsmSppfPdfs =
                 match algo with
                 | AlgorithmTypes.LR0
                 | AlgorithmTypes.SLR1
@@ -84,12 +86,28 @@ module Summary =
 
                     if File.Exists autoTikzTex then
                         let tikzContent = File.ReadAllText autoTikzTex
-                        (None, Some tikzContent)
+                        (None, Some tikzContent, [])
                     elif File.Exists autoDot then
-                        (Some "dot_pdfs/lr_automaton.pdf", None)
+                        (Some "dot_pdfs/lr_automaton.pdf", None, [])
                     else
-                        (None, None)
-                | _ -> (None, None)
+                        (None, None, [])
+                | AlgorithmTypes.GLL ->
+                    let pdfs =
+                        [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
+                              ("RSM", "dot_pdfs/rsm_blocks.pdf")
+                          if File.Exists(Path.Combine(vizDir, "sppf.dot")) then
+                              ("SPPF", "dot_pdfs/sppf.pdf") ]
+
+                    (None, None, pdfs)
+                | AlgorithmTypes.RNGLR ->
+                    let pdfs =
+                        [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
+                              ("RSM", "dot_pdfs/rsm_blocks.pdf")
+                          if File.Exists(Path.Combine(vizDir, "sppf.dot")) then
+                              ("SPPF", "dot_pdfs/sppf.pdf") ]
+
+                    (None, None, pdfs)
+                | _ -> (None, None, [])
 
             let algoKind = algorithmToKind algo
 
@@ -101,6 +119,7 @@ module Summary =
                     steps.Length
                     lrAutomatonPdf
                     lrAutomatonTikz
+                    rsmSppfPdfs
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

@@ -10,10 +10,10 @@ module ExternalTools =
 
     /// Parsed information from a Graphviz `-Tplain` output.
     type DotInfo =
-        { nodeCount: int
-          edgeCount: int
-          nodeLabels: string list
-          edgeLabels: string list }
+        { NodeCount: int
+          EdgeCount: int
+          NodeLabels: string list
+          EdgeLabels: string list }
 
     let private tokenizePlainLine (line: string) : string list =
         let mutable tokens = []
@@ -101,10 +101,10 @@ module ExternalTools =
                         edgeCount <- edgeCount + 1
                 | _ -> ()
 
-            { nodeCount = nodeCount
-              edgeCount = edgeCount
-              nodeLabels = List.rev nodeLabels
-              edgeLabels = List.rev edgeLabels }
+            { NodeCount = nodeCount
+              EdgeCount = edgeCount
+              NodeLabels = List.rev nodeLabels
+              EdgeLabels = List.rev edgeLabels }
         finally
             File.Delete(tempFile)
 

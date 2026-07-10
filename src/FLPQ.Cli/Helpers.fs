@@ -34,8 +34,8 @@ module Helpers =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].treeAndStack
-            writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].input
+            writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].TreeAndStack
+            writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
 
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
