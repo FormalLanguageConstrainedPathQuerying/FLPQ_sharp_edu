@@ -154,20 +154,20 @@ module PropertyTests =
     let ``Belyanin and Arroyuelo produce identical results for single source with single-label regex``
         (d: RPQTestData)
         =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
-                let source = min d.sources.[0] (v - 1)
-                let nfaBely = TestHelpers.nfaFromEdges v d.edges [| source |]
+                let source = min d.Sources.[0] (v - 1)
+                let nfaBely = TestHelpers.nfaFromEdges v d.Edges [| source |]
                 let dfa = TestHelpers.buildDfa [ (0, "a", 1) ] 0 [ 1 ]
                 let belyResult = BelyaninRPQ.evaluate dfa nfaBely
 
-                let nfaArro = TestHelpers.nfaFromEdges v d.edges [| source |]
+                let nfaArro = TestHelpers.nfaFromEdges v d.Edges [| source |]
                 let regexp = Regexp.RTerm(Terminal "a")
                 let arroResult = ArroyueloRPQ.evaluate nfaArro regexp
 
@@ -181,16 +181,16 @@ module PropertyTests =
 
     [<Property>]
     let ``Belyanin and Kronecker produce identical results for single source`` (d: RPQTestData) =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
-                let source = min d.sources.[0] (v - 1)
-                let nfa = TestHelpers.nfaFromEdges v d.edges [| source |]
+                let source = min d.Sources.[0] (v - 1)
+                let nfa = TestHelpers.nfaFromEdges v d.Edges [| source |]
                 let dfa = TestHelpers.buildDfa [ (0, "a", 1) ] 0 [ 1 ]
                 let belyResult = BelyaninRPQ.evaluate dfa nfa
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
@@ -205,18 +205,18 @@ module PropertyTests =
 
     [<Property>]
     let ``Arroyuelo and Kronecker produce identical results`` (d: RPQTestData) =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
                 let safeSources =
-                    d.sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
+                    d.Sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
 
-                let nfa = TestHelpers.nfaFromEdges v d.edges safeSources
+                let nfa = TestHelpers.nfaFromEdges v d.Edges safeSources
                 let dfa = TestHelpers.buildDfa [ (0, "a", 1) ] 0 [ 1 ]
                 let regexp = Regexp.RTerm(Terminal "a")
                 let arroResult = ArroyueloRPQ.evaluate nfa regexp
@@ -294,21 +294,21 @@ module RegexPropertyTests =
 
     [<Property>]
     let ``Belyanin and Arroyuelo produce identical results with random regex`` (d: RegexAndGraph) =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
-                let source = min d.sources.[0] (v - 1)
-                let nfaBely = TestHelpers.nfaFromEdges v d.edges [| source |]
-                let dfa = regexToDfa d.regex
+                let source = min d.Sources.[0] (v - 1)
+                let nfaBely = TestHelpers.nfaFromEdges v d.Edges [| source |]
+                let dfa = regexToDfa d.Regex
                 let belyResult = BelyaninRPQ.evaluate dfa nfaBely
 
-                let nfaArro = TestHelpers.nfaFromEdges v d.edges [| source |]
-                let arroResult = ArroyueloRPQ.evaluate nfaArro d.regex
+                let nfaArro = TestHelpers.nfaFromEdges v d.Edges [| source |]
+                let arroResult = ArroyueloRPQ.evaluate nfaArro d.Regex
 
                 let mutable ok = true
 
@@ -320,17 +320,17 @@ module RegexPropertyTests =
 
     [<Property>]
     let ``Belyanin and Kronecker produce identical results with random DFA`` (d: RegexAndGraph) =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
-                let source = min d.sources.[0] (v - 1)
-                let nfa = TestHelpers.nfaFromEdges v d.edges [| source |]
-                let dfa = regexToDfa d.regex
+                let source = min d.Sources.[0] (v - 1)
+                let nfa = TestHelpers.nfaFromEdges v d.Edges [| source |]
+                let dfa = regexToDfa d.Regex
                 let belyResult = BelyaninRPQ.evaluate dfa nfa
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
@@ -344,20 +344,20 @@ module RegexPropertyTests =
 
     [<Property>]
     let ``Arroyuelo and Kronecker produce identical results with random regex`` (d: RegexAndGraph) =
-        if d.sources.Length = 0 then
+        if d.Sources.Length = 0 then
             true
         else
-            let v = d.vertexCount
+            let v = d.VertexCount
 
             if v = 0 then
                 true
             else
                 let safeSources =
-                    d.sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
+                    d.Sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
 
-                let nfa = TestHelpers.nfaFromEdges v d.edges safeSources
-                let dfa = regexToDfa d.regex
-                let arroResult = ArroyueloRPQ.evaluate nfa d.regex
+                let nfa = TestHelpers.nfaFromEdges v d.Edges safeSources
+                let dfa = regexToDfa d.Regex
+                let arroResult = ArroyueloRPQ.evaluate nfa d.Regex
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
                 let mutable ok = true

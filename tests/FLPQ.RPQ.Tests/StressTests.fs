@@ -57,11 +57,11 @@ module StressRpqProperties =
     [<Property>]
     [<Trait("Category", "Stress")>]
     let ``Belyanin and Kronecker agree on large random graphs`` (d: RPQTestData) =
-        if d.sources.Length = 0 || d.vertexCount = 0 then
+        if d.Sources.Length = 0 || d.VertexCount = 0 then
             true
         else
-            let source = min d.sources.[0] (d.vertexCount - 1)
-            let nfa = TestHelpers.nfaFromEdges d.vertexCount d.edges [| source |]
+            let source = min d.Sources.[0] (d.VertexCount - 1)
+            let nfa = TestHelpers.nfaFromEdges d.VertexCount d.Edges [| source |]
             let dfa = TestHelpers.buildDfa [ (0, "a", 1) ] 0 [ 1 ]
 
             let belyResult = BelyaninRPQ.evaluate dfa nfa
@@ -69,7 +69,7 @@ module StressRpqProperties =
 
             let mutable ok = true
 
-            for j in 0 .. d.vertexCount - 1 do
+            for j in 0 .. d.VertexCount - 1 do
                 if Matrix.get belyResult 0 j <> Matrix.get kronResult 0 j then
                     ok <- false
 

@@ -117,9 +117,9 @@ type RandomGraphGenerators =
         |> MyArb.fromGen
 
 type RPQTestData =
-    { vertexCount: int
-      edges: (int * string * int) list
-      sources: int[] }
+    { VertexCount: int
+      Edges: (int * string * int) list
+      Sources: int[] }
 
 type RPQGenerators =
 
@@ -144,9 +144,9 @@ type RPQGenerators =
                                         List.zip3 fromList labelList toList
                                         |> List.filter (fun (f, _, t) -> f <> t)
 
-                                    { vertexCount = n
-                                      edges = edges
-                                      sources = Array.ofList sources })))))))
+                                    { VertexCount = n
+                                      Edges = edges
+                                      Sources = Array.ofList sources })))))))
         |> MyArb.fromGen
 
 type AbStringGenerators =
@@ -192,7 +192,7 @@ type ExprStringGenerators =
                             |> MyGen.bind (fun right ->
                                 MyGen.elements operators |> MyGen.map (fun op -> left + " " + op + " " + right))))
 
-        MyGen.choose (0, 4) |> MyGen.bind (fun d -> genExpr d) |> MyArb.fromGen
+        MyGen.choose (0, 4) |> MyGen.bind genExpr |> MyArb.fromGen
 
 type IntersectionGenerators =
 
@@ -220,7 +220,7 @@ type IntersectionGenerators =
                                 MyGen.listOfLength finalCount (MyGen.choose (0, stateCount - 1))
                                 |> MyGen.map (fun finalStates ->
                                     Nfa.fromTransitions
-                                        ([ 0 .. stateCount - 1 ] |> List.map id)
+                                        ([ 0 .. stateCount - 1 ])
                                         transitions
                                         Set.empty
                                         (Set.ofList startStates)
@@ -246,13 +246,13 @@ type RegexGenerators =
                     | 2 -> MyGen.map2 (fun l r -> RAlt(l, r)) (genExpr (depth - 1)) (genExpr (depth - 1))
                     | _ -> MyGen.map RStar (genExpr (depth - 1)))
 
-        MyGen.choose (0, 3) |> MyGen.bind (fun d -> genExpr d) |> MyArb.fromGen
+        MyGen.choose (0, 3) |> MyGen.bind genExpr |> MyArb.fromGen
 
 type RegexAndGraph =
-    { regex: Regexp<string, string>
-      vertexCount: int
-      edges: (int * string * int) list
-      sources: int[] }
+    { Regex: Regexp<string, string>
+      VertexCount: int
+      Edges: (int * string * int) list
+      Sources: int[] }
 
 type RegexAndGraphGenerators =
 
@@ -296,7 +296,7 @@ type RegexAndGraphGenerators =
                                                             (genExpr (depth - 1))
                                                     | _ -> MyGen.map RStar (genExpr (depth - 1)))
 
-                                        MyGen.choose (0, 3) |> MyGen.bind (fun d -> genExpr d)
+                                        MyGen.choose (0, 3) |> MyGen.bind genExpr
 
                                     genRegex
                                     |> MyGen.map (fun regex ->
@@ -304,10 +304,10 @@ type RegexAndGraphGenerators =
                                             List.zip3 fromList labelList toList
                                             |> List.filter (fun (f, _, t) -> f <> t)
 
-                                        { regex = regex
-                                          vertexCount = n
-                                          edges = edges
-                                          sources = Array.ofList sources }))))))))
+                                        { Regex = regex
+                                          VertexCount = n
+                                          Edges = edges
+                                          Sources = Array.ofList sources }))))))))
         |> MyArb.fromGen
 
 type StressStringGenerators =
@@ -344,7 +344,7 @@ type StressNfaGenerators =
                                             |> List.filter (fun (f, _, t) -> f <> t)
 
                                         Nfa.fromTransitions
-                                            ([ 0 .. stateCount - 1 ] |> List.map id)
+                                            ([ 0 .. stateCount - 1 ])
                                             trans
                                             Set.empty
                                             (Set.ofList startStates)
@@ -374,9 +374,9 @@ type StressRpqGenerators =
                                         List.zip3 fromList labelList toList
                                         |> List.filter (fun (f, _, t) -> f <> t)
 
-                                    { vertexCount = n
-                                      edges = edges
-                                      sources = Array.ofList sources })))))))
+                                    { VertexCount = n
+                                      Edges = edges
+                                      Sources = Array.ofList sources })))))))
         |> MyArb.fromGen
 
 type StressMatrixGenerators =

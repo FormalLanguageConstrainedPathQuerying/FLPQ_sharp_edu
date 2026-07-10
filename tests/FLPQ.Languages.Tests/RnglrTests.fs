@@ -621,3 +621,295 @@ module RnglrGrammarAcceptanceAndTree =
         let ``Grammar 4: GLL == CYK (filter a chars)`` (s: string) =
             let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
             TestHelpers.gllAccepts grammar4 input = TestHelpers.cykAccepts grammar4 input
+
+module RnglrGrammar159A =
+    let private grammar = TestGrammars.grammar1
+
+    [<Fact>]
+    let ``S -> a S b S | eps tree yield matches input: a a b a b b`` () =
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> a S b S | eps tree yield matches input: a a b a b b a b`` () =
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> a S b S | eps tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+module RnglrGrammar159B =
+    let private grammar = Grammar.parseGrammar "S -> S a S b\nS -> eps"
+
+    [<Fact>]
+    let ``S -> S a S b | eps tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> S a S b | eps tree yield matches input: a a b a b b a b`` () =
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+module RnglrGrammar159C =
+    let private grammar = TestGrammars.grammar2
+
+    [<Fact>]
+    let ``S -> S S | a S b | eps tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> S S | a S b | eps tree yield matches input: a a b a b b a b`` () =
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
+
+        match rnglrTree grammar input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+module RnglrGrammar159D =
+    let private rnglrTreeRsm (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
+        let freshStart = Nonterminal("S'")
+        let graph = TestHelpers.terminalsToGraph input
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        let vc = Graph.vertexCount graph
+
+        if not (Rnglr.isAccepted pathIndex vc) then
+            None
+        else
+            let extRsm = RSM.extendWithStart freshStart rsmFixed
+            let flat = RSM.flattenRsm extRsm
+            let stateInfo = flat.StateInfo
+            let blockStart = flat.BlockStart
+
+            let blockFinals =
+                System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
+
+            for i in 0 .. stateInfo.Length - 1 do
+                if stateInfo.[i].IsFinal then
+                    let nt = stateInfo.[i].BlockNonterminal
+
+                    let current =
+                        match blockFinals.TryGetValue(nt) with
+                        | true, s -> s
+                        | false, _ -> Set.empty
+
+                    blockFinals.[nt] <- Set.add i current
+
+            let rootRanges =
+                [ { FromState = 0
+                    FromVertex = 0
+                    ToState = 1
+                    ToVertex = vc - 1 } ]
+
+            rootRanges
+            |> List.tryPick (fun rk ->
+                GLL.extractDerivationTree
+                    pathIndex
+                    stateInfo
+                    blockStart
+                    blockFinals
+                    rk.FromState
+                    rk.FromVertex
+                    rk.ToState
+                    rk.ToVertex)
+
+    let private rsm = TestHelpers.buildRegexRsm "(a S b)*"
+
+    [<Fact>]
+    let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTreeRsm rsm input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    let private rsm2 =
+        let r = RsmBuilder.buildRSMFromText "S -> S1 S2\nS1 -> (a S1 b)*\nS2 -> (c S2 d)*"
+        { r with StartBlock = Nonterminal "S" }
+
+    [<Fact>]
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        match rnglrTreeRsm rsm2 input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* tree yield matches input: a a a b a b b a b b c c d c d d`` () =
+        let input =
+            [ "a"
+              "a"
+              "a"
+              "b"
+              "a"
+              "b"
+              "b"
+              "a"
+              "b"
+              "b"
+              "c"
+              "c"
+              "d"
+              "c"
+              "d"
+              "d" ]
+
+        match rnglrTreeRsm rsm2 input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* tree yield matches input: a a a b a b b a b b c d`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b"; "c"; "d" ]
+
+        match rnglrTreeRsm rsm2 input with
+        | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
+        | None -> Assert.True(false, "Should produce a tree")
+
+module RnglrPropertyTreeYield =
+    let private grammarG1 = TestGrammars.grammar1
+    let private grammarG2 = TestGrammars.grammar2
+    let private grammarG3 = TestGrammars.grammar3
+    let private grammarG4 = TestGrammars.grammar4
+
+    let private grammarG5 =
+        Grammar.parseGrammar
+            "
+        S -> a a A
+        S -> a A
+        A -> a A
+        A -> eps
+        "
+
+    let private grammarG6 =
+        Grammar.parseGrammar
+            "
+        S -> a
+        S -> a a
+        S -> a a A
+        S -> a a a A
+        A -> a A
+        A -> eps
+        "
+
+    let private grammarG7 =
+        Grammar.parseGrammar
+            "
+        S -> eps
+        S -> a a S
+        S -> a S
+        "
+
+    let private grammarG8 = Grammar.parseGrammar "S -> a\nS -> S S\nS -> S S S"
+
+    [<Property>]
+    let ``S -> a S b S | eps tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG1 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> S S | a S b | eps tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG2 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> a S | a tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG3 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> S a | a tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG4 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> N a* tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG5 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> a* N tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG6 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> N* tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG7 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true
+
+    [<Property>]
+    let ``S -> a | S S | S S S tree yield matches input`` (s: string) =
+        if s.Length > 30 then
+            true
+        else
+            let input = TestHelpers.stringToTerminals s
+
+            match rnglrTree grammarG8 input with
+            | Some tree -> DerivationTree.leaves tree = input
+            | None -> true

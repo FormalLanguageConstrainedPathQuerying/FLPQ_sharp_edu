@@ -314,7 +314,7 @@
       5.   Add RNGLR CLI runner and RnglrTableTeX. Support -a rnglr + LR table tee.
       6.   Add GLL/RNGLR to CLI Algorithm enum, Summary module, and Program dispatch.
       7.   Fix pre-existing FSharpLint warnings in modified projects.
- [done] 153. SPPF refactoring
+ 153. [done] SPPF refactoring
       1.   Add tests on path index to tex rendering and tex compilation.
       2.   GLL and GLR tree tests contains workaround to collect terminals. It is illigable. Tusts must check the algorithm. If SPPF construction incorrect, fix it. If necessary, ask me to assist with sppf structure.
       3.   Improve path index printing
@@ -326,3 +326,23 @@
  155. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
  156. [done] Fix skills and documentation violating no-duplicates principle. Multiple skills describe documentation process. Some skills describe documentation structure ("what") instead of procedures ("how"). Create single canonical source for documentation requirements in docs/, trim all skills to reference it.
  157. [done] Strengthen subtask-loop and git-workflow skills to prevent subtask batching. Add hard gate before commit (verify single SN, no ranges), rename "Commit Gate" → "Pre-Commit Check" to disambiguate from final merge gates, add multi-subtask sequential discipline, add documentation-only subtask section, strengthen git commit message format rules. Add doc-only task note to AGENTS.md.
+ 158. [done] Rework RNGLR path index.
+      1.   Turn skipped tests on RNGLR trees on.
+      2.   Rework RNGLR bfs traversal: each moving-formard step add intermediate node. For grammar `S -> a a` and input `0 a 1 a 2`. Having both `a` on gss you match first (inversed oreder) `a` in BFS cretae terminal node in cell with input positions 1, 2 and respective RSM states. Next BFS step you add terminal to cell with input positions 0,1. And intermediate node I(1) to cell with input position 0,2 (and respective RSM states). For more complex cases your behaviour is similar. So, during BFS propagate collected range coorinates required to know were to add intermediate node.
+      3.   Fix SPPF root definition and acceptance check: root of SPPF for linear case is a range from start input position to end input position, from start state of extended RSM to next state (reachable by start nonterminal of original grammar. Must be single one transition from start state in extended rsm).
+      4.   Check taht all tests pass.
+      5.   Recheck GLL to be aligned with previous changes. Path index and SPPF MUST be identical gor GLL and RNGLR
+      6.   Check taht all tests pass.
+ 159. Add more tree checking tests for both GLL and RNGLR. All tests extract tree from sppf and check that leafs are exactly input string.
+      1.   Grammar: `S -> a S b S | eps `     String: a a b a b b
+      2.   Grammar: `S -> a S b S | eps `     String: a a b a b b a b
+      3.   Grammar: `S -> a S b S | eps `     String: a a a b a b b a b b
+      4.   Grammar: `S -> S a S b | eps `     String: a a a b a b b a b b
+      5.   Grammar: `S -> S a S b | eps `     String: a a b a b b a b
+      6.   Grammar: `S -> S S | a S b |eps `     String: a a a b a b b a b b
+      7.   Grammar: `S -> S S | a S b |eps `     String: a a b a b b a b
+      8.   Grammar: `S -> (a S b)* '     String: a a a b a b b a b b
+      9.   Grammar: `S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* `     String: a a a b a b b a b b 
+      10.   Grammar: `S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* `     String: a a a b a b b a b b c c d c d d
+      11.   Grammar: `S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* `     String: a a a b a b b a b b c d
+      12.   Add proprty based tests: collect all grammars used in GLL and RNGLR tests. For each collected grammar property test: for randomly generated string (use strings up to 30 symbols), if sreing accepted, leafs of tree is exactly it string. 

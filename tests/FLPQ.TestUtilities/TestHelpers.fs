@@ -36,15 +36,9 @@ module TestHelpers =
     let terminalsToGraph (terminals: string list) : Graph<int, Option<string>> = GLL.stringToGraph terminals
 
     let blockOffset (rsm: RSM<'t, 'nt>) (target: Nonterminal<'nt>) : int =
-        let mutable offset = 0
-
-        for block in RSM.blocks rsm do
-            if block.Nonterminal = target then
-                ()
-            else
-                offset <- offset + Dfa.stateCount block.Dfa
-
-        offset
+        RSM.blocks rsm
+        |> List.takeWhile (fun block -> block.Nonterminal <> target)
+        |> List.sumBy (fun block -> Dfa.stateCount block.Dfa)
 
     let globalStartState (rsm: RSM<'t, 'nt>) (nt: Nonterminal<'nt>) : int =
         let offset = blockOffset rsm nt
@@ -88,7 +82,7 @@ module TestHelpers =
     let dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> = (RSM.startBlock rsm).Dfa
 
     let dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
-        let input' = input |> List.map (fun s -> Terminal(RsmSymbol.RTerm(Terminal s)))
+        let input' = input |> List.map (Terminal << RsmSymbol.RTerm << Terminal)
         Dfa.accept dfa input'
 
     let cykAccepts (g: Grammar<string, string>) (input: string list) : bool =
@@ -116,7 +110,7 @@ module TestHelpers =
             |> List.distinct
             |> List.sort
 
-        Dfa.fromTransitions (List.map id allStates) transitions startState (Set.ofList finalStates)
+        Dfa.fromTransitions allStates transitions startState (Set.ofList finalStates)
 
     let nfaFromEdges (vCount: int) (edges: (int * string * int) list) (sources: int[]) : NFA<string, int> =
         let states = [ 0 .. vCount - 1 ]
