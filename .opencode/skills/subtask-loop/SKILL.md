@@ -67,7 +67,15 @@ Update all task-related documentation per the `documentation` skill. The skill r
 
 ### 4. Pre-Commit Check
 
-Run format + build. See `quality-gates` skill for the exact commands.
+Run the quality check tool:
+
+```bash
+python3 tools/quality_check.py
+```
+
+This runs format + build without timeout. Read and deeply analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
+
+If format modified files, re-stage them (`git add`) before proceeding.
 
 **Hard gate — do not proceed to step 5 unless this passes.**
 
@@ -161,17 +169,15 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
 
 ## Task Completion Verification
 
-After ALL subtasks are committed, run these gates in order. Each references the `quality-gates` skill for exact commands — **do not duplicate command recipes here.**
+After ALL subtasks are committed, run the hard gate:
 
-| Gate | Owned by | Description |
-|------|----------|-------------|
-| Subtask completeness | (per subtask cycle) | Tests written, docs updated — verified at steps 2-3 above |
-| Lint gate | `quality-gates` | `dotnet-fsharplint lint` — 0 warnings in modified projects |
-| Test gate | `quality-gates` | `dotnet dotnet-coverage collect dotnet test` — 0 failures, 0 skipped |
-| Coverage gate | `quality-gates` | Parse `tmp/coverage.cobertura`, verify FLPQ source ≥ 80% |
-| Code review | `code-review` | Zero findings across entire repo |
+```bash
+python3 tools/hard_gate.py
+```
 
-**Hard rule: a task is NOT `[done]` until every gate in this table passes.**
+Then read and deeply analyze `tmp/hard-gate.txt`. Fix all problems and re-run until STATUS: PASS.
+
+The hard gate runs: format → build → tests with coverage → coverage verification (≥80% total, ≥75% per-project) → lint on changed projects. See `quality-gates` skill for threshold details.
 
 ## Marking Complete
 

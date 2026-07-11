@@ -4,6 +4,10 @@
 
 ```
 FLPQ.slnx
+├── tools/                       # Auxiliary Python scripts for quality control
+│   ├── detect_changes.py            # Detect projects with modified .fs files
+│   ├── quality_check.py             # Commit gate: format + build
+│   └── hard_gate.py                 # Full gate: format + build + tests + coverage + lint
 ├── src/
 │   ├── FLPQ.LinearAlgebra/     # Linear algebra library
 │   │   ├── Matrix.fs               # Generic matrix type and operations
