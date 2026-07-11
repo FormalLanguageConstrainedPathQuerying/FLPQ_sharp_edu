@@ -14,8 +14,7 @@ let private exampleLRInput = Path.Combine(baseDir, "example_lr_input.txt")
 let private runAlgorithm (algorithm: string) (grammarFile: string) (inputFile: string) : int =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args =
-        [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
     let mutable cleanup = true
@@ -47,10 +46,10 @@ let ``GLL runs successfully with EBNF grammar`` () =
     File.WriteAllText(grammarFile, "S -> a S b | eps")
     File.WriteAllText(inputFile, "a a b b")
 
-    let args =
-        [| "-a"; "GLL"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; "GLL"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
+
     try
         Directory.Delete(tmpDir, true)
     with _ ->
@@ -68,10 +67,10 @@ let ``RNGLR runs successfully with EBNF grammar`` () =
     File.WriteAllText(grammarFile, "S -> a S b | eps")
     File.WriteAllText(inputFile, "a a b b")
 
-    let args =
-        [| "-a"; "RNGLR"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; "RNGLR"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
+
     try
         Directory.Delete(tmpDir, true)
     with _ ->

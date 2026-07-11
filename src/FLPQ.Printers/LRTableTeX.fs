@@ -24,7 +24,8 @@ module LRTableTeX =
                 match c with
                 | ShiftReduce(s, sym', shiftTo, reduceRule) when s = state && sym' = sym ->
                     [ LRAction.Shift shiftTo; LRAction.Reduce reduceRule ]
-                | ReduceReduce(s, sym', r1, r2) when s = state && sym' = sym -> [ LRAction.Reduce r1; LRAction.Reduce r2 ]
+                | ReduceReduce(s, sym', r1, r2) when s = state && sym' = sym ->
+                    [ LRAction.Reduce r1; LRAction.Reduce r2 ]
                 | _ -> [])
 
         (fromConflicts @ fromMap) |> List.distinct

@@ -17,6 +17,7 @@ let private runRnglrRunner (grammarText: string) (inputText: string) : string =
 
 let private cleanup (outDir: string) =
     let parent = Path.GetDirectoryName(outDir)
+
     try
         Directory.Delete(parent, true)
     with _ ->
