@@ -336,6 +336,10 @@ def main() -> None:
         lines.append(log)
         lines.append("")
 
+    if not overall_pass:
+        lines.append("HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.")
+        lines.append("")
+
     with open(OUTPUT_FILE, "w") as f:
         f.write("\n".join(lines))
 

@@ -49,7 +49,13 @@ docs(XXX-SN): description
 
 ### Pre-merge checks
 
-Run task verification (lint + tests + coverage). See `quality-gates` skill.
+The hard gate MUST pass before merging:
+
+```bash
+python3 tools/hard_gate.py
+```
+
+Check the exit code. If non-zero — for ANY reason — STOP. Do not merge. Only merge when exit code 0.
 
 ### Merge strategy
 

@@ -175,9 +175,7 @@ After ALL subtasks are committed, run the hard gate:
 python3 tools/hard_gate.py
 ```
 
-Then read and deeply analyze `tmp/hard-gate.txt`. Fix all problems and re-run until STATUS: PASS.
-
-The hard gate runs: format → build → tests with coverage → coverage verification (≥80% total, ≥75% per-project) → lint on changed projects. See `quality-gates` skill for threshold details.
+Check the **exit code** (`echo $?`). If non-zero — for ANY reason — STOP. Do not merge. Do not mark the task as done. Read the output file (`tmp/hard-gate.txt`) only to identify what to fix, not to decide whether the failure applies to you. Re-run until exit code 0, then proceed to merge.
 
 ## Marking Complete
 

@@ -303,10 +303,10 @@
         Create common function and use in both places.
      6. `GraphTests.fs` lines 63–72 (`filterOutgoing empty set`) and lines 74–83 (`filterIncoming empty set`) are structurally identical, differing only in the function called. The verification loop is copy-pasted. Create one generic parametrizable function.
      7. `BooleanDecomposition.fs`: `decompose` (lines 12–27) and `decomposeNonEmptySet` (lines 32–52) share the same structure. Create one generic parametrizable function.
- 151. [done] Fix GLL anf GLR
+151. [done] Fix GLL anf GLR
       1.   Fix tree tests. all tests must check that crone of tree is exactly the input tree. 
       2.   Fix code if some tests mail
- 152. [done] Add GLL/RNGLR visualization: SPPF DOT, PathIndex TeX, RSM DOT, CLI runners.
+152. [done] Add GLL/RNGLR visualization: SPPF DOT, PathIndex TeX, RSM DOT, CLI runners.
       1.   Add SPPF DOT visualization. Render SPPF graph (GllTypes.fs) to DOT format.
       2.   Add PathIndex TeX visualization. Render GLL/RNGLR path index matrix to TeX.
       3.   Add RSM DOT visualization. Render RSM automaton structure to DOT format.
@@ -314,26 +314,25 @@
       5.   Add RNGLR CLI runner and RnglrTableTeX. Support -a rnglr + LR table tee.
       6.   Add GLL/RNGLR to CLI Algorithm enum, Summary module, and Program dispatch.
       7.   Fix pre-existing FSharpLint warnings in modified projects.
- 153. [done] SPPF refactoring
+153. [done] SPPF refactoring
       1.   Add tests on path index to tex rendering and tex compilation.
       2.   GLL and GLR tree tests contains workaround to collect terminals. It is illigable. Tusts must check the algorithm. If SPPF construction incorrect, fix it. If necessary, ask me to assist with sppf structure.
       3.   Improve path index printing
            1.   Print pairs (rsm_state, input_positions) as indexes for rows and colunms. Make matrix printer parametrizable by index printer
            2.   In summary Wrap path index matrix with resizebox  0.9/textxwidth
- 154. Refactoring. RnglaTypes.
-      1.   RnglrAction is similar to LRAction. Use one common type
-      2.   storedStates
- 155. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
- 156. [done] Fix skills and documentation violating no-duplicates principle. Multiple skills describe documentation process. Some skills describe documentation structure ("what") instead of procedures ("how"). Create single canonical source for documentation requirements in docs/, trim all skills to reference it.
- 157. [done] Strengthen subtask-loop and git-workflow skills to prevent subtask batching. Add hard gate before commit (verify single SN, no ranges), rename "Commit Gate" → "Pre-Commit Check" to disambiguate from final merge gates, add multi-subtask sequential discipline, add documentation-only subtask section, strengthen git commit message format rules. Add doc-only task note to AGENTS.md.
- 158. [done] Rework RNGLR path index.
+154. Refactoring. RnglaTypes.
+      1.   storedStates
+155. Microsoft.NET.Test.Sdk.Program.fs  .NETCoreApp,Version=v10.0.AssemblyAttributes.fs  AssemblyInfo.fs
+156. [done] Fix skills and documentation violating no-duplicates principle. Multiple skills describe documentation process. Some skills describe documentation structure ("what") instead of procedures ("how"). Create single canonical source for documentation requirements in docs/, trim all skills to reference it.
+157. [done] Strengthen subtask-loop and git-workflow skills to prevent subtask batching. Add hard gate before commit (verify single SN, no ranges), rename "Commit Gate" → "Pre-Commit Check" to disambiguate from final merge gates, add multi-subtask sequential discipline, add documentation-only subtask section, strengthen git commit message format rules. Add doc-only task note to AGENTS.md.
+158. [done] Rework RNGLR path index.
       1.   Turn skipped tests on RNGLR trees on.
       2.   Rework RNGLR bfs traversal: each moving-formard step add intermediate node. For grammar `S -> a a` and input `0 a 1 a 2`. Having both `a` on gss you match first (inversed oreder) `a` in BFS cretae terminal node in cell with input positions 1, 2 and respective RSM states. Next BFS step you add terminal to cell with input positions 0,1. And intermediate node I(1) to cell with input position 0,2 (and respective RSM states). For more complex cases your behaviour is similar. So, during BFS propagate collected range coorinates required to know were to add intermediate node.
       3.   Fix SPPF root definition and acceptance check: root of SPPF for linear case is a range from start input position to end input position, from start state of extended RSM to next state (reachable by start nonterminal of original grammar. Must be single one transition from start state in extended rsm).
       4.   Check taht all tests pass.
       5.   Recheck GLL to be aligned with previous changes. Path index and SPPF MUST be identical gor GLL and RNGLR
       6.   Check taht all tests pass.
- 159. Add more tree checking tests for both GLL and RNGLR. All tests extract tree from sppf and check that leafs are exactly input string.
+159. [done] Add more tree checking tests for both GLL and RNGLR. All tests extract tree from sppf and check that leafs are exactly input string.
       1.   Grammar: `S -> a S b S | eps `     String: a a b a b b
       2.   Grammar: `S -> a S b S | eps `     String: a a b a b b a b
       3.   Grammar: `S -> a S b S | eps `     String: a a a b a b b a b b
@@ -346,3 +345,22 @@
       10.   Grammar: `S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* `     String: a a a b a b b a b b c c d c d d
       11.   Grammar: `S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* `     String: a a a b a b b a b b c d
       12.   Add proprty based tests: collect all grammars used in GLL and RNGLR tests. For each collected grammar property test: for randomly generated string (use strings up to 30 symbols), if sreing accepted, leafs of tree is exactly it string. 
+160. [done] Refactoring (GLL and RNGLR).
+      1.    Collect all SPPF-related types and functions in separated module.
+      2.    Collect all path index related types and functions in separated module
+      3.    RnglrAction is similar to LRAction. Use one common type
+161. [done] SPPF refactoring
+      1.    For all tests in GLL and GLR add check that all cells of path index contains mot more than 1 nonterminal. It must be true even if input does not accepted.
+      2.    Do not use strings as a key for sppf nodes in sppf extraction. Reuse existing types or crete new one. Create specific dictionary for each node type.
+      3.    Nonterminal is not an alternative for range node. If range (cell) contains nonterminal, it must contains only one nonterminal and possibly several nodes of other types. So, nonterminal node is a predcessor of respective range node. For example, if intermediate node i1 refers to range node r1, and cell for r1 contains nonterminal N1, edges in sppf: i1 -> N1, N1 -> r1
+162. [done] Выделение вспомогательных инструментов
+      1.    Создай в корне проекта директорию tools. В ней будут храниться вспомогательные инструменты для работы с проектом, контроля качества кода и т.д. Задокументируй это.
+      2.    Проанализируй текущие скилы и создай инструменты на Python. Каждый инструмент возвращает свой файл с подробными лоагми и результатми. Файл создаётся в дирекртрии tmp в корне (она уже есть). Файлы перезаписываются. Ничего не пишется в консоль. Продумай структуру файла так, чтобы тебе было уддобно его анализировать. Например: сперва короткое резюме о наличии проблем. Потом детальный лог соответствующих команд. Задокументируй структуру файлов. Инструменты запускаются БЕЗ каких-либо таймаутов. 
+            1.     Для определения проектов, в которых были изменения. 
+            2.     Для проверки качества кода между подзадачами. Мперва запускается форматирование. Потом запускается сборка всего решения.
+            3.     Для hard gate проверки качества. Последовательность: форматирование, сборка всего решения, все тесты с контролем покрытия (установить среднее в 80% по строкам, для проектов не ниже 75% по строкам), fsharplint только тех проектов, которые были изменениы.
+      3.    Замени в скилах соответствущие места на инструкцию по запуску созданных инструментов. Явно укажи, что запуск без таймаута. Явно укажи, что результат в файле и необходим детальный глубокий анализ его содержимого. Сперва исправляем все проблемы, указанные в файле, потом перезапускаем инструменты.
+      4.    Обрати внимание: на текущий момент покрытие может быть меньше установленного. Не исправляй это. Сейчас главное --- подготовить инструменты контроля.
+163. [done] Доработай тестовое покрытие проектов, котрые не проходят пороговое значение.
+164. [done] GLL fail wtih infinite loop when handle grammar `S -> a S b | S S | eps`  and string a b . Fix this problem. Add respective test.
+165. Tests GLL

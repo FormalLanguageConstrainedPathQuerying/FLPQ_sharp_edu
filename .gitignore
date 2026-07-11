@@ -63,3 +63,6 @@ viz_output/*
 
 #tmp for agent
 tmp/*
+
+# python
+tools/__pycache__/*

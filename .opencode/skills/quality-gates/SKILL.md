@@ -5,7 +5,7 @@ description: Use when running quality checks: format check, lint, build, test (w
 
 # Quality Gates
 
-Every quality gate MUST pass before a commit or merge. A single failing test, lint warning, or coverage drop is a blocker. Zero means absolute zero — pre-existing warnings are not exempt.
+Every quality gate MUST pass before a commit or merge. A single failing test, lint warning, or coverage drop is a blocker. Zero means absolute zero. Non-zero exit code from any gate tool means STOP — no exceptions, no partial passes.
 
 ## Tools
 
