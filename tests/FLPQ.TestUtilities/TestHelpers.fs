@@ -7,6 +7,15 @@ open FLPQ.GraphAnalysis
 
 module TestHelpers =
 
+    let assertPathIndexInvariant (source: string) (pi: PathIndex<string, string>) : unit =
+        match PathIndex.checkNonterminalInvariant pi with
+        | Ok() -> ()
+        | Error errors ->
+            let msg =
+                $"[{source}] Path index invariant violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
     let grammarToEbnfText (g: Grammar<string, string>) : string =
         g.Rules
         |> List.map (fun r ->
@@ -50,6 +59,7 @@ module TestHelpers =
     let gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
         let graph = terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        assertPathIndexInvariant "gllAcceptsRsm" pathIndex
 
         let startBlock = RSM.startBlock rsm
         let startGlobalState = globalStartState rsm startBlock.Nonterminal
@@ -95,6 +105,7 @@ module TestHelpers =
         let freshStart = Nonterminal("S'")
         let rsmFixed = { rsm with StartBlock = startNt }
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        assertPathIndexInvariant "rnglrAccepts" pathIndex
         Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
 
     let nonEpsilon (tree: DerivationTree<string, string>) : bool =

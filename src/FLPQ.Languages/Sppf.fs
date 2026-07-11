@@ -42,27 +42,58 @@ module Sppf =
         let mutable edgeList: (int * Option<SppfEdgeLabel> * int) list = []
 
         let rangeNodeMap = Dictionary<RangeKey, int>()
-        let processedRanges = HashSet<RangeKey>()
-        let nodeMap = Dictionary<string, int>()
+        let rangeResultMap = Dictionary<RangeKey, int>()
 
-        let nodeKey (info: SppfNodeInfo<'t, 'nt>) : string =
-            match info with
-            | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> $"T({t},{l},{r})"
-            | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r) -> $"N({nt},{l},{r})"
-            | SppfNodeInfo.SppfEpsilon p -> $"E({p})"
-            | SppfNodeInfo.SppfIntermediate(s, p) -> $"I({s},{p})"
-            | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> $"R({fs},{fp},{ts},{tp})"
+        let terminalNodeMap = Dictionary<Terminal<'t> * int * int, int>()
+        let nonterminalNodeMap = Dictionary<Nonterminal<'nt> * int * int, int>()
+        let epsilonNodeMap = Dictionary<int, int>()
+        let intermediateNodeMap = Dictionary<int * int, int>()
 
         let getOrCreateNode (info: SppfNodeInfo<'t, 'nt>) : int =
-            let key = nodeKey info
+            match info with
+            | SppfNodeInfo.SppfTerminal(t, l, r) ->
+                let key = (t, l, r)
 
-            match nodeMap.TryGetValue(key) with
-            | true, idx -> idx
-            | false, _ ->
-                let idx = vertices.Length
-                vertices <- vertices @ [ info ]
-                nodeMap.[key] <- idx
-                idx
+                match terminalNodeMap.TryGetValue(key) with
+                | true, idx -> idx
+                | false, _ ->
+                    let idx = vertices.Length
+                    vertices <- vertices @ [ info ]
+                    terminalNodeMap.[key] <- idx
+                    idx
+
+            | SppfNodeInfo.SppfNonterminal(nt, l, r) ->
+                let key = (nt, l, r)
+
+                match nonterminalNodeMap.TryGetValue(key) with
+                | true, idx -> idx
+                | false, _ ->
+                    let idx = vertices.Length
+                    vertices <- vertices @ [ info ]
+                    nonterminalNodeMap.[key] <- idx
+                    idx
+
+            | SppfNodeInfo.SppfEpsilon p ->
+                match epsilonNodeMap.TryGetValue(p) with
+                | true, idx -> idx
+                | false, _ ->
+                    let idx = vertices.Length
+                    vertices <- vertices @ [ info ]
+                    epsilonNodeMap.[p] <- idx
+                    idx
+
+            | SppfNodeInfo.SppfIntermediate(s, p) ->
+                let key = (s, p)
+
+                match intermediateNodeMap.TryGetValue(key) with
+                | true, idx -> idx
+                | false, _ ->
+                    let idx = vertices.Length
+                    vertices <- vertices @ [ info ]
+                    intermediateNodeMap.[key] <- idx
+                    idx
+
+            | SppfNodeInfo.SppfRange _ -> failwith "SppfRange must use getOrCreateRangeNode"
 
         let getOrCreateRangeNode (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
             let rk =
@@ -87,16 +118,20 @@ module Sppf =
                 edgeList <- (fromIdx, lbl, toIdx) :: edgeList
 
         let rec processRange (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
-            let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
-
             let rk =
                 { FromState = fromState
                   FromVertex = fromPos
                   ToState = toState
                   ToVertex = toPos }
 
-            if processedRanges.Add(rk) then
+            match rangeResultMap.TryGetValue(rk) with
+            | true, cachedIdx -> cachedIdx
+            | false, _ ->
+                let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
+
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
+
+                let mutable nonterminalNodeIdx: int option = None
 
                 for entry in entries do
                     match entry with
@@ -107,8 +142,8 @@ module Sppf =
 
                     | PathIndexEntry.PNonterminal nt ->
                         let ntNode = getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos))
-                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
                         addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
+                        nonterminalNodeIdx <- Some ntNode
 
                     | PathIndexEntry.PEpsilonNonterminal _ ->
                         let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon fromPos)
@@ -123,7 +158,13 @@ module Sppf =
                         addEdge interNode SppfEdgeLabel.LeftChild leftChild
                         addEdge interNode SppfEdgeLabel.RightChild rightChild
 
-            rangeIdx
+                let resultIdx =
+                    match nonterminalNodeIdx with
+                    | Some ntIdx -> ntIdx
+                    | None -> rangeIdx
+
+                rangeResultMap.[rk] <- resultIdx
+                resultIdx
 
         let rootIndices =
             rootRanges
@@ -170,10 +211,7 @@ module Sppf =
 
             result
 
-        let rec extractChildren
-            (visited: HashSet<int>)
-            (nodeIdx: int)
-            : DerivationTree<'t, 'nt> list =
+        let rec extractChildren (visited: HashSet<int>) (nodeIdx: int) : DerivationTree<'t, 'nt> list =
             let info = Graph.getVertex nodeIdx sppf.Graph
 
             let isRange =
@@ -193,9 +231,7 @@ module Sppf =
                         let alternatives =
                             allEdgesTo rangeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative)
 
-                        let child = alternatives |> List.tryFind (fun alt -> alt <> nodeIdx)
-
-                        match child with
+                        match List.tryHead alternatives with
                         | Some childIdx ->
                             let children = extractChildren visited childIdx
                             [ Node(nt, children) ]

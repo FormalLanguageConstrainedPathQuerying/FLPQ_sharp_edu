@@ -17,6 +17,7 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
     let startNt = (RSM.startBlock rsm).Nonterminal
     let rsmFixed = { rsm with StartBlock = startNt }
     let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+    TestHelpers.assertPathIndexInvariant "rnglrTree" pathIndex
     let vc = Graph.vertexCount graph
 
     if not (Rnglr.isAccepted pathIndex vc) then
@@ -217,6 +218,7 @@ module RnglrRegexEquivalence =
                 StartBlock = Nonterminal "S" }
 
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        TestHelpers.assertPathIndexInvariant "rnglrRegexEquiv" pathIndex
         Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
 
     [<Property(MaxTest = 50)>]
@@ -694,6 +696,7 @@ module RnglrGrammar159D =
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        TestHelpers.assertPathIndexInvariant "rnglrTreeRsm" pathIndex
         let vc = Graph.vertexCount graph
 
         if not (Rnglr.isAccepted pathIndex vc) then

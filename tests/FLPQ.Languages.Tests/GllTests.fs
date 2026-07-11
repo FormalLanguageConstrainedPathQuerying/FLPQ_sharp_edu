@@ -14,6 +14,7 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
     let rsm = TestHelpers.grammarToRsm g
     let graph = TestHelpers.terminalsToGraph input
     let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+    TestHelpers.assertPathIndexInvariant "gllTree" pathIndex
     let vc = Graph.vertexCount graph
 
     let startBlock = RSM.startBlock rsm
@@ -633,6 +634,7 @@ module GllGrammar159D =
     let private gllTreeRsm (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        TestHelpers.assertPathIndexInvariant "gllTreeRsm" pathIndex
         let vc = Graph.vertexCount graph
 
         let startBlock = RSM.startBlock rsm
