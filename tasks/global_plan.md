@@ -1,63 +1,69 @@
-# Global Plan: Tasks 142--144
+# Global Plan: Tasks 161–163
 
 ## Task Summary
 
 | ID | Description | Type | Dependencies |
 |----|-------------|------|--------------|
-| 142 | Add GLL regex-DFA equivalence property tests | Tests | None |
-| 143 | Add GLL + RNGLR acceptance & derivation tree tests for 4 grammars | Tests | None (independent of 142) |
-| 144 | Add property tests for cross-algorithm equivalence (GLL == RNGLR == CYK) on grammars from 143 | Tests | 143 (needs grammars defined there) |
+| 161 | SPPF refactoring — invariant enforcement, node key types, edge restructuring | Code + Tests | None |
+| 162 | Create `tools/` directory with Python quality control tools | Tooling + Docs | None |
+| 163 | Improve test coverage for projects below threshold | Tests | 162 (needs coverage tool) |
 
 ## Dependencies Graph
 
 ```
-Task 142 → (independent)
-Task 143 → Task 144
+Task 162 → (independent, tooling)
+Task 161 → (independent, SPPF code)
+Task 163 → Task 162 (needs coverage reporting tool to identify gaps)
 ```
-
-- Task 142 adds a new `GllRegexEquivalence` module in `GllTests.fs`. Independent of 143/144.
-- Task 143 adds new grammars and Fact tests in both `GllTests.fs` and `RnglrTests.fs`.
-- Task 144 adds Property tests referencing grammars from 143. Must follow 143.
 
 ## Execution Order
 
-1. **Task 142** — GLL regex equivalence tests
-2. **Task 143** — GLL + RNGLR acceptance & tree tests
-3. **Task 144** — Cross-algorithm equivalence property tests
+1. **Task 162** — Create auxiliary tools in `tools/`
+2. **Task 161** — SPPF refactoring
+3. **Task 163** — Test coverage improvement
+
+## Rationale
+
+- Task 162 creates the coverage analysis tool needed by Task 163
+- Task 161 is independent SPPF code changes; placing it before 163 allows the new test invariants (path index nonterminal check) to contribute to coverage
+- Task 163 depends on 162 for coverage measurement; 161 may add tests that help coverage
 
 ## Conflict Analysis
 
-- **Task 142 vs 143/144**: 142 only adds code to `GllTests.fs`. 143 adds to both `GllTests.fs` and `RnglrTests.fs`. 144 adds Property tests referencing 143's grammars. No file conflicts if done in order.
-- **Task 143 vs 144**: 144 depends on 143's grammars. Sequential execution prevents conflicts.
+- **162 vs 161/163**: Task 162 only creates files in `tools/` and updates skill `.md` files. Skill files are not touched by 161 or 163. No conflicts.
+- **161 vs 163**: Task 161 modifies `Sppf.fs`, `GllTests.fs`, `RnglrTests.fs`. Task 163 may add new tests to existing test files. Sequential execution prevents conflicts.
 
 ## Shared Infrastructure
 
-- `TestGrammars.fs` — existing shared grammar definitions. New grammars from task 143 could be added here or defined inline in test files.
-- `Generators.fs` — existing `AStringGenerators` for "a"-only strings. May need new generators for combined "a"/"b" strings.
-- `GllTests.fs` — existing GLL tests. Task 142 adds GllRegexEquivalence module. Task 143 adds grammar-specific acceptance/tree tests. Task 144 adds property equivalence tests.
-- `RnglrTests.fs` — existing RNGLR tests. Task 143 adds grammar-specific acceptance/tree tests. Task 144 adds property equivalence tests.
+- `src/FLPQ.Languages/Sppf.fs` — SPPF types and build/extraction functions (modified by 161)
+- `tests/FLPQ.Languages.Tests/GllTests.fs` — GLL tests (modified by 161, 163)
+- `tests/FLPQ.Languages.Tests/RnglrTests.fs` — RNGLR tests (modified by 161, 163)
+- `.opencode/skills/quality-gates/SKILL.md` — quality gate procedures (modified by 162)
+- `.opencode/skills/subtask-loop/SKILL.md` — subtask loop procedures (modified by 162)
 
-## Task 142: GLL Regex Equivalence Tests
+## Task 161: SPPF Refactoring
 
-Add `GllRegexEquivalence` module to `GllTests.fs` mirroring RNGLR's `RnglrRegexEquivalence`:
-- `S -> a* ≡ DFA for a*` ([<Property>])
-- `S -> a* a* ≡ DFA for a* a*` ([<Property>])
-- `S -> (a | b)* ≡ DFA for (a | b)*` ([<Property>])
-- `S -> (a | b)* (a | c)* ≡ DFA for (a | b)* (a | c)*` ([<Property>])
-- For random strings, gllAccepts rsm str = dfaAccepts dfa str.
+Three deep changes to SPPF data structures and extraction logic:
 
-## Task 143: GLL + RNGLR Acceptance & Tree Tests
+1. **Path index invariant check**: For all GLL and RNGLR tests, verify that each cell of the path index contains at most one `PNonterminal` or `PEpsilonNonterminal`. This must hold even for rejected inputs.
+2. **Typed node keys**: Replace `Dictionary<string, int>` (string-based node deduplication) with typed dictionaries keyed by discriminated union subtypes (`TerminalNodeKey`, `NonterminalNodeKey`, `IntermediateNodeKey`, etc.).
+3. **Nonterminal edge restructuring**: Nonterminal nodes are not alternatives of range nodes. If a range cell contains a nonterminal, it contains exactly one nonterminal. The nonterminal node becomes a predecessor of its corresponding range node: `Intermediate → Nonterminal → Range` (instead of current `Intermediate → Range` with `Nonterminal` as an alternative child).
 
-Grammars:
-1. `S -> N a*; N -> (a a) | a` — Accept: a, aa, aaa, aaaa. Reject: empty, b, ab, aab, aaab, abaa
-2. `S -> a* N; N -> a | (a a)` — Accept: a, aa, aaa, aaaa. Reject: empty, b, ab, aab, aaab, abaa
-3. `S -> N*; N -> a | (a a)` — Accept: empty, a, aa, aaa, aaaa. Reject: b, ab, aab, aaab, abaa
-4. `S -> a | S S | S S S` — Accept: a, aa, aaa, aaaa. Reject: empty, b, ab, aab, aaab, abaa
+## Task 162: Auxiliary Tools
 
-For each grammar: add [<Fact>] acceptance tests (GLL) and derivation tree leaf tests (GLL + RNGLR).
+Create `tools/` directory at project root with Python scripts for quality control:
 
-## Task 144: Cross-Algorithm Equivalence Property Tests
+1. **`tools/detect_changes.py`** — determines which projects have modified `.fs` files
+2. **`tools/quality_check.py`** — inter-subtask check: format → build solution
+3. **`tools/hard_gate.py`** — full gate: format → build → all tests with coverage (80% line min, 75% per-project min) → fsharplint on changed projects
+4. Each tool writes results to `tmp/<tool-name>.txt` with structured output (summary first, detailed logs after)
+5. Update `quality-gates` and `subtask-loop` skills to reference these tools
 
-For all 4 grammars from task 143, add [<Property>] tests:
-- `acceptGLL str == acceptGLR str == acceptCYK str`
-- Reuse FsCheck string generators (filtered to alphabet `a`/`b` where needed).
+## Task 163: Test Coverage Improvement
+
+After running the coverage tool from Task 162:
+
+1. Identify all FLPQ source projects (excluding `*.Tests`) with line coverage below 75%
+2. Add focused tests to bring each below-threshold project up to at least 75% line coverage
+3. Verify total coverage meets 80% threshold
+4. Do NOT modify projects already above threshold

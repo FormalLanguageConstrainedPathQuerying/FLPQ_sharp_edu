@@ -1,137 +1,48 @@
-# Detailed Plan: Task 157 — Prevent subtask batching
+# Detailed Plan — Task 164
 
-## S1: Rename "Commit Gate" → "Pre-Commit Check" in subtask-loop skill
+**Task**: GLL fail with infinite loop when handling grammar `S -> a S b | S S | eps` and string `a b`. Fix this problem. Add respective test.
 
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/subtask-loop/SKILL.md`
+## Root Cause Analysis
 
-**Spec:**
-- Line 52: Rename `### 4. Commit Gate` → `### 4. Pre-Commit Check`
-- Line 54: `Run commit gate (format + build)` → `Run format + build`
-- Line 104 (example): `"S1: Commit gate (format + build)"` → `"S1: Pre-Commit Check (format + build)"`
-- Also rename in the description line 3: `quality gates` → `checks` (to avoid overloading "gates")
-- The purpose: disambiguate from the "Commit gate (per subtask)" row in the Task Verification table
+For grammar `S -> a S b | S S | eps`, the RSM DFA for block S has a nonterminal transition S (from `S S` rule) that points back to the same block. When S can match epsilon (both `eps` alternative and `S S` produce empty), this creates an infinite descriptor chain:
 
-## S2: Add hard gate before Step 6 (Commit) in subtask-loop skill
+1. State qX in block S processes nonterminal transition S → creates GSS edge → call descriptor enters start of S
+2. Start of S reaches final (epsilon) → saves matched range to storedPops
+3. Continuation descriptor arrives at state qY in block S (same block)
+4. At qY, nonterminal transition S fires again → addEdge returns storedPops → another continuation
+5. Each iteration creates a new descriptor with a different MatchedRange but same vertex → infinite loop
 
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/subtask-loop/SKILL.md`
+The `handled` set uses full `Descriptor` including `MatchedRange` as key, and each iteration extends `MatchedRange` differently, so the set never blocks the cycle.
 
-**Spec:**
-Before the "Commit with message" line, insert:
+## Fix Strategy
 
-```
-**Hard gate — before committing, verify:**
+Add epsilon-cycle tracking: maintain a `HashSet<int * int * int>` of `(RsmState, Vertex, GssIdx)` for descriptors carrying a NonEmpty MatchedRange. Before enqueuing such a descriptor, check if the triple was already seen — if so, skip.
 
-- [ ] Exactly ONE subtask's worth of changes is being committed. If multiple subtasks have been completed since the last commit, STOP. Unstage all files. Commit each subtask individually, one at a time.
-- [ ] The commit message uses a single subtask identifier: `feat(XXX-SN): ...`, not ranges like `S1-S6`.
-```
+This is safe because two descriptors with the same `(RsmState, Vertex, GssIdx)` represent the same caller context. Processing the same triple again without advancing the vertex would only duplicate information already in the path index.
 
-Update "SN is the subtask identifier" → "SN is the **single** subtask identifier"
+## Subtasks
 
-## S3: Add "Documentation-Only Subtasks" section to subtask-loop skill
+### S1: Fix GLL infinite loop
 
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/subtask-loop/SKILL.md`
+**Code:** `src/FLPQ.Languages/Gll.fs` — add epsilon-cycle tracking in `buildPathIndex`
+**Tests:** None (verified by S2)
+**Docs:** None
 
 **Spec:**
-Insert after the "Cycle Steps" header and before "### 1. Implement" a new section:
+- Add `let handledNonEmpty = HashSet<int * int * int>()` alongside existing `handled`
+- In `tryEnqueue`, before `handled.Add(d)`, check if the descriptor's MatchedRange is NonEmptyRange. If yes, check `handledNonEmpty.Add(d.RsmState, d.Vertex, d.GssIdx)` — if returns false, skip (already processed this triple with a non-empty range)
+- The check must not apply to EmptyRange descriptors (call descriptors at block start must always be enqueued)
+- All existing tests must pass
 
-```
-## Documentation-Only Subtasks
+### S2: Add test for the problematic case
 
-When a subtask modifies only `.md` files (no `.fs` files), the following cycle steps are adapted:
-
-| Step | Action |
-|------|--------|
-| 1. Implement | Write documentation |
-| 2. Write Tests | **Skip** — no code to test |
-| 3. Update Docs | The implementation IS the documentation; verify navigation links are updated |
-| 4. Pre-Commit Check | **Skip** — no source files to format or build |
-| 5. Code Quality Checks | **Skip** — no code to check |
-| 6. Commit | **Follow exactly** — one commit per subtask, single SN identifier |
-| 7. Mark Done | **Follow exactly** |
-
-The absence of code changes **never** justifies batching multiple subtasks into a single commit.
-```
-
-## S4: Add "Multi-Subtask Discipline" section to subtask-loop skill
-
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/subtask-loop/SKILL.md`
+**Code:** `tests/FLPQ.Languages.Tests/GllTests.fs` — add [<Fact>] test
+**Tests:** New test case
+**Docs:** None
 
 **Spec:**
-Insert after the "Per-Subtask Execution Tracking" section:
-
-```
-## Multi-Subtask Discipline
-
-When a task has multiple subtasks (S1, S2, S3, ...), execute them **strictly sequentially**:
-
-1. Complete all cycle steps for S1 (Implement → Tests → Docs → Pre-Commit Check → Quality → Commit → Mark Done)
-2. Only after S1 is committed, start S2
-3. Never mark multiple subtasks `completed` in `todowrite` before committing each individually
-
-A `todowrite` listing "S1: Implement [completed], S2: Implement [completed], S1: Write tests [completed]" indicates skipped commits — each subtask must be fully committed before the next begins.
-```
-
-## S5: Strengthen commit message format in git-workflow skill
-
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/git-workflow/SKILL.md`
-
-**Spec:**
-Replace the commit message format section (lines 17-29) with:
-
-```
-### Message format
-
-Conventional Commits with **exactly one** subtask identifier:
-
-```
-feat(XXX-SN): description
-fix(XXX-SN): description
-docs(XXX-SN): description
-```
-
-- `XXX` — task ID from `tasks.md`
-- `SN` — a **single** atomic subtask identifier from `tasks/detailed_plan.md` (e.g., `S1`, `S4`). Ranges (`S1-S6`), lists (`S1,S3`), or commas are forbidden
-- One commit per completed atomic subtask — never combine subtasks in one commit
-
-**Pre-commit validation**: before running `git commit`, verify the message contains exactly one `SN` by checking the prepared message. If the message mentions multiple subtask identifiers, STOP — split the changes into individual commits.
-```
-
-## S6: Add doc-only task note to AGENTS.md
-
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `AGENTS.md`
-
-**Spec:**
-Insert after line 43 ("Commit messages must be detailed enough...") in the Core Rules section:
-
-```
-- Documentation-only tasks (no `.fs` files changed) skip code-specific gates (tests, lint, format, build) but still follow all other workflow rules: one task per branch, one commit per subtask, code review
-```
-
-## S7: Disambiguate Task Verification table row in subtask-loop skill
-
-**Code:** N/A
-**Tests:** N/A
-**Docs:** Edit `.opencode/skills/subtask-loop/SKILL.md`
-
-**Spec:**
-Change the first row of the table (line 136):
-
-```
-| Subtask completeness | (per subtask cycle) | Tests written, docs updated — verified at steps 2-3 above |
-```
-
-Was: `| Commit gate (per subtask) | subtask-loop | ...`
-
-This removes the final instance of ambiguous "Commit gate" naming.
+- Add test: `S -> a S b | S S | eps rejects a b`
+- Grammar: `TestGrammars.grammar2` (which is `S -> a S b | S S | eps`)
+- Input: `["a"; "b"]`
+- Expected: `gllAccepts g ["a"; "b"]` = false (string "ab" is not in the language)
+- The test must terminate (verifies the infinite loop is fixed)

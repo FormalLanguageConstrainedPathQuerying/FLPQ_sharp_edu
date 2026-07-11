@@ -3,12 +3,43 @@
 ## Scope
 
 Reviewed all `.fs` source files (31 in `src/`, 61 in `tests/`).
-Report generated: 2026-07-09. Prior reports: 2026-07-08, 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
-**Status: fixes applied for issues marked FIXED below.**
+Report generated: 2026-07-11. Prior reports: 2026-07-09, 2026-07-08, 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
+**Status: zero findings on task 160 changes.**
 
 ---
 
-## 2026-07-09 Report — Code Review Skill Creation + Fix Round
+## 2026-07-11 Report — Task 160 Refactoring (GLL and RNGLR)
+
+### Task 160 Changes: Architecture and Code Review
+
+Reviewed new files `PathIndex.fs` and `Sppf.fs` (extracted from `GllTypes.fs`/`Gll.fs`), and `LRAction<'a>` addition to `ParsingTable.fs` (unifying `LRAction` and `RnglrAction`).
+
+| Category | Finding |
+|----------|---------|
+| Architecture | Clean — PathIndex/Sppf types are domain types in `FLPQ.Languages`; `LRAction<'a>` in `ParsingTable.fs` sits before both `LRParser.fs` and `RnglrTypes.fs`. No circular dependencies. |
+| Code-Level | Zero duplicates introduced. All new files have XML doc comments. No signature inconsistencies. Book references preserved. |
+| Tests | All 797 tests pass. No new public APIs — types and functions were relocated, not changed. Existing test coverage fully preserved. |
+| Documentation | Two new modules (`PathIndex.fs`, `Sppf.fs`) with full XML documentation. All book references intact. |
+| Genericity | `RangeKey`, `RangeDescriptor`, `PathIndexEntry`, `PathIndex`, `SppfNodeInfo`, `SPPF` all properly generic. `LRAction<'a>` is generic over reduce payload. |
+| Clarity | Code is simpler — each file has a single responsibility. `GllTypes.fs` now contains only GSS types. `Gll.fs` contains only GLL algorithm. |
+
+**Zero findings — review pass complete.**
+
+### Prior Issues Status Update
+
+| Issue | Status |
+|-------|--------|
+| N1 (DerivationTree.Node list→NonEmptyList) | Still open — out of scope |
+| N2 (Twin Grammar test modules in Gll/Rnglr) | Still open — out of scope |
+| 1.1 (FSharpPlus in GraphAnalysis) | Still open — out of scope |
+| 2.1/2.2/2.3/2.4 (GraphTests, Submatrix, BooleanDecomposition) | Still open — out of scope |
+| 3.4 (LR0Item/LR1Item field casing) | Still open — out of scope |
+| 4.2 (Mislabeled property tests) | Still open — out of scope |
+| 4.1 (Stubbed Rnglr tests) | Observed — but these were actually fixed (bodies now contain real logic) |
+
+---
+
+
 
 ### Issues Fixed
 
