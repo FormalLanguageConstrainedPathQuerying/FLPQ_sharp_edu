@@ -276,7 +276,15 @@ module Rnglr =
                                                 let callGlobalState = callerOffset + callerItem.RsmState
                                                 let returnGlobalState = callerOffset + callTarget
 
-                                                if vPre = vEnd then
+                                                if
+                                                    vPre = vEnd
+                                                    && callGlobalState = blockGlobalOffset.[callerItem.BlockNonterminal]
+                                                                         + callerBlock.Dfa.StartState
+                                                    && Set.contains callTarget callerBlock.Dfa.FinalStates
+                                                    && callerItem.BlockNonterminal <> freshStart
+                                                then
+                                                    ()
+                                                elif vPre = vEnd then
                                                     addToIndex
                                                         callGlobalState
                                                         vPre
