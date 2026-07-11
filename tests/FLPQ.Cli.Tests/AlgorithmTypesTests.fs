@@ -26,6 +26,17 @@ let ``displayName of CLR1`` () =
     Assert.Equal("CLR(1)", displayName CLR1)
 
 [<Fact>]
+let ``displayName of ValiantModified`` () =
+    Assert.Equal("Valiant (modified)", displayName ValiantModified)
+
+[<Fact>]
+let ``displayName of GLL`` () = Assert.Equal("GLL", displayName GLL)
+
+[<Fact>]
+let ``displayName of RNGLR`` () =
+    Assert.Equal("RNGLR", displayName RNGLR)
+
+[<Fact>]
 let ``parse algorithm CYK from CLI args`` () =
     let args = [| "-a"; "CYK" |]
     let parser = ArgumentParser.Create<Arguments>()

@@ -54,3 +54,49 @@ let ``runValiant produces step directories with table.tex in each step`` () =
         Assert.True(FileInfo(tableTex).Length > 0L)
 
     Directory.Delete(outDir, true)
+
+let private runModifiedRunner () : string =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    ValiantRunner.runValiantModified exampleGrammar exampleInput outDir
+    outDir
+
+[<Fact>]
+let ``runValiantModified produces input.tex`` () =
+    let outDir = runModifiedRunner ()
+    let inputTex = Path.Combine(outDir, "input.tex")
+    Assert.True(File.Exists inputTex)
+    Assert.True(FileInfo(inputTex).Length > 0L)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runValiantModified produces grammar_original.tex`` () =
+    let outDir = runModifiedRunner ()
+    let grammarTex = Path.Combine(outDir, "grammar_original.tex")
+    Assert.True(File.Exists grammarTex)
+    Assert.True(FileInfo(grammarTex).Length > 0L)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runValiantModified produces grammar_cnf.tex`` () =
+    let outDir = runModifiedRunner ()
+    let cnfTex = Path.Combine(outDir, "grammar_cnf.tex")
+    Assert.True(File.Exists cnfTex)
+    Assert.True(FileInfo(cnfTex).Length > 0L)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runValiantModified produces step directories with table.tex`` () =
+    let outDir = runModifiedRunner ()
+
+    let stepDirs =
+        Directory.GetDirectories outDir
+        |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
+
+    Assert.NotEmpty(stepDirs)
+
+    for stepDir in stepDirs do
+        let tableTex = Path.Combine(stepDir, "table.tex")
+        Assert.True(File.Exists tableTex, sprintf "table.tex missing in %s" stepDir)
+        Assert.True(FileInfo(tableTex).Length > 0L)
+
+    Directory.Delete(outDir, true)

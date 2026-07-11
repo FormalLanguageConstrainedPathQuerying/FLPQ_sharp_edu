@@ -35,3 +35,40 @@ let ``algorithmLower for CYK`` () = Assert.Equal("cyk", algorithmLower CYK)
 [<Fact>]
 let ``algorithmLower for CLR1`` () =
     Assert.Equal("clr1", algorithmLower CLR1)
+
+[<Fact>]
+let ``algorithmToKind for ValiantModified is TablePerStep`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.TablePerStep, algorithmToKind ValiantModified)
+
+[<Fact>]
+let ``algorithmToKind for GLL is GLL`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.GLL, algorithmToKind GLL)
+
+[<Fact>]
+let ``algorithmToKind for RNGLR is RNGLR`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.RNGLR, algorithmToKind RNGLR)
+
+[<Fact>]
+let ``algorithmLower for Valiant`` () =
+    Assert.Equal("valiant", algorithmLower Valiant)
+
+[<Fact>]
+let ``algorithmLower for ValiantModified`` () =
+    Assert.Equal("valiantmodified", algorithmLower ValiantModified)
+
+[<Fact>]
+let ``algorithmLower for LL`` () = Assert.Equal("ll", algorithmLower LL)
+
+[<Fact>]
+let ``algorithmLower for LR0`` () = Assert.Equal("lr0", algorithmLower LR0)
+
+[<Fact>]
+let ``algorithmLower for SLR1`` () =
+    Assert.Equal("slr1", algorithmLower SLR1)
+
+[<Fact>]
+let ``algorithmLower for GLL`` () = Assert.Equal("gll", algorithmLower GLL)
+
+[<Fact>]
+let ``algorithmLower for RNGLR`` () =
+    Assert.Equal("rnglr", algorithmLower RNGLR)

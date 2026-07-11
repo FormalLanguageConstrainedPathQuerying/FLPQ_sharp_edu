@@ -15,6 +15,9 @@
     <Compile Include="LLRunnerTests.fs" />
     <Compile Include="LRRunnerTests.fs" />
     <Compile Include="CliSummaryTests.fs" />
+    <Compile Include="GllRunnerTests.fs" />
+    <Compile Include="RnglrRunnerTests.fs" />
+    <Compile Include="ProgramDispatchTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

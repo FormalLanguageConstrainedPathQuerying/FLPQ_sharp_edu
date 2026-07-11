@@ -66,3 +66,17 @@ let ``naturalSortKey extracts step number`` () =
 let ``naturalSortKey returns 0 for non-step directories`` () =
     Assert.Equal(0, naturalSortKey "something_else")
     Assert.Equal(0, naturalSortKey "")
+
+[<Fact>]
+let ``findSummaryTemplate returns existing file`` () =
+    let templatePath = findSummaryTemplate ()
+    Assert.True(File.Exists templatePath)
+    let content = File.ReadAllText templatePath
+    Assert.Contains("__CONTENT__", content)
+
+[<Fact>]
+let ``findTikzTemplate returns existing file`` () =
+    let templatePath = findTikzTemplate ()
+    Assert.True(File.Exists templatePath)
+    let content = File.ReadAllText templatePath
+    Assert.Contains("\\usepackage{tikz}", content)
