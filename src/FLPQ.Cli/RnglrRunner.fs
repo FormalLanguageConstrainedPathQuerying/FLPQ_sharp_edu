@@ -27,30 +27,30 @@ module RnglrRunner =
 
         let accepted = Rnglr.isAccepted pathIndex vertexCount
 
-        let k = pathIndex.StateCount * pathIndex.VertexCount
+        let originalStartBlock = extRsm.Blocks.[1]
+
+        let startBlockOffset =
+            extRsm.Blocks
+            |> List.takeWhile (fun b -> b.Nonterminal <> originalStartBlock.Nonterminal)
+            |> List.sumBy (fun b -> b.Dfa.States.Length)
+
+        let startGlobalState = startBlockOffset + originalStartBlock.Dfa.StartState
 
         let mutable rootRanges = []
 
-        for i in 0 .. k - 1 do
-            let fromVertex = i % vertexCount
+        for finalLocal in originalStartBlock.Dfa.FinalStates do
+            let finalGlobalState = startBlockOffset + finalLocal
 
-            if fromVertex = 0 then
-                for j in 0 .. k - 1 do
-                    let toVertex = j % vertexCount
+            let entries =
+                PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
 
-                    if toVertex = vertexCount - 1 then
-                        let entries = Matrix.get pathIndex.Matrix i j
-
-                        if not (Set.isEmpty entries) then
-                            let fromState = i / vertexCount
-                            let toState = j / vertexCount
-
-                            rootRanges <-
-                                { FromState = fromState
-                                  FromVertex = fromVertex
-                                  ToState = toState
-                                  ToVertex = toVertex }
-                                :: rootRanges
+            if not (Set.isEmpty entries) then
+                rootRanges <-
+                    { FromState = startGlobalState
+                      FromVertex = 0
+                      ToState = finalGlobalState
+                      ToVertex = vertexCount - 1 }
+                    :: rootRanges
 
         let sppf = Sppf.buildSppfFromIndex pathIndex (List.rev rootRanges)
 

@@ -916,3 +916,73 @@ module RnglrPropertyTreeYield =
             match rnglrTree grammarG8 input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
+
+module SppfDotTests =
+
+    let private buildSppf (grammarText: string) (input: string list) : SPPF<string, string> =
+        let rsm = RsmBuilder.buildRSMFromText grammarText
+        let freshStart = Nonterminal("S'")
+        let graph = TestHelpers.terminalsToGraph input
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        TestHelpers.assertPathIndexInvariant "buildSppf" pathIndex
+        let vc = Graph.vertexCount graph
+
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
+        let flat = RSM.flattenRsm extRsm
+        let stateInfo = flat.StateInfo
+        let blockStart = flat.BlockStart
+
+        let (Nonterminal startNtName) = (RSM.startBlock rsmFixed).Nonterminal
+
+        let blockFinals =
+            System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
+
+        for i in 0 .. stateInfo.Length - 1 do
+            if stateInfo.[i].IsFinal then
+                let nt = stateInfo.[i].BlockNonterminal
+
+                let current =
+                    match blockFinals.TryGetValue(nt) with
+                    | true, s -> s
+                    | false, _ -> Set.empty
+
+                blockFinals.[nt] <- Set.add i current
+
+        let rootRanges =
+            [ { FromState = 0
+                FromVertex = 0
+                ToState = 1
+                ToVertex = vc - 1 } ]
+
+        Sppf.buildSppfFromIndex pathIndex rootRanges
+
+    [<Fact>]
+    let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
+        let grammarText = "S -> a S b\nS -> S S\nS -> eps\n"
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
+
+        let sppf = buildSppf grammarText input
+
+        let terminalPositions =
+            Graph.vertices sppf.Graph
+            |> List.choose (fun (_, v) ->
+                match v with
+                | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> Some(t, l, r)
+                | _ -> None)
+            |> Set.ofList
+
+        let expected: Set<string * int * int> =
+            set [ ("a", 0, 1); ("a", 1, 2); ("b", 2, 3); ("a", 3, 4); ("b", 4, 5); ("b", 5, 6) ]
+
+        Assert.Equal<Set<string * int * int>>(expected, terminalPositions)
+
+    [<Fact>]
+    let ``RNGLR SPPF has root nodes for S->aSb|SS|eps with aababb`` () =
+        let grammarText = "S -> a S b\nS -> S S\nS -> eps\n"
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
+
+        let sppf = buildSppf grammarText input
+
+        Assert.NotEmpty(sppf.RootIndices)
