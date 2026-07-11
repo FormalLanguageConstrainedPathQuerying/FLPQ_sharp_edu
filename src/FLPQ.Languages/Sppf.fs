@@ -128,6 +128,7 @@ module Sppf =
             | true, cachedIdx -> cachedIdx
             | false, _ ->
                 let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
+                rangeResultMap.[rk] <- rangeIdx
 
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
 
@@ -163,7 +164,9 @@ module Sppf =
                     | Some ntIdx -> ntIdx
                     | None -> rangeIdx
 
-                rangeResultMap.[rk] <- resultIdx
+                if resultIdx <> rangeIdx then
+                    rangeResultMap.[rk] <- resultIdx
+
                 resultIdx
 
         let rootIndices =

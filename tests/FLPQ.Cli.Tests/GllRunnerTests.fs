@@ -64,3 +64,11 @@ let ``runGll produces sppf.dot`` () =
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir
+
+[<Fact>]
+let ``runGll handles ambiguous grammar with S -> S S production`` () =
+    let outDir = runGllRunner "S -> a S b | S S | eps" "a b"
+    let f = Path.Combine(outDir, "sppf.dot")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
