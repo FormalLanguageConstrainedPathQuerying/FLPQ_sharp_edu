@@ -23,6 +23,15 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
     if not (Rnglr.isAccepted pathIndex vc) then
         None
     else
+        let rootRanges =
+            [ { FromState = 0
+                FromVertex = 0
+                ToState = 1
+                ToVertex = vc - 1 } ]
+
+        let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+        TestHelpers.assertSppfInvariant sppf
+
         let extRsm = RSM.extendWithStart freshStart rsmFixed
         let flat = RSM.flattenRsm extRsm
         let stateInfo = flat.StateInfo
@@ -64,92 +73,92 @@ module RnglrAcceptance =
     [<Fact>]
     let ``S -> a accepts a`` () =
         let g = Grammar.parseGrammar "S -> a"
-        Assert.True(TestHelpers.rnglrAccepts g [ "a" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a" ])
 
     [<Fact>]
     let ``S -> a rejects eps`` () =
         let g = Grammar.parseGrammar "S -> a"
-        Assert.False(TestHelpers.rnglrAccepts g [])
+        Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck g [])
 
     [<Fact>]
     let ``S -> a b accepts a b`` () =
         let g = Grammar.parseGrammar "S -> a b"
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S | b accepts a a b`` () =
         let g = Grammar.parseGrammar "S -> a S\nS -> b"
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S | b rejects a a a`` () =
         let g = Grammar.parseGrammar "S -> a S\nS -> b"
-        Assert.False(TestHelpers.rnglrAccepts g [ "a"; "a"; "a" ])
+        Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "a" ])
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a b a b`` () =
         let g = TestGrammars.grammar1
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "b"; "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "b"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a a b b`` () =
         let g = TestGrammars.grammar1
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "b"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "b"; "b" ])
 
     [<Fact>]
     let ``S -> a S b S | eps accepts empty`` () =
         let g = TestGrammars.grammar1
-        Assert.True(TestHelpers.rnglrAccepts g [])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [])
 
     [<Fact>]
     let ``S -> a S b | eps accepts a a b b`` () =
         let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "b"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "b"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps rejects a a b`` () =
         let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
-        Assert.False(TestHelpers.rnglrAccepts g [ "a"; "a"; "b" ])
+        Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps | S S accepts a b a b`` () =
         let g = TestGrammars.grammar2
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "b"; "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "b"; "a"; "b" ])
 
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =
         let g = TestGrammars.grammar3
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "a" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "a" ])
 
     [<Fact>]
     let ``Right-recursive S -> S a | a accepts a a a`` () =
         let g = TestGrammars.grammar4
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "a" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "a" ])
 
 module RnglrEquivalence =
     [<Property>]
     let ``RNGLR and CYK agree on grammar1`` (s: string) =
         let g = TestGrammars.grammar1
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.rnglrAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.cykAccepts g input
 
     [<Property>]
     let ``RNGLR and CYK agree on grammar3 (left-recursive)`` (s: string) =
         let g = TestGrammars.grammar3
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.rnglrAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.cykAccepts g input
 
     [<Property>]
     let ``RNGLR and GLL agree on grammar1`` (s: string) =
         let g = TestGrammars.grammar1
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.rnglrAccepts g input = TestHelpers.gllAccepts g input
+        TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.gllAccepts g input
 
     [<Property>]
     let ``RNGLR and GLL agree on grammar3`` (s: string) =
         let g = TestGrammars.grammar3
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.rnglrAccepts g input = TestHelpers.gllAccepts g input
+        TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.gllAccepts g input
 
 module RnglrRightNullable =
     [<Fact>]
@@ -164,7 +173,7 @@ module RnglrRightNullable =
         B -> eps
         "
 
-        Assert.True(TestHelpers.rnglrAccepts g [])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [])
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a b`` () =
@@ -178,7 +187,7 @@ module RnglrRightNullable =
         B -> eps
         "
 
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "b" ])
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a a b`` () =
@@ -192,7 +201,7 @@ module RnglrRightNullable =
         B -> eps
         "
 
-        Assert.True(TestHelpers.rnglrAccepts g [ "a"; "a"; "b" ])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [ "a"; "a"; "b" ])
 
 module RnglrReductionCascade =
     [<Fact>]
@@ -205,7 +214,7 @@ module RnglrReductionCascade =
         B -> eps
         "
 
-        Assert.True(TestHelpers.rnglrAccepts g [])
+        Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck g [])
 
 module RnglrRegexEquivalence =
 
@@ -219,7 +228,20 @@ module RnglrRegexEquivalence =
 
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         TestHelpers.assertPathIndexInvariant "rnglrRegexEquiv" pathIndex
-        Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
+        let vc = Graph.vertexCount graph
+
+        if Rnglr.isAccepted pathIndex vc then
+            let rootRanges =
+                [ { FromState = 0
+                    FromVertex = 0
+                    ToState = 1
+                    ToVertex = vc - 1 } ]
+
+            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            TestHelpers.assertSppfInvariant sppf
+            true
+        else
+            false
 
     [<Property(MaxTest = 50)>]
     let ``S -> a* matches DFA for a*`` (s: string) =
@@ -300,43 +322,43 @@ module RnglrGrammarAcceptanceAndTree =
     module Grammar1 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar1 [ "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar1 [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar1 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar1 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [ "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [ "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar1 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar1 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: a`` () =
@@ -374,43 +396,43 @@ module RnglrGrammarAcceptanceAndTree =
     module Grammar2 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar2 [ "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar2 [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar2 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar2 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [ "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [ "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar2 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar2 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: a`` () =
@@ -448,43 +470,43 @@ module RnglrGrammarAcceptanceAndTree =
     module Grammar3 =
         [<Fact>]
         let ``accepts empty`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar3 [])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [])
 
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar3 [ "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar3 [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar3 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar3 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar3 [ "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar3 [ "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar3 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar3 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar3 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar3 [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: empty`` () =
@@ -528,11 +550,11 @@ module RnglrGrammarAcceptanceAndTree =
     module Grammar4 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar4 [ "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar4 [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
@@ -544,27 +566,27 @@ module RnglrGrammarAcceptanceAndTree =
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [ "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [ "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.rnglrAccepts grammar4 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "b"; "a"; "a" ])
 
     /// Cross-algorithm equivalence: GLL ≡ RNGLR ≡ CYK for all 4 grammars.
     module CrossAlgorithmEquivalence =
@@ -577,12 +599,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 1: RNGLR == CYK`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.rnglrAccepts grammar1 input = TestHelpers.cykAccepts grammar1 input
+            TestHelpers.rnglrAcceptsWithSppfCheck grammar1 input = TestHelpers.cykAccepts grammar1 input
 
         [<Property>]
         let ``Grammar 1: GLL == RNGLR`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.gllAccepts grammar1 input = TestHelpers.rnglrAccepts grammar1 input
+            TestHelpers.gllAccepts grammar1 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar1 input
 
         [<Property>]
         let ``Grammar 2: GLL == CYK`` (s: string) =
@@ -592,12 +614,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 2: RNGLR == CYK`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.rnglrAccepts grammar2 input = TestHelpers.cykAccepts grammar2 input
+            TestHelpers.rnglrAcceptsWithSppfCheck grammar2 input = TestHelpers.cykAccepts grammar2 input
 
         [<Property>]
         let ``Grammar 2: GLL == RNGLR`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.gllAccepts grammar2 input = TestHelpers.rnglrAccepts grammar2 input
+            TestHelpers.gllAccepts grammar2 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar2 input
 
         [<Property>]
         let ``Grammar 3: GLL == CYK`` (s: string) =
@@ -607,12 +629,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 3: RNGLR == CYK`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.rnglrAccepts grammar3 input = TestHelpers.cykAccepts grammar3 input
+            TestHelpers.rnglrAcceptsWithSppfCheck grammar3 input = TestHelpers.cykAccepts grammar3 input
 
         [<Property>]
         let ``Grammar 3: GLL == RNGLR`` (s: string) =
             let input = TestHelpers.stringToTerminals s
-            TestHelpers.gllAccepts grammar3 input = TestHelpers.rnglrAccepts grammar3 input
+            TestHelpers.gllAccepts grammar3 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar3 input
 
         [<Property>]
         let ``Grammar 4: GLL == CYK`` (s: string) =
@@ -702,6 +724,15 @@ module RnglrGrammar159D =
         if not (Rnglr.isAccepted pathIndex vc) then
             None
         else
+            let rootRanges =
+                [ { FromState = 0
+                    FromVertex = 0
+                    ToState = 1
+                    ToVertex = vc - 1 } ]
+
+            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            TestHelpers.assertSppfInvariant sppf
+
             let extRsm = RSM.extendWithStart freshStart rsmFixed
             let flat = RSM.flattenRsm extRsm
             let stateInfo = flat.StateInfo
@@ -965,6 +996,8 @@ module SppfDotTests =
 
         let sppf = buildSppf grammarText input
 
+        TestHelpers.assertSppfInvariant sppf
+
         let terminalPositions =
             Graph.vertices sppf.Graph
             |> List.choose (fun (_, v) ->
@@ -984,5 +1017,7 @@ module SppfDotTests =
         let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
 
         let sppf = buildSppf grammarText input
+
+        TestHelpers.assertSppfInvariant sppf
 
         Assert.NotEmpty(sppf.RootIndices)

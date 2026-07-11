@@ -152,12 +152,25 @@ module Sppf =
 
                     | PathIndexEntry.PIntermediate(state, pos) ->
                         let interNode = getOrCreateNode (SppfNodeInfo.SppfIntermediate(state, pos))
-                        let leftChild = processRange fromState fromPos state pos
-                        let rightChild = processRange state pos toState toPos
-
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative interNode
-                        addEdge interNode SppfEdgeLabel.LeftChild leftChild
-                        addEdge interNode SppfEdgeLabel.RightChild rightChild
+
+                        let leftEntries = PathIndex.get pathIndex fromState fromPos state pos
+
+                        if Set.isEmpty leftEntries then
+                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon fromPos)
+                            addEdge interNode SppfEdgeLabel.LeftChild epsNode
+                        else
+                            let leftChild = processRange fromState fromPos state pos
+                            addEdge interNode SppfEdgeLabel.LeftChild leftChild
+
+                        let rightEntries = PathIndex.get pathIndex state pos toState toPos
+
+                        if Set.isEmpty rightEntries then
+                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon toPos)
+                            addEdge interNode SppfEdgeLabel.RightChild epsNode
+                        else
+                            let rightChild = processRange state pos toState toPos
+                            addEdge interNode SppfEdgeLabel.RightChild rightChild
 
                 let resultIdx =
                     match nonterminalNodeIdx with
@@ -185,6 +198,35 @@ module Sppf =
 
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndices = rootIndices }
+
+    let validateRangeNodesHaveChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable errors = []
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfRange(fromState, fromPos, toState, toPos) ->
+                let hasChild =
+                    [ for j in 0 .. vc - 1 do
+                          match Matrix.get sppf.Graph.Edges i j with
+                          | Some SppfEdgeLabel.PackedAlternative -> true
+                          | _ -> false ]
+                    |> List.contains true
+
+                if not hasChild then
+                    let msg =
+                        sprintf
+                            "Range node %d (SppfRange(%d,%d)→(%d,%d)) has no children"
+                            i
+                            fromState
+                            fromPos
+                            toState
+                            toPos
+
+                    errors <- msg :: errors
+            | _ -> ()
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
 
     /// Extracts a single derivation tree from an SPPF root.
     /// For ambiguous grammars, picks the first alternative at each packed node.

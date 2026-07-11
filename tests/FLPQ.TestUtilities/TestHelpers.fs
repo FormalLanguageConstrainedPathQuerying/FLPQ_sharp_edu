@@ -16,6 +16,13 @@ module TestHelpers =
 
             failwith msg
 
+    let assertSppfInvariant (sppf: SPPF<string, string>) : unit =
+        match Sppf.validateRangeNodesHaveChildren sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg = "SPPF range node children violations:\n  " + String.concat "\n  " errors
+            failwith msg
+
     let grammarToEbnfText (g: Grammar<string, string>) : string =
         g.Rules
         |> List.map (fun r ->
@@ -82,6 +89,44 @@ module TestHelpers =
 
             not (Set.isEmpty entries))
 
+    let gllAcceptsRsmWithSppfCheck (rsm: RSM<string, string>) (input: string list) : bool =
+        let graph = terminalsToGraph input
+        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        assertPathIndexInvariant "gllAcceptsRsmWithSppfCheck" pathIndex
+        let vc = Graph.vertexCount graph
+        let startBlock = RSM.startBlock rsm
+        let startGlobalState = globalStartState rsm startBlock.Nonterminal
+        let blocks = RSM.blocks rsm
+
+        let finalStates =
+            (Set.empty, blocks)
+            ||> List.fold (fun acc block ->
+                let offset = blockOffset rsm block.Nonterminal
+                let blockFinals = block.Dfa.FinalStates |> Set.map (fun local -> offset + local)
+                Set.union acc blockFinals)
+
+        let acceptedRanges =
+            finalStates
+            |> Set.toList
+            |> List.choose (fun fs ->
+                let entries = PathIndex.get pathIndex startGlobalState 0 fs (vc - 1)
+
+                if Set.isEmpty entries then
+                    None
+                else
+                    Some
+                        { FromState = startGlobalState
+                          FromVertex = 0
+                          ToState = fs
+                          ToVertex = vc - 1 })
+
+        if not (List.isEmpty acceptedRanges) then
+            let sppf = Sppf.buildSppfFromIndex pathIndex acceptedRanges
+            assertSppfInvariant sppf
+            true
+        else
+            false
+
     let gllAccepts (g: Grammar<string, string>) (input: string list) : bool =
         let rsm = grammarToRsm g
         gllAcceptsRsm rsm input
@@ -126,3 +171,65 @@ module TestHelpers =
     let nfaFromEdges (vCount: int) (edges: (int * string * int) list) (sources: int[]) : NFA<string, int> =
         let states = [ 0 .. vCount - 1 ]
         Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
+
+    let gllAcceptsWithSppfCheck (g: Grammar<string, string>) (input: string list) : bool =
+        let rsm = grammarToRsm g
+        let graph = terminalsToGraph input
+        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        assertPathIndexInvariant "gllAcceptsWithSppfCheck" pathIndex
+        let vc = Graph.vertexCount graph
+        let startBlock = RSM.startBlock rsm
+        let startGlobalState = globalStartState rsm startBlock.Nonterminal
+        let blocks = RSM.blocks rsm
+
+        let finalStates =
+            (Set.empty, blocks)
+            ||> List.fold (fun acc block ->
+                let offset = blockOffset rsm block.Nonterminal
+                let blockFinals = block.Dfa.FinalStates |> Set.map (fun local -> offset + local)
+                Set.union acc blockFinals)
+
+        let acceptedRanges =
+            finalStates
+            |> Set.toList
+            |> List.choose (fun fs ->
+                let entries = PathIndex.get pathIndex startGlobalState 0 fs (vc - 1)
+
+                if Set.isEmpty entries then
+                    None
+                else
+                    Some
+                        { FromState = startGlobalState
+                          FromVertex = 0
+                          ToState = fs
+                          ToVertex = vc - 1 })
+
+        if not (List.isEmpty acceptedRanges) then
+            let sppf = Sppf.buildSppfFromIndex pathIndex acceptedRanges
+            assertSppfInvariant sppf
+            true
+        else
+            false
+
+    let rnglrAcceptsWithSppfCheck (g: Grammar<string, string>) (input: string list) : bool =
+        let rsm = grammarToRsm g
+        let graph = terminalsToGraph input
+        let startNt = g.Start
+        let freshStart = Nonterminal("S'")
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        assertPathIndexInvariant "rnglrAcceptsWithSppfCheck" pathIndex
+        let vc = Graph.vertexCount graph
+
+        if not (Rnglr.isAccepted pathIndex vc) then
+            false
+        else
+            let rootRanges =
+                [ { FromState = 0
+                    FromVertex = 0
+                    ToState = 1
+                    ToVertex = vc - 1 } ]
+
+            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            assertSppfInvariant sppf
+            true

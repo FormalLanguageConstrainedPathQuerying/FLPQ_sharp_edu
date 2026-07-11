@@ -287,6 +287,16 @@ module GLL =
                             addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                         else
                             addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+
+                            if termTrans.[qNStart].Count > 0 then
+                                let (_, qNext) = termTrans.[qNStart].[0]
+
+                                addToIndex
+                                    qNStart
+                                    vStart
+                                    qNFinal
+                                    vFinal
+                                    (PathIndexEntry.PIntermediate(qNext, vStart + 1))
                     else
                         for (parentGssIdx, edgeInfo) in outgoingEdges do
                             let qRet = edgeInfo.ReturnState
@@ -296,6 +306,16 @@ module GLL =
                                 addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                             else
                                 addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+
+                                if termTrans.[qNStart].Count > 0 then
+                                    let (_, qNext) = termTrans.[qNStart].[0]
+
+                                    addToIndex
+                                        qNStart
+                                        vStart
+                                        qNFinal
+                                        vFinal
+                                        (PathIndexEntry.PIntermediate(qNext, vStart + 1))
 
                             if vStart = vFinal then
                                 addToIndex

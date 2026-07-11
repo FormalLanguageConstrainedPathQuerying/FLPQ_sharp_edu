@@ -274,7 +274,7 @@ module Rnglr =
 
                     if vPre = vEnd then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
-                    else
+                    elif finalRsmState <> globalStart then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
 
                     let callerItems = lrTable.Automaton.States.[lrStatePre]
@@ -313,6 +313,13 @@ module Rnglr =
                                                 addToIndex
                                                     callGlobalState
                                                     vPre
+                                                    globalStart
+                                                    vPre
+                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
+
+                                                addToIndex
+                                                    callGlobalState
+                                                    vPre
                                                     returnGlobalState
                                                     vEnd
                                                     (PathIndexEntry.PIntermediate(globalStart, vPre))
@@ -327,6 +334,13 @@ module Rnglr =
                                                 addToIndex
                                                     callGlobalState
                                                     vPre
+                                                    globalStart
+                                                    vPre
+                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
+
+                                                addToIndex
+                                                    callGlobalState
+                                                    vPre
                                                     returnGlobalState
                                                     vEnd
                                                     (PathIndexEntry.PIntermediate(globalStart, vPre))
@@ -337,6 +351,13 @@ module Rnglr =
                                                     returnGlobalState
                                                     vEnd
                                                     (PathIndexEntry.PIntermediate(finalRsmState, vEnd))
+
+                                                addToIndex
+                                                    finalRsmState
+                                                    vEnd
+                                                    returnGlobalState
+                                                    vEnd
+                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
                                         | _ -> ()
                                 | None -> ()
                         | None -> ()
