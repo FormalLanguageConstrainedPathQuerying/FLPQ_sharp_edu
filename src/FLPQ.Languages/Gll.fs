@@ -96,7 +96,8 @@ module GLL =
         let queue = Queue<Descriptor>()
         let handled = HashSet<Descriptor>()
 
-        // Helper: add entry at indices, avoiding redundant adds
+        let handledNonEmpty = HashSet<int * int * int>()
+
         let addToIndex
             (fromState: int)
             (fromVertex: int)
@@ -111,10 +112,16 @@ module GLL =
             if not (Set.contains entry current) then
                 Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
 
-        // Helper: try to enqueue a descriptor
         let tryEnqueue (d: Descriptor) =
-            if handled.Add(d) then
-                queue.Enqueue(d)
+            match d.MatchedRange with
+            | RangeDescriptor.NonEmptyRange _ ->
+                if not (handledNonEmpty.Add(d.RsmState, d.Vertex, d.GssIdx)) then
+                    ()
+                elif handled.Add(d) then
+                    queue.Enqueue(d)
+            | RangeDescriptor.EmptyRange ->
+                if handled.Add(d) then
+                    queue.Enqueue(d)
 
         // Initialize: for each start vertex, create descriptor at start block's start state
         let startBlock = RSM.startBlock rsm

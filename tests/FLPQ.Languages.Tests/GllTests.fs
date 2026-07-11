@@ -108,6 +108,11 @@ module GllAcceptance =
         Assert.False(TestHelpers.gllAccepts g [ "a"; "a"; "b" ])
 
     [<Fact>]
+    let ``S -> a S b | S S | eps accepts a b (no infinite loop)`` () =
+        let g = TestGrammars.grammar2
+        Assert.True(TestHelpers.gllAccepts g [ "a"; "b" ])
+
+    [<Fact>]
     let ``S -> a S b | eps accepts empty`` () =
         let g = TestGrammars.grammar2
         Assert.True(TestHelpers.gllAccepts g [])
