@@ -18,12 +18,6 @@ type LR1Item<'t, 'nt> =
       Dot: int
       Lookahead: Symbol<'t, 'nt> }
 
-/// Action in an LR parsing table.
-type LRAction =
-    | Shift of int
-    | Reduce of int
-    | Accept
-
 /// Conflict detected during LR table construction.
 type LRConflict<'t, 'nt> =
     | ShiftReduce of state: int * symbol: Symbol<'t, 'nt> * shiftTo: int * reduceRule: int
@@ -36,7 +30,7 @@ type LRAutomaton<'t, 'nt when 't: comparison and 'nt: comparison> =
 
 /// LR parsing table with action and goto maps, detected conflicts, and the automaton used to build it.
 type LRTable<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { Action: Map<int * Symbol<'t, 'nt>, LRAction>
+    { Action: Map<int * Symbol<'t, 'nt>, LRAction<int>>
       GoTo: Map<int * Nonterminal<'nt>, int>
       Conflicts: LRConflict<'t, 'nt> list
       Automaton: LRAutomaton<'t, 'nt> }
@@ -250,7 +244,7 @@ module LRParser =
 
     let private populateShiftGoto
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<Symbol<'t, 'nt>>>>>)
-        (action: byref<Map<int * Symbol<'t, 'nt>, LRAction>>)
+        (action: byref<Map<int * Symbol<'t, 'nt>, LRAction<int>>>)
         (goto: byref<Map<int * Nonterminal<'nt>, int>>)
         (conflicts: byref<LRConflict<'t, 'nt> list>)
         : unit =
@@ -264,10 +258,10 @@ module LRParser =
                             let key = (i, tSym)
 
                             match Map.tryFind key action with
-                            | Some(Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
-                            | Some(Shift _) -> ()
-                            | Some Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
-                            | None -> action <- Map.add key (Shift j) action
+                            | Some(LRAction.Reduce r) -> conflicts <- ShiftReduce(i, tSym, j, r) :: conflicts
+                            | Some(LRAction.Shift _) -> ()
+                            | Some LRAction.Accept -> conflicts <- ShiftReduce(i, tSym, j, -1) :: conflicts
+                            | None -> action <- Map.add key (LRAction.Shift j) action
                         | ATerm(Symbol.N nt) -> goto <- Map.add (i, nt) j goto
                         | _ -> ()
                 | None -> ()
@@ -301,10 +295,10 @@ module LRParser =
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
-                        | Some Accept -> ()
-                        | None -> action <- Map.add key Accept action
+                        | Some(LRAction.Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(LRAction.Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
+                        | Some LRAction.Accept -> ()
+                        | None -> action <- Map.add key LRAction.Accept action
                     else
                         let ruleIdx =
                             aug.Rules
@@ -314,10 +308,10 @@ module LRParser =
                             let key = (stateIdx, t)
 
                             match Map.tryFind key action with
-                            | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, t, s, ruleIdx) :: conflicts
-                            | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, t, r, ruleIdx) :: conflicts
-                            | Some Accept -> conflicts <- ShiftReduce(stateIdx, t, -1, ruleIdx) :: conflicts
-                            | None -> action <- Map.add key (Reduce ruleIdx) action
+                            | Some(LRAction.Shift s) -> conflicts <- ShiftReduce(stateIdx, t, s, ruleIdx) :: conflicts
+                            | Some(LRAction.Reduce r) -> conflicts <- ReduceReduce(stateIdx, t, r, ruleIdx) :: conflicts
+                            | Some LRAction.Accept -> conflicts <- ShiftReduce(stateIdx, t, -1, ruleIdx) :: conflicts
+                            | None -> action <- Map.add key (LRAction.Reduce ruleIdx) action
 
         { Action = action
           GoTo = goto
@@ -346,10 +340,10 @@ module LRParser =
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
-                        | Some Accept -> ()
-                        | None -> action <- Map.add key Accept action
+                        | Some(LRAction.Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(LRAction.Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
+                        | Some LRAction.Accept -> ()
+                        | None -> action <- Map.add key LRAction.Accept action
                     else
                         let ruleIdx =
                             aug.Rules
@@ -362,10 +356,10 @@ module LRParser =
                             let key = (stateIdx, la)
 
                             match Map.tryFind key action with
-                            | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, la, s, ruleIdx) :: conflicts
-                            | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, la, r, ruleIdx) :: conflicts
-                            | Some Accept -> conflicts <- ShiftReduce(stateIdx, la, -1, ruleIdx) :: conflicts
-                            | None -> action <- Map.add key (Reduce ruleIdx) action
+                            | Some(LRAction.Shift s) -> conflicts <- ShiftReduce(stateIdx, la, s, ruleIdx) :: conflicts
+                            | Some(LRAction.Reduce r) -> conflicts <- ReduceReduce(stateIdx, la, r, ruleIdx) :: conflicts
+                            | Some LRAction.Accept -> conflicts <- ShiftReduce(stateIdx, la, -1, ruleIdx) :: conflicts
+                            | None -> action <- Map.add key (LRAction.Reduce ruleIdx) action
 
         { Action = action
           GoTo = goto
@@ -393,10 +387,10 @@ module LRParser =
                         let key = (stateIdx, Symbol.Epsilon)
 
                         match Map.tryFind key action with
-                        | Some(Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
-                        | Some(Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
-                        | Some Accept -> ()
-                        | None -> action <- Map.add key Accept action
+                        | Some(LRAction.Shift s) -> conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
+                        | Some(LRAction.Reduce r) -> conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
+                        | Some LRAction.Accept -> ()
+                        | None -> action <- Map.add key LRAction.Accept action
                     else
                         let ruleIdx =
                             aug.Rules
@@ -407,15 +401,15 @@ module LRParser =
                         let key = (stateIdx, t)
 
                         match Map.tryFind key action with
-                        | Some existing when existing <> Reduce ruleIdx ->
+                        | Some existing when existing <> LRAction.Reduce ruleIdx ->
                             conflicts <-
                                 (match existing with
-                                 | Shift s -> ShiftReduce(stateIdx, t, s, ruleIdx)
-                                 | Reduce r -> ReduceReduce(stateIdx, t, r, ruleIdx)
+                                 | LRAction.Shift s -> ShiftReduce(stateIdx, t, s, ruleIdx)
+                                 | LRAction.Reduce r -> ReduceReduce(stateIdx, t, r, ruleIdx)
                                  | _ -> failwith "Unexpected")
                                 :: conflicts
                         | Some _ -> ()
-                        | None -> action <- Map.add key (Reduce ruleIdx) action
+                        | None -> action <- Map.add key (LRAction.Reduce ruleIdx) action
 
         { Action = action
           GoTo = goto
@@ -471,12 +465,12 @@ module LRParser =
             let lookahead = if pos < tokens.Length then tokens.[pos] else Symbol.Epsilon
 
             match Map.tryFind (currentState, lookahead) table.Action with
-            | Some(Shift nextState) ->
+            | Some(LRAction.Shift nextState) ->
                 stack <- LRSymbol(Leaf(tokens.[pos])) :: stack
                 stack <- LRState nextState :: stack
                 pos <- pos + 1
                 recordStep ()
-            | Some(Reduce ruleIdx) ->
+            | Some(LRAction.Reduce ruleIdx) ->
                 let rule = aug.Rules.[ruleIdx]
                 let popCount = Rhs.toNonEpsilonList rule.Rhs |> List.length
 
@@ -491,13 +485,13 @@ module LRParser =
                 stack <- LRSymbol(newNode) :: stack
                 stack <- LRState gotoState :: stack
                 recordStep ()
-            | Some Accept ->
+            | Some LRAction.Accept ->
                 finished <- true
                 accepted <- true
             | None ->
                 if pos = tokens.Length && lookahead = Symbol.Epsilon then
                     match Map.tryFind (currentState, Symbol.Epsilon) table.Action with
-                    | Some Accept ->
+                    | Some LRAction.Accept ->
                         finished <- true
                         accepted <- true
                     | _ -> finished <- true

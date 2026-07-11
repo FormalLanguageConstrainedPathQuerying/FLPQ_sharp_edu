@@ -52,7 +52,7 @@ module RnglrRunner =
                                   ToVertex = toVertex }
                                 :: rootRanges
 
-        let sppf = GLL.buildSppfFromIndex pathIndex (List.rev rootRanges)
+        let sppf = Sppf.buildSppfFromIndex pathIndex (List.rev rootRanges)
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))

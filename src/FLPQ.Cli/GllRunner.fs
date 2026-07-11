@@ -57,7 +57,7 @@ module GllRunner =
                       ToVertex = vertexCount - 1 }
                     :: sppfRootRanges
 
-        let sppf = GLL.buildSppfFromIndex pathIndex (List.rev sppfRootRanges)
+        let sppf = Sppf.buildSppfFromIndex pathIndex (List.rev sppfRootRanges)
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))

@@ -315,7 +315,7 @@ module Rnglr =
                     let shiftKey = (lrState, Symbol.T(Terminal tVal))
 
                     match Map.tryFind shiftKey lrTable.Action with
-                    | Some(RnglrAction.Shift targetLrState) ->
+                    | Some(LRAction.Shift targetLrState) ->
                         let gssIdx = linearIdx lrState v
                         let targetGssIdx = linearIdx targetLrState vNext
 

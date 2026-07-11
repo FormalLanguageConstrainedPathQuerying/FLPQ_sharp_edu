@@ -6,13 +6,13 @@ open FLPQ.Languages
 /// Works for LR(0), SLR(1), and CLR(1) tables.
 module LRTableTeX =
 
-    let private actionStr (action: LRAction) : string =
+    let private actionStr (action: LRAction<int>) : string =
         match action with
-        | Shift n -> sprintf "$s_%d$" n
-        | Reduce r -> sprintf "$r_%d$" r
-        | Accept -> "acc"
+        | LRAction.Shift n -> sprintf "$s_%d$" n
+        | LRAction.Reduce r -> sprintf "$r_%d$" r
+        | LRAction.Accept -> "acc"
 
-    let private allActionsFor (table: LRTable<'t, 'nt>) (state: int) (sym: Symbol<'t, 'nt>) : LRAction list =
+    let private allActionsFor (table: LRTable<'t, 'nt>) (state: int) (sym: Symbol<'t, 'nt>) : LRAction<int> list =
         let fromMap =
             match Map.tryFind (state, sym) table.Action with
             | Some a -> [ a ]
@@ -23,8 +23,8 @@ module LRTableTeX =
             |> List.collect (fun c ->
                 match c with
                 | ShiftReduce(s, sym', shiftTo, reduceRule) when s = state && sym' = sym ->
-                    [ Shift shiftTo; Reduce reduceRule ]
-                | ReduceReduce(s, sym', r1, r2) when s = state && sym' = sym -> [ Reduce r1; Reduce r2 ]
+                    [ LRAction.Shift shiftTo; LRAction.Reduce reduceRule ]
+                | ReduceReduce(s, sym', r1, r2) when s = state && sym' = sym -> [ LRAction.Reduce r1; LRAction.Reduce r2 ]
                 | _ -> [])
 
         (fromConflicts @ fromMap) |> List.distinct

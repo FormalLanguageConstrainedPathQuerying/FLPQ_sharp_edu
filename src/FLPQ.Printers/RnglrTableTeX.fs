@@ -6,11 +6,11 @@ open FLPQ.Languages
 /// Book reference: sec:CFPQ_RNGLR.
 module RnglrTableTeX =
 
-    let private actionStr (action: RnglrAction<'nt>) (nonterminalPrinter: 'nt -> string) : string =
+    let private actionStr (action: LRAction<Nonterminal<'nt>>) (nonterminalPrinter: 'nt -> string) : string =
         match action with
-        | RnglrAction.Shift n -> sprintf "$s_%d$" n
-        | RnglrAction.Reduce(Nonterminal nt) -> sprintf "$r_{%s}$" (nonterminalPrinter nt)
-        | RnglrAction.Accept -> "acc"
+        | LRAction.Shift n -> sprintf "$s_%d$" n
+        | LRAction.Reduce(Nonterminal nt) -> sprintf "$r_{%s}$" (nonterminalPrinter nt)
+        | LRAction.Accept -> "acc"
 
     let private stateCount (table: RnglrTable<'t, 'nt>) : int =
         let mutable maxState = -1

@@ -20,6 +20,8 @@
     <Compile Include="Valiant.fs" />
     <Compile Include="LLParser.fs" />
     <Compile Include="LRParser.fs" />
+    <Compile Include="PathIndex.fs" />
+    <Compile Include="Sppf.fs" />
     <Compile Include="GllTypes.fs" />
     <Compile Include="Gll.fs" />
     <Compile Include="RnglrTypes.fs" />

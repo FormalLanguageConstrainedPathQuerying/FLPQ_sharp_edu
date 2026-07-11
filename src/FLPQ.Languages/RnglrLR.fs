@@ -167,7 +167,7 @@ module RnglrLR =
                 match sym with
                 | Symbol.T _ ->
                     match Dfa.move lrAutomaton lrState sym with
-                    | Some target -> action <- Map.add (lrState, sym) (RnglrAction.Shift target) action
+                    | Some target -> action <- Map.add (lrState, sym) (LRAction.Shift target) action
                     | None -> ()
                 | Symbol.N nt ->
                     match Dfa.move lrAutomaton lrState sym with
@@ -182,7 +182,7 @@ module RnglrLR =
                 if Set.contains item.RsmState finals then
                     if item.BlockNonterminal = augNonterm then
                         // Accept action for augmented start nonterminal at final state
-                        action <- Map.add (lrState, Symbol.Epsilon) RnglrAction.Accept action
+                        action <- Map.add (lrState, Symbol.Epsilon) LRAction.Accept action
                     else
                         // Reduce by nonterminal for all possible lookaheads (LR(0): reduce on everything)
                         let block = blocks |> List.find (fun b -> b.Nonterminal = item.BlockNonterminal)
@@ -190,7 +190,7 @@ module RnglrLR =
                         let allTerminals =
                             RSM.terminals rsm |> List.map (fun (Terminal t) -> Symbol.T(Terminal t))
 
-                        let reduceAction = RnglrAction.Reduce item.BlockNonterminal
+                        let reduceAction = LRAction.Reduce item.BlockNonterminal
 
                         for term in allTerminals do
                             let key = (lrState, term)

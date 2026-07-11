@@ -11,20 +11,12 @@ type RnglrItem<'nt when 'nt: comparison> =
     { BlockNonterminal: Nonterminal<'nt>
       RsmState: int }
 
-/// LR action in the RNGLR parsing table.
-/// Book reference: sec:CFPQ_RNGLR.
-[<RequireQualifiedAccess>]
-type RnglrAction<'nt when 'nt: comparison> =
-    | Shift of int
-    | Reduce of Nonterminal<'nt>
-    | Accept
-
 /// RNGLR parsing table built from an RSM.
-/// Action maps (automatonState, symbol) to an action.
+/// Action maps (automatonState, symbol) to an LR action.
 /// Goto maps (automatonState, nonterminal) to an automaton state.
 /// Book reference: sec:CFPQ_RNGLR.
 type RnglrTable<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { Action: Map<int * Symbol<'t, 'nt>, RnglrAction<'nt>>
+    { Action: Map<int * Symbol<'t, 'nt>, LRAction<Nonterminal<'nt>>>
       Goto: Map<int * Nonterminal<'nt>, int>
       Automaton: DFA<Symbol<'t, 'nt>, Set<RnglrItem<'nt>>> }
 
