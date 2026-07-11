@@ -281,18 +281,16 @@ def main() -> None:
         lint_all_ok = True
         per_project_lint: list[str] = []
 
-        # Always use /usr/lib/dotnet for fsharplint (project SDK requirement)
-        fsharplint_root = "/usr/lib/dotnet"
-        fsharplint_cmd_base = f"{fsharplint_root}/tools/dotnet-fsharplint"
         fsharplint_env = os.environ.copy()
-        fsharplint_env["DOTNET_ROOT"] = fsharplint_root
+        # Use system dotnet for runtime compatibility (fsharplint needs >=9.0)
+        fsharplint_env["DOTNET_ROOT"] = "/usr/lib/dotnet"
 
         for proj in changed_projects:
             try:
                 lint_result = subprocess.run(
-                    [fsharplint_cmd_base, "lint", proj],
+                    ["dotnet", "fsharplint", "lint", proj],
                     capture_output=True, text=True, timeout=None,
-                    env=fsharplint_env
+                    env=fsharplint_env,
                 )
                 lint_output = lint_result.stdout + lint_result.stderr
             except Exception as e:
