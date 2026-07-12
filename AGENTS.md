@@ -70,7 +70,9 @@ Supplementary materials for the book on formal language constrained path queryin
    every subtask committed, every requirement met, every test passing, zero
    known failures or unresolved limitations. Never mark a task `[done]` if
    any subtask was skipped, reverted, or blocked.
-9. Return to step 1
+9. Before marking the task `[done]`, re-read the task description. For each clause, verify the implementation satisfies it. Partial completion is not completion.
+9a. If any clause was skipped, reverted, deferred, or left unresolved — the task is NOT done. Follow the Blocked Work Protocol in the `subtask-loop` skill.
+9b. Return to step 2
 
 ### Git Safety
 

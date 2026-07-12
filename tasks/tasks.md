@@ -363,4 +363,7 @@
       4.    Обрати внимание: на текущий момент покрытие может быть меньше установленного. Не исправляй это. Сейчас главное --- подготовить инструменты контроля.
 163. [done] Доработай тестовое покрытие проектов, котрые не проходят пороговое значение.
 164. [done] GLL fail wtih infinite loop when handle grammar `S -> a S b | S S | eps`  and string a b . Fix this problem. Add respective test.
-165. Tests GLL
+165. [done] Check tmp/hard-gate.txt. Logs from fsharplint looks like tool run linter incorrectly: `ERROR running fsharplint: [Errno 2] No such file or directory: '/usr/lib/dotnet/tools/dotnet-fsharplint'` Fix this problem
+166. [done] When I run `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -a rnglr -i data/example_input.txt -g data/example_grammar_amb.bnf -s -o viz_output/glr` resulting SPPF in DOT conteins range nodes that have no childs. Moreover, leafs of SPPF missed (not all terminals presented). Fix this probelm. Create respective test.
+167. [done] For all GLL anf RNGLR tests (property and fact) add check that on accepted string in SPPF for this string each range node contains at least one child. 
+168. Tests GLL

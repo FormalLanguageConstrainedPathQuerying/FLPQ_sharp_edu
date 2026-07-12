@@ -103,6 +103,18 @@ Requirements:
 - Remaining work items must be actionable (e.g., "Track origin final RSM state through BFS queue by adding a field to the BFS node tuple") — not vague goals
 - If the user provided design guidance (e.g., decomposition schema, coordinate system), record it verbatim in the `### <Topic>` section as the authoritative reference
 
+## Task Completeness Verification
+
+Before marking a task `[done]` in `tasks/tasks.md`, verify completeness:
+
+- [ ] Every clause in the task description is traceable to implemented and committed code
+- [ ] No subtask was reverted without resolution
+- [ ] No requirement was silently skipped or deferred
+- [ ] All tests pass (0 failures, 0 skipped)
+- [ ] If any of the above fails, the task is NOT done — it is blocked. Follow the Blocked Work Protocol in the `subtask-loop` skill. Do NOT mark it `[done]` with known unresolved limitations.
+
+Partial completion is not completion. "All passing tests are for the parts I did" does not mean the task is done if other parts were reverted.
+
 ## Task Authoring Guidelines
 
 When writing a new task for `tasks/tasks.md`, follow these rules:

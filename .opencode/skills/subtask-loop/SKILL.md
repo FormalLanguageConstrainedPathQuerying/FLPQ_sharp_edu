@@ -120,6 +120,17 @@ A subtask has exactly two valid outcomes:
 
 There is no third state. "Reverted and left as a known limitation" is not a valid outcome — it means the subtask is blocked. Report it.
 
+Never silently skip a subtask. If a subtask was attempted, reverted, and its planned changes were not committed, the subtask is incomplete. Do not mark it done. Do not proceed. Report it as blocked.
+
+### Requirement Cross-Check
+
+Before marking a subtask complete, re-read the task specification in `tasks/tasks.md`. Verify each clause against what was actually implemented:
+
+- [ ] Every clause in the task description is traceable to code that was committed
+- [ ] No requirement was silently skipped or deferred without user approval
+- [ ] No code was reverted without resolution
+- [ ] If ANY of the above fails, the subtask is blocked — follow the Blocked Work Protocol
+
 ## Per-Subtask Execution Tracking
 
 For each subtask, use the `todowrite` tool to track cycle steps as separate items. **No subtask may be committed with any step still `pending`.**
