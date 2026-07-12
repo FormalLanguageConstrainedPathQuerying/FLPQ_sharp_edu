@@ -12,9 +12,8 @@ module RnglrRunner =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
 
-        let freshStart = Nonterminal("S'")
-        let extRsm = RSM.extendWithStart freshStart rsm
-        let lrTable = RnglrLR.buildLR0Table extRsm
+        let extRsm = ExtendedRSM.create (Nonterminal "S'") rsm
+        let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm extRsm)
         let lrStateCount = Dfa.stateCount lrTable.Automaton
 
         let inputText = Helpers.readFile inputFile
@@ -23,22 +22,26 @@ module RnglrRunner =
         let inputGraph = GLL.stringToGraph rawTokens
         let vertexCount = Graph.vertexCount inputGraph
 
-        let pathIndex = Rnglr.buildPathIndex freshStart rsm inputGraph
+        let pathIndex = Rnglr.buildPathIndex (ExtendedRSM.freshStart extRsm) rsm inputGraph
 
         let accepted = Rnglr.isAccepted pathIndex vertexCount
 
-        let originalStartBlock = extRsm.Blocks.[1]
+        let flatExt = RSM.flattenRsm (ExtendedRSM.extRsm extRsm)
+        let originalStartBlock = ExtendedRSM.originalStartBlock extRsm
 
-        let startBlockOffset =
-            extRsm.Blocks
-            |> List.takeWhile (fun b -> b.Nonterminal <> originalStartBlock.Nonterminal)
-            |> List.sumBy (fun b -> b.Dfa.States.Length)
-
-        let startGlobalState = startBlockOffset + originalStartBlock.Dfa.StartState
+        let startGlobalState =
+            match flatExt.BlockStart.TryGetValue(originalStartBlock.Nonterminal) with
+            | true, gs -> gs
+            | false, _ -> failwithf "Start block %A not found in extended RSM" originalStartBlock.Nonterminal
 
         let mutable rootRanges = []
 
         for finalLocal in originalStartBlock.Dfa.FinalStates do
+            let startBlockOffset =
+                ExtendedRSM.extBlocks extRsm
+                |> List.takeWhile (fun b -> b.Nonterminal <> originalStartBlock.Nonterminal)
+                |> List.sumBy (fun b -> b.Dfa.States.Length)
+
             let finalGlobalState = startBlockOffset + finalLocal
 
             let entries =

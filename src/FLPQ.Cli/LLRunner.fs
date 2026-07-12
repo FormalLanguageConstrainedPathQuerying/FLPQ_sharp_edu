@@ -10,6 +10,7 @@ module LLRunner =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let tokens = Tokenizer.tokenizeTerminals inputTokens
+        let tokensWithEoi = tokens @ [ Grammar.eoiTerminal ]
         let table = LLParser.buildTable grammar k
 
         let firstMap = FirstFollow.firstK grammar k
@@ -23,7 +24,7 @@ module LLRunner =
             (Path.Combine(outputDir, "ll_table.tex"))
             (LLTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) grammar k firstMap followMap table)
 
-        let _, steps = LLParser.parseWithSteps grammar table k tokens
+        let _, steps = LLParser.parseWithSteps grammar table k tokensWithEoi
         let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
         Helpers.writeStepsVisualization outputDir vizSteps
         printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir

@@ -55,11 +55,7 @@ module LRAutomaton =
     /// Augment a grammar with a fresh start nonterminal.
     /// The augmented grammar has S' -> S as the first rule.
     let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
-        { Rules =
-            { Lhs = freshStart
-              Rhs = NonEmptyList.create (Symbol.N g.Start) [] |> Symbols }
-            :: g.Rules
-          Start = freshStart }
+        Grammar.augmentGrammar freshStart g
 
     let private closureLR0 (rules: Rule<'t, 'nt> list) (items: Set<LR0Item<'t, 'nt>>) : Set<LR0Item<'t, 'nt>> =
         let mutable closure = items
@@ -292,15 +288,18 @@ module LRParser =
             for item in state do
                 if isCompletedLR0 item then
                     if item.Lhs = augmentedRule.Lhs && item.Dot = 1 then
-                        let key = (stateIdx, Symbol.Epsilon)
-
-                        match Map.tryFind key action with
+                        match Map.tryFind (stateIdx, Symbol.Epsilon) action with
                         | Some(LRAction.Shift s) ->
                             conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
                         | Some(LRAction.Reduce r) ->
                             conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
                         | Some LRAction.Accept -> ()
-                        | None -> action <- Map.add key LRAction.Accept action
+                        | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
+
+                        match Map.tryFind (stateIdx, Grammar.eoiSymbol) action with
+                        | Some _ -> ()
+                        | None -> action <- Map.add (stateIdx, Grammar.eoiSymbol) LRAction.Accept action
+
                     else
                         let ruleIdx =
                             aug.Rules
@@ -339,15 +338,18 @@ module LRParser =
             for item in state do
                 if isCompletedLR0 item then
                     if item.Lhs = augmentedRule.Lhs && item.Dot = 1 then
-                        let key = (stateIdx, Symbol.Epsilon)
-
-                        match Map.tryFind key action with
+                        match Map.tryFind (stateIdx, Symbol.Epsilon) action with
                         | Some(LRAction.Shift s) ->
                             conflicts <- ShiftReduce(stateIdx, Symbol.Epsilon, s, -1) :: conflicts
                         | Some(LRAction.Reduce r) ->
                             conflicts <- ReduceReduce(stateIdx, Symbol.Epsilon, r, -1) :: conflicts
                         | Some LRAction.Accept -> ()
-                        | None -> action <- Map.add key LRAction.Accept action
+                        | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
+
+                        match Map.tryFind (stateIdx, Grammar.eoiSymbol) action with
+                        | Some _ -> ()
+                        | None -> action <- Map.add (stateIdx, Grammar.eoiSymbol) LRAction.Accept action
+
                     else
                         let ruleIdx =
                             aug.Rules

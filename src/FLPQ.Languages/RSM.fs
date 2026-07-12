@@ -158,3 +158,50 @@ module RSM =
 
         { Blocks = startBlock' :: rsm.Blocks
           StartBlock = freshStart }
+
+
+/// An extended RSM: the original RSM augmented with a fresh start nonterminal S'.
+/// S' has a single transition: start --RNonterm(originalStart)--> final.
+/// The type preserves the relationship between the original and augmented RSMs,
+/// providing uniform access to the original start block regardless of extension.
+/// Book reference: sec:CFPQ_RNGLR.
+type ExtendedRSM<'t, 'nt when 't: comparison and 'nt: comparison> =
+    { OriginalRsm: RSM<'t, 'nt>
+      FreshStart: Nonterminal<'nt>
+      ExtendedRsm: RSM<'t, 'nt> }
+
+
+module ExtendedRSM =
+
+    /// Creates an extended RSM by augmenting the given RSM with a fresh start nonterminal.
+    let create (freshStart: Nonterminal<'nt>) (rsm: RSM<'t, 'nt>) : ExtendedRSM<'t, 'nt> =
+        let extRsm = RSM.extendWithStart freshStart rsm
+
+        { OriginalRsm = rsm
+          FreshStart = freshStart
+          ExtendedRsm = extRsm }
+
+    /// Returns the original (non-extended) RSM.
+    let originalRsm (ersm: ExtendedRSM<'t, 'nt>) : RSM<'t, 'nt> = ersm.OriginalRsm
+
+    /// Returns the fresh start nonterminal (S') used for augmentation.
+    let freshStart (ersm: ExtendedRSM<'t, 'nt>) : Nonterminal<'nt> = ersm.FreshStart
+
+    /// Returns the extended (augmented) RSM.
+    let extRsm (ersm: ExtendedRSM<'t, 'nt>) : RSM<'t, 'nt> = ersm.ExtendedRsm
+
+    /// Returns the start block of the original RSM.
+    let originalStartBlock (ersm: ExtendedRSM<'t, 'nt>) : RsmBlock<'t, 'nt> = RSM.startBlock ersm.OriginalRsm
+
+    /// Returns the start nonterminal of the original RSM.
+    let originalStartNonterminal (ersm: ExtendedRSM<'t, 'nt>) : Nonterminal<'nt> =
+        (RSM.startBlock ersm.OriginalRsm).Nonterminal
+
+    /// Flattens the extended RSM for efficient lookup during parsing.
+    let flattenExtRsm (ersm: ExtendedRSM<'t, 'nt>) : FlattenedRsm<'t, 'nt> = RSM.flattenRsm ersm.ExtendedRsm
+
+    /// Returns the state count of the extended RSM.
+    let stateCount (ersm: ExtendedRSM<'t, 'nt>) : int = RSM.stateCount ersm.ExtendedRsm
+
+    /// Returns the blocks of the extended RSM.
+    let extBlocks (ersm: ExtendedRSM<'t, 'nt>) : RsmBlock<'t, 'nt> list = RSM.blocks ersm.ExtendedRsm

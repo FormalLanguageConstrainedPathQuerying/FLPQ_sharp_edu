@@ -423,3 +423,76 @@ module PropertyCnfTests =
                 let cnfResult = Cyk.parse (fun i -> $"_CNF_N{i}") cnf tokens
 
                 origResult = cnfResult))
+
+
+module ExtendedGrammarTests =
+
+    [<Fact>]
+    let ``create produces ExtendedGrammar with correct original grammar`` () =
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(g, ExtendedGrammar.originalGrammar eg)
+
+    [<Fact>]
+    let ``create produces ExtendedGrammar with correct fresh start`` () =
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(freshStart, ExtendedGrammar.freshStart eg)
+
+    [<Fact>]
+    let ``extGrammar has fresh start as start nonterminal`` () =
+        let g = Grammar.parseGrammar "S -> a"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(freshStart, (ExtendedGrammar.extGrammar eg).Start)
+
+    [<Fact>]
+    let ``extGrammar has one more rule than original`` () =
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(g.Rules.Length + 1, (ExtendedGrammar.extGrammar eg).Rules.Length)
+
+    [<Fact>]
+    let ``extGrammar's first rule is S' -> S`` () =
+        let g = Grammar.parseGrammar "S -> a"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        let firstRule = (ExtendedGrammar.extGrammar eg).Rules.Head
+        Assert.Equal(freshStart, firstRule.Lhs)
+        Assert.Equal(1, Rhs.length firstRule.Rhs)
+
+    [<Fact>]
+    let ``originalStart returns S from simple grammar`` () =
+        let g = Grammar.parseGrammar "A -> x\nS -> a A"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(Nonterminal "A", ExtendedGrammar.originalStart eg)
+
+    [<Fact>]
+    let ``create is idempotent for same inputs`` () =
+        let g = Grammar.parseGrammar "S -> a"
+        let freshStart = Nonterminal "S'"
+        let eg1 = ExtendedGrammar.create freshStart g
+        let eg2 = ExtendedGrammar.create freshStart g
+
+        Assert.Equal(ExtendedGrammar.extGrammar eg1, ExtendedGrammar.extGrammar eg2)
+
+    [<Fact>]
+    let ``extGrammar preserves all original rules`` () =
+        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let freshStart = Nonterminal "S'"
+        let eg = ExtendedGrammar.create freshStart g
+        let ext = ExtendedGrammar.extGrammar eg
+
+        let originalRules = ext.Rules |> List.skip 1
+        Assert.Equal(g.Rules.Length, originalRules.Length)
+        Assert.StrictEqual(g.Rules, originalRules)

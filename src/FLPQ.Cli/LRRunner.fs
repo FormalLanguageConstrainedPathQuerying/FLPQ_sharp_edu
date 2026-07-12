@@ -16,10 +16,12 @@ module LRRunner =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let tokens = Tokenizer.tokenizeTerminals inputTokens
+        let tokensWithEoi = tokens @ [ Grammar.eoiTerminal ]
 
         let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
 
-        let aug = LRAutomaton.augmentGrammar freshStart grammar
+        let extGram = ExtendedGrammar.create freshStart grammar
+        let aug = ExtendedGrammar.extGrammar extGram
 
         let table =
             match algo with
@@ -63,13 +65,13 @@ module LRRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string grammar)
+            (GrammarTeX.grammarToTeX string string (ExtendedGrammar.originalGrammar extGram))
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "lr_table.tex"))
             (LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table)
 
-        let _, steps = LRParser.parseWithSteps aug table tokens
+        let _, steps = LRParser.parseWithSteps aug table tokensWithEoi
         let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
         Helpers.writeStepsVisualization outputDir vizSteps
         printfn "%s trace: %d steps written to %s" (AlgorithmTypes.displayName algo) vizSteps.Length outputDir

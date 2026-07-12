@@ -157,3 +157,93 @@ module RsmBuilderPropertyTests =
         let rsm = RsmBuilder.buildRSMFromText "S -> a"
         Assert.Equal(1, rsm.Blocks.Length)
         Assert.True(Dfa.isDeterministic rsm.Blocks.Head.Dfa)
+
+
+module ExtendedRSMTests =
+
+    [<Fact>]
+    let ``create produces ExtendedRSM with correct original RSM`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(rsm, ExtendedRSM.originalRsm extRsm)
+
+    [<Fact>]
+    let ``create produces ExtendedRSM with correct fresh start`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(freshStart, ExtendedRSM.freshStart extRsm)
+
+    [<Fact>]
+    let ``extRsm has fresh start as start block`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(freshStart, ExtendedRSM.extRsm extRsm |> RSM.startBlock |> (fun b -> b.Nonterminal))
+
+    [<Fact>]
+    let ``extRsm has one more block than original`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(rsm.Blocks.Length + 1, (ExtendedRSM.extRsm extRsm).Blocks.Length)
+
+    [<Fact>]
+    let ``flattenExtRsm successfully flattens extended RSM`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a b"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+        let flat = ExtendedRSM.flattenExtRsm extRsm
+
+        Assert.True(flat.StateInfo.Length > 0)
+        Assert.True(flat.BlockStart.Count > 0)
+
+    [<Fact>]
+    let ``extBlocks returns blocks including fresh start block`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+        let blocks = ExtendedRSM.extBlocks extRsm
+
+        Assert.Equal(rsm.Blocks.Length + 1, blocks.Length)
+        Assert.Equal(freshStart, blocks.Head.Nonterminal)
+
+    [<Fact>]
+    let ``stateCount of extended RSM is greater than original`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a b | c"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.True(ExtendedRSM.stateCount extRsm > RSM.stateCount rsm)
+
+    [<Fact>]
+    let ``originalStartBlock returns correct block from original RSM`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        let origBlock = ExtendedRSM.originalStartBlock extRsm
+        Assert.Equal(Nonterminal "S", origBlock.Nonterminal)
+        Assert.Equal(RSM.startBlock rsm, origBlock)
+
+    [<Fact>]
+    let ``originalStartNonterminal returns S from simple grammar`` () =
+        let rsm = RsmBuilder.buildRSMFromText "A -> b\nS -> a A"
+        let freshStart = Nonterminal "S'"
+        let extRsm = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(Nonterminal "A", ExtendedRSM.originalStartNonterminal extRsm)
+
+    [<Fact>]
+    let ``create is idempotent for fresh start`` () =
+        let rsm = RsmBuilder.buildRSMFromText "S -> a"
+        let freshStart = Nonterminal "S'"
+        let ext1 = ExtendedRSM.create freshStart rsm
+        let ext2 = ExtendedRSM.create freshStart rsm
+
+        Assert.Equal(ExtendedRSM.extRsm ext1, ExtendedRSM.extRsm ext2)

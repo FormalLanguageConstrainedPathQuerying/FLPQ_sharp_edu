@@ -113,7 +113,28 @@ Transforms a context-free grammar into Chomsky Normal Form (CNF). In CNF all pro
 | Fresh nonterminal names prefixed `N_CNF_` | Prevents name collisions with user-defined nonterminals |
 | Fixed-point computation for nullable/unit pairs | Standard Hopcroft-Ullman approach; guaranteed termination on finite grammars |
 | New start symbol always introduced in CNF | Simplifies epsilon handling; ensures start doesn't appear on any RHS |
+| `augmentGrammar` in Grammar module | General-purpose grammar operation; avoids duplication with LR-specific code |
+| `ExtendedGrammar` as wrapper type | Preserves original-extended relationship; eliminates need for parallel variables (`grammar` + `aug`) in runners |
+
+### `ExtendedGrammar<'t, 'nt>`
+```fsharp
+type ExtendedGrammar<'t, 'nt> =
+    { originalGrammar: Grammar<'t, 'nt>
+      freshStart: Nonterminal<'nt>
+      extended: Grammar<'t, 'nt> }
+```
+An augmented grammar with fresh start `S'`. The extended grammar has `S' -> S` as the first rule. The type wraps both the original and augmented grammars, providing uniform access to the original start.
+
+### `ExtendedGrammar` module helpers
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `create` | `Nonterminal<'nt> -> Grammar<'t,'nt> -> ExtendedGrammar<'t,'nt>` | Creates an extended grammar |
+| `originalGrammar` | `ExtendedGrammar<'t,'nt> -> Grammar<'t,'nt>` | Returns the original grammar |
+| `freshStart` | `ExtendedGrammar<'t,'nt> -> Nonterminal<'nt>` | Returns the fresh start nonterminal |
+| `extGrammar` | `ExtendedGrammar<'t,'nt> -> Grammar<'t,'nt>` | Returns the augmented grammar |
+| `originalStart` | `ExtendedGrammar<'t,'nt> -> Nonterminal<'nt>` | Returns the original start nonterminal |
 
 ## Relationship to the Book
 
-Context-free grammar representation is fundamental to the Chomsky Normal Form transformation (Task 5) and the CYK parsing algorithm (Task 6).
+Context-free grammar representation is fundamental to the Chomsky Normal Form transformation (Task 5) and the CYK parsing algorithm (Task 6). The EOI (end-of-input) symbol `$` is explicitly added to token streams in all algorithm runners, making the end-of-input condition visible in visualization steps.

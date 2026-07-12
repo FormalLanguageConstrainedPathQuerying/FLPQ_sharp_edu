@@ -63,6 +63,12 @@ type Grammar<'t, 'nt> =
 
 module Grammar =
 
+    /// End-of-input terminal symbol, used to signal the end of token stream (string-based grammars).
+    let eoiTerminal: Terminal<string> = Terminal "$"
+
+    /// End-of-input symbol as a grammar Symbol (string-based grammars).
+    let eoiSymbol: Symbol<string, string> = Symbol.T eoiTerminal
+
     let private classifyToken (token: string) : Symbol<string, string> =
         if System.Char.IsUpper(token[0]) then
             Symbol.N(Nonterminal token)
@@ -388,6 +394,16 @@ module Grammar =
         { g with
             Rules = List.distinct newRules }
 
+    /// Augment a grammar with a fresh start nonterminal S' -> S.
+    /// The augmented grammar has S' -> S as the first rule, making the acceptance
+    /// condition explicit: S' is reduced when the original start is fully parsed.
+    let augmentGrammar (freshStart: Nonterminal<'nt>) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
+        { Rules =
+            { Lhs = freshStart
+              Rhs = NonEmptyList.create (Symbol.N g.Start) [] |> Symbols }
+            :: g.Rules
+          Start = freshStart }
+
     /// A convenience function: generate a fresh nonterminal name from an integer index
     /// for use with string-based grammars (Nonterminal<string>).
     let freshStringNonterminal (i: int) : string = $"N_{i}"
@@ -411,3 +427,36 @@ module Grammar =
         let s3 = eliminateUnit s2
         let s4 = replaceTerminals fresh s3
         s4
+
+
+/// An extended grammar: the original grammar augmented with a fresh start nonterminal S'.
+/// The augmented grammar has S' -> S as the first rule, making the acceptance condition
+/// explicit: S' is reduced when the original start is fully parsed.
+/// The type preserves the relationship between the original and augmented grammars.
+type ExtendedGrammar<'t, 'nt> =
+    { OriginalGrammar: Grammar<'t, 'nt>
+      FreshStart: Nonterminal<'nt>
+      Extended: Grammar<'t, 'nt> }
+
+
+module ExtendedGrammar =
+
+    /// Creates an extended grammar by augmenting the given grammar with a fresh start nonterminal.
+    let create (freshStart: Nonterminal<'nt>) (grammar: Grammar<'t, 'nt>) : ExtendedGrammar<'t, 'nt> =
+        let ext = Grammar.augmentGrammar freshStart grammar
+
+        { OriginalGrammar = grammar
+          FreshStart = freshStart
+          Extended = ext }
+
+    /// Returns the original (non-extended) grammar.
+    let originalGrammar (eg: ExtendedGrammar<'t, 'nt>) : Grammar<'t, 'nt> = eg.OriginalGrammar
+
+    /// Returns the fresh start nonterminal (S') used for augmentation.
+    let freshStart (eg: ExtendedGrammar<'t, 'nt>) : Nonterminal<'nt> = eg.FreshStart
+
+    /// Returns the extended (augmented) grammar.
+    let extGrammar (eg: ExtendedGrammar<'t, 'nt>) : Grammar<'t, 'nt> = eg.Extended
+
+    /// Returns the start nonterminal of the original grammar.
+    let originalStart (eg: ExtendedGrammar<'t, 'nt>) : Nonterminal<'nt> = eg.OriginalGrammar.Start
