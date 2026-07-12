@@ -83,12 +83,11 @@ module GLL =
               StateCount = stateCount
               VertexCount = vertexCount }
 
-        let flat = RSM.flattenRsm rsm
-        let stateInfo = flat.StateInfo
-        let blockStart = flat.BlockStart
-        let finalStates = flat.FinalStates
-        let termTrans = flat.TermTrans
-        let nontermTrans = flat.NontermTrans
+        let stateInfo = rsm.StateInfo
+        let blockStart = rsm.BlockStart
+        let finalStates = rsm.FinalStates
+        let termTrans = RSM.termTransitions rsm
+        let nontermTrans = RSM.nontermTransitions rsm
         let graphEdges = GraphHelpers.collectGraphEdges inputGraph
 
         let gss = GSS.init stateCount vertexCount

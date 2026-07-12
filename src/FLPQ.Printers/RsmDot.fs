@@ -98,7 +98,7 @@ module RsmDot =
         sb.AppendLine("  rankdir=LR;") |> ignore
         sb.AppendLine("  compound=true;") |> ignore
 
-        rsm.Blocks
+        RSM.blocks rsm
         |> List.iteri (fun idx block ->
             let isStartBlock = block.Nonterminal = rsm.StartBlock
             blockToSubgraph terminalPrinter nonterminalPrinter idx block isStartBlock sb)

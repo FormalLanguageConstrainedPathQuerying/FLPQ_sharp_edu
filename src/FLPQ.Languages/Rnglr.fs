@@ -417,6 +417,13 @@ module Rnglr =
 
         pathIndex
 
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (vertexCount: int) : bool =
-        let entries = PathIndex.get pathIndex 0 0 1 (vertexCount - 1)
+    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (extRsm: RSM<'t, 'nt>) (vertexCount: int) : bool =
+        let startGlobalState =
+            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+            | true, gs -> gs
+            | false, _ -> 0
+
+        let finalGlobalState = startGlobalState + 1
+
+        let entries = PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
         not (Set.isEmpty entries)

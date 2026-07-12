@@ -149,9 +149,10 @@ module TestHelpers =
         let startNt = g.Start
         let freshStart = Nonterminal("S'")
         let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         assertPathIndexInvariant "rnglrAccepts" pathIndex
-        Rnglr.isAccepted pathIndex (Graph.vertexCount graph)
+        Rnglr.isAccepted pathIndex extRsm (Graph.vertexCount graph)
 
     let nonEpsilon (tree: DerivationTree<string, string>) : bool =
         match tree with
@@ -217,17 +218,25 @@ module TestHelpers =
         let startNt = g.Start
         let freshStart = Nonterminal("S'")
         let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         assertPathIndexInvariant "rnglrAcceptsWithSppfCheck" pathIndex
         let vc = Graph.vertexCount graph
 
-        if not (Rnglr.isAccepted pathIndex vc) then
+        if not (Rnglr.isAccepted pathIndex extRsm vc) then
             false
         else
+            let startGlobalState =
+                match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            let finalGlobalState = startGlobalState + 1
+
             let rootRanges =
-                [ { FromState = 0
+                [ { FromState = startGlobalState
                     FromVertex = 0
-                    ToState = 1
+                    ToState = finalGlobalState
                     ToVertex = vc - 1 } ]
 
             let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges

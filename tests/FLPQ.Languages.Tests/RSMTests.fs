@@ -5,16 +5,13 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
 let private makeSBlock () : RsmBlock<string, string> =
-    let nt = Nonterminal "S"
     let aSym = RsmSymbol.RTerm(Terminal "a")
     let transitions = [ (0, aSym, 1) ]
     let dfa = Dfa.fromTransitions [ 0; 1 ] transitions 0 (set [ 1 ])
 
-    { Nonterminal = nt; Dfa = dfa }
+    { Nonterminal = Nonterminal "S"; Dfa = dfa }
 
-let private makeSimpleRSM () : RSM<string, string> =
-    { Blocks = [ makeSBlock () ]
-      StartBlock = Nonterminal "S" }
+let private makeSimpleRSM () : RSM<string, string> = RsmBuilder.buildRSMFromText "S -> a"
 
 
 module RsmBlockTests =
@@ -99,23 +96,12 @@ module RSMTests =
     let ``RSM with two blocks`` () =
         let ntA = Nonterminal "A"
         let ntB = Nonterminal "B"
-        let xSym = RsmSymbol.RTerm(Terminal "x")
 
-        let blockA =
-            { Nonterminal = ntA
-              Dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
+        let rsm = RsmBuilder.buildRSMFromText "A -> x\nB -> x"
 
-        let blockB =
-            { Nonterminal = ntB
-              Dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, xSym, 1) ] 0 (set [ 1 ]) }
-
-        let rsm =
-            { Blocks = [ blockA; blockB ]
-              StartBlock = ntA }
-
-        Assert.Equal(2, rsm.Blocks.Length)
+        Assert.Equal(2, RSM.blocks rsm |> List.length)
         Assert.Equal(ntA, rsm.StartBlock)
-        Assert.Equal<int>(set [ 0 ], RSM.startStates rsm)
+        Assert.Equal<int>(set [ 0; 2 ], RSM.startStates rsm)
 
 
 module RsmBuilderPropertyTests =
@@ -135,7 +121,7 @@ module RsmBuilderPropertyTests =
         |> List.forall (fun text ->
             let rsm = RsmBuilder.buildRSMFromText text
 
-            rsm.Blocks |> List.forall (fun block -> Dfa.isDeterministic block.Dfa))
+            RSM.blocks rsm |> List.forall (fun block -> Dfa.isDeterministic block.Dfa))
 
     [<Fact>]
     let ``buildRSMFromText blocks match nonterminal count`` () =
@@ -150,13 +136,13 @@ module RsmBuilderPropertyTests =
             let rsm = RsmBuilder.buildRSMFromText text
             let rules = EbnfParser.parseEbnf text
             let grouped = EbnfParser.groupRules rules
-            rsm.Blocks.Length = Map.count grouped)
+            RSM.blocks rsm |> List.length = Map.count grouped)
 
     [<Fact>]
     let ``buildRSMFromText handles single terminal rule`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a"
-        Assert.Equal(1, rsm.Blocks.Length)
-        Assert.True(Dfa.isDeterministic rsm.Blocks.Head.Dfa)
+        Assert.Equal(1, RSM.blocks rsm |> List.length)
+        Assert.True(Dfa.isDeterministic (RSM.blocks rsm).Head.Dfa)
 
 
 module ExtendedRSMTests =
@@ -191,17 +177,20 @@ module ExtendedRSMTests =
         let freshStart = Nonterminal "S'"
         let extRsm = ExtendedRSM.create freshStart rsm
 
-        Assert.Equal(rsm.Blocks.Length + 1, (ExtendedRSM.extRsm extRsm).Blocks.Length)
+        Assert.Equal(
+            RSM.blocks rsm |> List.length |> (+) 1,
+            RSM.blocks (ExtendedRSM.extRsm extRsm) |> List.length
+        )
 
     [<Fact>]
-    let ``flattenExtRsm successfully flattens extended RSM`` () =
+    let ``extended RSM has flat state info`` () =
         let rsm = RsmBuilder.buildRSMFromText "S -> a b"
         let freshStart = Nonterminal "S'"
         let extRsm = ExtendedRSM.create freshStart rsm
-        let flat = ExtendedRSM.flattenExtRsm extRsm
+        let extFlat = ExtendedRSM.extRsm extRsm
 
-        Assert.True(flat.StateInfo.Length > 0)
-        Assert.True(flat.BlockStart.Count > 0)
+        Assert.True(extFlat.StateInfo.Length > 0)
+        Assert.True(extFlat.BlockStart.Count > 0)
 
     [<Fact>]
     let ``extBlocks returns blocks including fresh start block`` () =
@@ -210,8 +199,9 @@ module ExtendedRSMTests =
         let extRsm = ExtendedRSM.create freshStart rsm
         let blocks = ExtendedRSM.extBlocks extRsm
 
-        Assert.Equal(rsm.Blocks.Length + 1, blocks.Length)
-        Assert.Equal(freshStart, blocks.Head.Nonterminal)
+        Assert.Equal(RSM.blocks rsm |> List.length |> (+) 1, blocks.Length)
+        Assert.Contains(freshStart, blocks |> List.map _.Nonterminal)
+        Assert.Contains(Nonterminal "S", blocks |> List.map _.Nonterminal)
 
     [<Fact>]
     let ``stateCount of extended RSM is greater than original`` () =
@@ -246,4 +236,9 @@ module ExtendedRSMTests =
         let ext1 = ExtendedRSM.create freshStart rsm
         let ext2 = ExtendedRSM.create freshStart rsm
 
-        Assert.Equal(ExtendedRSM.extRsm ext1, ExtendedRSM.extRsm ext2)
+        let rsm1 = ExtendedRSM.extRsm ext1
+        let rsm2 = ExtendedRSM.extRsm ext2
+        Assert.Equal(rsm1.StateCount, rsm2.StateCount)
+        Assert.Equal(Nonterminal "S'", rsm1.StartBlock)
+        Assert.Equal(Nonterminal "S'", rsm2.StartBlock)
+        Assert.Equal<int>(rsm1.FinalStates, rsm2.FinalStates)

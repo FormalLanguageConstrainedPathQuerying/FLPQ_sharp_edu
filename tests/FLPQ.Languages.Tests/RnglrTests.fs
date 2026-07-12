@@ -16,26 +16,30 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
     let graph = TestHelpers.terminalsToGraph input
     let startNt = (RSM.startBlock rsm).Nonterminal
     let rsmFixed = { rsm with StartBlock = startNt }
+    let extRsm = RSM.extendWithStart freshStart rsmFixed
     let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
     TestHelpers.assertPathIndexInvariant "rnglrTree" pathIndex
     let vc = Graph.vertexCount graph
 
-    if not (Rnglr.isAccepted pathIndex vc) then
+    if not (Rnglr.isAccepted pathIndex extRsm vc) then
         None
     else
         let rootRanges =
-            [ { FromState = 0
+            let startGlobal =
+                match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            [ { FromState = startGlobal
                 FromVertex = 0
-                ToState = 1
+                ToState = startGlobal + 1
                 ToVertex = vc - 1 } ]
 
         let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
         TestHelpers.assertSppfInvariant sppf
 
-        let extRsm = RSM.extendWithStart freshStart rsmFixed
-        let flat = RSM.flattenRsm extRsm
-        let stateInfo = flat.StateInfo
-        let blockStart = flat.BlockStart
+        let stateInfo = extRsm.StateInfo
+        let blockStart = extRsm.BlockStart
 
         let blockFinals =
             System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
@@ -51,10 +55,15 @@ let private rnglrTree (g: Grammar<string, string>) (input: string list) : Deriva
 
                 blockFinals.[nt] <- Set.add i current
 
+        let startGlobal =
+            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+            | true, gs -> gs
+            | false, _ -> 0
+
         let rootRanges =
-            [ { FromState = 0
+            [ { FromState = startGlobal
                 FromVertex = 0
-                ToState = 1
+                ToState = startGlobal + 1
                 ToVertex = vc - 1 } ]
 
         rootRanges
@@ -226,15 +235,21 @@ module RnglrRegexEquivalence =
             { rsm with
                 StartBlock = Nonterminal "S" }
 
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         TestHelpers.assertPathIndexInvariant "rnglrRegexEquiv" pathIndex
         let vc = Graph.vertexCount graph
 
-        if Rnglr.isAccepted pathIndex vc then
+        if Rnglr.isAccepted pathIndex extRsm vc then
             let rootRanges =
-                [ { FromState = 0
+                let startGlobal =
+                    match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                    | true, gs -> gs
+                    | false, _ -> 0
+
+                [ { FromState = startGlobal
                     FromVertex = 0
-                    ToState = 1
+                    ToState = startGlobal + 1
                     ToVertex = vc - 1 } ]
 
             let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
@@ -721,22 +736,27 @@ module RnglrGrammar159D =
         TestHelpers.assertPathIndexInvariant "rnglrTreeRsm" pathIndex
         let vc = Graph.vertexCount graph
 
-        if not (Rnglr.isAccepted pathIndex vc) then
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
+
+        if not (Rnglr.isAccepted pathIndex extRsm vc) then
             None
         else
             let rootRanges =
-                [ { FromState = 0
+                let startGlobal =
+                    match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                    | true, gs -> gs
+                    | false, _ -> 0
+
+                [ { FromState = startGlobal
                     FromVertex = 0
-                    ToState = 1
+                    ToState = startGlobal + 1
                     ToVertex = vc - 1 } ]
 
             let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
             TestHelpers.assertSppfInvariant sppf
 
-            let extRsm = RSM.extendWithStart freshStart rsmFixed
-            let flat = RSM.flattenRsm extRsm
-            let stateInfo = flat.StateInfo
-            let blockStart = flat.BlockStart
+            let stateInfo = extRsm.StateInfo
+            let blockStart = extRsm.BlockStart
 
             let blockFinals =
                 System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
@@ -753,9 +773,14 @@ module RnglrGrammar159D =
                     blockFinals.[nt] <- Set.add i current
 
             let rootRanges =
-                [ { FromState = 0
+                let startGlobal =
+                    match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                    | true, gs -> gs
+                    | false, _ -> 0
+
+                [ { FromState = startGlobal
                     FromVertex = 0
-                    ToState = 1
+                    ToState = startGlobal + 1
                     ToVertex = vc - 1 } ]
 
             rootRanges
@@ -961,9 +986,8 @@ module SppfDotTests =
         let vc = Graph.vertexCount graph
 
         let extRsm = RSM.extendWithStart freshStart rsmFixed
-        let flat = RSM.flattenRsm extRsm
-        let stateInfo = flat.StateInfo
-        let blockStart = flat.BlockStart
+        let stateInfo = extRsm.StateInfo
+        let blockStart = extRsm.BlockStart
 
         let (Nonterminal startNtName) = (RSM.startBlock rsmFixed).Nonterminal
 
@@ -982,9 +1006,14 @@ module SppfDotTests =
                 blockFinals.[nt] <- Set.add i current
 
         let rootRanges =
-            [ { FromState = 0
+            let startGlobal =
+                match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            [ { FromState = startGlobal
                 FromVertex = 0
-                ToState = 1
+                ToState = startGlobal + 1
                 ToVertex = vc - 1 } ]
 
         Sppf.buildSppfFromIndex pathIndex rootRanges

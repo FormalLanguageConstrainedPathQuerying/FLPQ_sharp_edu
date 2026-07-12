@@ -204,8 +204,8 @@ module RsmBuilderTests =
         let rsm = RsmBuilder.buildRSMFromText "S -> a\nS -> b"
         let blocks = RSM.blocks rsm
         Assert.Equal(1, List.length blocks)
-        Assert.True(Dfa.isDeterministic rsm.Blocks.Head.Dfa)
-        Assert.True(Dfa.stateCount rsm.Blocks.Head.Dfa >= 1)
+        Assert.True(Dfa.isDeterministic blocks.Head.Dfa)
+        Assert.True(Dfa.stateCount blocks.Head.Dfa >= 1)
 
     [<Fact>]
     let ``Build RSM for expression grammar`` () =

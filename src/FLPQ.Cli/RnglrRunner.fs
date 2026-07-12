@@ -24,9 +24,9 @@ module RnglrRunner =
 
         let pathIndex = Rnglr.buildPathIndex (ExtendedRSM.freshStart extRsm) rsm inputGraph
 
-        let accepted = Rnglr.isAccepted pathIndex vertexCount
+        let accepted = Rnglr.isAccepted pathIndex (ExtendedRSM.extRsm extRsm) vertexCount
 
-        let flatExt = RSM.flattenRsm (ExtendedRSM.extRsm extRsm)
+        let flatExt = ExtendedRSM.extRsm extRsm
         let originalStartBlock = ExtendedRSM.originalStartBlock extRsm
 
         let startGlobalState =
@@ -40,7 +40,7 @@ module RnglrRunner =
             let startBlockOffset =
                 ExtendedRSM.extBlocks extRsm
                 |> List.takeWhile (fun b -> b.Nonterminal <> originalStartBlock.Nonterminal)
-                |> List.sumBy (fun b -> b.Dfa.States.Length)
+                |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
 
             let finalGlobalState = startBlockOffset + finalLocal
 

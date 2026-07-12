@@ -19,9 +19,8 @@ let private gllTree (g: Grammar<string, string>) (input: string list) : Derivati
 
     let startBlock = RSM.startBlock rsm
     let startGlobalState = TestHelpers.globalStartState rsm startBlock.Nonterminal
-    let flat = RSM.flattenRsm rsm
-    let stateInfo = flat.StateInfo
-    let blockStart = flat.BlockStart
+    let stateInfo = rsm.StateInfo
+    let blockStart = rsm.BlockStart
 
     let blockFinals =
         System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
@@ -644,9 +643,8 @@ module GllGrammar159D =
 
         let startBlock = RSM.startBlock rsm
         let startGlobalState = TestHelpers.globalStartState rsm startBlock.Nonterminal
-        let flat = RSM.flattenRsm rsm
-        let stateInfo = flat.StateInfo
-        let blockStart = flat.BlockStart
+        let stateInfo = rsm.StateInfo
+        let blockStart = rsm.BlockStart
 
         let blockFinals =
             System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()

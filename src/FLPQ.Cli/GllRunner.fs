@@ -10,19 +10,18 @@ module GllRunner =
     let runGll (grammarFile: string) (inputFile: string) (outputDir: string) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
-        let flat = RSM.flattenRsm rsm
         let startBlock = RSM.startBlock rsm
         let (Nonterminal startNtName) = startBlock.Nonterminal
 
         let startGlobalState =
-            match flat.BlockStart.TryGetValue(Nonterminal startNtName) with
+            match rsm.BlockStart.TryGetValue(Nonterminal startNtName) with
             | true, gs -> gs
             | false, _ -> failwithf "Start block %s not found in RSM" startNtName
 
         let startBlockOffset =
-            rsm.Blocks
+            RSM.blocks rsm
             |> List.takeWhile (fun b -> b.Nonterminal <> startBlock.Nonterminal)
-            |> List.sumBy (fun b -> b.Dfa.States.Length)
+            |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
 
         let startBlockFinalStates =
             startBlock.Dfa.FinalStates

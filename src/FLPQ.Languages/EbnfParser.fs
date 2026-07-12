@@ -319,7 +319,44 @@ module RsmBuilder =
         let blocks =
             grouped |> Map.toList |> List.map (fun (nt, regexp) -> buildBlockDfa nt regexp)
 
-        { Blocks = blocks
+        let totalStates = blocks |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
+
+        let transitions = Matrix.init totalStates totalStates None
+        let stateInfo = Array.zeroCreate<RsmStateInfo<string>> totalStates
+        let blockStart = System.Collections.Generic.Dictionary<Nonterminal<string>, int>()
+        let mutable finalStates = Set.empty<int>
+        let mutable offset = 0
+
+        for block in blocks do
+            let dfa = block.Dfa
+            let localSize = Dfa.stateCount dfa
+            blockStart.[block.Nonterminal] <- offset + dfa.StartState
+
+            for localState in 0 .. localSize - 1 do
+                let globalState = offset + localState
+                let isFinal = Set.contains localState dfa.FinalStates
+
+                stateInfo.[globalState] <-
+                    { BlockNonterminal = block.Nonterminal
+                      LocalState = localState
+                      IsFinal = isFinal }
+
+                if isFinal then
+                    finalStates <- Set.add globalState finalStates
+
+                for localTarget in 0 .. localSize - 1 do
+                    match Matrix.get dfa.Transitions localState localTarget with
+                    | Some labels ->
+                        Matrix.set transitions (offset + localState) (offset + localTarget) (Some labels)
+                    | None -> ()
+
+            offset <- offset + localSize
+
+        { Transitions = transitions
+          StateCount = totalStates
+          StateInfo = stateInfo
+          BlockStart = blockStart
+          FinalStates = finalStates
           StartBlock = firstNt }
 
     let buildRSMFromText (text: string) : RSM<string, string> =
