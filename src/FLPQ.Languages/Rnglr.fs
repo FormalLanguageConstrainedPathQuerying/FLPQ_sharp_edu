@@ -425,5 +425,7 @@ module Rnglr =
 
         let finalGlobalState = startGlobalState + 1
 
-        let entries = PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
+        let entries =
+            PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
+
         not (Set.isEmpty entries)

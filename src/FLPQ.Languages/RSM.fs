@@ -101,53 +101,54 @@ module RSM =
         | false, _ -> None
         | true, startGlobal ->
 
-        let globalIndices =
-            rsm.StateInfo
-            |> Array.indexed
-            |> Array.choose (fun (g, info) -> if info.BlockNonterminal = nt then Some(g, info) else None)
+            let globalIndices =
+                rsm.StateInfo
+                |> Array.indexed
+                |> Array.choose (fun (g, info) -> if info.BlockNonterminal = nt then Some(g, info) else None)
 
-        if globalIndices.Length = 0 then
-            None
-        else
+            if globalIndices.Length = 0 then
+                None
+            else
 
-        let globalToLocal =
-            globalIndices |> Array.mapi (fun i (g, _) -> (g, i)) |> Map.ofArray
+                let globalToLocal =
+                    globalIndices |> Array.mapi (fun i (g, _) -> (g, i)) |> Map.ofArray
 
-        let localSize = globalIndices.Length
-        let startLocal = Map.find startGlobal globalToLocal
+                let localSize = globalIndices.Length
+                let startLocal = Map.find startGlobal globalToLocal
 
-        let finalsLocal =
-            globalIndices
-            |> Array.choose (fun (g, info) -> if info.IsFinal then Map.tryFind g globalToLocal else None)
-            |> Set.ofArray
+                let finalsLocal =
+                    globalIndices
+                    |> Array.choose (fun (g, info) -> if info.IsFinal then Map.tryFind g globalToLocal else None)
+                    |> Set.ofArray
 
-        let subTransitions = Matrix.init localSize localSize None
+                let subTransitions = Matrix.init localSize localSize None
 
-        for (globalFrom, _) in globalIndices do
-            for (globalTo, _) in globalIndices do
-                match Matrix.get rsm.Transitions globalFrom globalTo with
-                | Some labels ->
-                    Matrix.set
-                        subTransitions
-                        (globalToLocal.[globalFrom])
-                        (globalToLocal.[globalTo])
-                        (Some labels)
-                | None -> ()
+                for (globalFrom, _) in globalIndices do
+                    for (globalTo, _) in globalIndices do
+                        match Matrix.get rsm.Transitions globalFrom globalTo with
+                        | Some labels ->
+                            Matrix.set
+                                subTransitions
+                                (globalToLocal.[globalFrom])
+                                (globalToLocal.[globalTo])
+                                (Some labels)
+                        | None -> ()
 
-        let localTransitions =
-            [ for fromLocal in 0 .. localSize - 1 do
-                  for toLocal in 0 .. localSize - 1 do
-                      match Matrix.get subTransitions fromLocal toLocal with
-                      | Some labels ->
-                          for label in NonEmptySet.toSeq labels do
-                              match label with
-                              | AutomatonLabel.ATerm sym -> (fromLocal, sym, toLocal)
-                              | _ -> ()
-                      | None -> () ]
+                let localTransitions =
+                    [ for fromLocal in 0 .. localSize - 1 do
+                          for toLocal in 0 .. localSize - 1 do
+                              match Matrix.get subTransitions fromLocal toLocal with
+                              | Some labels ->
+                                  for label in NonEmptySet.toSeq labels do
+                                      match label with
+                                      | AutomatonLabel.ATerm sym -> (fromLocal, sym, toLocal)
+                                      | _ -> ()
+                              | None -> () ]
 
-        let dfa = Dfa.fromTransitions [ 0 .. localSize - 1 ] localTransitions startLocal finalsLocal
+                let dfa =
+                    Dfa.fromTransitions [ 0 .. localSize - 1 ] localTransitions startLocal finalsLocal
 
-        Some { Nonterminal = nt; Dfa = dfa }
+                Some { Nonterminal = nt; Dfa = dfa }
 
     /// Returns the list of all blocks in the RSM, reconstructed from flat storage.
     let blocks (rsm: RSM<'t, 'nt>) : RsmBlock<'t, 'nt> list =
@@ -278,8 +279,7 @@ module ExtendedRSM =
     let extRsm (ersm: ExtendedRSM<'t, 'nt>) : RSM<'t, 'nt> = ersm.ExtendedRsm
 
     /// Returns the start block of the original RSM.
-    let originalStartBlock (ersm: ExtendedRSM<'t, 'nt>) : RsmBlock<'t, 'nt> =
-        RSM.startBlock ersm.OriginalRsm
+    let originalStartBlock (ersm: ExtendedRSM<'t, 'nt>) : RsmBlock<'t, 'nt> = RSM.startBlock ersm.OriginalRsm
 
     /// Returns the start nonterminal of the original RSM.
     let originalStartNonterminal (ersm: ExtendedRSM<'t, 'nt>) : Nonterminal<'nt> =

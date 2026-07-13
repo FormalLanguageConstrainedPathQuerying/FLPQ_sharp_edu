@@ -9,7 +9,8 @@ let private makeSBlock () : RsmBlock<string, string> =
     let transitions = [ (0, aSym, 1) ]
     let dfa = Dfa.fromTransitions [ 0; 1 ] transitions 0 (set [ 1 ])
 
-    { Nonterminal = Nonterminal "S"; Dfa = dfa }
+    { Nonterminal = Nonterminal "S"
+      Dfa = dfa }
 
 let private makeSimpleRSM () : RSM<string, string> = RsmBuilder.buildRSMFromText "S -> a"
 
@@ -177,10 +178,7 @@ module ExtendedRSMTests =
         let freshStart = Nonterminal "S'"
         let extRsm = ExtendedRSM.create freshStart rsm
 
-        Assert.Equal(
-            RSM.blocks rsm |> List.length |> (+) 1,
-            RSM.blocks (ExtendedRSM.extRsm extRsm) |> List.length
-        )
+        Assert.Equal(RSM.blocks rsm |> List.length |> (+) 1, RSM.blocks (ExtendedRSM.extRsm extRsm) |> List.length)
 
     [<Fact>]
     let ``extended RSM has flat state info`` () =

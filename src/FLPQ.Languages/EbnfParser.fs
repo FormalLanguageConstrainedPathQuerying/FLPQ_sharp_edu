@@ -346,8 +346,7 @@ module RsmBuilder =
 
                 for localTarget in 0 .. localSize - 1 do
                     match Matrix.get dfa.Transitions localState localTarget with
-                    | Some labels ->
-                        Matrix.set transitions (offset + localState) (offset + localTarget) (Some labels)
+                    | Some labels -> Matrix.set transitions (offset + localState) (offset + localTarget) (Some labels)
                     | None -> ()
 
             offset <- offset + localSize
