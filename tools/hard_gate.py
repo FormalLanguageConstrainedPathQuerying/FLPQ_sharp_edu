@@ -169,26 +169,16 @@ def main() -> None:
     changed_projects = detect_changed_projects()
 
     # --- Step 1: Format ---
-    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", "."])
-    detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas .) ---")
+    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
+    detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas . --check) ---")
     detailed_logs.append(fmt_stdout.strip() if fmt_stdout else "(no output)")
     if fmt_stderr.strip():
         detailed_logs.append(fmt_stderr.strip())
     if fmt_rc == 0:
         lines.append("Step 1 (Format): OK")
     else:
-        lines.append(f"Step 1 (Format): FAILED (exit code {fmt_rc})")
+        lines.append(f"Step 1 (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
         overall_pass = False
-        lines.append("STATUS: BLOCKED (format failed)")
-        lines.append("")
-        lines.append("--- DETAILED LOG ---")
-        lines.append("")
-        for log in detailed_logs:
-            lines.append(log)
-            lines.append("")
-        with open(OUTPUT_FILE, "w") as f:
-            f.write("\n".join(lines))
-        sys.exit(1)
 
     # --- Step 2: Build ---
     build_rc, build_stdout, build_stderr = run_cmd(

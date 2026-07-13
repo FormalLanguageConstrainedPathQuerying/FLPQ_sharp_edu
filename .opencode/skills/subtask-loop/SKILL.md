@@ -67,15 +67,19 @@ Update all task-related documentation per the `documentation` skill. The skill r
 
 ### 4. Pre-Commit Check
 
-Run the quality check tool:
+First, run fantomas manually to format all files:
+
+```bash
+dotnet fantomas .
+```
+
+Stage any formatted files (`git add`). Then run the quality check tool:
 
 ```bash
 python3 tools/quality_check.py
 ```
 
-This runs format + build without timeout. Read and deeply analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
-
-If format modified files, re-stage them (`git add`) before proceeding.
+This runs format check + build without timeout. Read and deeply analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
 
 **Hard gate — do not proceed to step 5 unless this passes.**
 

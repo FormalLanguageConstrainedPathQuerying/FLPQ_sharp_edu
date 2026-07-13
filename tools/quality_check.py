@@ -38,12 +38,12 @@ def main() -> None:
     detailed_logs: list[str] = []
 
     # --- Step 1: Format ---
-    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", "."], "fantomas")
+    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"], "fantomas")
     if fmt_rc == 0:
         lines.append("  Format: OK")
         statuses.append("PASS")
     else:
-        lines.append("  Format: FAILED (exit code {})".format(fmt_rc))
+        lines.append("  Format: FAILED (exit code {} - files need formatting)".format(fmt_rc))
         statuses.append("BLOCKED")
 
     detailed_logs.append("--- FORMAT (dotnet fantomas .) ---")

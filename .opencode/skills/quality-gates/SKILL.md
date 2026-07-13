@@ -14,8 +14,8 @@ The following Python scripts in `tools/` automate quality gate execution. **Alwa
 | Tool | Purpose |
 |------|---------|
 | `tools/detect_changes.py` | Detect projects with modified `.fs` files relative to `dev` |
-| `tools/quality_check.py` | Commit gate: format + build |
-| `tools/hard_gate.py` | Full gate: format + build + tests with coverage + lint on changed projects |
+| `tools/quality_check.py` | Commit gate: format check + build |
+| `tools/hard_gate.py` | Full gate: format check + build + tests with coverage + lint on changed projects |
 
 **Key rules when running these tools:**
 
@@ -90,13 +90,19 @@ Every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipe
 
 Run before every commit. Both steps must pass.
 
+The format step is **check-only**: it verifies formatting but does NOT modify files. You must run fantomas manually before the gate:
+
+```bash
+dotnet fantomas .
+```
+
+Then stage any formatted files (`git add`), then run the gate:
+
 ```bash
 python3 tools/quality_check.py
 ```
 
 Then read and analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
-
-If format modified files, re-stage them (`git add`) before committing.
 
 ## Task Verification
 
