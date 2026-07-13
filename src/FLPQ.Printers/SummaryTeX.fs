@@ -26,13 +26,13 @@ module SummaryTeX =
     let wrapMath (tex: string) : string =
         [ @"\begin{center}"; @"\["; tex; @"\]"; @"\end{center}" ] |> String.concat "\n"
 
-    /// Wraps TeX content in a centered display math environment with resizing.
+    /// Wraps TeX content in a centered math environment with resizing.
     let wrapMathResized (tex: string) : string =
         [ @"\begin{center}"
           @"\resizebox{0.9\textwidth}{!}{%%"
-          @"\["
+          "$"
           tex
-          @"\]"
+          "$"
           "}"
           @"\end{center}" ]
         |> String.concat "\n"
