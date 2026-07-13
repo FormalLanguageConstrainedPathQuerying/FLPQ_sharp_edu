@@ -243,16 +243,173 @@ module TestHelpers =
         else
             false
 
-    let rnglrAcceptsWithSppfCheck (g: Grammar<string, string>) (input: string list) : bool =
-        let rsm = grammarToRsm g
-        let graph = terminalsToGraph input
-        let startNt = g.Start
+    let private buildPathIndexForRsm
+        (rsm: RSM<string, string>)
+        (input: string list)
+        : PathIndex<string, string> * RSM<string, string> * int =
         let freshStart = Nonterminal("S'")
+        let graph = terminalsToGraph input
+        let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
         let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        pathIndex, extRsm, Graph.vertexCount graph
+
+    let rnglrCheckReject (g: Grammar<string, string>) (input: string list) : bool =
+        let rsm = grammarToRsm g
+        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        assertPathIndexInvariant "rnglrCheckReject" pathIndex
+        not (Rnglr.isAccepted pathIndex extRsm vc)
+
+    let rnglrAcceptsAndCheckTree
+        (g: Grammar<string, string>)
+        (input: string list)
+        : DerivationTree<string, string> option =
+        let rsm = grammarToRsm g
+        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        assertPathIndexInvariant "rnglrAcceptsAndCheckTree" pathIndex
+
+        if not (Rnglr.isAccepted pathIndex extRsm vc) then
+            None
+        else
+            let startGlobalState =
+                match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            let finalGlobalState = startGlobalState + 1
+
+            let rootRanges =
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = finalGlobalState
+                    ToVertex = vc - 1 } ]
+
+            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            assertSppfInvariant sppf
+
+            let stateInfo = extRsm.StateInfo
+            let blockStart = extRsm.BlockStart
+
+            let blockFinals =
+                System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
+
+            for i in 0 .. stateInfo.Length - 1 do
+                if stateInfo.[i].IsFinal then
+                    let nt = stateInfo.[i].BlockNonterminal
+
+                    let current =
+                        match blockFinals.TryGetValue(nt) with
+                        | true, s -> s
+                        | false, _ -> Set.empty
+
+                    blockFinals.[nt] <- Set.add i current
+
+            let rootRangesForExtraction =
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = startGlobalState + 1
+                    ToVertex = vc - 1 } ]
+
+            let tree =
+                rootRangesForExtraction
+                |> List.tryPick (fun rk ->
+                    GLL.extractDerivationTree
+                        pathIndex
+                        stateInfo
+                        blockStart
+                        blockFinals
+                        rk.FromState
+                        rk.FromVertex
+                        rk.ToState
+                        rk.ToVertex)
+
+            match tree with
+            | Some t ->
+                let leaves = DerivationTree.leaves t
+
+                if leaves = input then
+                    Some t
+                else
+                    failwithf "Tree leaves %A ≠ input %A for grammar" leaves input
+            | None -> None
+
+    let rnglrAcceptsAndCheckTreeRsm
+        (rsm: RSM<string, string>)
+        (input: string list)
+        : DerivationTree<string, string> option =
+        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        assertPathIndexInvariant "rnglrAcceptsAndCheckTreeRsm" pathIndex
+
+        if not (Rnglr.isAccepted pathIndex extRsm vc) then
+            None
+        else
+            let startGlobalState =
+                match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            let finalGlobalState = startGlobalState + 1
+
+            let rootRanges =
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = finalGlobalState
+                    ToVertex = vc - 1 } ]
+
+            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            assertSppfInvariant sppf
+
+            let stateInfo = extRsm.StateInfo
+            let blockStart = extRsm.BlockStart
+
+            let blockFinals =
+                System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
+
+            for i in 0 .. stateInfo.Length - 1 do
+                if stateInfo.[i].IsFinal then
+                    let nt = stateInfo.[i].BlockNonterminal
+
+                    let current =
+                        match blockFinals.TryGetValue(nt) with
+                        | true, s -> s
+                        | false, _ -> Set.empty
+
+                    blockFinals.[nt] <- Set.add i current
+
+            let rootRangesForExtraction =
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = startGlobalState + 1
+                    ToVertex = vc - 1 } ]
+
+            let tree =
+                rootRangesForExtraction
+                |> List.tryPick (fun rk ->
+                    GLL.extractDerivationTree
+                        pathIndex
+                        stateInfo
+                        blockStart
+                        blockFinals
+                        rk.FromState
+                        rk.FromVertex
+                        rk.ToState
+                        rk.ToVertex)
+
+            match tree with
+            | Some t ->
+                let leaves = DerivationTree.leaves t
+
+                if leaves = input then
+                    Some t
+                else
+                    failwithf "Tree leaves %A ≠ input %A for RSM" leaves input
+            | None -> None
+
+    let rnglrAcceptsWithSppfCheck (g: Grammar<string, string>) (input: string list) : bool =
+        let rsm = grammarToRsm g
+        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
         assertPathIndexInvariant "rnglrAcceptsWithSppfCheck" pathIndex
-        let vc = Graph.vertexCount graph
 
         if not (Rnglr.isAccepted pathIndex extRsm vc) then
             false
