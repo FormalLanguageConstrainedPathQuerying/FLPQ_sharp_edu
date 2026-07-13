@@ -310,11 +310,11 @@ module RsmBuilder =
 
         { Nonterminal = nt; Dfa = dfa }
 
-    let buildRSM (grouped: Map<Nonterminal<string>, Regexp<string, string>>) : RSM<string, string> =
+    let buildRSMWithStart (grouped: Map<Nonterminal<string>, Regexp<string, string>>) (startNt: Nonterminal<string>) : RSM<string, string> =
         if Map.isEmpty grouped then
             invalidArg (nameof grouped) "Grammar must contain at least one rule"
 
-        let firstNt = grouped |> Map.keys |> Seq.head
+        let firstNt = startNt
 
         let blocks =
             grouped |> Map.toList |> List.map (fun (nt, regexp) -> buildBlockDfa nt regexp)
@@ -358,10 +358,19 @@ module RsmBuilder =
           FinalStates = finalStates
           StartBlock = firstNt }
 
+    let buildRSM (grouped: Map<Nonterminal<string>, Regexp<string, string>>) : RSM<string, string> =
+        buildRSMWithStart grouped (grouped |> Map.keys |> Seq.head)
+
     let buildRSMFromText (text: string) : RSM<string, string> =
         let rules = EbnfParser.parseEbnf text
         let grouped = EbnfParser.groupRules rules
-        buildRSM grouped
+
+        let startNt =
+            match rules with
+            | (nt, _) :: _ -> nt
+            | [] -> invalidArg (nameof text) "Grammar must contain at least one rule"
+
+        buildRSMWithStart grouped startNt
 
     let buildRSMFromFile (path: string) : RSM<string, string> =
         File.ReadAllText path |> buildRSMFromText

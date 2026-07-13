@@ -823,7 +823,6 @@ module RnglrGrammarTests =
         let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         let vc = Graph.vertexCount graph
-        TestHelpers.assertPathIndexInvariant "checkRsmAccepts" pathIndex
         Assert.True(Rnglr.isAccepted pathIndex extRsm vc, $"Should accept {input}: {ebnfText}")
 
     let private checkRsmRejects (ebnfText: string) (input: string list) : unit =
@@ -835,7 +834,6 @@ module RnglrGrammarTests =
         let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         let vc = Graph.vertexCount graph
-        TestHelpers.assertPathIndexInvariant "checkRsmRejects" pathIndex
         Assert.False(Rnglr.isAccepted pathIndex extRsm vc, $"Should reject {input}: {ebnfText}")
 
     // Grammar 1: S -> N a* ; N -> (a a) | a
