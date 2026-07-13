@@ -811,3 +811,109 @@ module RnglrEpsilonGrammars =
 
         for input in rejectInputs do
             checkRejects g input
+
+module RnglrGrammarTests =
+
+    let private checkRsmAccepts (ebnfText: string) (input: string list) : unit =
+        let rsm = RsmBuilder.buildRSMFromText ebnfText
+        let graph = TestHelpers.terminalsToGraph input
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let freshStart = Nonterminal("S'")
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
+        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        let vc = Graph.vertexCount graph
+        TestHelpers.assertPathIndexInvariant "checkRsmAccepts" pathIndex
+        Assert.True(Rnglr.isAccepted pathIndex extRsm vc, $"Should accept {input}: {ebnfText}")
+
+    let private checkRsmRejects (ebnfText: string) (input: string list) : unit =
+        let rsm = RsmBuilder.buildRSMFromText ebnfText
+        let graph = TestHelpers.terminalsToGraph input
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let freshStart = Nonterminal("S'")
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
+        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
+        let vc = Graph.vertexCount graph
+        TestHelpers.assertPathIndexInvariant "checkRsmRejects" pathIndex
+        Assert.False(Rnglr.isAccepted pathIndex extRsm vc, $"Should reject {input}: {ebnfText}")
+
+    // Grammar 1: S -> N a* ; N -> (a a) | a
+    module Grammar1 =
+        let private g = "S -> N a*\nN -> (a a) | a"
+
+        let private acceptInputs =
+            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
+
+        let private rejectInputs =
+            [ []; [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "a"; "a"; "b" ]; [ "a"; "b"; "a"; "a" ] ]
+
+        [<Fact>]
+        let ``S -> N a* accepts valid strings`` () =
+            for input in acceptInputs do
+                checkRsmAccepts g input
+
+        [<Fact>]
+        let ``S -> N a* rejects invalid strings`` () =
+            for input in rejectInputs do
+                checkRsmRejects g input
+
+    // Grammar 2: S -> a* N ; N -> a | (a a)
+    module Grammar2 =
+        let private g = "S -> a* N\nN -> a | (a a)"
+
+        let private acceptInputs =
+            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
+
+        let private rejectInputs =
+            [ []; [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "a"; "a"; "b" ]; [ "a"; "b"; "a"; "a" ] ]
+
+        [<Fact>]
+        let ``S -> a* N accepts valid strings`` () =
+            for input in acceptInputs do
+                checkRsmAccepts g input
+
+        [<Fact>]
+        let ``S -> a* N rejects invalid strings`` () =
+            for input in rejectInputs do
+                checkRsmRejects g input
+
+    // Grammar 3: S -> N* ; N -> a | (a a)
+    module Grammar3 =
+        let private g = "S -> N*\nN -> a | (a a)"
+
+        let private acceptInputs =
+            [ []; [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
+
+        let private rejectInputs =
+            [ [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "a"; "a"; "b" ]; [ "a"; "b"; "a"; "a" ] ]
+
+        [<Fact>]
+        let ``S -> N* accepts valid strings`` () =
+            for input in acceptInputs do
+                checkRsmAccepts g input
+
+        [<Fact>]
+        let ``S -> N* rejects invalid strings`` () =
+            for input in rejectInputs do
+                checkRsmRejects g input
+
+    // Grammar 4: S -> a | S S | S S S
+    module Grammar4 =
+        let private g = "S -> a\nS -> S S\nS -> S S S"
+
+        let private acceptInputs =
+            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
+
+        let private rejectInputs =
+            [ []; [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "a"; "a"; "b" ]; [ "a"; "b"; "a"; "a" ] ]
+
+        [<Fact>]
+        let ``S -> a | S S | S S S accepts valid strings`` () =
+            for input in acceptInputs do
+                checkRsmAccepts g input
+
+        [<Fact>]
+        let ``S -> a | S S | S S S rejects invalid strings`` () =
+            for input in rejectInputs do
+                checkRsmRejects g input
