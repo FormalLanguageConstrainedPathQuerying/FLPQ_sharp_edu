@@ -738,3 +738,76 @@ module SppfDotTests =
         TestHelpers.assertSppfInvariant sppf
 
         Assert.NotEmpty(sppf.RootIndices)
+
+module RnglrEpsilonGrammars =
+
+    let private checkAccepts (grammarText: string) =
+        let g = Grammar.parseGrammar grammarText
+
+        match TestHelpers.rnglrAcceptsAndCheckTree g [] with
+        | Some _ -> ()
+        | None -> Assert.True(false, $"Should accept empty string: {grammarText}")
+
+    let private checkRejects (grammarText: string) (testStr: string list) =
+        Assert.True(
+            TestHelpers.rnglrCheckReject (Grammar.parseGrammar grammarText) testStr,
+            $"Should reject {testStr}: {grammarText}"
+        )
+
+    let private rejectInputs = [ [ "a" ]; [ "b" ]; [ "a"; "b" ]; [ "a"; "a" ]; [ "b"; "b" ] ]
+
+    [<Fact>]
+    let ``S -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> N; N -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> N\nN -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> N N; N -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> N N\nN -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> N*; N -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> N*\nN -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> S S | eps accepts empty, rejects non-empty`` () =
+        let g = "S -> S S\nS -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> A B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> A B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
+
+    [<Fact>]
+    let ``S -> A | B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
+        let g = "S -> A\nS -> B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
+        checkAccepts g
+
+        for input in rejectInputs do
+            checkRejects g input
