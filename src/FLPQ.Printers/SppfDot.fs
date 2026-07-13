@@ -36,9 +36,13 @@ module SppfDot =
                     sprintf "%s [%d,%d]" (terminalPrinter t) l r, "oval", ""
                 | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r) ->
                     sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r, "oval", ""
-                | SppfNodeInfo.SppfEpsilon p -> sprintf "ε @%d" p, "none", ""
+                | SppfNodeInfo.SppfEpsilon(optNt, p) ->
+                    match optNt with
+                    | Some(Nonterminal nt) -> sprintf "%s^ε @%d" (nonterminalPrinter nt) p, "none", ""
+                    | None -> sprintf "ε @%d" p, "none", ""
                 | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]→[s%d,v%d]" fs fp ts tp, "rectangle", ""
-                | SppfNodeInfo.SppfIntermediate(s, p) -> sprintf "I(%d,%d)" s p, "diamond", ""
+                | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
+                    sprintf "I(%d,%d) @[s%d,v%d]→[s%d,v%d]" s p fs fp ts tp, "diamond", ""
 
             let rootStyle =
                 if Set.contains i rootSet then

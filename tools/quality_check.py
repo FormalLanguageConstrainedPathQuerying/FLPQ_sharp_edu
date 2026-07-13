@@ -62,9 +62,6 @@ def main() -> None:
     if build_rc == 0 and "Build succeeded" in build_output:
         lines.append("  Build: OK (Build succeeded)")
         statuses.append("PASS")
-    elif "Build succeeded" in build_output:
-        lines.append("  Build: OK (Build succeeded)")
-        statuses.append("PASS")
     else:
         # Count errors
         error_lines = [l for l in build_output.split("\n") if "error " in l.lower()]

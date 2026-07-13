@@ -10,8 +10,8 @@ open FLPQ.GraphAnalysis
 type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
     | SppfTerminal of Terminal<'t> * leftPos: int * rightPos: int
     | SppfNonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int
-    | SppfEpsilon of pos: int
-    | SppfIntermediate of state: int * pos: int
+    | SppfEpsilon of Nonterminal<'nt> option * pos: int
+    | SppfIntermediate of state: int * pos: int * fromState: int * fromPos: int * toState: int * toPos: int
     | SppfRange of fromState: int * fromPos: int * toState: int * toPos: int
 
 /// Edge labels in the SPPF graph encoding the tree/forest structure.
@@ -47,7 +47,7 @@ module Sppf =
         let terminalNodeMap = Dictionary<Terminal<'t> * int * int, int>()
         let nonterminalNodeMap = Dictionary<Nonterminal<'nt> * int * int, int>()
         let epsilonNodeMap = Dictionary<int, int>()
-        let intermediateNodeMap = Dictionary<int * int, int>()
+        let intermediateNodeMap = Dictionary<int * int * int * int * int * int, int>()
 
         let getOrCreateNode (info: SppfNodeInfo<'t, 'nt>) : int =
             match info with
@@ -73,7 +73,7 @@ module Sppf =
                     nonterminalNodeMap.[key] <- idx
                     idx
 
-            | SppfNodeInfo.SppfEpsilon p ->
+            | SppfNodeInfo.SppfEpsilon(_, p) ->
                 match epsilonNodeMap.TryGetValue(p) with
                 | true, idx -> idx
                 | false, _ ->
@@ -82,8 +82,8 @@ module Sppf =
                     epsilonNodeMap.[p] <- idx
                     idx
 
-            | SppfNodeInfo.SppfIntermediate(s, p) ->
-                let key = (s, p)
+            | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
+                let key = (s, p, fs, fp, ts, tp)
 
                 match intermediateNodeMap.TryGetValue(key) with
                 | true, idx -> idx
@@ -146,18 +146,22 @@ module Sppf =
                         addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
                         nonterminalNodeIdx <- Some ntNode
 
-                    | PathIndexEntry.PEpsilonNonterminal _ ->
-                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon fromPos)
+                    | PathIndexEntry.PEpsilonNonterminal nt ->
+                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative epsNode
 
                     | PathIndexEntry.PIntermediate(state, pos) ->
-                        let interNode = getOrCreateNode (SppfNodeInfo.SppfIntermediate(state, pos))
+                        let interNode =
+                            getOrCreateNode (
+                                SppfNodeInfo.SppfIntermediate(state, pos, fromState, fromPos, toState, toPos)
+                            )
+
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative interNode
 
                         let leftEntries = PathIndex.get pathIndex fromState fromPos state pos
 
                         if Set.isEmpty leftEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon fromPos)
+                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, fromPos))
                             addEdge interNode SppfEdgeLabel.LeftChild epsNode
                         else
                             let leftChild = processRange fromState fromPos state pos
@@ -166,7 +170,7 @@ module Sppf =
                         let rightEntries = PathIndex.get pathIndex state pos toState toPos
 
                         if Set.isEmpty rightEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon toPos)
+                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, toPos))
                             addEdge interNode SppfEdgeLabel.RightChild epsNode
                         else
                             let rightChild = processRange state pos toState toPos
@@ -224,6 +228,32 @@ module Sppf =
                             toPos
 
                     errors <- msg :: errors
+            | _ -> ()
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
+
+    let validateIntermediateChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable errors = []
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfIntermediate _ ->
+                let outgoing =
+                    [ for j in 0 .. vc - 1 do
+                          let lbl = Matrix.get sppf.Graph.Edges i j
+
+                          if lbl.IsSome then
+                              lbl.Value ]
+
+                let hasLeft = outgoing |> List.contains SppfEdgeLabel.LeftChild
+                let hasRight = outgoing |> List.contains SppfEdgeLabel.RightChild
+
+                if not hasLeft then
+                    errors <- sprintf "Intermediate node %d has no LeftChild edge" i :: errors
+
+                if not hasRight then
+                    errors <- sprintf "Intermediate node %d has no RightChild edge" i :: errors
             | _ -> ()
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)

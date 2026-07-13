@@ -23,6 +23,14 @@ module TestHelpers =
             let msg = "SPPF range node children violations:\n  " + String.concat "\n  " errors
             failwith msg
 
+        match Sppf.validateIntermediateChildren sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg =
+                "SPPF intermediate node children violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
     let grammarToEbnfText (g: Grammar<string, string>) : string =
         g.Rules
         |> List.map (fun r ->

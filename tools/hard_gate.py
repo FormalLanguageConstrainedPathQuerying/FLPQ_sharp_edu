@@ -61,11 +61,6 @@ def run_cmd(cmd: list[str]) -> tuple[int, str, str]:
         return -1, "", f"ERROR: {e}"
 
 
-def get_dotnet_root() -> str:
-    """Get DOTNET_ROOT from environment or fall back to /usr/lib/dotnet."""
-    return os.environ.get("DOTNET_ROOT", "/usr/lib/dotnet")
-
-
 def detect_changed_projects() -> list[str]:
     """Return list of changed .fsproj paths relative to dev, or empty list if none."""
     try:
@@ -167,8 +162,6 @@ def main() -> None:
     lines: list[str] = []
     lines.append("HARD GATE SUMMARY")
     lines.append("")
-
-    dotnet_root = get_dotnet_root()
     detailed_logs: list[str] = []
     overall_pass = True
 
@@ -235,27 +228,31 @@ def main() -> None:
     detailed_logs.append(test_output.strip())
 
     # Check test results
-    failed_count = 0
-    skipped_count = 0
-    for line in test_output.split("\n"):
-        if "Failed:" in line or "Failed!" in line:
-            import re
-            m = re.search(r"Failed[:\!]\s*(\d+)", line)
-            if m:
-                # take the last occurrence (total line)
-                failed_count = max(failed_count, int(m.group(1)))
-        if "Skipped:" in line:
-            import re
-            m = re.search(r"Skipped:\s*(\d+)", line)
-            if m:
-                skipped_count = max(skipped_count, int(m.group(1)))
-
-    test_ok = failed_count == 0 and skipped_count == 0
-    if test_ok:
-        lines.append("Step 3 (Tests): OK (0 failed, 0 skipped)")
-    else:
-        lines.append(f"Step 3 (Tests): BLOCKED ({failed_count} failed, {skipped_count} skipped)")
+    if test_rc != 0:
+        lines.append(f"Step 3 (Tests): FAILED (test runner exit code {test_rc})")
         overall_pass = False
+    else:
+        failed_count = 0
+        skipped_count = 0
+        for line in test_output.split("\n"):
+            if "Failed:" in line or "Failed!" in line:
+                import re
+                m = re.search(r"Failed[:\!]\s*(\d+)", line)
+                if m:
+                    # take the last occurrence (total line)
+                    failed_count = max(failed_count, int(m.group(1)))
+            if "Skipped:" in line:
+                import re
+                m = re.search(r"Skipped:\s*(\d+)", line)
+                if m:
+                    skipped_count = max(skipped_count, int(m.group(1)))
+
+        test_ok = failed_count == 0 and skipped_count == 0
+        if test_ok:
+            lines.append("Step 3 (Tests): OK (0 failed, 0 skipped)")
+        else:
+            lines.append(f"Step 3 (Tests): BLOCKED ({failed_count} failed, {skipped_count} skipped)")
+            overall_pass = False
 
     # --- Step 4: Coverage Gate ---
     cov_lines, under_threshold, cov_ok = run_coverage_gate()
@@ -281,34 +278,45 @@ def main() -> None:
         lint_all_ok = True
         per_project_lint: list[str] = []
 
-        fsharplint_env = os.environ.copy()
-        # Use system dotnet for runtime compatibility (fsharplint needs >=9.0)
-        fsharplint_env["DOTNET_ROOT"] = "/usr/lib/dotnet"
+        lint_env = os.environ.copy()
+        lint_env["DOTNET_ROOT"] = "/usr/lib/dotnet"
+        dotnet_exe = "/usr/lib/dotnet/dotnet"
 
         for proj in changed_projects:
+            lint_rc = -1
+            lint_output = ""
             try:
                 lint_result = subprocess.run(
-                    ["dotnet", "fsharplint", "lint", proj],
+                    [dotnet_exe, "fsharplint", "lint", proj],
                     capture_output=True, text=True, timeout=None,
-                    env=fsharplint_env,
+                    env=lint_env,
                 )
+                lint_rc = lint_result.returncode
                 lint_output = lint_result.stdout + lint_result.stderr
             except Exception as e:
                 lint_output = f"ERROR running fsharplint: {e}"
+                lint_rc = -1
 
             detailed_logs.append(f"--- LINT: {proj} ---")
             detailed_logs.append(lint_output.strip())
 
-            # Check for warnings
-            import re
-            warning_match = re.search(r"(\d+) warnings", lint_output)
-            warn_count = int(warning_match.group(1)) if warning_match else 0
-            if warn_count > 0:
+            if lint_rc != 0:
                 lint_all_ok = False
-                per_project_lint.append(f"  {proj}: {warn_count} warnings — BLOCKED")
                 overall_pass = False
+                if "ERROR running fsharplint" in lint_output:
+                    per_project_lint.append(f"  {proj}: TOOL FAILED — {lint_output}")
+                else:
+                    per_project_lint.append(f"  {proj}: TOOL FAILED (exit code {lint_rc})")
             else:
-                per_project_lint.append(f"  {proj}: 0 warnings — PASS")
+                import re
+                warning_match = re.search(r"(\d+) warnings", lint_output)
+                warn_count = int(warning_match.group(1)) if warning_match else 0
+                if warn_count > 0:
+                    lint_all_ok = False
+                    overall_pass = False
+                    per_project_lint.append(f"  {proj}: {warn_count} warnings — BLOCKED")
+                else:
+                    per_project_lint.append(f"  {proj}: 0 warnings — PASS")
 
         lines.append("Step 5 (Lint):")
         for pl in per_project_lint:

@@ -65,7 +65,7 @@ After capturing, analyze the output file with the Grep or Read tools — do NOT 
 | `dotnet build` | `tmp/build-output.txt` |
 | `dotnet test` | `tmp/test-output.txt` |
 | `dotnet fantomas .` | (in-place, no captured output) |
-| `dotnet-fsharplint lint` | `tmp/fsharplint-output.txt` |
+| `dotnet fsharplint lint` | `tmp/fsharplint-output.txt` |
 | `dotnet dotnet-coverage` | `tmp/coverage-output.txt` |
 
 Coverage data file: `tmp/coverage.cobertura`
@@ -117,7 +117,7 @@ The hard gate's Step 5 runs `dotnet-fsharplint lint` on each project with modifi
 To run lint manually on a specific project:
 
 ```bash
-DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint <project.fsproj> > tmp/fsharplint-output.txt 2>&1
+DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint <project.fsproj> > tmp/fsharplint-output.txt 2>&1
 ```
 
 Zero warnings policy: any warning in a modified project is a blocker, including pre-existing warnings.
@@ -132,7 +132,7 @@ A single `BLOCKED` means go back and fix. Continue only when every line says `PA
 **Pre-merge full-solution lint** (run once before merging to `dev`):
 
 ```bash
-DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
+DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
 ```
 Timeout: 1800000 (30 min). Must show `Summary: 0 warnings`.
 
