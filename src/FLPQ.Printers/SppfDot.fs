@@ -34,7 +34,7 @@ module SppfDot =
                 match info with
                 | SppfNodeInfo.SppfTerminal(Terminal t, l, r) ->
                     sprintf "%s [%d,%d]" (terminalPrinter t) l r, "oval", ""
-                | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r) ->
+                | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r, _, _) ->
                     sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r, "oval", ""
                 | SppfNodeInfo.SppfEpsilon(optNt, p) ->
                     match optNt with

@@ -31,6 +31,29 @@ module TestHelpers =
 
             failwith msg
 
+        match Sppf.validateNonterminalChildren sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg =
+                "SPPF nonterminal node children violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
+        match Sppf.validateRangePositions sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg = "SPPF range position violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
+        match Sppf.validateIntermediateConnectedness sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg =
+                "SPPF intermediate connectedness violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
     let grammarToEbnfText (g: Grammar<string, string>) : string =
         g.Rules
         |> List.map (fun r ->

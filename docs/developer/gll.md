@@ -17,7 +17,7 @@ Located in `src/FLPQ.Languages/GllTypes.fs`. Defines three type groups:
 ```fsharp
 SppfNodeInfo<'t,'nt> = DU:
   SppfTerminal(Terminal<'t>, leftPos: int, rightPos: int)
-  SppfNonterminal(Nonterminal<'nt>, leftPos: int, rightPos: int)
+  SppfNonterminal(Nonterminal<'nt>, leftPos: int, rightPos: int, fromState: int, toState: int)
   SppfEpsilon(pos: int)
   SppfIntermediate(state: int, pos: int)
   SppfRange(fromState: int, fromPos: int, toState: int, toPos: int)

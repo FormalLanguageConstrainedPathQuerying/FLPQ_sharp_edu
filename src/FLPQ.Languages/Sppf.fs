@@ -9,7 +9,7 @@ open FLPQ.GraphAnalysis
 [<RequireQualifiedAccess>]
 type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
     | SppfTerminal of Terminal<'t> * leftPos: int * rightPos: int
-    | SppfNonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int
+    | SppfNonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int * fromState: int * toState: int
     | SppfEpsilon of Nonterminal<'nt> option * pos: int
     | SppfIntermediate of state: int * pos: int * fromState: int * fromPos: int * toState: int * toPos: int
     | SppfRange of fromState: int * fromPos: int * toState: int * toPos: int
@@ -45,7 +45,7 @@ module Sppf =
         let rangeResultMap = Dictionary<RangeKey, int>()
 
         let terminalNodeMap = Dictionary<Terminal<'t> * int * int, int>()
-        let nonterminalNodeMap = Dictionary<Nonterminal<'nt> * int * int, int>()
+        let nonterminalNodeMap = Dictionary<Nonterminal<'nt> * int * int * int * int, int>()
         let epsilonNodeMap = Dictionary<int, int>()
         let intermediateNodeMap = Dictionary<int * int * int * int * int * int, int>()
 
@@ -62,8 +62,8 @@ module Sppf =
                     terminalNodeMap.[key] <- idx
                     idx
 
-            | SppfNodeInfo.SppfNonterminal(nt, l, r) ->
-                let key = (nt, l, r)
+            | SppfNodeInfo.SppfNonterminal(nt, l, r, fs, ts) ->
+                let key = (nt, l, r, fs, ts)
 
                 match nonterminalNodeMap.TryGetValue(key) with
                 | true, idx -> idx
@@ -142,7 +142,9 @@ module Sppf =
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative termNode
 
                     | PathIndexEntry.PNonterminal nt ->
-                        let ntNode = getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos))
+                        let ntNode =
+                            getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos, fromState, toState))
+
                         addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
                         nonterminalNodeIdx <- Some ntNode
 
@@ -258,6 +260,187 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    let validateNonterminalChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable errors = []
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
+                let singleChildCount =
+                    [ for j in 0 .. vc - 1 do
+                          let lbl = Matrix.get sppf.Graph.Edges i j
+
+                          if lbl = Some SppfEdgeLabel.SingleChild then
+                              true ]
+                    |> List.length
+
+                if singleChildCount <> 1 then
+                    let (Nonterminal ntName) = nt
+
+                    errors <-
+                        sprintf
+                            "Nonterminal node %d (%s) has %d SingleChild edge(s), expected 1"
+                            i
+                            ntName
+                            singleChildCount
+                        :: errors
+            | _ -> ()
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
+
+    let validateRangePositions (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable errors = []
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfRange(_, fromPos, _, toPos) ->
+                if fromPos > toPos then
+                    errors <- sprintf "Range node %d has fromPos (%d) > toPos (%d)" i fromPos toPos :: errors
+            | _ -> ()
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
+
+    let validateIntermediateConnectedness (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable errors = []
+
+        let findEdgeTarget (nodeIdx: int) (label: SppfEdgeLabel) : int option =
+            let mutable result = None
+
+            for j in 0 .. vc - 1 do
+                match result with
+                | Some _ -> ()
+                | None ->
+                    if Matrix.get sppf.Graph.Edges nodeIdx j = Some label then
+                        result <- Some j
+
+            result
+
+        let getCoords (nodeIdx: int) : (int * int * int * int) option =
+            match Graph.getVertex nodeIdx sppf.Graph with
+            | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> Some(fs, fp, ts, tp)
+            | SppfNodeInfo.SppfNonterminal(_, fp, tp, fs, ts) -> Some(fs, fp, ts, tp)
+            | _ -> None
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfIntermediate(state, pos, fromState, fromPos, toState, toPos) ->
+                let leftChildIdx = findEdgeTarget i SppfEdgeLabel.LeftChild
+                let rightChildIdx = findEdgeTarget i SppfEdgeLabel.RightChild
+
+                match leftChildIdx with
+                | Some lc ->
+                    match Graph.getVertex lc sppf.Graph with
+                    | SppfNodeInfo.SppfEpsilon _ -> ()
+                    | vLeft ->
+                        match getCoords lc with
+                        | Some(lfs, lfp, lts, ltp) ->
+                            if lfs <> fromState || lfp <> fromPos then
+                                errors <-
+                                    sprintf
+                                        "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): left child %d starts at [s%d,v%d], expected [s%d,v%d]"
+                                        i
+                                        fromState
+                                        fromPos
+                                        toState
+                                        toPos
+                                        state
+                                        pos
+                                        lc
+                                        lfs
+                                        lfp
+                                        fromState
+                                        fromPos
+                                    :: errors
+
+                            if lts <> state || ltp <> pos then
+                                errors <-
+                                    sprintf
+                                        "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): left child %d ends at [s%d,v%d], expected [s%d,v%d]"
+                                        i
+                                        fromState
+                                        fromPos
+                                        toState
+                                        toPos
+                                        state
+                                        pos
+                                        lc
+                                        lts
+                                        ltp
+                                        state
+                                        pos
+                                    :: errors
+                        | None -> ()
+                | None ->
+                    errors <-
+                        sprintf
+                            "Intermediate node %d [s%d,v%d]->[s%d,v%d]: missing LeftChild"
+                            i
+                            fromState
+                            fromPos
+                            toState
+                            toPos
+                        :: errors
+
+                match rightChildIdx with
+                | Some rc ->
+                    match Graph.getVertex rc sppf.Graph with
+                    | SppfNodeInfo.SppfEpsilon _ -> ()
+                    | vRight ->
+                        match getCoords rc with
+                        | Some(rfs, rfp, rts, rtp) ->
+                            if rfs <> state || rfp <> pos then
+                                errors <-
+                                    sprintf
+                                        "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): right child %d starts at [s%d,v%d], expected [s%d,v%d]"
+                                        i
+                                        fromState
+                                        fromPos
+                                        toState
+                                        toPos
+                                        state
+                                        pos
+                                        rc
+                                        rfs
+                                        rfp
+                                        state
+                                        pos
+                                    :: errors
+
+                            if rts <> toState || rtp <> toPos then
+                                errors <-
+                                    sprintf
+                                        "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): right child %d ends at [s%d,v%d], expected [s%d,v%d]"
+                                        i
+                                        fromState
+                                        fromPos
+                                        toState
+                                        toPos
+                                        state
+                                        pos
+                                        rc
+                                        rts
+                                        rtp
+                                        toState
+                                        toPos
+                                    :: errors
+                        | None -> ()
+                | None ->
+                    errors <-
+                        sprintf
+                            "Intermediate node %d [s%d,v%d]->[s%d,v%d]: missing RightChild"
+                            i
+                            fromState
+                            fromPos
+                            toState
+                            toPos
+                        :: errors
+            | _ -> ()
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
+
     /// Extracts a single derivation tree from an SPPF root.
     /// For ambiguous grammars, picks the first alternative at each packed node.
     /// Uses a visited set to break cycles in the Nonterminal-SingleChild-Range-PackedAlternative loop.
@@ -300,7 +483,7 @@ module Sppf =
                 match info with
                 | SppfNodeInfo.SppfTerminal(t, _, _) -> [ Leaf(Symbol.T t) ]
                 | SppfNodeInfo.SppfEpsilon _ -> [ Leaf Symbol.Epsilon ]
-                | SppfNodeInfo.SppfNonterminal(nt, _, _) ->
+                | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
                     match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.SingleChild) with
                     | Some rangeIdx ->
                         let alternatives =
