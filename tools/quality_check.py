@@ -6,27 +6,16 @@ Writes results to tmp/quality-check.txt.
 No console output. No timeout on subprocess calls.
 """
 
-import subprocess
-import os
 import sys
+from common import run_cmd, ensure_output_dir, remove_output_file, write_output_file
 
 OUTPUT_FILE = "tmp/quality-check.txt"
 SOLUTION = "FLPQ.slnx"
 
 
-def run_cmd(cmd: list[str], label: str) -> tuple[int, str, str]:
-    """Run a command without timeout. Returns (exit_code, stdout, stderr)."""
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=None
-        )
-        return result.returncode, result.stdout, result.stderr
-    except Exception as e:
-        return -1, "", f"ERROR running {' '.join(cmd)}: {e}"
-
-
 def main() -> None:
-    os.makedirs("tmp", exist_ok=True)
+    ensure_output_dir("tmp")
+    remove_output_file(OUTPUT_FILE)
 
     lines: list[str] = []
     lines.append("QUALITY CHECK SUMMARY")
@@ -38,12 +27,12 @@ def main() -> None:
     detailed_logs: list[str] = []
 
     # --- Step 1: Format ---
-    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"], "fantomas")
+    fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
     if fmt_rc == 0:
         lines.append("  Format: OK")
         statuses.append("PASS")
     else:
-        lines.append("  Format: FAILED (exit code {} - files need formatting)".format(fmt_rc))
+        lines.append(f"  Format: FAILED (exit code {fmt_rc} - files need formatting)")
         statuses.append("BLOCKED")
 
     detailed_logs.append("--- FORMAT (dotnet fantomas .) ---")
@@ -56,14 +45,13 @@ def main() -> None:
 
     # --- Step 2: Build ---
     build_rc, build_stdout, build_stderr = run_cmd(
-        ["dotnet", "build", SOLUTION, "-c", "Debug"], "build"
+        ["dotnet", "build", SOLUTION, "-c", "Debug"]
     )
     build_output = build_stdout + build_stderr
     if build_rc == 0 and "Build succeeded" in build_output:
         lines.append("  Build: OK (Build succeeded)")
         statuses.append("PASS")
     else:
-        # Count errors
         error_lines = [l for l in build_output.split("\n") if "error " in l.lower()]
         lines.append(f"  Build: FAILED ({len(error_lines)} error(s))")
         statuses.append("BLOCKED")
@@ -88,9 +76,7 @@ def main() -> None:
         lines.append(log)
         lines.append("")
 
-    with open(OUTPUT_FILE, "w") as f:
-        f.write("\n".join(lines))
-
+    write_output_file(OUTPUT_FILE, lines)
     sys.exit(exit_code)
 
 

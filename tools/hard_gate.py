@@ -5,60 +5,34 @@ Sequence:
   1. Format: dotnet fantomas .
   2. Build: dotnet build FLPQ.slnx -c Debug
   3. Tests + Coverage: dotnet dotnet-coverage collect dotnet test FLPQ.slnx ...
-  4. Coverage gate: per-project ≥75% line, total ≥80% line
+  4. Coverage gate: per-project >= 75% line, total >= 80% line
   5. Lint: dotnet-fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
 No console output. No timeout on subprocess calls.
 """
 
-import subprocess
 import os
+import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from common import (
+    run_cmd,
+    find_fsproj_paths,
+    find_source_packages,
+    ensure_output_dir,
+    remove_output_file,
+    write_output_file,
+)
+
 OUTPUT_FILE = "tmp/hard-gate.txt"
 SOLUTION = "FLPQ.slnx"
 
-# Source packages (exclude *.Tests and TestUtilities)
-SOURCE_PACKAGES = [
-    "FLPQ.Cli",
-    "FLPQ.GraphAnalysis",
-    "FLPQ.Languages",
-    "FLPQ.LinearAlgebra",
-    "FLPQ.Printers",
-    "FLPQ.RPQ",
-]
-
 PER_PROJECT_THRESHOLD = 75.0
 TOTAL_THRESHOLD = 80.0
-
-# FS project paths for lint detection
-FS_PROJ_PATHS = {
-    "FLPQ.Cli": "src/FLPQ.Cli/FLPQ.Cli.fsproj",
-    "FLPQ.GraphAnalysis": "src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj",
-    "FLPQ.Languages": "src/FLPQ.Languages/FLPQ.Languages.fsproj",
-    "FLPQ.LinearAlgebra": "src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj",
-    "FLPQ.Printers": "src/FLPQ.Printers/FLPQ.Printers.fsproj",
-    "FLPQ.RPQ": "src/FLPQ.RPQ/FLPQ.RPQ.fsproj",
-    "FLPQ.Cli.Tests": "tests/FLPQ.Cli.Tests/FLPQ.Cli.Tests.fsproj",
-    "FLPQ.GraphAnalysis.Tests": "tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj",
-    "FLPQ.Languages.Tests": "tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj",
-    "FLPQ.LinearAlgebra.Tests": "tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj",
-    "FLPQ.Printers.Tests": "tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj",
-    "FLPQ.RPQ.Tests": "tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj",
-    "FLPQ.TestUtilities": "tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj",
-}
-
-
-def run_cmd(cmd: list[str]) -> tuple[int, str, str]:
-    """Run a command without timeout. Returns (exit_code, stdout, stderr)."""
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=None)
-        return result.returncode, result.stdout, result.stderr
-    except Exception as e:
-        return -1, "", f"ERROR: {e}"
 
 
 def detect_changed_projects() -> list[str]:
@@ -66,7 +40,9 @@ def detect_changed_projects() -> list[str]:
     try:
         result = subprocess.run(
             ["git", "diff", "--name-only", "dev", "--", "*.fs"],
-            capture_output=True, text=True, timeout=None
+            capture_output=True,
+            text=True,
+            timeout=None,
         )
         changed_files = [f for f in result.stdout.strip().split("\n") if f]
     except Exception:
@@ -75,12 +51,13 @@ def detect_changed_projects() -> list[str]:
     if not changed_files:
         return []
 
+    all_projects = find_fsproj_paths()
     projects: set[str] = set()
     for fs_file in changed_files:
         parts = Path(fs_file).parts
         for i in range(len(parts)):
             candidate = Path(*parts[: i + 1])
-            for pkg_name, proj_path in FS_PROJ_PATHS.items():
+            for _pkg_name, proj_path in all_projects.items():
                 proj = Path(proj_path)
                 if str(candidate) == str(proj.parent):
                     projects.add(proj_path)
@@ -91,6 +68,7 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
     """Parse coverage data and check thresholds.
     Returns (per_project_lines, under_threshold_list, total_pass).
     """
+    source_packages = find_source_packages()
     per_project_lines: list[str] = []
     under_threshold: list[str] = []
 
@@ -111,7 +89,7 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
 
     for pkg in root.findall(".//package"):
         name = pkg.attrib.get("name", "")
-        if name not in SOURCE_PACKAGES:
+        if name not in source_packages:
             continue
 
         pkg_covered = 0
@@ -130,7 +108,11 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
         else:
             pct = 0.0
 
-        status = "PASS" if pct >= PER_PROJECT_THRESHOLD else f"BLOCKED (below {PER_PROJECT_THRESHOLD:.0f}%)"
+        status = (
+            "PASS"
+            if pct >= PER_PROJECT_THRESHOLD
+            else f"BLOCKED (below {PER_PROJECT_THRESHOLD:.0f}%)"
+        )
         if pct < PER_PROJECT_THRESHOLD:
             all_ok = False
             under_threshold.append(name)
@@ -144,7 +126,11 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
     else:
         total_pct = 0.0
 
-    total_status = "PASS" if total_pct >= TOTAL_THRESHOLD else f"BLOCKED (below {TOTAL_THRESHOLD:.0f}%)"
+    total_status = (
+        "PASS"
+        if total_pct >= TOTAL_THRESHOLD
+        else f"BLOCKED (below {TOTAL_THRESHOLD:.0f}%)"
+    )
     if total_pct < TOTAL_THRESHOLD:
         all_ok = False
 
@@ -157,7 +143,8 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
 
 
 def main() -> None:
-    os.makedirs("tmp", exist_ok=True)
+    ensure_output_dir("tmp")
+    remove_output_file(OUTPUT_FILE)
 
     lines: list[str] = []
     lines.append("HARD GATE SUMMARY")
@@ -201,23 +188,29 @@ def main() -> None:
         for log in detailed_logs:
             lines.append(log)
             lines.append("")
-        with open(OUTPUT_FILE, "w") as f:
-            f.write("\n".join(lines))
+        write_output_file(OUTPUT_FILE, lines)
         sys.exit(1)
 
     # --- Step 3: Tests + Coverage ---
-    test_rc, test_stdout, test_stderr = run_cmd([
-        "dotnet", "dotnet-coverage", "collect",
-        "dotnet", "test", SOLUTION,
-        "-o", "tmp/coverage.cobertura",
-        "-f", "cobertura",
-        "--nologo",
-    ])
+    test_rc, test_stdout, test_stderr = run_cmd(
+        [
+            "dotnet",
+            "dotnet-coverage",
+            "collect",
+            "dotnet",
+            "test",
+            SOLUTION,
+            "-o",
+            "tmp/coverage.cobertura",
+            "-f",
+            "cobertura",
+            "--nologo",
+        ]
+    )
     test_output = test_stdout + test_stderr
     detailed_logs.append("--- STEP 3: TESTS WITH COVERAGE ---")
     detailed_logs.append(test_output.strip())
 
-    # Check test results
     if test_rc != 0:
         lines.append(f"Step 3 (Tests): FAILED (test runner exit code {test_rc})")
         overall_pass = False
@@ -226,13 +219,10 @@ def main() -> None:
         skipped_count = 0
         for line in test_output.split("\n"):
             if "Failed:" in line or "Failed!" in line:
-                import re
                 m = re.search(r"Failed[:\!]\s*(\d+)", line)
                 if m:
-                    # take the last occurrence (total line)
                     failed_count = max(failed_count, int(m.group(1)))
             if "Skipped:" in line:
-                import re
                 m = re.search(r"Skipped:\s*(\d+)", line)
                 if m:
                     skipped_count = max(skipped_count, int(m.group(1)))
@@ -241,11 +231,13 @@ def main() -> None:
         if test_ok:
             lines.append("Step 3 (Tests): OK (0 failed, 0 skipped)")
         else:
-            lines.append(f"Step 3 (Tests): BLOCKED ({failed_count} failed, {skipped_count} skipped)")
+            lines.append(
+                f"Step 3 (Tests): BLOCKED ({failed_count} failed, {skipped_count} skipped)"
+            )
             overall_pass = False
 
     # --- Step 4: Coverage Gate ---
-    cov_lines, under_threshold, cov_ok = run_coverage_gate()
+    cov_lines, _under_threshold, cov_ok = run_coverage_gate()
     detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
     for cl in cov_lines:
         detailed_logs.append(cl)
@@ -278,7 +270,9 @@ def main() -> None:
             try:
                 lint_result = subprocess.run(
                     [dotnet_exe, "fsharplint", "lint", proj],
-                    capture_output=True, text=True, timeout=None,
+                    capture_output=True,
+                    text=True,
+                    timeout=None,
                     env=lint_env,
                 )
                 lint_rc = lint_result.returncode
@@ -298,7 +292,6 @@ def main() -> None:
                 else:
                     per_project_lint.append(f"  {proj}: TOOL FAILED (exit code {lint_rc})")
             else:
-                import re
                 warning_match = re.search(r"(\d+) warnings", lint_output)
                 warn_count = int(warning_match.group(1)) if warning_match else 0
                 if warn_count > 0:
@@ -336,9 +329,7 @@ def main() -> None:
         lines.append("HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.")
         lines.append("")
 
-    with open(OUTPUT_FILE, "w") as f:
-        f.write("\n".join(lines))
-
+    write_output_file(OUTPUT_FILE, lines)
     sys.exit(exit_code)
 
 

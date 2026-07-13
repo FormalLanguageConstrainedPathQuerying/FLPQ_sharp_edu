@@ -6,74 +6,58 @@ No console output. No timeout on subprocess calls.
 """
 
 import subprocess
-import os
 import sys
 from pathlib import Path
 
+from common import (
+    run_cmd,
+    find_fsproj_paths,
+    ensure_output_dir,
+    remove_output_file,
+    write_output_file,
+)
+
 OUTPUT_FILE = "tmp/detect-changes.txt"
 
-FS_PROJ_NAMES = [
-    "src/FLPQ.Cli/FLPQ.Cli.fsproj",
-    "src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj",
-    "src/FLPQ.Languages/FLPQ.Languages.fsproj",
-    "src/FLPQ.LinearAlgebra/FLPQ.LinearAlgebra.fsproj",
-    "src/FLPQ.Printers/FLPQ.Printers.fsproj",
-    "src/FLPQ.RPQ/FLPQ.RPQ.fsproj",
-    "tests/FLPQ.Cli.Tests/FLPQ.Cli.Tests.fsproj",
-    "tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj",
-    "tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj",
-    "tests/FLPQ.LinearAlgebra.Tests/FLPQ.LinearAlgebra.Tests.fsproj",
-    "tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj",
-    "tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj",
-    "tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj",
-]
 
-
-def find_project_for_file(fs_file: str) -> str | None:
+def find_project_for_file(fs_file: str, all_projects: dict[str, str]) -> str | None:
     """Map a changed .fs file to its .fsproj by finding the first matching
     parent directory that contains a .fsproj file."""
     parts = Path(fs_file).parts
     for i in range(len(parts)):
         candidate = Path(*parts[: i + 1])
-        for proj in FS_PROJ_NAMES:
-            proj_path = Path(proj)
-            if str(candidate) == str(proj_path.parent) or candidate == proj_path:
-                return proj
+        for proj_name, proj_path in all_projects.items():
+            proj_p = Path(proj_path)
+            if str(candidate) == str(proj_p.parent) or candidate == proj_p:
+                return proj_path
     return None
 
 
 def main() -> None:
-    os.makedirs("tmp", exist_ok=True)
+    ensure_output_dir("tmp")
+    remove_output_file(OUTPUT_FILE)
 
     lines: list[str] = []
     lines.append("DETECT CHANGES SUMMARY")
     lines.append("")
 
     # Check git branch
-    try:
-        branch_result = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True, text=True, timeout=None
-        )
-        branch = branch_result.stdout.strip()
-    except Exception:
-        branch = "unknown"
+    branch_rc, branch_stdout, _ = run_cmd(["git", "branch", "--show-current"])
+    branch = branch_stdout.strip() if branch_rc == 0 else "unknown"
 
     # Get changed .fs files relative to dev
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "dev", "--", "*.fs"],
-            capture_output=True, text=True, timeout=None
-        )
-        changed_files = [f for f in result.stdout.strip().split("\n") if f]
-    except Exception as e:
-        lines.append(f"ERROR: git diff failed: {e}")
+    diff_rc, diff_stdout, diff_stderr = run_cmd(
+        ["git", "diff", "--name-only", "dev", "--", "*.fs"]
+    )
+    if diff_rc != 0:
+        lines.append(f"ERROR: git diff failed: {diff_stderr}")
         lines.append("STATUS: ERROR")
         lines.append("")
         lines.append("--- DETAILED LOG ---")
-        with open(OUTPUT_FILE, "w") as f:
-            f.write("\n".join(lines))
+        write_output_file(OUTPUT_FILE, lines)
         sys.exit(1)
+
+    changed_files = [f for f in diff_stdout.strip().split("\n") if f]
 
     if not changed_files:
         lines.append("No modified .fs files detected relative to dev.")
@@ -81,17 +65,17 @@ def main() -> None:
         lines.append("")
         lines.append("--- DETAILED LOG ---")
         lines.append(f"Branch: {branch}")
-        with open(OUTPUT_FILE, "w") as f:
-            f.write("\n".join(lines))
+        write_output_file(OUTPUT_FILE, lines)
         sys.exit(0)
 
     # Map files to projects
+    all_projects = find_fsproj_paths()
     project_set: set[str] = set()
     file_to_project: dict[str, str] = {}
     unmapped: list[str] = []
 
     for fs_file in changed_files:
-        proj = find_project_for_file(fs_file)
+        proj = find_project_for_file(fs_file, all_projects)
         if proj:
             project_set.add(proj)
             file_to_project[fs_file] = proj
@@ -120,9 +104,7 @@ def main() -> None:
         proj = file_to_project.get(fs_file, "UNMAPPED")
         lines.append(f"  {fs_file} -> {proj}")
 
-    with open(OUTPUT_FILE, "w") as f:
-        f.write("\n".join(lines))
-
+    write_output_file(OUTPUT_FILE, lines)
     sys.exit(0)
 
 
