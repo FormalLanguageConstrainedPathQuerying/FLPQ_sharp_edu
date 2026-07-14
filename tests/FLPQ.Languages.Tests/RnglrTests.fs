@@ -12,52 +12,39 @@ open FLPQ.TestUtilities
 module RnglrAcceptance =
     [<Fact>]
     let ``S -> a accepts a`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm (Grammar.parseGrammar "S -> a")) [ "a" ]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm TestGrammars.grammarS2a) [ "a" ],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a rejects eps`` () =
-        Assert.True(TestHelpers.rnglrCheckReject (Grammar.parseGrammar "S -> a") [])
+        Assert.True(TestHelpers.rnglrCheckReject TestGrammars.grammarS2a [])
 
     [<Fact>]
     let ``S -> a b accepts a b`` () =
-        let g = Grammar.parseGrammar "S -> a b"
+        let g = TestGrammars.grammarAB
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a S | b accepts a a b`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> b
-        "
+        let g = TestGrammars.grammar_aS_b
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "a"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "a"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a S | b rejects a a a`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> b
-        "
+        let g = TestGrammars.grammar_aS_b
 
         Assert.True(TestHelpers.rnglrCheckReject g [ "a"; "a"; "a" ])
 
@@ -65,90 +52,82 @@ module RnglrAcceptance =
     let ``S -> a S b S | eps accepts a b a b`` () =
         let g = TestGrammars.grammar1
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "b"
-                                                                             "a"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "b"
+                                                                 "a"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a a b b`` () =
         let g = TestGrammars.grammar1
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "a"
-                                                                             "b"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "a"
+                                                                 "b"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a S b S | eps accepts empty`` () =
         let g = TestGrammars.grammar1
 
-        match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [] with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
 
     [<Fact>]
     let ``S -> a S b | eps accepts a a b b`` () =
-        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let g = TestGrammars.grammar_aSb_eps
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "a"
-                                                                             "b"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "a"
+                                                                 "b"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> a S b | eps rejects a a b`` () =
-        let g = Grammar.parseGrammar "S -> a S b\nS -> eps"
+        let g = TestGrammars.grammar_aSb_eps
         Assert.True(TestHelpers.rnglrCheckReject g [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps | S S accepts a b a b`` () =
         let g = TestGrammars.grammar2
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "b"
-                                                                             "a"
-                                                                             "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "b"
+                                                                 "a"
+                                                                 "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =
         let g = TestGrammars.grammar3
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "a"
-                                                                             "a"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "a"
+                                                                 "a"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``Right-recursive S -> S a | a accepts a a a`` () =
         let g = TestGrammars.grammar4
 
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm g)["a"
-                                                                             "a"
-                                                                             "a"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm g)["a"
+                                                                 "a"
+                                                                 "a"],
+            "Should accept and produce tree"
+        )
 
 module RnglrEquivalence =
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
@@ -157,13 +136,13 @@ module RnglrEquivalence =
         let ``RNGLR and CYK agree on grammar1`` (s: string) =
             let g = TestGrammars.grammar1
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.cykAccepts g input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
         [<Property>]
         let ``RNGLR and GLL agree on grammar1`` (s: string) =
             let g = TestGrammars.grammar1
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.gllAccepts g input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.gllAccepts g input
 
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module A =
@@ -171,64 +150,47 @@ module RnglrEquivalence =
         let ``RNGLR and CYK agree on grammar3 (left-recursive)`` (s: string) =
             let g = TestGrammars.grammar3
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.cykAccepts g input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
         [<Property>]
         let ``RNGLR and GLL agree on grammar3`` (s: string) =
             let g = TestGrammars.grammar3
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            TestHelpers.rnglrAcceptsWithSppfCheck g input = TestHelpers.gllAccepts g input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.gllAccepts g input
 
 module RnglrRightNullable =
-    let private rightNullableGrammar =
-        Grammar.parseGrammar
-            "
-        S -> A B
-        A -> a A
-        A -> eps
-        B -> b B
-        B -> eps
-        "
+    let private rightNullableGrammar = TestGrammars.grammarRightNullable
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts empty`` () =
-        match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm rightNullableGrammar) [] with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm rightNullableGrammar) [],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm rightNullableGrammar)["a"
-                                                                                                "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm rightNullableGrammar)["a"
+                                                                                    "b"],
+            "Should accept and produce tree"
+        )
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a a b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm rightNullableGrammar)["a"
-                                                                                                "a"
-                                                                                                "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm rightNullableGrammar)["a"
+                                                                                    "a"
+                                                                                    "b"],
+            "Should accept and produce tree"
+        )
 
 module RnglrReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> A
-        A -> B
-        B -> eps
-        "
+        let g = TestGrammars.grammarCascade
 
-        match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [] with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should accept and produce tree")
+        Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
 
 module RnglrRegexEquivalence =
 
@@ -240,7 +202,7 @@ module RnglrRegexEquivalence =
             let rsm = TestHelpers.buildRegexRsm regexText
             let dfa = TestHelpers.dfaFromRegexRsm rsm
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            (TestHelpers.rnglrAcceptsAndCheckTree rsm input).IsSome = TestHelpers.dfaAcceptsRegex dfa input
+            TestHelpers.rnglrAccepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
         [<Property(MaxTest = 50)>]
         let ``S -> a* a* matches DFA for a* a*`` (s: string) =
@@ -248,7 +210,7 @@ module RnglrRegexEquivalence =
             let rsm = TestHelpers.buildRegexRsm regexText
             let dfa = TestHelpers.dfaFromRegexRsm rsm
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            (TestHelpers.rnglrAcceptsAndCheckTree rsm input).IsSome = TestHelpers.dfaAcceptsRegex dfa input
+            TestHelpers.rnglrAccepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Ab =
@@ -258,7 +220,7 @@ module RnglrRegexEquivalence =
             let rsm = TestHelpers.buildRegexRsm regexText
             let dfa = TestHelpers.dfaFromRegexRsm rsm
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            (TestHelpers.rnglrAcceptsAndCheckTree rsm input).IsSome = TestHelpers.dfaAcceptsRegex dfa input
+            TestHelpers.rnglrAccepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
         [<Property(MaxTest = 50)>]
         let ``S -> (a | b)* (a | c)* matches DFA for (a | b)* (a | c)*`` (s: string) =
@@ -266,7 +228,7 @@ module RnglrRegexEquivalence =
             let rsm = TestHelpers.buildRegexRsm regexText
             let dfa = TestHelpers.dfaFromRegexRsm rsm
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            (TestHelpers.rnglrAcceptsAndCheckTree rsm input).IsSome = TestHelpers.dfaAcceptsRegex dfa input
+            TestHelpers.rnglrAccepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
 module RnglrGrammarAcceptanceAndTree =
 
@@ -285,9 +247,7 @@ module RnglrGrammarAcceptanceAndTree =
     // ---- Grammar 1 ----
     module Grammar1 =
         let private check g input =
-            match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) input with
-            | Some _ -> ()
-            | None -> Assert.True(false, "Should accept and produce tree")
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input, "Should accept and produce tree")
 
         [<Fact>]
         let ``accepts a`` () = check grammar1 [ "a" ]
@@ -328,9 +288,7 @@ module RnglrGrammarAcceptanceAndTree =
     // ---- Grammar 2 ----
     module Grammar2 =
         let private check g input =
-            match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) input with
-            | Some _ -> ()
-            | None -> Assert.True(false, "Should accept and produce tree")
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input, "Should accept and produce tree")
 
         [<Fact>]
         let ``accepts a`` () = check grammar2 [ "a" ]
@@ -371,9 +329,7 @@ module RnglrGrammarAcceptanceAndTree =
     // ---- Grammar 3 ----
     module Grammar3 =
         let private check g input =
-            match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) input with
-            | Some _ -> ()
-            | None -> Assert.True(false, "Should accept and produce tree")
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) input, "Should accept and produce tree")
 
         [<Fact>]
         let ``accepts empty`` () = check grammar3 []
@@ -414,19 +370,23 @@ module RnglrGrammarAcceptanceAndTree =
     module Grammar4 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAcceptsWithSppfCheck grammar4 [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar4 [ "a"; "a"; "a" ])
+            Assert.True(
+                TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a" ]
+            )
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.rnglrAccepts grammar4 [ "a"; "a"; "a"; "a" ])
+            Assert.True(
+                TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a"; "a" ]
+            )
 
         [<Fact>]
         let ``rejects empty`` () =
@@ -456,7 +416,7 @@ module RnglrGrammarAcceptanceAndTree =
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module CrossAlgorithmEquivalence =
         let private inputFrom (s: string) =
-            s.Replace(" ", "") |> TestHelpers.stringToTerminals
+            s.Replace("; ", "") |> TestHelpers.stringToTerminals
 
         [<Property>]
         let ``Grammar 1: GLL == CYK`` (s: string) =
@@ -466,12 +426,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 1: RNGLR == CYK`` (s: string) =
             let input = inputFrom s
-            TestHelpers.rnglrAcceptsWithSppfCheck grammar1 input = TestHelpers.cykAccepts grammar1 input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar1) input = TestHelpers.cykAccepts grammar1 input
 
         [<Property>]
         let ``Grammar 1: GLL == RNGLR`` (s: string) =
             let input = inputFrom s
-            TestHelpers.gllAccepts grammar1 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar1 input
+            TestHelpers.gllAccepts grammar1 input = TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar1) input
 
         [<Property>]
         let ``Grammar 2: GLL == CYK`` (s: string) =
@@ -481,12 +441,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 2: RNGLR == CYK`` (s: string) =
             let input = inputFrom s
-            TestHelpers.rnglrAcceptsWithSppfCheck grammar2 input = TestHelpers.cykAccepts grammar2 input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar2) input = TestHelpers.cykAccepts grammar2 input
 
         [<Property>]
         let ``Grammar 2: GLL == RNGLR`` (s: string) =
             let input = inputFrom s
-            TestHelpers.gllAccepts grammar2 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar2 input
+            TestHelpers.gllAccepts grammar2 input = TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar2) input
 
         [<Property>]
         let ``Grammar 3: GLL == CYK`` (s: string) =
@@ -496,12 +456,12 @@ module RnglrGrammarAcceptanceAndTree =
         [<Property>]
         let ``Grammar 3: RNGLR == CYK`` (s: string) =
             let input = inputFrom s
-            TestHelpers.rnglrAcceptsWithSppfCheck grammar3 input = TestHelpers.cykAccepts grammar3 input
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar3) input = TestHelpers.cykAccepts grammar3 input
 
         [<Property>]
         let ``Grammar 3: GLL == RNGLR`` (s: string) =
             let input = inputFrom s
-            TestHelpers.gllAccepts grammar3 input = TestHelpers.rnglrAcceptsWithSppfCheck grammar3 input
+            TestHelpers.gllAccepts grammar3 input = TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar3) input
 
         [<Property>]
         let ``Grammar 4: GLL == CYK`` (s: string) =
@@ -513,127 +473,121 @@ module RnglrGrammar159A =
 
     [<Fact>]
     let ``S -> a S b S | eps accepts and yields tree: a a b a b b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
     [<Fact>]
     let ``S -> a S b S | eps accepts and yields tree: a a b a b b a b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
     [<Fact>]
     let ``S -> a S b S | eps accepts and yields tree: a a a b a b b a b b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
 module RnglrGrammar159B =
-    let private grammar = Grammar.parseGrammar "S -> S a S b\nS -> eps"
+    let private grammar = TestGrammars.grammarSaSb_eps
 
     [<Fact>]
     let ``S -> S a S b | eps accepts and yields tree: a a a b a b b a b b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
     [<Fact>]
     let ``S -> S a S b | eps accepts and yields tree: a a b a b b a b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
 module RnglrGrammar159C =
     let private grammar = TestGrammars.grammar2
 
     [<Fact>]
     let ``S -> S S | a S b | eps accepts and yields tree: a a a b a b b a b b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
     [<Fact>]
     let ``S -> S S | a S b | eps accepts and yields tree: a a b a b b a b`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree(TestHelpers.grammarToRsm grammar)["a"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"
-                                                                                   "b"
-                                                                                   "a"
-                                                                                   "b"]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts(TestHelpers.grammarToRsm grammar)["a"
+                                                                       "a"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"
+                                                                       "b"
+                                                                       "a"
+                                                                       "b"],
+            "Should produce a tree"
+        )
 
 module RnglrGrammar159D =
     let private rsm = TestHelpers.buildRegexRsm "(a S b)*"
 
     [<Fact>]
     let ``S -> (a S b)* accepts and yields tree: a a a b a b b a b b`` () =
-        match TestHelpers.rnglrAcceptsAndCheckTree rsm [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ] with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts rsm [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ],
+            "Should produce a tree"
+        )
 
     let private rsm2 =
         let r = RsmBuilder.buildRSMFromText "S -> S1 S2\nS1 -> (a S1 b)*\nS2 -> (c S2 d)*"
@@ -641,9 +595,10 @@ module RnglrGrammar159D =
 
     [<Fact>]
     let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b`` () =
-        match TestHelpers.rnglrAcceptsAndCheckTree rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ] with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ],
+            "Should produce a tree"
+        )
 
     [<Fact>]
     let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b c c d c d d`` () =
@@ -665,17 +620,14 @@ module RnglrGrammar159D =
               "d"
               "d" ]
 
-        match TestHelpers.rnglrAcceptsAndCheckTree rsm2 input with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(TestHelpers.rnglrAccepts rsm2 input, "Should produce a tree")
 
     [<Fact>]
     let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b c d`` () =
-        match
-            TestHelpers.rnglrAcceptsAndCheckTree rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b"; "c"; "d" ]
-        with
-        | Some _ -> ()
-        | None -> Assert.True(false, "Should produce a tree")
+        Assert.True(
+            TestHelpers.rnglrAccepts rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b"; "c"; "d" ],
+            "Should produce a tree"
+        )
 
 module RnglrPropertyTreeYield =
     let private grammarG1 = TestGrammars.grammar1
@@ -697,8 +649,7 @@ module RnglrPropertyTreeYield =
         let ``S -> a S b S | eps tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG1) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG1) input |> ignore
 
             true
 
@@ -706,8 +657,7 @@ module RnglrPropertyTreeYield =
         let ``S -> S S | a S b | eps tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG2) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG2) input |> ignore
 
             true
 
@@ -717,8 +667,7 @@ module RnglrPropertyTreeYield =
         let ``S -> a S | a tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG3) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG3) input |> ignore
 
             true
 
@@ -726,8 +675,7 @@ module RnglrPropertyTreeYield =
         let ``S -> S a | a tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG4) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG4) input |> ignore
 
             true
 
@@ -735,8 +683,7 @@ module RnglrPropertyTreeYield =
         let ``S -> N a* tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG5) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG5) input |> ignore
 
             true
 
@@ -744,8 +691,7 @@ module RnglrPropertyTreeYield =
         let ``S -> a* N tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG6) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG6) input |> ignore
 
             true
 
@@ -753,8 +699,7 @@ module RnglrPropertyTreeYield =
         let ``S -> N* tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG7) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG7) input |> ignore
 
             true
 
@@ -762,13 +707,10 @@ module RnglrPropertyTreeYield =
         let ``S -> a | S S | S S S tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            try
-                TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG8) input
-                |> ignore
+            TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammarG8) input
+            |> ignore
 
-                true
-            with _ ->
-                true
+            true
 
 module SppfDotTests =
 
@@ -783,11 +725,16 @@ module SppfDotTests =
             | true, gs -> gs
             | false, _ -> 0
 
+        let startFinalStates = RSM.blockFinalStates extRsm.StartBlock extRsm
+
         let rootRanges =
-            [ { FromState = startGlobal
-                FromVertex = 0
-                ToState = startGlobal + 1
-                ToVertex = vc - 1 } ]
+            startFinalStates
+            |> Set.toList
+            |> List.map (fun finalState ->
+                { FromState = startGlobal
+                  FromVertex = 0
+                  ToState = finalState
+                  ToVertex = vc - 1 })
 
         Sppf.buildSppfFromIndex pathIndex rootRanges
 
@@ -826,77 +773,63 @@ module SppfDotTests =
 
 module RnglrEpsilonGrammars =
 
-    let private checkAccepts (grammarText: string) =
-        let g = Grammar.parseGrammar grammarText
+    let private checkAccepts (g: Grammar<string, string>) (desc: string) =
+        Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm g) [], $"Should accept empty string: {desc}")
 
-        match TestHelpers.rnglrAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [] with
-        | Some _ -> ()
-        | None -> Assert.True(false, $"Should accept empty string: {grammarText}")
-
-    let private checkRejects (grammarText: string) (testStr: string list) =
-        Assert.True(
-            TestHelpers.rnglrCheckReject (Grammar.parseGrammar grammarText) testStr,
-            $"Should reject {testStr}: {grammarText}"
-        )
+    let private checkRejects (g: Grammar<string, string>) (testStr: string list) (desc: string) =
+        Assert.True(TestHelpers.rnglrCheckReject g testStr, $"Should reject {testStr}: {desc}")
 
     let private rejectInputs =
         [ [ "a" ]; [ "b" ]; [ "a"; "b" ]; [ "a"; "a" ]; [ "b"; "b" ] ]
 
     [<Fact>]
     let ``S -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarEps "S -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarEps input "S -> eps"
 
     [<Fact>]
     let ``S -> N; N -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> N\nN -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarNtoEps "S -> N; N -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarNtoEps input "S -> N; N -> eps"
 
     [<Fact>]
     let ``S -> N N; N -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> N N\nN -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarNNtoEps "S -> N N; N -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarNNtoEps input "S -> N N; N -> eps"
 
     [<Fact>]
     let ``S -> N*; N -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> N*\nN -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarNStarEps "S -> N*; N -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarNStarEps input "S -> N*; N -> eps"
 
     [<Fact>]
     let ``S -> S S | eps accepts empty, rejects non-empty`` () =
-        let g = "S -> S S\nS -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarSSeps "S -> S S | eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarSSeps input "S -> S S | eps"
 
     [<Fact>]
     let ``S -> A B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> A B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarChainEps "S -> A B; A -> C D; B -> D C; D -> eps; C -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarChainEps input "S -> A B; A -> C D; B -> D C; D -> eps; C -> eps"
 
     [<Fact>]
     let ``S -> A | B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
-        let g = "S -> A\nS -> B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
-        checkAccepts g
+        checkAccepts TestGrammars.grammarAltEps "S -> A | B; A -> C D; B -> D C; D -> eps; C -> eps"
 
         for input in rejectInputs do
-            checkRejects g input
+            checkRejects TestGrammars.grammarAltEps input "S -> A | B; A -> C D; B -> D C; D -> eps; C -> eps"
 
 module RnglrGrammarTests =
 

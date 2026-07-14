@@ -87,6 +87,17 @@ module RSM =
     let startStates (rsm: RSM<'t, 'nt>) : Set<int> =
         rsm.BlockStart.Values |> Seq.toList |> Set.ofList
 
+    /// Returns the set of global final state indices belonging to the specified block.
+    let blockFinalStates (nt: Nonterminal<'nt>) (rsm: RSM<'t, 'nt>) : Set<int> =
+        rsm.StateInfo
+        |> Array.indexed
+        |> Array.choose (fun (i, info) ->
+            if info.BlockNonterminal = nt && info.IsFinal then
+                Some i
+            else
+                None)
+        |> Set.ofArray
+
     /// Computes block offsets (global start state for each block) ordered by state appearance.
     let private blockOffsets (rsm: RSM<'t, 'nt>) : (Nonterminal<'nt> * int) list =
         nonterminals rsm
