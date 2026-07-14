@@ -241,7 +241,7 @@ module RnglrGrammarAcceptanceAndTree =
     /// Grammar 3: S -> N* ; N -> a | (a a)
     let private grammar3 = TestGrammars.grammar13
 
-    /// Grammar 4: S -> a | S S | S S S (RNGLR skip tree tests — unbounded DFA)
+    /// Grammar 4: S -> a | S S | S S S
     let private grammar4 = TestGrammars.grammar14
 
     // ---- Grammar 1 ----
@@ -366,27 +366,23 @@ module RnglrGrammarAcceptanceAndTree =
         let ``rejects abaa`` () =
             Assert.True(TestHelpers.rnglrCheckReject grammar3 [ "a"; "b"; "a"; "a" ])
 
-    // ---- Grammar 4: S -> a | S S | S S S (acceptance only — SPPF extraction does not support this grammar) ----
+    // ---- Grammar 4: S -> a | S S | S S S ----
     module Grammar4 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a" ])
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar4) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a" ])
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(
-                TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a" ]
-            )
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(
-                TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a"; "a" ]
-            )
+            Assert.True(TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
@@ -707,8 +703,7 @@ module RnglrPropertyTreeYield =
         let ``S -> a | S S | S S S tree yield`` (s: string) =
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
 
-            TestHelpers.rnglrAcceptsWithoutSppfValidation (TestHelpers.grammarToRsm grammarG8) input
-            |> ignore
+            TestHelpers.rnglrAccepts (TestHelpers.grammarToRsm grammarG8) input |> ignore
 
             true
 

@@ -277,6 +277,35 @@ module Rnglr =
                     elif finalRsmState <> globalStart then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
 
+                        match Map.tryFind reduceNt blockMap with
+                        | Some block ->
+                            let startState = block.Dfa.StartState
+
+                            let firstTermTarget =
+                                seq {
+                                    for target in 0 .. Dfa.stateCount block.Dfa - 1 do
+                                        match Matrix.get block.Dfa.Transitions startState target with
+                                        | Some labels ->
+                                            for label in NonEmptySet.toSeq labels do
+                                                match label with
+                                                | AutomatonLabel.ATerm(RsmSymbol.RTerm _) ->
+                                                    yield invData.GlobalOffset + target
+                                                | _ -> ()
+                                        | None -> ()
+                                }
+                                |> Seq.tryHead
+
+                            match firstTermTarget with
+                            | Some firstTermGlobalState ->
+                                addToIndex
+                                    globalStart
+                                    vPre
+                                    finalRsmState
+                                    vEnd
+                                    (PathIndexEntry.PIntermediate(firstTermGlobalState, vPre + 1))
+                            | None -> ()
+                        | None -> ()
+
                     let callerItems = lrTable.Automaton.States.[lrStatePre]
 
                     for callerItem in callerItems do

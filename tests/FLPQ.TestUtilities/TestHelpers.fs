@@ -259,18 +259,12 @@ module TestHelpers =
         assertPathIndexInvariant "rnglrCheckReject" pathIndex
         not (Rnglr.isAccepted pathIndex extRsm vc)
 
-    let private rnglrAcceptsWithSppfValidation
-        (rsm: RSM<string, string>)
-        (input: string list)
-        (validateSppf: bool)
-        : bool =
+    let rnglrAccepts (rsm: RSM<string, string>) (input: string list) =
         let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
         assertPathIndexInvariant "rnglrAccepts" pathIndex
 
         if not (Rnglr.isAccepted pathIndex extRsm vc) then
             false
-        elif not validateSppf then
-            true
         else
             let freshStart = extRsm.StartBlock
 
@@ -341,9 +335,3 @@ module TestHelpers =
                 else
                     failwithf "Tree leaves %A <> input %A for RSM" leaves input
             | None -> failwith "Could not extract derivation tree for accepted input"
-
-    let rnglrAccepts (rsm: RSM<string, string>) (input: string list) =
-        rnglrAcceptsWithSppfValidation rsm input true
-
-    let rnglrAcceptsWithoutSppfValidation (rsm: RSM<string, string>) (input: string list) =
-        rnglrAcceptsWithSppfValidation rsm input false

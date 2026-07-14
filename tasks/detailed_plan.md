@@ -1,49 +1,40 @@
-# Task 167: SPPF Range Node Children Check
-
-Add SPPF invariant check to all GLL and RNGLR tests: on accepted strings, every SppfRange node in the SPPF must have at least one child (outgoing PackedAlternative edge).
+# Task 180 — Fix RNGLR: Replace `rnglrAcceptsWithoutSppfValidation` with `rnglrAccepts`
 
 ## Subtasks
 
-### S1: Add SPPF validation helpers
+### S1: Replace all `rnglrAcceptsWithoutSppfValidation` with `rnglrAccepts` in tests
 
-**Code:** `src/FLPQ.Languages/Sppf.fs` — add `validateRangeNodesHaveChildren` function. `tests/FLPQ.TestUtilities/TestHelpers.fs` — add `assertSppfInvariant`, `gllAcceptsWithSppfCheck`, `rnglrAcceptsWithSppfCheck`.
-**Tests:** None (test utility code)
-**Docs:** None (internal invariant, no public API change)
-
-**Spec:**
-- Add `Sppf.validateRangeNodesHaveChildren : SPPF<'t,'nt> -> Result<unit, string list>` — iterates all vertices, for each SppfRange, checks it has at least one outgoing edge with label `Some PackedAlternative`. Returns Error with descriptions of violating nodes.
-- Add `assertSppfInvariant : SPPF<'t,'nt> -> unit` to TestHelpers — calls validateRangeNodesHaveChildren and fails with descriptive message.
-- Add `gllAcceptsWithSppfCheck : Grammar -> string list -> bool` — builds PathIndex, checks acceptance, if accepted builds SPPF via `Sppf.buildSppfFromIndex` and validates.
-- Add `rnglrAcceptsWithSppfCheck : Grammar -> string list -> bool` — same for RNGLR.
-
-### S2: Modify GLL tests to add SPPF validation
-
-**Code:** `tests/FLPQ.Languages.Tests/GllTests.fs`
-**Tests:** All existing GLL tests (Fact + Property) — add SPPF invariant check.
+**Code:** No algorithm changes; test code only
+**Tests:** Replace 5 usages in `tests/FLPQ.Languages.Tests/RnglrTests.fs` (lines 373, 377, 382, 388, 710). Run tests and record failures.
 **Docs:** None
 
 **Spec:**
-- GllAcceptance module: replace `TestHelpers.gllAccepts` with `TestHelpers.gllAcceptsWithSppfCheck` in all Fact tests.
-- GllTreeExtraction module: in `gllTree`, after confirming acceptance and before tree extraction, build SPPF via common flow and validate. Keep tree extraction from path index (unchanged), add parallel SPPF check.
-- GllCykEquivalence: restructure property tests to use `gllAcceptsWithSppfCheck` for GLL side.
-- GllRegexEquivalence: restructure to validate SPPF when GLL accepts.
-- GllGrammarAcceptanceAndTree: replace `gllAccepts` → `gllAcceptsWithSppfCheck`. Add SPPF check to tree tests.
-- GllGrammar159A/B/C/D: add SPPF check to tree tests.
-- GllPropertyTreeYield: add SPPF check when tree is Some.
+- Search-and-replace `rnglrAcceptsWithoutSppfValidation` → `rnglrAccepts` in `RnglrTests.fs`
+- Both functions have the same signature `(rsm: RSM<string, string>) -> (input: string list) -> bool`
+- The only difference: `rnglrAccepts` validates SPPF and extracts derivation tree; `rnglrAcceptsWithoutSppfValidation` skips it
+- After replacement, `grammar4` (S -> S a | a) and `grammarG8` (S -> a | S S | S S S) tests that were previously acceptance-only will now attempt SPPF validation and tree extraction
+- Run tests and record failures
 
-### S3: Modify RNGLR tests to add SPPF validation
+### S2: Fix RNGLR algorithm for failing tests
 
-**Code:** `tests/FLPQ.Languages.Tests/RnglrTests.fs`
-**Tests:** All existing RNGLR tests (Fact + Property) — add SPPF invariant check.
+**Code:** Fix in `src/FLPQ.Languages/Rnglr.fs`, possibly `src/FLPQ.Languages/Sppf.fs`, `src/FLPQ.Languages/GLL.fs` (tree extraction)
+**Tests:** Fix `RnglrTests.fs` failing tests to pass with `rnglrAccepts`
 **Docs:** None
 
 **Spec:**
-- RnglrAcceptance: replace `TestHelpers.rnglrAccepts` → `TestHelpers.rnglrAcceptsWithSppfCheck`.
-- RnglrEquivalence: restructure to validate SPPF when RNGLR accepts.
-- RnglrRightNullable, RnglrReductionCascade: replace with SPPF-checking variant.
-- RnglrRegexEquivalence: add SPPF check to `rnglrAcceptsRegex`.
-- RnglrGrammarAcceptanceAndTree: replace acceptance helpers, add SPPF check to tree tests.
-- CrossAlgorithmEquivalence: add SPPF check to RNGLR side.
-- RnglrGrammar159A/B/C/D: add SPPF check to tree tests.
-- RnglrPropertyTreeYield: add SPPF check when tree is Some.
-- SppfDotTests: add `assertSppfInvariant` call after building SPPF.
+- Analyze which tests fail after S1
+- Fix the underlying issue: SPPF construction or tree extraction for left-recursive and ambiguous grammars
+- Ensure all tests pass with full SPPF validation
+- All existing RNGLR tests must pass (0 failures, 0 skipped)
+
+### S3: Remove `rnglrAcceptsWithoutSppfValidation` from TestHelpers
+
+**Code:** `tests/FLPQ.TestUtilities/TestHelpers.fs`
+**Tests:** Ensure all tests still pass after removal
+**Docs:** None
+
+**Spec:**
+- Remove the `rnglrAcceptsWithoutSppfValidation` function definition (lines 348-349)
+- Remove the `validateSppf` parameter from `rnglrAcceptsWithSppfValidation` — always validate
+- Rename `rnglrAcceptsWithSppfValidation` inline into `rnglrAccepts` or keep as `rnglrAccepts`
+- Ensure tests compile and pass
