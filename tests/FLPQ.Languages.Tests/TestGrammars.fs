@@ -135,3 +135,33 @@ let grammar10Accept = grammar9Accept
 let grammar10Reject = grammar9Reject
 
 let augGrammar10 = augmentStringGrammar grammar10
+
+let grammar11 =
+    Grammar.parseGrammar
+        "
+S -> a a A
+S -> a A
+A -> a A
+A -> eps
+"
+
+let grammar12 =
+    Grammar.parseGrammar
+        "
+S -> a
+S -> a a
+S -> a a A
+S -> a a a A
+A -> a A
+A -> eps
+"
+
+let grammar13 =
+    Grammar.parseGrammar
+        "
+S -> eps
+S -> a a S
+S -> a S
+"
+
+let grammar14 = Grammar.parseGrammar "S -> a\nS -> S S\nS -> S S S"

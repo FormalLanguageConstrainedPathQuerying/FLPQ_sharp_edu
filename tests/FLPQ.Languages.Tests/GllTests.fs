@@ -9,57 +9,6 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 open FLPQ.TestUtilities
 
-/// Extract derivation tree from GLL via path-index-based extraction.
-let private gllTree (g: Grammar<string, string>) (input: string list) : DerivationTree<string, string> option =
-    let rsm = TestHelpers.grammarToRsm g
-    let graph = TestHelpers.terminalsToGraph input
-    let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-    TestHelpers.assertPathIndexInvariant "gllTree" pathIndex
-    let vc = Graph.vertexCount graph
-
-    let startBlock = RSM.startBlock rsm
-    let startGlobalState = TestHelpers.globalStartState rsm startBlock.Nonterminal
-    let stateInfo = rsm.StateInfo
-    let blockStart = rsm.BlockStart
-
-    let blockFinals =
-        System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
-
-    for i in 0 .. stateInfo.Length - 1 do
-        if stateInfo.[i].IsFinal then
-            let nt = stateInfo.[i].BlockNonterminal
-
-            let current =
-                match blockFinals.TryGetValue(nt) with
-                | true, s -> s
-                | false, _ -> Set.empty
-
-            blockFinals.[nt] <- Set.add i current
-
-    let mutable finalGlobalState = -1
-    let offset = TestHelpers.blockOffset rsm startBlock.Nonterminal
-
-    for finalLocal in startBlock.Dfa.FinalStates do
-        let fgs = offset + finalLocal
-
-        let entries = PathIndex.get pathIndex startGlobalState 0 fgs (vc - 1)
-
-        if not (Set.isEmpty entries) then
-            finalGlobalState <- fgs
-
-    if finalGlobalState = -1 then
-        None
-    else
-        GLL.extractDerivationTree
-            pathIndex
-            stateInfo
-            blockStart
-            blockFinals
-            startGlobalState
-            0
-            finalGlobalState
-            (vc - 1)
-
 module GllAcceptance =
     [<Fact>]
     let ``S -> a accepts a`` () =
@@ -161,7 +110,7 @@ module GllTreeExtraction =
     let ``Tree extraction for S->aSbS|eps on abab produces tree with correct yield`` () =
         let g = TestGrammars.grammar1
 
-        match gllTree g [ "a"; "b"; "a"; "b" ] with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ] with
         | Some tree ->
             let leaves = DerivationTree.leaves tree
             Assert.Equal<string list>([ "a"; "b"; "a"; "b" ], leaves)
@@ -171,7 +120,7 @@ module GllTreeExtraction =
     let ``Tree extraction for S->aSb|eps on aabb produces tree with correct yield`` () =
         let g = TestGrammars.grammar2
 
-        match gllTree g [ "a"; "a"; "b"; "b" ] with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ] with
         | Some tree ->
             let leaves = DerivationTree.leaves tree
             Assert.Equal<string list>([ "a"; "a"; "b"; "b" ], leaves)
@@ -181,7 +130,7 @@ module GllTreeExtraction =
     let ``Tree extraction for S->a|b on a produces tree with leaf`` () =
         let g = Grammar.parseGrammar "S -> a\nS -> b"
 
-        match gllTree g [ "a" ] with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm g) [ "a" ] with
         | Some tree ->
             let leaves = DerivationTree.leaves tree
             Assert.Equal<string list>([ "a" ], leaves)
@@ -232,40 +181,18 @@ module GllGrammarAcceptanceAndTree =
 
     /// Grammar 1: S -> N a* ; N -> (a a) | a
     /// CFG with inlined terminal-first start.
-    let private grammar1 =
-        Grammar.parseGrammar
-            "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
+    let private grammar1 = TestGrammars.grammar11
 
     /// Grammar 2: S -> a* N ; N -> a | (a a)
     /// CFG with inlined terminal-first start.
-    let private grammar2 =
-        Grammar.parseGrammar
-            "
-        S -> a
-        S -> a a
-        S -> a a A
-        S -> a a a A
-        A -> a A
-        A -> eps
-        "
+    let private grammar2 = TestGrammars.grammar12
 
     /// Grammar 3: S -> N* ; N -> a | (a a)
     /// CFG with inlined terminal-first start.
-    let private grammar3 =
-        Grammar.parseGrammar
-            "
-        S -> eps
-        S -> a a S
-        S -> a S
-        "
+    let private grammar3 = TestGrammars.grammar13
 
     /// Grammar 4: S -> a | S S | S S S
-    let private grammar4 = Grammar.parseGrammar "S -> a\nS -> S S\nS -> S S S"
+    let private grammar4 = TestGrammars.grammar14
 
     // ---- Grammar 1: S -> N a* ; N -> (a a) | a ----
     module Grammar1 =
@@ -313,7 +240,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: a`` () =
             let input = [ "a" ]
 
-            match gllTree grammar1 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar1) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -321,7 +248,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
-            match gllTree grammar1 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar1) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -329,7 +256,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
-            match gllTree grammar1 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar1) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -337,7 +264,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 
-            match gllTree grammar1 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar1) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -387,7 +314,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: a`` () =
             let input = [ "a" ]
 
-            match gllTree grammar2 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar2) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -395,7 +322,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
-            match gllTree grammar2 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar2) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -403,7 +330,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
-            match gllTree grammar2 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar2) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -411,7 +338,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 
-            match gllTree grammar2 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar2) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -459,7 +386,7 @@ module GllGrammarAcceptanceAndTree =
 
         [<Fact>]
         let ``tree yield matches input: empty`` () =
-            match gllTree grammar3 [] with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar3) [] with
             | Some tree -> Assert.Equal<string list>([], DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -467,7 +394,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: a`` () =
             let input = [ "a" ]
 
-            match gllTree grammar3 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar3) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -475,7 +402,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
-            match gllTree grammar3 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar3) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -483,7 +410,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
-            match gllTree grammar3 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar3) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -491,7 +418,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 
-            match gllTree grammar3 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar3) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -541,7 +468,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: a`` () =
             let input = [ "a" ]
 
-            match gllTree grammar4 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar4) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -549,7 +476,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aa`` () =
             let input = [ "a"; "a" ]
 
-            match gllTree grammar4 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar4) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -557,7 +484,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaa`` () =
             let input = [ "a"; "a"; "a" ]
 
-            match gllTree grammar4 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar4) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -565,7 +492,7 @@ module GllGrammarAcceptanceAndTree =
         let ``tree yield matches input: aaaa`` () =
             let input = [ "a"; "a"; "a"; "a" ]
 
-            match gllTree grammar4 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar4) input with
             | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
             | None -> Assert.True(false, "Should produce a tree")
 
@@ -576,7 +503,7 @@ module GllGrammar159A =
     let ``S -> a S b S | eps tree yield matches input: a a b a b b`` () =
         let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -584,7 +511,7 @@ module GllGrammar159A =
     let ``S -> a S b S | eps tree yield matches input: a a b a b b a b`` () =
         let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -592,7 +519,7 @@ module GllGrammar159A =
     let ``S -> a S b S | eps tree yield matches input: a a a b a b b a b b`` () =
         let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -603,7 +530,7 @@ module GllGrammar159B =
     let ``S -> S a S b | eps tree yield matches input: a a a b a b b a b b`` () =
         let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -611,7 +538,7 @@ module GllGrammar159B =
     let ``S -> S a S b | eps tree yield matches input: a a b a b b a b`` () =
         let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -622,7 +549,7 @@ module GllGrammar159C =
     let ``S -> S S | a S b | eps tree yield matches input: a a a b a b b a b b`` () =
         let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -630,58 +557,12 @@ module GllGrammar159C =
     let ``S -> S S | a S b | eps tree yield matches input: a a b a b b a b`` () =
         let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
 
-        match gllTree grammar input with
+        match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammar) input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
 module GllGrammar159D =
-    let private gllTreeRsm (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
-        let graph = TestHelpers.terminalsToGraph input
-        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        TestHelpers.assertPathIndexInvariant "gllTreeRsm" pathIndex
-        let vc = Graph.vertexCount graph
 
-        let startBlock = RSM.startBlock rsm
-        let startGlobalState = TestHelpers.globalStartState rsm startBlock.Nonterminal
-        let stateInfo = rsm.StateInfo
-        let blockStart = rsm.BlockStart
-
-        let blockFinals =
-            System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
-
-        for i in 0 .. stateInfo.Length - 1 do
-            if stateInfo.[i].IsFinal then
-                let nt = stateInfo.[i].BlockNonterminal
-
-                let current =
-                    match blockFinals.TryGetValue(nt) with
-                    | true, s -> s
-                    | false, _ -> Set.empty
-
-                blockFinals.[nt] <- Set.add i current
-
-        let mutable finalGlobalState = -1
-        let offset = TestHelpers.blockOffset rsm startBlock.Nonterminal
-
-        for finalLocal in startBlock.Dfa.FinalStates do
-            let fgs = offset + finalLocal
-            let entries = PathIndex.get pathIndex startGlobalState 0 fgs (vc - 1)
-
-            if not (Set.isEmpty entries) then
-                finalGlobalState <- fgs
-
-        if finalGlobalState = -1 then
-            None
-        else
-            GLL.extractDerivationTree
-                pathIndex
-                stateInfo
-                blockStart
-                blockFinals
-                startGlobalState
-                0
-                finalGlobalState
-                (vc - 1)
 
     let private rsm = TestHelpers.buildRegexRsm "(a S b)*"
 
@@ -689,7 +570,7 @@ module GllGrammar159D =
     let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
         let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
 
-        match gllTreeRsm rsm input with
+        match TestHelpers.gllAcceptsAndCheckTree rsm input with
         | Some tree -> Assert.Equal<string list>(input, DerivationTree.leaves tree)
         | None -> Assert.True(false, "Should produce a tree")
 
@@ -699,35 +580,13 @@ module GllPropertyTreeYield =
     let private grammarG3 = TestGrammars.grammar3
     let private grammarG4 = TestGrammars.grammar4
 
-    let private grammarG5 =
-        Grammar.parseGrammar
-            "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
+    let private grammarG5 = TestGrammars.grammar11
 
-    let private grammarG6 =
-        Grammar.parseGrammar
-            "
-        S -> a
-        S -> a a
-        S -> a a A
-        S -> a a a A
-        A -> a A
-        A -> eps
-        "
+    let private grammarG6 = TestGrammars.grammar12
 
-    let private grammarG7 =
-        Grammar.parseGrammar
-            "
-        S -> eps
-        S -> a a S
-        S -> a S
-        "
+    let private grammarG7 = TestGrammars.grammar13
 
-    let private grammarG8 = Grammar.parseGrammar "S -> a\nS -> S S\nS -> S S S"
+    let private grammarG8 = TestGrammars.grammar14
 
     [<Property>]
     let ``S -> a S b S | eps tree yield matches input`` (s: string) =
@@ -736,7 +595,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG1 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG1) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -747,7 +606,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG2 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG2) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -758,7 +617,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG3 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG3) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -769,7 +628,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG4 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG4) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -780,7 +639,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG5 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG5) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -791,7 +650,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG6 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG6) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -802,7 +661,7 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG7 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG7) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
 
@@ -813,6 +672,6 @@ module GllPropertyTreeYield =
         else
             let input = TestHelpers.stringToTerminals s
 
-            match gllTree grammarG8 input with
+            match TestHelpers.gllAcceptsAndCheckTree (TestHelpers.grammarToRsm grammarG8) input with
             | Some tree -> DerivationTree.leaves tree = input
             | None -> true
