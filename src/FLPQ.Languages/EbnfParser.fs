@@ -310,7 +310,10 @@ module RsmBuilder =
 
         { Nonterminal = nt; Dfa = dfa }
 
-    let buildRSMWithStart (grouped: Map<Nonterminal<string>, Regexp<string, string>>) (startNt: Nonterminal<string>) : RSM<string, string> =
+    let buildRSMWithStart
+        (grouped: Map<Nonterminal<string>, Regexp<string, string>>)
+        (startNt: Nonterminal<string>)
+        : RSM<string, string> =
         if Map.isEmpty grouped then
             invalidArg (nameof grouped) "Grammar must contain at least one rule"
 
