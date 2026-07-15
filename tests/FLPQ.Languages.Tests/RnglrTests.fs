@@ -713,16 +713,16 @@ module SppfDotTests =
         let rsm = RsmBuilder.buildRSMFromText grammarText
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
-        let pathIndex, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
+        let pathIndex, extRsm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
 
-        let startNt = rsmFixed.StartBlock
+        let freshStart = extRsm.StartBlock
 
         let startGlobal =
-            match rsmFixed.BlockStart.TryGetValue(startNt) with
+            match extRsm.BlockStart.TryGetValue(freshStart) with
             | true, gs -> gs
             | false, _ -> 0
 
-        let startFinalStates = RSM.blockFinalStates startNt rsmFixed
+        let startFinalStates = RSM.blockFinalStates freshStart extRsm
 
         let rootRanges =
             startFinalStates
@@ -742,8 +742,8 @@ module SppfDotTests =
         Sppf.buildSppfFromIndex
             pathIndex
             rootRanges
-            (Some (rsmFixed.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-            (Some (RSM.blockFinalsMap rsmFixed))
+            (Some (extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some (RSM.blockFinalsMap extRsm))
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
@@ -844,15 +844,15 @@ module RnglrGrammarTests =
         let rsm = RsmBuilder.buildRSMFromText ebnfText
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
-        let pathIndex, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
-        Assert.True(Rnglr.isAccepted pathIndex rsmFixed vc, $"Should accept {input}: {ebnfText}")
+        let pathIndex, extRsm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
+        Assert.True(Rnglr.isAccepted pathIndex extRsm vc, $"Should accept {input}: {ebnfText}")
 
     let private checkRsmRejects (ebnfText: string) (input: string list) : unit =
         let rsm = RsmBuilder.buildRSMFromText ebnfText
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
-        let pathIndex, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
-        Assert.False(Rnglr.isAccepted pathIndex rsmFixed vc, $"Should reject {input}: {ebnfText}")
+        let pathIndex, extRsm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
+        Assert.False(Rnglr.isAccepted pathIndex extRsm vc, $"Should reject {input}: {ebnfText}")
 
     // Grammar 1: S -> N a* ; N -> (a a) | a
     module Grammar1 =

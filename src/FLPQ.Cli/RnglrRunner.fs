@@ -24,7 +24,7 @@ module RnglrRunner =
 
         let pathIndex = Rnglr.buildPathIndex (ExtendedRSM.freshStart extRsm) rsm inputGraph
 
-        let accepted = Rnglr.isAccepted pathIndex rsm vertexCount
+        let accepted = Rnglr.isAccepted pathIndex (ExtendedRSM.extRsm extRsm) vertexCount
 
         let flatExt = ExtendedRSM.extRsm extRsm
         let originalStartBlock = ExtendedRSM.originalStartBlock extRsm

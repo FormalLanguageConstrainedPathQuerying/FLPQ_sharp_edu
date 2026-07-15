@@ -105,17 +105,14 @@ module Rnglr =
             items
             |> Set.toList
             |> List.choose (fun item ->
-                if item.BlockNonterminal = freshStart then
-                    None
-                else
-                    match Map.tryFind item.BlockNonterminal blockMap with
-                    | Some block ->
-                        if Set.contains item.RsmState block.Dfa.FinalStates then
-                            let globalState = blockGlobalOffset.[item.BlockNonterminal] + item.RsmState
-                            Some(item.BlockNonterminal, globalState)
-                        else
-                            None
-                    | None -> None)
+                match Map.tryFind item.BlockNonterminal blockMap with
+                | Some block ->
+                    if Set.contains item.RsmState block.Dfa.FinalStates then
+                        let globalState = blockGlobalOffset.[item.BlockNonterminal] + item.RsmState
+                        Some(item.BlockNonterminal, globalState)
+                    else
+                        None
+                | None -> None)
 
         let toRsmSym (sym: Symbol<'t, 'nt>) : RsmSymbol<'t, 'nt> option =
             match sym with
@@ -321,23 +318,15 @@ module Rnglr =
 
         pathIndex
 
-    let isAccepted
-        (pathIndex: PathIndex<'t, 'nt>)
-        (rsm: RSM<'t, 'nt>)
-        (vertexCount: int)
-        : bool =
-        let (Nonterminal origStartNt) = rsm.StartBlock
-
+    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (extRsm: RSM<'t, 'nt>) (vertexCount: int) : bool =
         let startGlobalState =
-            match rsm.BlockStart.TryGetValue(Nonterminal origStartNt) with
+            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
             | true, gs -> gs
             | false, _ -> 0
 
-        let startFinals = RSM.blockFinalStates (Nonterminal origStartNt) rsm
+        let finalGlobalState = startGlobalState + 1
 
-        startFinals
-        |> Set.exists (fun finalState ->
-            let entries =
-                PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
+        let entries =
+            PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
 
-            not (Set.isEmpty entries))
+        not (Set.isEmpty entries)
