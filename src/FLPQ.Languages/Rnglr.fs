@@ -184,24 +184,7 @@ module Rnglr =
                                         (PathIndexEntry.PIntermediate(globalCurrInv, vCurr))
 
                                 if isStart then
-                                    let globalStart = invData.GlobalOffset + invData.Start
                                     predecessors <- (nextGss, nextVx.LrState, vNext, currInv) :: predecessors
-
-                                    if (globalStart, vNext) <> (globalEnd, endVertex) then
-                                        if vNext = endVertex then
-                                            addToIndex
-                                                globalStart
-                                                vNext
-                                                globalEnd
-                                                endVertex
-                                                (PathIndexEntry.PEpsilonNonterminal invData.Nonterminal)
-                                        else
-                                            addToIndex
-                                                globalStart
-                                                vNext
-                                                globalEnd
-                                                endVertex
-                                                (PathIndexEntry.PNonterminal invData.Nonterminal)
 
                                 let np = (nextGss, nextInv)
 
@@ -272,39 +255,8 @@ module Rnglr =
                 | true, invData ->
                     let globalStart = invData.GlobalOffset + invData.Start
 
-                    if vPre = vEnd then
+                    if vPre = vEnd && finalRsmState = globalStart then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
-                    elif finalRsmState <> globalStart then
-                        addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
-
-                        match Map.tryFind reduceNt blockMap with
-                        | Some block ->
-                            let startState = block.Dfa.StartState
-
-                            let firstTermTarget =
-                                seq {
-                                    for target in 0 .. Dfa.stateCount block.Dfa - 1 do
-                                        match Matrix.get block.Dfa.Transitions startState target with
-                                        | Some labels ->
-                                            for label in NonEmptySet.toSeq labels do
-                                                match label with
-                                                | AutomatonLabel.ATerm(RsmSymbol.RTerm _) ->
-                                                    yield invData.GlobalOffset + target
-                                                | _ -> ()
-                                        | None -> ()
-                                }
-                                |> Seq.tryHead
-
-                            match firstTermTarget with
-                            | Some firstTermGlobalState ->
-                                addToIndex
-                                    globalStart
-                                    vPre
-                                    finalRsmState
-                                    vEnd
-                                    (PathIndexEntry.PIntermediate(firstTermGlobalState, vPre + 1))
-                            | None -> ()
-                        | None -> ()
 
                     let callerItems = lrTable.Automaton.States.[lrStatePre]
 
@@ -323,70 +275,12 @@ module Rnglr =
                                             let callGlobalState = callerOffset + callerItem.RsmState
                                             let returnGlobalState = callerOffset + callTarget
 
-                                            if
-                                                vPre = vEnd
-                                                && callGlobalState = blockGlobalOffset.[callerItem.BlockNonterminal]
-                                                                     + callerBlock.Dfa.StartState
-                                                && Set.contains callTarget callerBlock.Dfa.FinalStates
-                                                && callerItem.BlockNonterminal <> freshStart
-                                            then
-                                                ()
-                                            elif vPre = vEnd then
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    globalStart
-                                                    vPre
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(globalStart, vPre))
-                                            else
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    globalStart
-                                                    vPre
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(globalStart, vPre))
-
-                                                addToIndex
-                                                    globalStart
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(finalRsmState, vEnd))
-
-                                                addToIndex
-                                                    finalRsmState
-                                                    vEnd
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
+                                            addToIndex
+                                                callGlobalState
+                                                vPre
+                                                returnGlobalState
+                                                vEnd
+                                                (PathIndexEntry.PNonterminal reduceNt)
                                         | _ -> ()
                                 | None -> ()
                         | None -> ()
