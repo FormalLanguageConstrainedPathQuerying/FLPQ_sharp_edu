@@ -159,11 +159,10 @@ module Rnglr =
                             let vNext = nextVx.InputVertex
 
                             for nextInv in nextInvList do
-                                let addedTerminal =
+                                let globalNextInv = invData.GlobalOffset + nextInv
+                                let addedEntry =
                                     match rSym with
                                     | RsmSymbol.RTerm(Terminal t) ->
-                                        let globalNextInv = invData.GlobalOffset + nextInv
-
                                         addToIndex
                                             globalNextInv
                                             vNext
@@ -172,13 +171,19 @@ module Rnglr =
                                             (PathIndexEntry.PTerminal(Terminal t))
 
                                         true
-                                    | _ -> false
+                                    | RsmSymbol.RNonterm nt ->
+                                        addToIndex
+                                            globalNextInv
+                                            vNext
+                                            globalCurrInv
+                                            vCurr
+                                            (PathIndexEntry.PNonterminal nt)
+
+                                        true
 
                                 let isStart = nextInv = invData.Start
 
-                                if addedTerminal && (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
-                                    let globalNextInv = invData.GlobalOffset + nextInv
-
+                                if addedEntry && (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
                                     addToIndex
                                         globalNextInv
                                         vNext
@@ -260,33 +265,6 @@ module Rnglr =
 
                     if vPre = vEnd && finalRsmState = globalStart then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                    let callerItems = lrTable.Automaton.States.[lrStatePre]
-
-                    for callerItem in callerItems do
-                        match Map.tryFind callerItem.BlockNonterminal blockMap with
-                        | Some callerBlock ->
-                            let trans = callerBlock.Dfa.Transitions
-
-                            for callTarget in 0 .. Dfa.stateCount callerBlock.Dfa - 1 do
-                                match Matrix.get trans callerItem.RsmState callTarget with
-                                | Some labels ->
-                                    for label in NonEmptySet.toSeq labels do
-                                        match label with
-                                        | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) when nt = reduceNt ->
-                                            let callerOffset = blockGlobalOffset.[callerItem.BlockNonterminal]
-                                            let callGlobalState = callerOffset + callerItem.RsmState
-                                            let returnGlobalState = callerOffset + callTarget
-
-                                            addToIndex
-                                                callGlobalState
-                                                vPre
-                                                returnGlobalState
-                                                vEnd
-                                                (PathIndexEntry.PNonterminal reduceNt)
-                                        | _ -> ()
-                                | None -> ()
-                        | None -> ()
                 | false, _ -> ()
 
                 if isNew then
@@ -343,15 +321,23 @@ module Rnglr =
 
         pathIndex
 
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (extRsm: RSM<'t, 'nt>) (vertexCount: int) : bool =
+    let isAccepted
+        (pathIndex: PathIndex<'t, 'nt>)
+        (rsm: RSM<'t, 'nt>)
+        (vertexCount: int)
+        : bool =
+        let (Nonterminal origStartNt) = rsm.StartBlock
+
         let startGlobalState =
-            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+            match rsm.BlockStart.TryGetValue(Nonterminal origStartNt) with
             | true, gs -> gs
             | false, _ -> 0
 
-        let finalGlobalState = startGlobalState + 1
+        let startFinals = RSM.blockFinalStates (Nonterminal origStartNt) rsm
 
-        let entries =
-            PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
+        startFinals
+        |> Set.exists (fun finalState ->
+            let entries =
+                PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
 
-        not (Set.isEmpty entries)
+            not (Set.isEmpty entries))

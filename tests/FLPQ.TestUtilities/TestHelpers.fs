@@ -249,52 +249,60 @@ module TestHelpers =
     let buildPathIndexForRsm
         (rsm: RSM<string, string>)
         (input: string list)
-        : PathIndex<string, string> * RSM<string, string> * int =
+        : PathIndex<string, string> * int =
         let freshStart = Nonterminal("S'")
         let graph = terminalsToGraph input
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
-        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
-        pathIndex, extRsm, Graph.vertexCount graph
+        pathIndex, Graph.vertexCount graph
 
     let rnglrCheckReject (g: Grammar<string, string>) (input: string list) : bool =
         let rsm = grammarToRsm g
-        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        let pathIndex, vc = buildPathIndexForRsm rsm input
         assertPathIndexInvariant "rnglrCheckReject" pathIndex
-        not (Rnglr.isAccepted pathIndex extRsm vc)
+        not (Rnglr.isAccepted pathIndex rsm vc)
 
     let rnglrAccepts (rsm: RSM<string, string>) (input: string list) =
-        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        let pathIndex, vc = buildPathIndexForRsm rsm input
         assertPathIndexInvariant "rnglrAccepts" pathIndex
 
-        if not (Rnglr.isAccepted pathIndex extRsm vc) then
+        if not (Rnglr.isAccepted pathIndex rsm vc) then
             false
         else
-            let freshStart = extRsm.StartBlock
+            let startNt = rsm.StartBlock
 
             let startGlobalState =
-                match extRsm.BlockStart.TryGetValue(freshStart) with
+                match rsm.BlockStart.TryGetValue(startNt) with
                 | true, gs -> gs
                 | false, _ -> failwith "Start block not found"
 
-            let startFinalStates = RSM.blockFinalStates freshStart extRsm
+            let startFinalStates = RSM.blockFinalStates startNt rsm
 
             let rootRanges =
                 startFinalStates
                 |> Set.toList
-                |> List.map (fun finalState ->
-                    { FromState = startGlobalState
-                      FromVertex = 0
-                      ToState = finalState
-                      ToVertex = vc - 1 })
+                |> List.choose (fun finalState ->
+                    let rk =
+                        { FromState = startGlobalState
+                          FromVertex = 0
+                          ToState = finalState
+                          ToVertex = vc - 1 }
+
+                    let entries =
+                        PathIndex.get pathIndex rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+
+                    if Set.isEmpty entries then
+                        None
+                    else
+                        Some rk)
 
             let sppf =
                 Sppf.buildSppfFromIndex
                     pathIndex
                     rootRanges
-                    (Some (extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-                    (Some (RSM.blockFinalsMap extRsm))
+                    (Some (rsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some (RSM.blockFinalsMap rsm))
             assertSppfInvariant sppf
 
             let tree =
