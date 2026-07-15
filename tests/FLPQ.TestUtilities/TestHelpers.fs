@@ -287,44 +287,10 @@ module TestHelpers =
             let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
             assertSppfInvariant sppf
 
-            let stateInfo = extRsm.StateInfo
-            let blockStart = extRsm.BlockStart
-
-            let blockFinals =
-                System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
-
-            for i in 0 .. stateInfo.Length - 1 do
-                if stateInfo.[i].IsFinal then
-                    let nt = stateInfo.[i].BlockNonterminal
-
-                    let current =
-                        match blockFinals.TryGetValue(nt) with
-                        | true, s -> s
-                        | false, _ -> Set.empty
-
-                    blockFinals.[nt] <- Set.add i current
-
-            let rootRangesForExtraction =
-                startFinalStates
-                |> Set.toList
-                |> List.map (fun finalState ->
-                    { FromState = startGlobalState
-                      FromVertex = 0
-                      ToState = finalState
-                      ToVertex = vc - 1 })
-
             let tree =
-                rootRangesForExtraction
-                |> List.tryPick (fun rk ->
-                    GLL.extractDerivationTree
-                        pathIndex
-                        stateInfo
-                        blockStart
-                        blockFinals
-                        rk.FromState
-                        rk.FromVertex
-                        rk.ToState
-                        rk.ToVertex)
+                sppf.RootIndices
+                |> List.tryHead
+                |> Option.map (fun rootIdx -> Sppf.extractDerivationTreeFromSppf sppf rootIdx)
 
             match tree with
             | Some t ->
