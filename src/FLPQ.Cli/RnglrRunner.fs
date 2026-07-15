@@ -55,7 +55,12 @@ module RnglrRunner =
                       ToVertex = vertexCount - 1 }
                     :: rootRanges
 
-        let sppf = Sppf.buildSppfFromIndex pathIndex (List.rev rootRanges)
+        let sppf =
+            Sppf.buildSppfFromIndex
+                pathIndex
+                (List.rev rootRanges)
+                (Some (ExtendedRSM.extRsm extRsm |> fun r -> r.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                (Some (ExtendedRSM.extRsm extRsm |> RSM.blockFinalsMap))
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))

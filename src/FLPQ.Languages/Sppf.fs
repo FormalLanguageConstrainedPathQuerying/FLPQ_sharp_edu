@@ -37,7 +37,12 @@ module Sppf =
     /// Top-down traversal with memoization: range nodes are created once and reused for packed alternatives.
     /// Each range is processed exactly once to avoid infinite recursion.
     /// Book reference: sec:CFPQ_GLL.
-    let buildSppfFromIndex (pathIndex: PathIndex<'t, 'nt>) (rootRanges: RangeKey list) : SPPF<'t, 'nt> =
+    let buildSppfFromIndex
+        (pathIndex: PathIndex<'t, 'nt>)
+        (rootRanges: RangeKey list)
+        (blockStart: Map<Nonterminal<'nt>, int> option)
+        (blockFinals: Map<Nonterminal<'nt>, Set<int>> option)
+        : SPPF<'t, 'nt> =
         let mutable vertices: SppfNodeInfo<'t, 'nt> list = []
         let mutable edgeList: (int * Option<SppfEdgeLabel> * int) list = []
 
@@ -132,8 +137,6 @@ module Sppf =
 
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
 
-                let mutable nonterminalNodeIdx: int option = None
-
                 for entry in entries do
                     match entry with
                     | PathIndexEntry.PTerminal t ->
@@ -145,8 +148,20 @@ module Sppf =
                         let ntNode =
                             getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos, fromState, toState))
 
-                        addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
-                        nonterminalNodeIdx <- Some ntNode
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
+
+                        match blockStart, blockFinals with
+                        | Some bs, Some bf ->
+                            match bs.TryGetValue(nt) with
+                            | true, blockStartState ->
+                                match bf.TryGetValue(nt) with
+                                | true, finals ->
+                                    for finalState in finals do
+                                        let calleeRange = processRange blockStartState fromPos finalState toPos
+                                        addEdge ntNode SppfEdgeLabel.SingleChild calleeRange
+                                | _ -> ()
+                            | _ -> ()
+                        | _ -> ()
 
                     | PathIndexEntry.PEpsilonNonterminal nt ->
                         let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
@@ -178,15 +193,7 @@ module Sppf =
                             let rightChild = processRange state pos toState toPos
                             addEdge interNode SppfEdgeLabel.RightChild rightChild
 
-                let resultIdx =
-                    match nonterminalNodeIdx with
-                    | Some ntIdx -> ntIdx
-                    | None -> rangeIdx
-
-                if resultIdx <> rangeIdx then
-                    rangeResultMap.[rk] <- resultIdx
-
-                resultIdx
+                rangeIdx
 
         let rootIndices =
             rootRanges

@@ -98,6 +98,12 @@ module RSM =
                 None)
         |> Set.ofArray
 
+    /// Returns a map from nonterminal to its set of global final state indices.
+    let blockFinalsMap (rsm: RSM<'t, 'nt>) : Map<Nonterminal<'nt>, Set<int>> =
+        nonterminals rsm
+        |> List.map (fun nt -> (nt, blockFinalStates nt rsm))
+        |> Map.ofList
+
     /// Computes block offsets (global start state for each block) ordered by state appearance.
     let private blockOffsets (rsm: RSM<'t, 'nt>) : (Nonterminal<'nt> * int) list =
         nonterminals rsm

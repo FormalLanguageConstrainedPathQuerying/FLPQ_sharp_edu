@@ -152,7 +152,12 @@ module TestHelpers =
                           ToVertex = vc - 1 })
 
         if not (List.isEmpty acceptedRanges) then
-            let sppf = Sppf.buildSppfFromIndex pathIndex acceptedRanges
+            let sppf =
+                Sppf.buildSppfFromIndex
+                    pathIndex
+                    acceptedRanges
+                    (Some (rsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some (RSM.blockFinalsMap rsm))
             assertSppfInvariant sppf
             true
         else
@@ -284,7 +289,12 @@ module TestHelpers =
                       ToState = finalState
                       ToVertex = vc - 1 })
 
-            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+            let sppf =
+                Sppf.buildSppfFromIndex
+                    pathIndex
+                    rootRanges
+                    (Some (extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some (RSM.blockFinalsMap extRsm))
             assertSppfInvariant sppf
 
             let tree =

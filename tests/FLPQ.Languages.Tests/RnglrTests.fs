@@ -731,7 +731,11 @@ module SppfDotTests =
                   ToState = finalState
                   ToVertex = vc - 1 })
 
-        Sppf.buildSppfFromIndex pathIndex rootRanges
+        Sppf.buildSppfFromIndex
+            pathIndex
+            rootRanges
+            (Some (extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some (RSM.blockFinalsMap extRsm))
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
