@@ -365,5 +365,84 @@
 164. [done] GLL fail wtih infinite loop when handle grammar `S -> a S b | S S | eps`  and string a b . Fix this problem. Add respective test.
 165. [done] Check tmp/hard-gate.txt. Logs from fsharplint looks like tool run linter incorrectly: `ERROR running fsharplint: [Errno 2] No such file or directory: '/usr/lib/dotnet/tools/dotnet-fsharplint'` Fix this problem
 166. [done] When I run `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -a rnglr -i data/example_input.txt -g data/example_grammar_amb.bnf -s -o viz_output/glr` resulting SPPF in DOT conteins range nodes that have no childs. Moreover, leafs of SPPF missed (not all terminals presented). Fix this probelm. Create respective test.
-167. [done] For all GLL anf RNGLR tests (property and fact) add check that on accepted string in SPPF for this string each range node contains at least one child. 
-168. Tests GLL
+167. [done] For all GLL anf RNGLR tests (property and fact) add check that on accepted string in SPPF for this string each range node contains at least one child.
+168. Tests GLL 
+169. [done] Improve storage for RSM. Current design stores boxes in separated Matrices. Some algorithms introduce states remapping to guarantee uniquity. Avoid remapping.
+       1.   In RSM stores all transitions for all boxes in one common Matrix.This way number of state is globally unique.
+       2.   Flow: individual automata for each nonterminal using existing fuctions -> merging of automata.
+       3.   When extends RSM, add new states at the end of range, not to the start. Thus you avoid existing states renumbering, remapping.
+       4.   Update algorithms that use RSMs.
+170. [done] Fix path index rendeting
+171. [done] Improve SPPF rendering and constructing.
+172. [done] Improve SPPF building and rendering.
+173. [done] Reorganize RNGLR tests.
+174. Remove GLL.extractDerivationTree. Use extractDerivationTreeFromSppf evrywhere
+175. [done] Improve python scripts tooling.
+176. [done] Add tests for wollowing grammaers for RNGLR.
+177. [done] Add tests for GLR.
+178. [done] Unify RSM test flow for GLL and RNGLR.
+179. [done] RNGLR tests refactoring.
+180. [done] Fix RNGLR. Some acceptance tests on RNGLR use rnglrAcceptsWithoutSppfValidation instead rnglrAccepts.
+       1.   Use rnglrAccepts everywhere
+       2.   If some tests fail, fix RNGLR algorithm.
+181.  Remove all gllAccepts. Rename rnglrCheckReject and rnglrAccepts because they are not specific for RNGLR. Use renamed versions of rnglrCheckReject and rnglrAccepts for both GLL and RNGLR tests. If some tests fail, fix GLL algorithm.
+182.  Rework RNGLR.
+       1.    Use extractDerivationTreeFromSppf in RNGLR tests instead of Gll.extractDerivationTree. Preserve original extractDerivationTreeFromSppf signature.
+       2.    Current version of RNGLR handles nonterminals incorrectly.
+             1.    Remove stub epsilon node. Preserve epsilon nonterminal to explicitly mark epsilon derivation.
+             2.    Nonterminal in Path index cell is just a reference to another range node. Nonterminal node marks call site.
+             3.    Example: Suppose grammar has rules N -> A, A -> a. Input a. RSM for grammar: N: 0 -[A]-> 1; A: 2 -[a]-> 3. cell (0,0)(1,1) contains Nonterm(A). Child of this node is a range node --- cell (0,2)(1,3). Because to recognize A we must go from A_start=2 to A_final=3. In general, nonterminal may have several childs, because block may have several final states. So, to build SPPF we must check all respective cells.
+             4.    Current version add stub epsilon nodes. E.g. in provided example, after fix, must not be epsilon nodes at all. Intermediate node is a real concatenation of two ranges. There are no ranges to concatenate in this grammar. Current version of RNGLR adds redundant intermediate nodes. Epsilon nodes a childs of range nodes. Epsilon is an explicit marker of epsilon string reduction. It may contains only in cells with coordinates of form (i,q)(i,q).
+             5.    Nonterminal node is a child of respective range node. For our example: nonterm a is a child of range node (0,0)(1,1)
+       3.    After this fix two invariants in tests must be corrected.
+             1.    PathIndex invariant. After fix cell may contains more than one Nonterminal. Replace it with: if cell (i,p)(j,q) contains nontermonal A,  start state of block for A is s and final states are f1,f2...fi, then at least one cell (i,s)(j,fi) is not empty.
+             2.    SPPF nonterminal children invariant. After fix Nonterminal node may have more than one children. Replace it with "all childs on nonterminal node are range nodes".
+  Detailed analysis of detected issues and required code changes:
+
+  **A) Self-referencing `PNonterminal` in callee cell (Rnglr.fs — `productBfs` lines 194-212, `processReduction` lines 279-315)**:
+  Both `productBfs` (BFS traversal) and `processReduction` add `PNonterminal(reduceNt)` to the callee's own range cell `(globalStart, vPre)→(finalRsmState, vEnd)`. This creates a self-referencing cycle in the SPPF: Range → Nonterm(N) → Range[same cell]. Tests pass only by accident because F# Set ordering places `PTerminal` before `PNonterminal`, so the terminal child is picked first in extraction.
+
+  **B) `productBfs` `isInitialStartState` (Rnglr.fs line 159)**:
+  For epsilon blocks (start=final), unconditionally adds `PNonterminal` even though the range is epsilon (fromVertex=toVertex). Should be `PEpsilonNonterminal` and only for genuine epsilon derivations.
+
+  **C) `processReduction` adds PEpsilonNonterminal for ALL epsilon cases (Rnglr.fs lines 283-284)**:
+  When `vPre=vEnd`, unconditionally adds `PEpsilonNonterminal` to the callee cell, even for chain epsilons like A→B, B→eps. For chain epsilons, the callee cell already has `PNonterminal(B)` and `PEpsilonNonterminal(A)` is spurious. Should only add when `vPre=vEnd && finalRsmState=globalStart` (true direct epsilon production).
+
+  **D) Five spurious entries in `processReduction` caller propagation (Rnglr.fs lines 343-376)**:
+  Each reduction adds 5 entries to the caller cell where only 1 is needed:
+  - `(callGlobalState, vPre)→(returnGlobalState, vEnd)`: `PNonterminal(reduceNt)` — CORRECT call site
+  - `(callGlobalState, vPre)→(globalStart, vPre)`: `PEpsilonNonterminal` — stub epsilon at call boundary
+  - `(callGlobalState, vPre)→(returnGlobalState, vEnd)`: `PIntermediate(globalStart, vPre)` — redundant intermediate
+  - `(globalStart, vPre)→(returnGlobalState, vEnd)`: `PIntermediate(finalRsmState, vEnd)` — intermediate straddling blocks
+  - `(finalRsmState, vEnd)→(returnGlobalState, vEnd)`: `PEpsilonNonterminal` — stub epsilon at return boundary
+
+  **E) Redundant intermediate in callee cell (Rnglr.fs lines 306-313)**:
+  When `finalRsmState ≠ globalStart`, finds the first terminal target from block's start state and adds `PIntermediate`. For rules like N→A (single nonterminal) or A→a (single terminal), there is no concatenation → intermediate is redundant. Intermediate nodes should only be added by `productBfs` during actual BFS traversal.
+
+  **F) `processReduction` skip condition (Rnglr.fs lines 334-341)**:
+  Complex guard prevents adding `PNonterminal` at the caller cell when vPre=vEnd, call is from caller's start, returns to a final state, and caller≠freshStart. This prevents legitimate entries for chains like S→A, A→eps (the caller cell `(S_start,0)→(S_final,0)` needs `PNonterminal(A)` for SPPF linkage).
+
+  **G) Direct epsilon child of nonterminal in SPPF (Sppf.fs lines 166-168)**:
+  When `ntStart=ntFinal && fromPos=toPos`, creates an Epsilon node as direct `SingleChild` of Nonterminal node. Per the task: epsilon nodes are children of **range** nodes, not nonterminal nodes. The epsilon should be a `PackedAlternative` child of the range node, and the nonterminal links to that range.
+
+  **H) `validateNonterminalChildren` allows `SppfEpsilon` (Sppf.fs line 304)**:
+  Accepts both `SppfRange` and `SppfEpsilon` as valid children. Per task 182.3.2: only `SppfRange` should be allowed.
+
+  **I) GLL also has same self-referencing PNonterminal (Gll.fs lines 206-207, 286-288, 304-307, 326-332)**:
+  Not part of task 182 but the SPPF changes (G, H) affect the shared construction. GLL's self-referencing PNonterminal will create cycles after SPPF fix — may manifest as wrong tree yields.
+
+  **Summary of required code changes:**
+
+  | File | Location | Change |
+  |------|----------|--------|
+  | Rnglr.fs:159 | `productBfs` isInitialStartState | Remove `addToIndex … PNonterminal`. Not needed — callee cell already populated by BFS entries + processReduction for epsilon. |
+  | Rnglr.fs:194-212 | `productBfs` isStart | Remove PNonterminal/PEpsilonNonterminal addition. Keep only predecessor tracking. |
+  | Rnglr.fs:279-315 | `processReduction` callee cell | Only add `PEpsilonNonterminal` when `vPre=vEnd && finalRsmState=globalStart`. Remove PNonterminal and PIntermediate here. |
+  | Rnglr.fs:317-379 | `processReduction` caller items | Replace with: for each caller item, add `PNonterminal(reduceNt)` at caller cell `(callGlobalState, vPre)→(returnGlobalState, vEnd)`. Remove the skip condition (lines 334-341) and all 5 extra entries. |
+  | Sppf.fs:163-172 | `buildSppfFromIndex` PNonterminal | Remove direct epsilon child (lines 166-168). Always process child range if non-empty. |
+  | Sppf.fs:303-306 | `validateNonterminalChildren` | Remove `SppfEpsilon` from allowed children — only `SppfRange`. |
+
+  Golden test `path_index_rnglr_aa.tex` will need regeneration after RNGLR path index changes.
+ 183. Tests GLL
+ 184. blockFinalStates
+
