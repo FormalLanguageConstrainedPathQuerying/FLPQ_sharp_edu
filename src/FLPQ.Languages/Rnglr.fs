@@ -159,21 +159,24 @@ module Rnglr =
                             let vNext = nextVx.InputVertex
 
                             for nextInv in nextInvList do
-                                match rSym with
-                                | RsmSymbol.RTerm(Terminal t) ->
-                                    let globalNextInv = invData.GlobalOffset + nextInv
+                                let addedTerminal =
+                                    match rSym with
+                                    | RsmSymbol.RTerm(Terminal t) ->
+                                        let globalNextInv = invData.GlobalOffset + nextInv
 
-                                    addToIndex
-                                        globalNextInv
-                                        vNext
-                                        globalCurrInv
-                                        vCurr
-                                        (PathIndexEntry.PTerminal(Terminal t))
-                                | _ -> ()
+                                        addToIndex
+                                            globalNextInv
+                                            vNext
+                                            globalCurrInv
+                                            vCurr
+                                            (PathIndexEntry.PTerminal(Terminal t))
+
+                                        true
+                                    | _ -> false
 
                                 let isStart = nextInv = invData.Start
 
-                                if (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
+                                if addedTerminal && (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
                                     let globalNextInv = invData.GlobalOffset + nextInv
 
                                     addToIndex

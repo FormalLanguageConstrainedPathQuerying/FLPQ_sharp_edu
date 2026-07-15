@@ -132,68 +132,75 @@ module Sppf =
             match rangeResultMap.TryGetValue(rk) with
             | true, cachedIdx -> cachedIdx
             | false, _ ->
-                let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
-                rangeResultMap.[rk] <- rangeIdx
-
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
 
-                for entry in entries do
-                    match entry with
-                    | PathIndexEntry.PTerminal t ->
-                        let termNode = getOrCreateNode (SppfNodeInfo.SppfTerminal(t, fromPos, toPos))
+                if Set.isEmpty entries then
+                    let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, fromPos))
+                    rangeResultMap.[rk] <- epsNode
+                    epsNode
+                else
+                    let rangeIdx = getOrCreateRangeNode fromState fromPos toState toPos
+                    rangeResultMap.[rk] <- rangeIdx
 
-                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative termNode
+                    for entry in entries do
+                        match entry with
+                        | PathIndexEntry.PTerminal t ->
+                            let termNode = getOrCreateNode (SppfNodeInfo.SppfTerminal(t, fromPos, toPos))
 
-                    | PathIndexEntry.PNonterminal nt ->
-                        let ntNode =
-                            getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos, fromState, toState))
+                            addEdge rangeIdx SppfEdgeLabel.PackedAlternative termNode
 
-                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
+                        | PathIndexEntry.PNonterminal nt ->
+                            let ntNode =
+                                getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos, fromState, toState))
 
-                        match blockStart, blockFinals with
-                        | Some bs, Some bf ->
-                            match bs.TryGetValue(nt) with
-                            | true, blockStartState ->
-                                match bf.TryGetValue(nt) with
-                                | true, finals ->
-                                    for finalState in finals do
-                                        let calleeRange = processRange blockStartState fromPos finalState toPos
-                                        addEdge ntNode SppfEdgeLabel.SingleChild calleeRange
+                            addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
+
+                            match blockStart, blockFinals with
+                            | Some bs, Some bf ->
+                                match bs.TryGetValue(nt) with
+                                | true, blockStartState ->
+                                    match bf.TryGetValue(nt) with
+                                    | true, finals ->
+                                        for finalState in finals do
+                                            let calleeRange = processRange blockStartState fromPos finalState toPos
+                                            addEdge ntNode SppfEdgeLabel.SingleChild calleeRange
+                                    | _ -> ()
                                 | _ -> ()
                             | _ -> ()
-                        | _ -> ()
 
-                    | PathIndexEntry.PEpsilonNonterminal nt ->
-                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
-                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative epsNode
+                        | PathIndexEntry.PEpsilonNonterminal nt ->
+                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
+                            addEdge rangeIdx SppfEdgeLabel.PackedAlternative epsNode
 
-                    | PathIndexEntry.PIntermediate(state, pos) ->
-                        let interNode =
-                            getOrCreateNode (
-                                SppfNodeInfo.SppfIntermediate(state, pos, fromState, fromPos, toState, toPos)
-                            )
+                        | PathIndexEntry.PIntermediate(state, pos) ->
+                            let leftEntries = PathIndex.get pathIndex fromState fromPos state pos
+                            let rightEntries = PathIndex.get pathIndex state pos toState toPos
 
-                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative interNode
+                            if Set.isEmpty leftEntries && Set.isEmpty rightEntries then
+                                ()
+                            else
+                                let interNode =
+                                    getOrCreateNode (
+                                        SppfNodeInfo.SppfIntermediate(state, pos, fromState, fromPos, toState, toPos)
+                                    )
 
-                        let leftEntries = PathIndex.get pathIndex fromState fromPos state pos
+                                addEdge rangeIdx SppfEdgeLabel.PackedAlternative interNode
 
-                        if Set.isEmpty leftEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, fromPos))
-                            addEdge interNode SppfEdgeLabel.LeftChild epsNode
-                        else
-                            let leftChild = processRange fromState fromPos state pos
-                            addEdge interNode SppfEdgeLabel.LeftChild leftChild
+                                if Set.isEmpty leftEntries then
+                                    let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, fromPos))
+                                    addEdge interNode SppfEdgeLabel.LeftChild epsNode
+                                else
+                                    let leftChild = processRange fromState fromPos state pos
+                                    addEdge interNode SppfEdgeLabel.LeftChild leftChild
 
-                        let rightEntries = PathIndex.get pathIndex state pos toState toPos
+                                if Set.isEmpty rightEntries then
+                                    let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, toPos))
+                                    addEdge interNode SppfEdgeLabel.RightChild epsNode
+                                else
+                                    let rightChild = processRange state pos toState toPos
+                                    addEdge interNode SppfEdgeLabel.RightChild rightChild
 
-                        if Set.isEmpty rightEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, toPos))
-                            addEdge interNode SppfEdgeLabel.RightChild epsNode
-                        else
-                            let rightChild = processRange state pos toState toPos
-                            addEdge interNode SppfEdgeLabel.RightChild rightChild
-
-                rangeIdx
+                    rangeIdx
 
         let rootIndices =
             rootRanges
@@ -274,24 +281,37 @@ module Sppf =
         for i in 0 .. vc - 1 do
             match Graph.getVertex i sppf.Graph with
             | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
-                let singleChildCount =
+                let singleChildTargets =
                     [ for j in 0 .. vc - 1 do
                           let lbl = Matrix.get sppf.Graph.Edges i j
 
                           if lbl = Some SppfEdgeLabel.SingleChild then
-                              true ]
-                    |> List.length
+                              j ]
 
-                if singleChildCount <> 1 then
+                if List.isEmpty singleChildTargets then
                     let (Nonterminal ntName) = nt
 
                     errors <-
-                        sprintf
-                            "Nonterminal node %d (%s) has %d SingleChild edge(s), expected 1"
-                            i
-                            ntName
-                            singleChildCount
+                        sprintf "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1" i ntName
                         :: errors
+                else
+                    for childIdx in singleChildTargets do
+                        match Graph.getVertex childIdx sppf.Graph with
+                        | SppfNodeInfo.SppfRange _ -> ()
+                        | SppfNodeInfo.SppfEpsilon _ -> ()
+                        | _ ->
+                            let (Nonterminal ntName) = nt
+
+                            let childInfo = Graph.getVertex childIdx sppf.Graph
+
+                            errors <-
+                                sprintf
+                                    "Nonterminal node %d (%s) child %d is not a range or epsilon node: %A"
+                                    i
+                                    ntName
+                                    childIdx
+                                    childInfo
+                                :: errors
             | _ -> ()
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
