@@ -13,97 +13,97 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a accepts a`` () =
         let g = Grammar.parseGrammar "S -> a"
-        Assert.True(TestHelpers.gllAccepts g [ "a" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a" ])
 
     [<Fact>]
     let ``S -> a rejects eps`` () =
         let g = Grammar.parseGrammar "S -> a"
-        Assert.False(TestHelpers.gllAccepts g [])
+        Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm g) [])
 
     [<Fact>]
     let ``S -> a b accepts a b`` () =
         let g = Grammar.parseGrammar "S -> a b"
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S | b accepts a a b`` () =
         let g = Grammar.parseGrammar "S -> a S\nS -> b"
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "a"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S | b rejects a a a`` () =
         let g = Grammar.parseGrammar "S -> a S\nS -> b"
-        Assert.False(TestHelpers.gllAccepts g [ "a"; "a"; "a" ])
+        Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a b a b`` () =
         let g = TestGrammars.grammar1
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "b"; "a"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a a b b`` () =
         let g = TestGrammars.grammar1
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "a"; "b"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps accepts a a b b`` () =
         let g = TestGrammars.grammar2
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "a"; "b"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps rejects a a b`` () =
         let g = TestGrammars.grammar2
-        Assert.False(TestHelpers.gllAccepts g [ "a"; "a"; "b" ])
+        Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | S S | eps accepts a b (no infinite loop)`` () =
         let g = TestGrammars.grammar2
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "b" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ])
 
     [<Fact>]
     let ``S -> a S b | eps accepts empty`` () =
         let g = TestGrammars.grammar2
-        Assert.True(TestHelpers.gllAccepts g [])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [])
 
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =
         let g = TestGrammars.grammar3
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "a"; "a" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
 
     [<Fact>]
     let ``Left-recursive S -> a S | a rejects empty`` () =
         let g = TestGrammars.grammar3
-        Assert.False(TestHelpers.gllAccepts g [])
+        Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm g) [])
 
     [<Fact>]
     let ``Right-recursive S -> S a | a accepts a a a`` () =
         let g = TestGrammars.grammar4
-        Assert.True(TestHelpers.gllAccepts g [ "a"; "a"; "a" ])
+        Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
 
 module GllCykEquivalence =
     [<Property>]
     let ``GLL and CYK agree on grammar1 random string inputs`` (s: string) =
         let g = TestGrammars.grammar1
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.gllAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
     [<Property>]
     let ``GLL and CYK agree on grammar2 random string inputs`` (s: string) =
         let g = TestGrammars.grammar2
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.gllAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
     [<Property>]
     let ``GLL and CYK agree on grammar3 random string inputs`` (s: string) =
         let g = TestGrammars.grammar3
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.gllAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
     [<Property>]
     let ``GLL and CYK agree on grammar4 random string inputs`` (s: string) =
         let g = TestGrammars.grammar4
         let input = TestHelpers.stringToTerminals s
-        TestHelpers.gllAccepts g input = TestHelpers.cykAccepts g input
+        TestHelpers.accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
 module GllTreeExtraction =
     [<Fact>]
@@ -144,7 +144,7 @@ module GllRegexEquivalence =
         let rsm = TestHelpers.buildRegexRsm regexText
         let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
+        TestHelpers.accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> a* a* matches DFA for a* a*`` (s: string) =
@@ -152,7 +152,7 @@ module GllRegexEquivalence =
         let rsm = TestHelpers.buildRegexRsm regexText
         let dfa = TestHelpers.dfaFromRegexRsm rsm
         let input = TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a")
-        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
+        TestHelpers.accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* matches DFA for (a | b)*`` (s: string) =
@@ -163,7 +163,7 @@ module GllRegexEquivalence =
         let input =
             TestHelpers.stringToTerminals s |> List.filter (fun c -> c = "a" || c = "b")
 
-        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
+        TestHelpers.accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     [<Property(MaxTest = 50)>]
     let ``S -> (a | b)* (a | c)* matches DFA for (a | b)* (a | c)*`` (s: string) =
@@ -175,7 +175,7 @@ module GllRegexEquivalence =
             TestHelpers.stringToTerminals s
             |> List.filter (fun c -> c = "a" || c = "b" || c = "c")
 
-        TestHelpers.gllAcceptsRsm rsm input = TestHelpers.dfaAcceptsRegex dfa input
+        TestHelpers.accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
 module GllGrammarAcceptanceAndTree =
 
@@ -198,43 +198,43 @@ module GllGrammarAcceptanceAndTree =
     module Grammar1 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.gllAccepts grammar1 [ "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar1 [ "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar1 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar1 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [ "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [ "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.gllAccepts grammar1 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar1) [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: a`` () =
@@ -272,43 +272,43 @@ module GllGrammarAcceptanceAndTree =
     module Grammar2 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.gllAccepts grammar2 [ "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar2 [ "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar2 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar2 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [ "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [ "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.gllAccepts grammar2 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar2) [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: a`` () =
@@ -346,43 +346,43 @@ module GllGrammarAcceptanceAndTree =
     module Grammar3 =
         [<Fact>]
         let ``accepts empty`` () =
-            Assert.True(TestHelpers.gllAccepts grammar3 [])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [])
 
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.gllAccepts grammar3 [ "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar3 [ "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar3 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar3 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.gllAccepts grammar3 [ "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar3 [ "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar3 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar3 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.gllAccepts grammar3 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar3) [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: empty`` () =
@@ -426,43 +426,43 @@ module GllGrammarAcceptanceAndTree =
     module Grammar4 =
         [<Fact>]
         let ``accepts a`` () =
-            Assert.True(TestHelpers.gllAccepts grammar4 [ "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a" ])
 
         [<Fact>]
         let ``accepts aa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar4 [ "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar4 [ "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a" ])
 
         [<Fact>]
         let ``accepts aaaa`` () =
-            Assert.True(TestHelpers.gllAccepts grammar4 [ "a"; "a"; "a"; "a" ])
+            Assert.True(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a"; "a" ])
 
         [<Fact>]
         let ``rejects empty`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [])
 
         [<Fact>]
         let ``rejects b`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [ "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "b" ])
 
         [<Fact>]
         let ``rejects ab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [ "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "b" ])
 
         [<Fact>]
         let ``rejects aab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [ "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects aaab`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [ "a"; "a"; "a"; "b" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "a"; "a"; "b" ])
 
         [<Fact>]
         let ``rejects abaa`` () =
-            Assert.False(TestHelpers.gllAccepts grammar4 [ "a"; "b"; "a"; "a" ])
+            Assert.False(TestHelpers.accepts (TestHelpers.grammarToRsm grammar4) [ "a"; "b"; "a"; "a" ])
 
         [<Fact>]
         let ``tree yield matches input: a`` () =

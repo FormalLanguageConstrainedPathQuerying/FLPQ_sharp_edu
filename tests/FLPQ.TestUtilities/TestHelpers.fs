@@ -172,9 +172,6 @@ module TestHelpers =
         else
             false
 
-    let gllAccepts (g: Grammar<string, string>) (input: string list) : bool =
-        let rsm = grammarToRsm g
-        gllAcceptsRsm rsm input
 
     let gllAcceptsAndCheckTree (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
         let graph = terminalsToGraph input
@@ -267,23 +264,23 @@ module TestHelpers =
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
         pathIndex, extRsm, Graph.vertexCount graph
 
-    let rnglrCheckReject (g: Grammar<string, string>) (input: string list) : bool =
+    let checkReject (g: Grammar<string, string>) (input: string list) : bool =
         let rsm = grammarToRsm g
         let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
 
         assertPathIndexInvariant
-            "rnglrCheckReject"
+            "checkReject"
             pathIndex
             (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap extRsm))
 
         not (Rnglr.isAccepted pathIndex extRsm vc)
 
-    let rnglrAccepts (rsm: RSM<string, string>) (input: string list) =
+    let accepts (rsm: RSM<string, string>) (input: string list) =
         let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
 
         assertPathIndexInvariant
-            "rnglrAccepts"
+            "accepts"
             pathIndex
             (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap extRsm))
