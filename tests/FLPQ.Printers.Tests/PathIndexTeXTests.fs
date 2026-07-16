@@ -29,7 +29,7 @@ module PathIndexGolden =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        TestHelpers.assertPathIndexInvariant "GLL golden" pathIndex
+        TestHelpers.assertPathIndexInvariant "GLL golden" pathIndex None None
         let tex = PathIndexTeX.toTeX string string pathIndex
         verifyGolden "path_index_gll_aa.tex" (wrapInTemplate templatePath tex)
 
@@ -50,8 +50,15 @@ module PathIndexGolden =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
-        TestHelpers.assertPathIndexInvariant "RNGLR golden" pathIndex
+
+        TestHelpers.assertPathIndexInvariant
+            "RNGLR golden"
+            pathIndex
+            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap extRsm))
+
         let tex = PathIndexTeX.toTeX string string pathIndex
         verifyGolden "path_index_rnglr_aa.tex" (wrapInTemplate templatePath tex)
 
@@ -73,7 +80,7 @@ module PathIndexCompilation =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        TestHelpers.assertPathIndexInvariant "GLL compilation" pathIndex
+        TestHelpers.assertPathIndexInvariant "GLL compilation" pathIndex None None
         let tex = PathIndexTeX.toTeX string string pathIndex
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
@@ -95,7 +102,14 @@ module PathIndexCompilation =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let rsmFixed = { rsm with StartBlock = startNt }
+        let extRsm = RSM.extendWithStart freshStart rsmFixed
         let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
-        TestHelpers.assertPathIndexInvariant "RNGLR compilation" pathIndex
+
+        TestHelpers.assertPathIndexInvariant
+            "RNGLR compilation"
+            pathIndex
+            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap extRsm))
+
         let tex = PathIndexTeX.toTeX string string pathIndex
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)

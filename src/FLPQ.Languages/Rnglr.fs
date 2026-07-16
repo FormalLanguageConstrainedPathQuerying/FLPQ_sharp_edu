@@ -105,17 +105,14 @@ module Rnglr =
             items
             |> Set.toList
             |> List.choose (fun item ->
-                if item.BlockNonterminal = freshStart then
-                    None
-                else
-                    match Map.tryFind item.BlockNonterminal blockMap with
-                    | Some block ->
-                        if Set.contains item.RsmState block.Dfa.FinalStates then
-                            let globalState = blockGlobalOffset.[item.BlockNonterminal] + item.RsmState
-                            Some(item.BlockNonterminal, globalState)
-                        else
-                            None
-                    | None -> None)
+                match Map.tryFind item.BlockNonterminal blockMap with
+                | Some block ->
+                    if Set.contains item.RsmState block.Dfa.FinalStates then
+                        let globalState = blockGlobalOffset.[item.BlockNonterminal] + item.RsmState
+                        Some(item.BlockNonterminal, globalState)
+                    else
+                        None
+                | None -> None)
 
         let toRsmSym (sym: Symbol<'t, 'nt>) : RsmSymbol<'t, 'nt> option =
             match sym with
@@ -159,23 +156,32 @@ module Rnglr =
                             let vNext = nextVx.InputVertex
 
                             for nextInv in nextInvList do
-                                match rSym with
-                                | RsmSymbol.RTerm(Terminal t) ->
-                                    let globalNextInv = invData.GlobalOffset + nextInv
+                                let globalNextInv = invData.GlobalOffset + nextInv
 
-                                    addToIndex
-                                        globalNextInv
-                                        vNext
-                                        globalCurrInv
-                                        vCurr
-                                        (PathIndexEntry.PTerminal(Terminal t))
-                                | _ -> ()
+                                let addedEntry =
+                                    match rSym with
+                                    | RsmSymbol.RTerm(Terminal t) ->
+                                        addToIndex
+                                            globalNextInv
+                                            vNext
+                                            globalCurrInv
+                                            vCurr
+                                            (PathIndexEntry.PTerminal(Terminal t))
+
+                                        true
+                                    | RsmSymbol.RNonterm nt ->
+                                        addToIndex
+                                            globalNextInv
+                                            vNext
+                                            globalCurrInv
+                                            vCurr
+                                            (PathIndexEntry.PNonterminal nt)
+
+                                        true
 
                                 let isStart = nextInv = invData.Start
 
-                                if (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
-                                    let globalNextInv = invData.GlobalOffset + nextInv
-
+                                if addedEntry && (globalCurrInv, vCurr) <> (globalEnd, endVertex) then
                                     addToIndex
                                         globalNextInv
                                         vNext
@@ -184,24 +190,7 @@ module Rnglr =
                                         (PathIndexEntry.PIntermediate(globalCurrInv, vCurr))
 
                                 if isStart then
-                                    let globalStart = invData.GlobalOffset + invData.Start
                                     predecessors <- (nextGss, nextVx.LrState, vNext, currInv) :: predecessors
-
-                                    if (globalStart, vNext) <> (globalEnd, endVertex) then
-                                        if vNext = endVertex then
-                                            addToIndex
-                                                globalStart
-                                                vNext
-                                                globalEnd
-                                                endVertex
-                                                (PathIndexEntry.PEpsilonNonterminal invData.Nonterminal)
-                                        else
-                                            addToIndex
-                                                globalStart
-                                                vNext
-                                                globalEnd
-                                                endVertex
-                                                (PathIndexEntry.PNonterminal invData.Nonterminal)
 
                                 let np = (nextGss, nextInv)
 
@@ -272,124 +261,8 @@ module Rnglr =
                 | true, invData ->
                     let globalStart = invData.GlobalOffset + invData.Start
 
-                    if vPre = vEnd then
+                    if vPre = vEnd && finalRsmState = globalStart then
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
-                    elif finalRsmState <> globalStart then
-                        addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PNonterminal reduceNt)
-
-                        match Map.tryFind reduceNt blockMap with
-                        | Some block ->
-                            let startState = block.Dfa.StartState
-
-                            let firstTermTarget =
-                                seq {
-                                    for target in 0 .. Dfa.stateCount block.Dfa - 1 do
-                                        match Matrix.get block.Dfa.Transitions startState target with
-                                        | Some labels ->
-                                            for label in NonEmptySet.toSeq labels do
-                                                match label with
-                                                | AutomatonLabel.ATerm(RsmSymbol.RTerm _) ->
-                                                    yield invData.GlobalOffset + target
-                                                | _ -> ()
-                                        | None -> ()
-                                }
-                                |> Seq.tryHead
-
-                            match firstTermTarget with
-                            | Some firstTermGlobalState ->
-                                addToIndex
-                                    globalStart
-                                    vPre
-                                    finalRsmState
-                                    vEnd
-                                    (PathIndexEntry.PIntermediate(firstTermGlobalState, vPre + 1))
-                            | None -> ()
-                        | None -> ()
-
-                    let callerItems = lrTable.Automaton.States.[lrStatePre]
-
-                    for callerItem in callerItems do
-                        match Map.tryFind callerItem.BlockNonterminal blockMap with
-                        | Some callerBlock ->
-                            let trans = callerBlock.Dfa.Transitions
-
-                            for callTarget in 0 .. Dfa.stateCount callerBlock.Dfa - 1 do
-                                match Matrix.get trans callerItem.RsmState callTarget with
-                                | Some labels ->
-                                    for label in NonEmptySet.toSeq labels do
-                                        match label with
-                                        | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) when nt = reduceNt ->
-                                            let callerOffset = blockGlobalOffset.[callerItem.BlockNonterminal]
-                                            let callGlobalState = callerOffset + callerItem.RsmState
-                                            let returnGlobalState = callerOffset + callTarget
-
-                                            if
-                                                vPre = vEnd
-                                                && callGlobalState = blockGlobalOffset.[callerItem.BlockNonterminal]
-                                                                     + callerBlock.Dfa.StartState
-                                                && Set.contains callTarget callerBlock.Dfa.FinalStates
-                                                && callerItem.BlockNonterminal <> freshStart
-                                            then
-                                                ()
-                                            elif vPre = vEnd then
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    globalStart
-                                                    vPre
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(globalStart, vPre))
-                                            else
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    globalStart
-                                                    vPre
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-
-                                                addToIndex
-                                                    callGlobalState
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(globalStart, vPre))
-
-                                                addToIndex
-                                                    globalStart
-                                                    vPre
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PIntermediate(finalRsmState, vEnd))
-
-                                                addToIndex
-                                                    finalRsmState
-                                                    vEnd
-                                                    returnGlobalState
-                                                    vEnd
-                                                    (PathIndexEntry.PEpsilonNonterminal reduceNt)
-                                        | _ -> ()
-                                | None -> ()
-                        | None -> ()
                 | false, _ -> ()
 
                 if isNew then

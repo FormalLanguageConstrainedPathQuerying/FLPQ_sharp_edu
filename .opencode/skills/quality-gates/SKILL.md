@@ -176,3 +176,7 @@ When `nestedFunctionNames` is enabled, FL0085 reports **two** categories of warn
 2. **Tail-call diagnostics**: any `let rec` function (local or top-level) missing `[<TailCall>]` attribute. This is from the `ensureTailCallDiagnosticsInRecursiveFunctions` rule.
 
 To suppress only the tail-call diagnostics while keeping naming checks, set `ensureTailCallDiagnosticsInRecursiveFunctions` to `false` in the config.
+
+## Debugging Test Hangs
+
+When a test hangs, times out, or produces wrong results, use the `debugging` skill for print-trace debugging.

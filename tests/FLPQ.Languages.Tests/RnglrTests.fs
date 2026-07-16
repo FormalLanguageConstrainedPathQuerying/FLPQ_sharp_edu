@@ -715,23 +715,35 @@ module SppfDotTests =
         let rsmFixed = { rsm with StartBlock = startNt }
         let pathIndex, extRsm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
 
+        let freshStart = extRsm.StartBlock
+
         let startGlobal =
-            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+            match extRsm.BlockStart.TryGetValue(freshStart) with
             | true, gs -> gs
             | false, _ -> 0
 
-        let startFinalStates = RSM.blockFinalStates extRsm.StartBlock extRsm
+        let startFinalStates = RSM.blockFinalStates freshStart extRsm
 
         let rootRanges =
             startFinalStates
             |> Set.toList
-            |> List.map (fun finalState ->
-                { FromState = startGlobal
-                  FromVertex = 0
-                  ToState = finalState
-                  ToVertex = vc - 1 })
+            |> List.choose (fun finalState ->
+                let rk =
+                    { FromState = startGlobal
+                      FromVertex = 0
+                      ToState = finalState
+                      ToVertex = vc - 1 }
 
-        Sppf.buildSppfFromIndex pathIndex rootRanges
+                let entries =
+                    PathIndex.get pathIndex rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+
+                if Set.isEmpty entries then None else Some rk)
+
+        Sppf.buildSppfFromIndex
+            pathIndex
+            rootRanges
+            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap extRsm))
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =

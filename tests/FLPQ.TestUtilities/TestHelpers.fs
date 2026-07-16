@@ -7,14 +7,22 @@ open FLPQ.GraphAnalysis
 
 module TestHelpers =
 
-    let assertPathIndexInvariant (source: string) (pi: PathIndex<string, string>) : unit =
-        match PathIndex.checkNonterminalInvariant pi with
-        | Ok() -> ()
-        | Error errors ->
-            let msg =
-                $"[{source}] Path index invariant violations:\n  " + String.concat "\n  " errors
+    let assertPathIndexInvariant
+        (source: string)
+        (pi: PathIndex<string, string>)
+        (blockStart: Map<Nonterminal<string>, int> option)
+        (blockFinals: Map<Nonterminal<string>, Set<int>> option)
+        : unit =
+        match blockStart, blockFinals with
+        | Some bs, Some bf ->
+            match PathIndex.checkCalleeReachabilityInvariant pi bs bf with
+            | Ok() -> ()
+            | Error errors ->
+                let msg =
+                    $"[{source}] Path index invariant violations:\n  " + String.concat "\n  " errors
 
-            failwith msg
+                failwith msg
+        | _ -> ()
 
     let assertSppfInvariant (sppf: SPPF<string, string>) : unit =
         match Sppf.validateRangeNodesHaveChildren sppf with
@@ -97,7 +105,7 @@ module TestHelpers =
     let gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
         let graph = terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        assertPathIndexInvariant "gllAcceptsRsm" pathIndex
+        assertPathIndexInvariant "gllAcceptsRsm" pathIndex None None
 
         let startBlock = RSM.startBlock rsm
         let startGlobalState = globalStartState rsm startBlock.Nonterminal
@@ -123,7 +131,7 @@ module TestHelpers =
     let gllAcceptsWithSppfCheck (rsm: RSM<string, string>) (input: string list) : bool =
         let graph = terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        assertPathIndexInvariant "gllAcceptsWithSppfCheck" pathIndex
+        assertPathIndexInvariant "gllAcceptsWithSppfCheck" pathIndex None None
         let vc = Graph.vertexCount graph
         let startBlock = RSM.startBlock rsm
         let startGlobalState = globalStartState rsm startBlock.Nonterminal
@@ -152,7 +160,13 @@ module TestHelpers =
                           ToVertex = vc - 1 })
 
         if not (List.isEmpty acceptedRanges) then
-            let sppf = Sppf.buildSppfFromIndex pathIndex acceptedRanges
+            let sppf =
+                Sppf.buildSppfFromIndex
+                    pathIndex
+                    acceptedRanges
+                    (Some(rsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some(RSM.blockFinalsMap rsm))
+
             assertSppfInvariant sppf
             true
         else
@@ -165,7 +179,7 @@ module TestHelpers =
     let gllAcceptsAndCheckTree (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
         let graph = terminalsToGraph input
         let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
-        assertPathIndexInvariant "gllAcceptsAndCheckTree" pathIndex
+        assertPathIndexInvariant "gllAcceptsAndCheckTree" pathIndex None None
         let vc = Graph.vertexCount graph
 
         let startBlock = RSM.startBlock rsm
@@ -256,12 +270,23 @@ module TestHelpers =
     let rnglrCheckReject (g: Grammar<string, string>) (input: string list) : bool =
         let rsm = grammarToRsm g
         let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
-        assertPathIndexInvariant "rnglrCheckReject" pathIndex
+
+        assertPathIndexInvariant
+            "rnglrCheckReject"
+            pathIndex
+            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap extRsm))
+
         not (Rnglr.isAccepted pathIndex extRsm vc)
 
     let rnglrAccepts (rsm: RSM<string, string>) (input: string list) =
         let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
-        assertPathIndexInvariant "rnglrAccepts" pathIndex
+
+        assertPathIndexInvariant
+            "rnglrAccepts"
+            pathIndex
+            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap extRsm))
 
         if not (Rnglr.isAccepted pathIndex extRsm vc) then
             false
@@ -278,53 +303,34 @@ module TestHelpers =
             let rootRanges =
                 startFinalStates
                 |> Set.toList
-                |> List.map (fun finalState ->
-                    { FromState = startGlobalState
-                      FromVertex = 0
-                      ToState = finalState
-                      ToVertex = vc - 1 })
+                |> List.choose (fun finalState ->
+                    let rk =
+                        { FromState = startGlobalState
+                          FromVertex = 0
+                          ToState = finalState
+                          ToVertex = vc - 1 }
 
-            let sppf = Sppf.buildSppfFromIndex pathIndex rootRanges
+                    let entries =
+                        PathIndex.get pathIndex rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+
+                    if Set.isEmpty entries then None else Some rk)
+
+            let sppf =
+                Sppf.buildSppfFromIndex
+                    pathIndex
+                    rootRanges
+                    (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some(RSM.blockFinalsMap extRsm))
+
             assertSppfInvariant sppf
 
-            let stateInfo = extRsm.StateInfo
-            let blockStart = extRsm.BlockStart
-
-            let blockFinals =
-                System.Collections.Generic.Dictionary<Nonterminal<string>, Set<int>>()
-
-            for i in 0 .. stateInfo.Length - 1 do
-                if stateInfo.[i].IsFinal then
-                    let nt = stateInfo.[i].BlockNonterminal
-
-                    let current =
-                        match blockFinals.TryGetValue(nt) with
-                        | true, s -> s
-                        | false, _ -> Set.empty
-
-                    blockFinals.[nt] <- Set.add i current
-
-            let rootRangesForExtraction =
-                startFinalStates
-                |> Set.toList
-                |> List.map (fun finalState ->
-                    { FromState = startGlobalState
-                      FromVertex = 0
-                      ToState = finalState
-                      ToVertex = vc - 1 })
-
             let tree =
-                rootRangesForExtraction
-                |> List.tryPick (fun rk ->
-                    GLL.extractDerivationTree
-                        pathIndex
-                        stateInfo
-                        blockStart
-                        blockFinals
-                        rk.FromState
-                        rk.FromVertex
-                        rk.ToState
-                        rk.ToVertex)
+                sppf.RootIndices
+                |> List.tryHead
+                |> Option.map (fun rootIdx ->
+                    let trees = Sppf.enumerateTrees sppf rootIdx
+
+                    trees |> Seq.head)
 
             match tree with
             | Some t ->

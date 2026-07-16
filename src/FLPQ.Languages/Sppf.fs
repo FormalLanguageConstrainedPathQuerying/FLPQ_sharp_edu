@@ -37,7 +37,12 @@ module Sppf =
     /// Top-down traversal with memoization: range nodes are created once and reused for packed alternatives.
     /// Each range is processed exactly once to avoid infinite recursion.
     /// Book reference: sec:CFPQ_GLL.
-    let buildSppfFromIndex (pathIndex: PathIndex<'t, 'nt>) (rootRanges: RangeKey list) : SPPF<'t, 'nt> =
+    let buildSppfFromIndex
+        (pathIndex: PathIndex<'t, 'nt>)
+        (rootRanges: RangeKey list)
+        (blockStart: Map<Nonterminal<'nt>, int> option)
+        (blockFinals: Map<Nonterminal<'nt>, Set<int>> option)
+        : SPPF<'t, 'nt> =
         let mutable vertices: SppfNodeInfo<'t, 'nt> list = []
         let mutable edgeList: (int * Option<SppfEdgeLabel> * int) list = []
 
@@ -132,8 +137,6 @@ module Sppf =
 
                 let entries = PathIndex.get pathIndex fromState fromPos toState toPos
 
-                let mutable nonterminalNodeIdx: int option = None
-
                 for entry in entries do
                     match entry with
                     | PathIndexEntry.PTerminal t ->
@@ -145,8 +148,25 @@ module Sppf =
                         let ntNode =
                             getOrCreateNode (SppfNodeInfo.SppfNonterminal(nt, fromPos, toPos, fromState, toState))
 
-                        addEdge ntNode SppfEdgeLabel.SingleChild rangeIdx
-                        nonterminalNodeIdx <- Some ntNode
+                        addEdge rangeIdx SppfEdgeLabel.PackedAlternative ntNode
+
+                        match blockStart, blockFinals with
+                        | Some bs, Some bf ->
+                            match bs.TryGetValue(nt) with
+                            | true, blockStartState ->
+                                match bf.TryGetValue(nt) with
+                                | true, finals ->
+                                    for finalState in finals do
+                                        let calleeEntries =
+                                            PathIndex.get pathIndex blockStartState fromPos finalState toPos
+
+                                        if not (Set.isEmpty calleeEntries) then
+                                            let calleeRange = processRange blockStartState fromPos finalState toPos
+
+                                            addEdge ntNode SppfEdgeLabel.SingleChild calleeRange
+                                | _ -> ()
+                            | _ -> ()
+                        | _ -> ()
 
                     | PathIndexEntry.PEpsilonNonterminal nt ->
                         let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
@@ -178,15 +198,7 @@ module Sppf =
                             let rightChild = processRange state pos toState toPos
                             addEdge interNode SppfEdgeLabel.RightChild rightChild
 
-                let resultIdx =
-                    match nonterminalNodeIdx with
-                    | Some ntIdx -> ntIdx
-                    | None -> rangeIdx
-
-                if resultIdx <> rangeIdx then
-                    rangeResultMap.[rk] <- resultIdx
-
-                resultIdx
+                rangeIdx
 
         let rootIndices =
             rootRanges
@@ -267,24 +279,37 @@ module Sppf =
         for i in 0 .. vc - 1 do
             match Graph.getVertex i sppf.Graph with
             | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
-                let singleChildCount =
+                let singleChildTargets =
                     [ for j in 0 .. vc - 1 do
                           let lbl = Matrix.get sppf.Graph.Edges i j
 
                           if lbl = Some SppfEdgeLabel.SingleChild then
-                              true ]
-                    |> List.length
+                              j ]
 
-                if singleChildCount <> 1 then
+                if List.isEmpty singleChildTargets then
                     let (Nonterminal ntName) = nt
 
                     errors <-
-                        sprintf
-                            "Nonterminal node %d (%s) has %d SingleChild edge(s), expected 1"
-                            i
-                            ntName
-                            singleChildCount
+                        sprintf "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1" i ntName
                         :: errors
+                else
+                    for childIdx in singleChildTargets do
+                        match Graph.getVertex childIdx sppf.Graph with
+                        | SppfNodeInfo.SppfRange _ -> ()
+                        | SppfNodeInfo.SppfEpsilon _ -> ()
+                        | _ ->
+                            let (Nonterminal ntName) = nt
+
+                            let childInfo = Graph.getVertex childIdx sppf.Graph
+
+                            errors <-
+                                sprintf
+                                    "Nonterminal node %d (%s) child %d is not a range or epsilon node: %A"
+                                    i
+                                    ntName
+                                    childIdx
+                                    childInfo
+                                :: errors
             | _ -> ()
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
@@ -441,11 +466,11 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
-    /// Extracts a single derivation tree from an SPPF root.
-    /// For ambiguous grammars, picks the first alternative at each packed node.
-    /// Uses a visited set to break cycles in the Nonterminal-SingleChild-Range-PackedAlternative loop.
+    /// Lazily enumerates derivation trees from an SPPF in order of increasing tree depth.
+    /// No visited tracking — cycles produce valid deeper trees (e.g., S → S S nesting).
+    /// Each yielded tree is a correct derivation if the SPPF is constructed correctly.
     /// Book reference: sec:CFPQ_GLL.
-    let extractDerivationTreeFromSppf (sppf: SPPF<'t, 'nt>) (rootIdx: int) : DerivationTree<'t, 'nt> =
+    let enumerateTrees (sppf: SPPF<'t, 'nt>) (rootIdx: int) : seq<DerivationTree<'t, 'nt>> =
         let vertexCount = Graph.vertexCount sppf.Graph
 
         let allEdgesTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int list =
@@ -455,7 +480,7 @@ module Sppf =
                   if predicate edgeLabel then
                       toIdx ]
 
-        let rec edgeTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int option =
+        let edgeTo (nodeIdx: int) (predicate: Option<SppfEdgeLabel> -> bool) : int option =
             let mutable result = None
 
             for toIdx in 0 .. vertexCount - 1 do
@@ -469,49 +494,62 @@ module Sppf =
 
             result
 
-        let rec extractChildren (visited: HashSet<int>) (nodeIdx: int) : DerivationTree<'t, 'nt> list =
+        let rec childrenByDepth (depth: int) (nodeIdx: int) : seq<seq<DerivationTree<'t, 'nt>>> =
             let info = Graph.getVertex nodeIdx sppf.Graph
 
-            let isRange =
-                match info with
-                | SppfNodeInfo.SppfRange _ -> true
-                | _ -> false
-
-            if not isRange && not (visited.Add(nodeIdx)) then
-                []
-            else
-                match info with
-                | SppfNodeInfo.SppfTerminal(t, _, _) -> [ Leaf(Symbol.T t) ]
-                | SppfNodeInfo.SppfEpsilon _ -> [ Leaf Symbol.Epsilon ]
-                | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
+            match info with
+            | SppfNodeInfo.SppfTerminal(t, _, _) ->
+                if depth = 1 then
+                    Seq.singleton (Seq.singleton (Leaf(Symbol.T t)))
+                else
+                    Seq.empty
+            | SppfNodeInfo.SppfEpsilon _ ->
+                if depth = 1 then
+                    Seq.singleton (Seq.singleton (Leaf Symbol.Epsilon))
+                else
+                    Seq.empty
+            | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
+                if depth <= 1 then
+                    Seq.empty
+                else
                     match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.SingleChild) with
-                    | Some rangeIdx ->
-                        let alternatives =
-                            allEdgesTo rangeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative)
+                    | Some calleeIdx ->
+                        childrenByDepth (depth - 1) calleeIdx
+                        |> Seq.map (fun childrenSeq -> Seq.singleton (Node(nt, childrenSeq |> Seq.toList)))
+                    | None -> Seq.empty
+            | SppfNodeInfo.SppfIntermediate _ ->
+                if depth <= 1 then
+                    Seq.empty
+                else
+                    match
+                        edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.LeftChild),
+                        edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.RightChild)
+                    with
+                    | Some lIdx, Some rIdx ->
+                        seq {
+                            for dL in 1 .. depth - 1 do
+                                for dR in 1 .. depth - 1 do
+                                    if max dL dR = depth - 1 then
+                                        for lc in childrenByDepth dL lIdx do
+                                            for rc in childrenByDepth dR rIdx do
+                                                Seq.append lc rc
+                        }
+                    | _ -> Seq.empty
+            | SppfNodeInfo.SppfRange _ ->
+                allEdgesTo nodeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative)
+                |> Seq.ofList
+                |> Seq.collect (fun childIdx -> childrenByDepth depth childIdx)
 
-                        match List.tryHead alternatives with
-                        | Some childIdx ->
-                            let children = extractChildren visited childIdx
-                            [ Node(nt, children) ]
-                        | None -> [ Node(nt, []) ]
-                    | None -> [ Node(nt, []) ]
-                | SppfNodeInfo.SppfIntermediate _ ->
-                    let left =
-                        match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.LeftChild) with
-                        | Some idx -> extractChildren visited idx
-                        | None -> []
+        seq {
+            let mutable depth = 1
 
-                    let right =
-                        match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.RightChild) with
-                        | Some idx -> extractChildren visited idx
-                        | None -> []
+            while depth < 50 do
+                match childrenByDepth depth rootIdx |> Seq.tryHead with
+                | Some childrenSeq ->
+                    match childrenSeq |> Seq.tryHead with
+                    | Some firstTree -> yield firstTree
+                    | None -> ()
+                | None -> ()
 
-                    left @ right
-                | SppfNodeInfo.SppfRange _ ->
-                    match edgeTo nodeIdx (fun e -> e = Some SppfEdgeLabel.PackedAlternative) with
-                    | Some childIdx -> extractChildren visited childIdx
-                    | None -> [ Leaf Symbol.Epsilon ]
-
-        extractChildren (HashSet<int>()) rootIdx
-        |> List.tryHead
-        |> Option.defaultValue (Leaf Symbol.Epsilon)
+                depth <- depth + 1
+        }

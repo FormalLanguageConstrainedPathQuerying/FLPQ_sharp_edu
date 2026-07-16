@@ -77,9 +77,14 @@ module PathIndex =
             | PathIndexEntry.PEpsilonNonterminal _ -> true
             | _ -> false)
 
-    /// Checks that no cell in the path index contains more than one nonterminal-like entry.
-    /// Returns Ok() or Error with list of violation descriptions (cell coordinates and count).
-    let checkNonterminalInvariant (pi: PathIndex<'t, 'nt>) : Result<unit, string list> =
+    /// Checks the callee-reachability invariant: if cell (i,p)(j,q) contains PNonterminal(A)
+    /// or PEpsilonNonterminal(A), then at least one callee cell (s_A,p)(f_A,q) is non-empty,
+    /// where s_A = blockStart[A] and f_A ∈ blockFinals[A].
+    let checkCalleeReachabilityInvariant
+        (pi: PathIndex<'t, 'nt>)
+        (blockStart: Map<Nonterminal<'nt>, int>)
+        (blockFinals: Map<Nonterminal<'nt>, Set<int>>)
+        : Result<unit, string list> =
         let k = pi.StateCount * pi.VertexCount
         let mutable errors = []
 
@@ -87,33 +92,71 @@ module PathIndex =
             for toIdx in 0 .. k - 1 do
                 let nts = filterNonterminals (Matrix.get pi.Matrix fromIdx toIdx)
 
-                if Set.count nts > 1 then
+                if not (Set.isEmpty nts) then
                     let fromState = fromIdx / pi.VertexCount
                     let fromVertex = fromIdx % pi.VertexCount
                     let toState = toIdx / pi.VertexCount
                     let toVertex = toIdx % pi.VertexCount
 
-                    let ntList = nts |> Set.toList
+                    for entry in nts do
+                        let nt =
+                            match entry with
+                            | PathIndexEntry.PNonterminal(Nonterminal n)
+                            | PathIndexEntry.PEpsilonNonterminal(Nonterminal n) -> Nonterminal n
+                            | _ -> failwith "unexpected"
 
-                    let desc =
-                        ntList
-                        |> List.map (fun e ->
-                            match e with
-                            | PathIndexEntry.PNonterminal(Nonterminal nt) -> sprintf "N(%A)" nt
-                            | PathIndexEntry.PEpsilonNonterminal(Nonterminal nt) -> sprintf "epsN(%A)" nt
-                            | _ -> "?")
-                        |> String.concat ", "
+                        match blockStart.TryGetValue(nt) with
+                        | true, ntStart ->
+                            match blockFinals.TryGetValue(nt) with
+                            | true, ntFinals ->
+                                let anyCalleeNonEmpty =
+                                    ntFinals
+                                    |> Set.exists (fun bf ->
+                                        let entries = get pi ntStart fromVertex bf toVertex
 
-                    let msg =
-                        sprintf
-                            "Cell (%d,%d)→(%d,%d) has %d nonterminal(s): %s"
-                            fromState
-                            fromVertex
-                            toState
-                            toVertex
-                            ntList.Length
-                            desc
+                                        not (Set.isEmpty entries))
 
-                    errors <- msg :: errors
+                                if not anyCalleeNonEmpty then
+                                    let (Nonterminal ntName) = nt
+
+                                    let msg =
+                                        sprintf
+                                            "Cell (%d,%d)->(%d,%d) has %A but all callee cells (%d,%d)->(f,%d) are empty"
+                                            fromState
+                                            fromVertex
+                                            toState
+                                            toVertex
+                                            ntName
+                                            ntStart
+                                            fromVertex
+                                            toVertex
+
+                                    errors <- msg :: errors
+                            | _ ->
+                                let (Nonterminal ntName) = nt
+
+                                let msg =
+                                    sprintf
+                                        "Cell (%d,%d)->(%d,%d) has %A but block metadata not found"
+                                        fromState
+                                        fromVertex
+                                        toState
+                                        toVertex
+                                        ntName
+
+                                errors <- msg :: errors
+                        | _ ->
+                            let (Nonterminal ntName) = nt
+
+                            let msg =
+                                sprintf
+                                    "Cell (%d,%d)->(%d,%d) has %A but block metadata not found"
+                                    fromState
+                                    fromVertex
+                                    toState
+                                    toVertex
+                                    ntName
+
+                            errors <- msg :: errors
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
