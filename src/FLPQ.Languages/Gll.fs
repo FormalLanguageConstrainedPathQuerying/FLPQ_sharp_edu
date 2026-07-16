@@ -68,14 +68,15 @@ module GLL =
                     ToVertex = newVertex }
 
     /// Builds the path index for the given extended RSM over the input graph.
-    /// Uses the original (unextended) RSM internally, starting from vertex 0.
+    /// Uses the extended RSM internally, starting from the S' block which has one
+    /// nonterminal transition to the original start — processed as a regular call.
     /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
     let buildPathIndex
         (_freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        let rsm = ersm.OriginalRsm
+        let rsm = ersm.ExtendedRsm
         let stateCount = RSM.stateCount rsm
         let vertexCount = Graph.vertexCount inputGraph
         let k = stateCount * vertexCount
@@ -379,26 +380,6 @@ module GLL =
                                 tryEnqueue contDesc
 
         pathIndex
-
-    /// Checks if the path index contains a path from the original start block's start state
-    /// at vertex 0 to any of its final states at the last vertex.
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
-        let rsm = ersm.OriginalRsm
-        let startBlock = RSM.startBlock rsm
-
-        let startGlobalState =
-            match rsm.BlockStart.TryGetValue(startBlock.Nonterminal) with
-            | true, gs -> gs
-            | false, _ -> 0
-
-        let startFinals = RSM.blockFinalStates startBlock.Nonterminal rsm
-
-        startFinals
-        |> Set.exists (fun finalState ->
-            let entries =
-                PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
-
-            not (Set.isEmpty entries))
 
     /// Extracts a single derivation tree from a path index starting from (fromState, fromVertex) to (toState, toVertex).
     /// Works directly with the path index entries, bypassing the SPPF.

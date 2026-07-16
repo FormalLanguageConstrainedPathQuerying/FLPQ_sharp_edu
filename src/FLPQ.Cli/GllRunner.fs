@@ -33,7 +33,7 @@ module GllRunner =
         let ersm = ExtendedRSM.create freshStart rsm
         let pathIndex = GLL.buildPathIndex freshStart ersm inputGraph
 
-        let accepted = GLL.isAccepted pathIndex ersm vertexCount
+        let accepted = PathIndex.isAccepted pathIndex ersm vertexCount
 
         let startVertex = 0
 
