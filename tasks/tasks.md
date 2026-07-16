@@ -385,7 +385,7 @@
 180. [done] Fix RNGLR. Some acceptance tests on RNGLR use rnglrAcceptsWithoutSppfValidation instead rnglrAccepts.
        1.   Use rnglrAccepts everywhere
        2.   If some tests fail, fix RNGLR algorithm.
-181.  Remove all gllAccepts. Rename rnglrCheckReject and rnglrAccepts because they are not specific for RNGLR. Use renamed versions of rnglrCheckReject and rnglrAccepts for both GLL and RNGLR tests. If some tests fail, fix GLL algorithm.
+181. [done] Remove all gllAccepts. Rename rnglrCheckReject and rnglrAccepts because they are not specific for RNGLR. Use renamed versions of rnglrCheckReject and rnglrAccepts for both GLL and RNGLR tests. If some tests fail, fix GLL algorithm. RNGLR is correct.
 182. [done] Rework RNGLR.
        1.    Use extractDerivationTreeFromSppf in RNGLR tests instead of Gll.extractDerivationTree. Preserve original extractDerivationTreeFromSppf signature.
        2.    Current version of RNGLR handles nonterminals incorrectly.
@@ -443,6 +443,49 @@
   | Sppf.fs:303-306 | `validateNonterminalChildren` | Remove `SppfEpsilon` from allowed children — only `SppfRange`. |
 
   Golden test `path_index_rnglr_aa.tex` will need regeneration after RNGLR path index changes.
- 183. Tests GLL
+ 183. Deep GLL refactoring: common isAccepted, parameterized accepts/checkReject, remove GLL.extractDerivationTree.
+        1.    Move `isAccepted` from Rnglr.fs to PathIndex.fs as a shared function.
+              - Signature: `PathIndex<'t,'nt> -> ExtendedRSM<'t,'nt> -> int -> bool`
+              - Checks range (startGlobalState, 0) → (startGlobalState+1, vertexCount-1) where startGlobalState = flatExt.BlockStart[flatExt.StartBlock]
+              - This is algorithm-independent: both GLL and RNGLR build path indices over ExtendedRSM states with S' at the end
+              - Update all callers: RnglrRunner.fs, TestHelpers.fs, RnglrTests.fs — replace `Rnglr.isAccepted` → `PathIndex.isAccepted`
+        2.    Refactor GLL to use ExtendedRSM internally (same as RNGLR).
+              - In `Gll.buildPathIndex`: replace `let rsm = ersm.OriginalRsm` → `let rsm = ersm.ExtendedRsm`
+              - All derived values (stateCount, StateInfo, BlockStart, termTrans, nontermTrans) now come from ExtendedRSM
+              - GLL starts from S' block (fresh start), which has one nonterminal transition to original start — processed as a regular call, no algorithmic change needed
+              - Remove `Gll.isAccepted` entirely (~18 lines)
+        3.    Update GllRunner.fs for ExtendedRSM-based path index.
+              - Replace `GLL.isAccepted` → `PathIndex.isAccepted`              
+              - Root ranges: from fresh start block (S' start → S' final), same as RNGLR
+        4.    Parameterize `accepts` and `checkReject` in TestHelpers.fs.
+              - New signatures:
+                ```
+                accepts : (Nonterminal<string> -> ExtendedRSM<_,_> -> Graph<_,_> -> PathIndex<_,_>)
+                        -> (PathIndex<_,_> -> ExtendedRSM<_,_> -> int -> bool)
+                        -> RSM<string,string> -> string list -> bool
+                checkReject : (Nonterminal<string> -> ExtendedRSM<_,_> -> Graph<_,_> -> PathIndex<_,_>)
+                            -> (PathIndex<_,_> -> ExtendedRSM<_,_> -> int -> bool)
+                            -> Grammar<string,string> -> string list -> bool
+                ```
+              - Shared pipeline: create ExtendedRSM → buildPI freshStart ersm graph → isAcc pi ersm vc → SPPF from fresh start block → enumerateTrees → validate leaves = input
+              - Remove obsolete helpers: `gllAcceptsRsm`, `gllAcceptsWithSppfCheck`, `gllAcceptsAndCheckTree`, `buildPathIndexForRsm`
+        5.    Add local bindings in GllTests.fs, replace all call sites.
+              ```
+              let private accepts = TestHelpers.accepts Gll.buildPathIndex PathIndex.isAccepted
+              let private checkReject = TestHelpers.checkReject Gll.buildPathIndex PathIndex.isAccepted
+              ```
+              - Replace `TestHelpers.accepts` → `accepts` (~20 calls)
+              - Replace 36 `match TestHelpers.gllAcceptsAndCheckTree rsm input with | Some tree -> Assert.Equal(input, DerivationTree.leaves tree) | None -> Assert.True(false, ...)` → `Assert.True(accepts rsm input)` (since `accepts` already validates tree leaves internally)
+        6.    Add local bindings in RnglrTests.fs, replace all call sites.
+              ```
+              let private accepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
+              let private checkReject = TestHelpers.checkReject Rnglr.buildPathIndex PathIndex.isAccepted
+              ```
+              - Replace `TestHelpers.accepts` → `accepts`, `TestHelpers.checkReject` → `checkReject` (~35 calls)
+              - Replace `Rnglr.isAccepted` → `PathIndex.isAccepted` in checkRsmAccepts/checkRsmRejects
+              - Inline ExtendedRSM creation in buildSppf (since buildPathIndexForRsm is removed)
+        7.    Remove `Gll.extractDerivationTree` from Gll.fs (~85 lines).
+              - Tree extraction goes through SPPF (`Sppf.enumerateTrees`) for both algorithms
+              - No other code references `Gll.extractDerivationTree` after the above changes
  184. blockFinalStates
 
