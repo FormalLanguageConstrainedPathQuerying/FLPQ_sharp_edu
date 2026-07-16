@@ -179,11 +179,4 @@ To suppress only the tail-call diagnostics while keeping naming checks, set `ens
 
 ## Debugging Test Hangs
 
-When a test hangs, times out, or produces wrong results, use the `debugging` skill for print-trace debugging. The `-l "console;verbosity=detailed"` flag is required to see `System.Console.WriteLine` output from test code:
-
-```bash
-dotnet test <testproj> -l "console;verbosity=detailed" --filter "<filter>" > tmp/test-trace.txt 2>&1
-grep TRACE tmp/test-trace.txt
-```
-
-See the `debugging` skill for trace marker conventions and the full debugging workflow.
+When a test hangs, times out, or produces wrong results, use the `debugging` skill for print-trace debugging.
