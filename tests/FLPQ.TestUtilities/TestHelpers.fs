@@ -325,7 +325,10 @@ module TestHelpers =
             let tree =
                 sppf.RootIndices
                 |> List.tryHead
-                |> Option.map (fun rootIdx -> Sppf.extractDerivationTreeFromSppf sppf rootIdx)
+                |> Option.map (fun rootIdx ->
+                    let trees = Sppf.enumerateTrees sppf rootIdx
+
+                    trees |> Seq.head)
 
             match tree with
             | Some t ->
