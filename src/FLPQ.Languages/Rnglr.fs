@@ -35,11 +35,11 @@ module Rnglr =
           GlobalOffset: int }
 
     let buildPathIndex
-        (freshStart: Nonterminal<'nt>)
-        (rsm: RSM<'t, 'nt>)
+        (_freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        let extRsm = RSM.extendWithStart freshStart rsm
+        let extRsm = ersm.ExtendedRsm
         let lrTable = RnglrLR.buildLR0Table extRsm
         let rsmStateCount = RSM.stateCount extRsm
         let lrStateCount = Dfa.stateCount lrTable.Automaton
@@ -319,9 +319,11 @@ module Rnglr =
 
         pathIndex
 
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (extRsm: RSM<'t, 'nt>) (vertexCount: int) : bool =
+    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
+        let flatExt = ersm.ExtendedRsm
+
         let startGlobalState =
-            match extRsm.BlockStart.TryGetValue(extRsm.StartBlock) with
+            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
             | true, gs -> gs
             | false, _ -> 0
 

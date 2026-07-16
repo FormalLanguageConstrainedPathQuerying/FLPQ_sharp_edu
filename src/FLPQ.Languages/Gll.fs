@@ -67,13 +67,15 @@ module GLL =
                     ToState = newState
                     ToVertex = newVertex }
 
-    /// Builds the path index for the given RSM over the input graph, starting from the specified vertices.
+    /// Builds the path index for the given extended RSM over the input graph.
+    /// Uses the original (unextended) RSM internally, starting from vertex 0.
     /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
     let buildPathIndex
-        (rsm: RSM<'t, 'nt>)
+        (_freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
-        (startVertices: Set<int>)
         : PathIndex<'t, 'nt> =
+        let rsm = ersm.OriginalRsm
         let stateCount = RSM.stateCount rsm
         let vertexCount = Graph.vertexCount inputGraph
         let k = stateCount * vertexCount
@@ -122,7 +124,7 @@ module GLL =
                 if handled.Add(d) then
                     queue.Enqueue(d)
 
-        // Initialize: for each start vertex, create descriptor at start block's start state
+        // Initialize: start from vertex 0 at the original start block's start state
         let startBlock = RSM.startBlock rsm
 
         let startGlobalState =
@@ -130,16 +132,15 @@ module GLL =
             | true, gs -> gs
             | false, _ -> failwithf "Start block %A not found" startBlock.Nonterminal
 
-        for vs in startVertices do
-            let gssIdx = GSS.linearIndex vertexCount startGlobalState vs
+        let gssIdx = GSS.linearIndex vertexCount startGlobalState 0
 
-            let desc =
-                { RsmState = startGlobalState
-                  Vertex = vs
-                  GssIdx = gssIdx
-                  MatchedRange = RangeDescriptor.EmptyRange }
+        let desc =
+            { RsmState = startGlobalState
+              Vertex = 0
+              GssIdx = gssIdx
+              MatchedRange = RangeDescriptor.EmptyRange }
 
-            tryEnqueue desc
+        tryEnqueue desc
 
         // Main loop
         while queue.Count > 0 do
@@ -379,20 +380,23 @@ module GLL =
 
         pathIndex
 
-    /// Checks if the path index contains a path from (fromState, fromVertex) to some final state
-    /// at the end of the input graph.
-    let isAccepted
-        (pathIndex: PathIndex<'t, 'nt>)
-        (startGlobalState: int)
-        (startVertex: int)
-        (finalStates: Set<int>)
-        (vertexCount: int)
-        : bool =
-        // Check if there's any entry from start to a final state at any vertex
-        finalStates
+    /// Checks if the path index contains a path from the original start block's start state
+    /// at vertex 0 to any of its final states at the last vertex.
+    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
+        let rsm = ersm.OriginalRsm
+        let startBlock = RSM.startBlock rsm
+
+        let startGlobalState =
+            match rsm.BlockStart.TryGetValue(startBlock.Nonterminal) with
+            | true, gs -> gs
+            | false, _ -> 0
+
+        let startFinals = RSM.blockFinalStates startBlock.Nonterminal rsm
+
+        startFinals
         |> Set.exists (fun finalState ->
             let entries =
-                PathIndex.get pathIndex startGlobalState startVertex finalState (vertexCount - 1)
+                PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
 
             not (Set.isEmpty entries))
 

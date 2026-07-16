@@ -23,20 +23,17 @@ module GllRunner =
             |> List.takeWhile (fun b -> b.Nonterminal <> startBlock.Nonterminal)
             |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
 
-        let startBlockFinalStates =
-            startBlock.Dfa.FinalStates
-            |> Set.map (fun localFinal -> startBlockOffset + localFinal)
-
         let inputText = Helpers.readFile inputFile
         let inputTokens = Tokenizer.tokenizeTerminals inputText
         let rawTokens = inputTokens |> List.map (fun (Terminal t) -> t)
         let inputGraph = GLL.stringToGraph rawTokens
         let vertexCount = Graph.vertexCount inputGraph
 
-        let pathIndex = GLL.buildPathIndex rsm inputGraph (set [ 0 ])
+        let freshStart = Nonterminal "S'"
+        let ersm = ExtendedRSM.create freshStart rsm
+        let pathIndex = GLL.buildPathIndex freshStart ersm inputGraph
 
-        let accepted =
-            GLL.isAccepted pathIndex startGlobalState 0 startBlockFinalStates vertexCount
+        let accepted = GLL.isAccepted pathIndex ersm vertexCount
 
         let startVertex = 0
 

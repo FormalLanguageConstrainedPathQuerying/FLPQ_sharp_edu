@@ -103,8 +103,10 @@ module TestHelpers =
         | None -> -1
 
     let gllAcceptsRsm (rsm: RSM<string, string>) (input: string list) : bool =
+        let freshStart = Nonterminal("S'")
+        let ersm = ExtendedRSM.create freshStart rsm
         let graph = terminalsToGraph input
-        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        let pathIndex = GLL.buildPathIndex freshStart ersm graph
         assertPathIndexInvariant "gllAcceptsRsm" pathIndex None None
 
         let startBlock = RSM.startBlock rsm
@@ -129,8 +131,10 @@ module TestHelpers =
             not (Set.isEmpty entries))
 
     let gllAcceptsWithSppfCheck (rsm: RSM<string, string>) (input: string list) : bool =
+        let freshStart = Nonterminal("S'")
+        let ersm = ExtendedRSM.create freshStart rsm
         let graph = terminalsToGraph input
-        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        let pathIndex = GLL.buildPathIndex freshStart ersm graph
         assertPathIndexInvariant "gllAcceptsWithSppfCheck" pathIndex None None
         let vc = Graph.vertexCount graph
         let startBlock = RSM.startBlock rsm
@@ -159,7 +163,9 @@ module TestHelpers =
                           ToState = fs
                           ToVertex = vc - 1 })
 
-        if not (List.isEmpty acceptedRanges) then
+        if List.isEmpty acceptedRanges then
+            false
+        else
             let sppf =
                 Sppf.buildSppfFromIndex
                     pathIndex
@@ -169,13 +175,13 @@ module TestHelpers =
 
             assertSppfInvariant sppf
             true
-        else
-            false
 
 
     let gllAcceptsAndCheckTree (rsm: RSM<string, string>) (input: string list) : DerivationTree<string, string> option =
+        let freshStart = Nonterminal("S'")
+        let ersm = ExtendedRSM.create freshStart rsm
         let graph = terminalsToGraph input
-        let pathIndex = GLL.buildPathIndex rsm graph (set [ 0 ])
+        let pathIndex = GLL.buildPathIndex freshStart ersm graph
         assertPathIndexInvariant "gllAcceptsAndCheckTree" pathIndex None None
         let vc = Graph.vertexCount graph
 
@@ -255,47 +261,47 @@ module TestHelpers =
     let buildPathIndexForRsm
         (rsm: RSM<string, string>)
         (input: string list)
-        : PathIndex<string, string> * RSM<string, string> * int =
+        : PathIndex<string, string> * ExtendedRSM<string, string> * int =
         let freshStart = Nonterminal("S'")
         let graph = terminalsToGraph input
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
-        let extRsm = RSM.extendWithStart freshStart rsmFixed
-        let pathIndex = Rnglr.buildPathIndex freshStart rsmFixed graph
-        pathIndex, extRsm, Graph.vertexCount graph
+        let ersm = ExtendedRSM.create freshStart rsmFixed
+        let pathIndex = Rnglr.buildPathIndex freshStart ersm graph
+        pathIndex, ersm, Graph.vertexCount graph
 
     let checkReject (g: Grammar<string, string>) (input: string list) : bool =
         let rsm = grammarToRsm g
-        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        let pathIndex, ersm, vc = buildPathIndexForRsm rsm input
 
         assertPathIndexInvariant
             "checkReject"
             pathIndex
-            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-            (Some(RSM.blockFinalsMap extRsm))
+            (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
 
-        not (Rnglr.isAccepted pathIndex extRsm vc)
+        not (Rnglr.isAccepted pathIndex ersm vc)
 
     let accepts (rsm: RSM<string, string>) (input: string list) =
-        let pathIndex, extRsm, vc = buildPathIndexForRsm rsm input
+        let pathIndex, ersm, vc = buildPathIndexForRsm rsm input
 
         assertPathIndexInvariant
             "accepts"
             pathIndex
-            (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-            (Some(RSM.blockFinalsMap extRsm))
+            (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
 
-        if not (Rnglr.isAccepted pathIndex extRsm vc) then
+        if not (Rnglr.isAccepted pathIndex ersm vc) then
             false
         else
-            let freshStart = extRsm.StartBlock
+            let flatExt = ersm.ExtendedRsm
 
             let startGlobalState =
-                match extRsm.BlockStart.TryGetValue(freshStart) with
+                match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
                 | true, gs -> gs
                 | false, _ -> failwith "Start block not found"
 
-            let startFinalStates = RSM.blockFinalStates freshStart extRsm
+            let startFinalStates = RSM.blockFinalStates flatExt.StartBlock flatExt
 
             let rootRanges =
                 startFinalStates
@@ -316,8 +322,8 @@ module TestHelpers =
                 Sppf.buildSppfFromIndex
                     pathIndex
                     rootRanges
-                    (Some(extRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-                    (Some(RSM.blockFinalsMap extRsm))
+                    (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                    (Some(RSM.blockFinalsMap flatExt))
 
             assertSppfInvariant sppf
 
