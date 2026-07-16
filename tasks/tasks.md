@@ -386,7 +386,7 @@
        1.   Use rnglrAccepts everywhere
        2.   If some tests fail, fix RNGLR algorithm.
 181.  Remove all gllAccepts. Rename rnglrCheckReject and rnglrAccepts because they are not specific for RNGLR. Use renamed versions of rnglrCheckReject and rnglrAccepts for both GLL and RNGLR tests. If some tests fail, fix GLL algorithm.
-182.  Rework RNGLR.
+182. [done] Rework RNGLR.
        1.    Use extractDerivationTreeFromSppf in RNGLR tests instead of Gll.extractDerivationTree. Preserve original extractDerivationTreeFromSppf signature.
        2.    Current version of RNGLR handles nonterminals incorrectly.
              1.    Remove stub epsilon node. Preserve epsilon nonterminal to explicitly mark epsilon derivation.
