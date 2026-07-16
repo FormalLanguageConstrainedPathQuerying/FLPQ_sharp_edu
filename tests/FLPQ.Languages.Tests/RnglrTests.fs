@@ -783,14 +783,14 @@ module RnglrGrammarTests =
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
         let pathIndex, ersm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
-        Assert.True(Rnglr.isAccepted pathIndex ersm vc, $"Should accept {input}: {ebnfText}")
+        Assert.True(PathIndex.isAccepted pathIndex ersm vc, $"Should accept {input}: {ebnfText}")
 
     let private checkRsmRejects (ebnfText: string) (input: string list) : unit =
         let rsm = RsmBuilder.buildRSMFromText ebnfText
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
         let pathIndex, ersm, vc = TestHelpers.buildPathIndexForRsm rsmFixed input
-        Assert.False(Rnglr.isAccepted pathIndex ersm vc, $"Should reject {input}: {ebnfText}")
+        Assert.False(PathIndex.isAccepted pathIndex ersm vc, $"Should reject {input}: {ebnfText}")
 
     // Grammar 1: S -> N a* ; N -> (a a) | a
     module Grammar1 =

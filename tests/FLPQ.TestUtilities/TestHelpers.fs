@@ -280,7 +280,7 @@ module TestHelpers =
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
 
-        not (Rnglr.isAccepted pathIndex ersm vc)
+        not (PathIndex.isAccepted pathIndex ersm vc)
 
     let accepts (rsm: RSM<string, string>) (input: string list) =
         let pathIndex, ersm, vc = buildPathIndexForRsm rsm input
@@ -291,7 +291,7 @@ module TestHelpers =
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
 
-        if not (Rnglr.isAccepted pathIndex ersm vc) then
+        if not (PathIndex.isAccepted pathIndex ersm vc) then
             false
         else
             let flatExt = ersm.ExtendedRsm

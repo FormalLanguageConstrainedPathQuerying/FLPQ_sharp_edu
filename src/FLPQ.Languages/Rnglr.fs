@@ -318,18 +318,3 @@ module Rnglr =
                     processNode lrState v 0
 
         pathIndex
-
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
-        let flatExt = ersm.ExtendedRsm
-
-        let startGlobalState =
-            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
-            | true, gs -> gs
-            | false, _ -> 0
-
-        let finalGlobalState = startGlobalState + 1
-
-        let entries =
-            PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
-
-        not (Set.isEmpty entries)
