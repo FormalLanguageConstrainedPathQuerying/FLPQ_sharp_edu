@@ -26,6 +26,13 @@ FLPQ.slnx
 │   │   ├── RsmToGrammar.fs         # RSM to BNF grammar conversion
 │   │   ├── DerivationTree.fs       # Derivation tree type and operations
 │   │   ├── VisualizationTypes.fs   # Shared visualization types
+│   │   ├── GllTypes.fs             # GLL types (SPPF, GSS, path index entries)
+│   │   ├── PathIndex.fs            # Path index (K×K matrix) for GLL/RNGLR recognized ranges
+│   │   ├── Sppf.fs                 # SPPF construction from path index
+│   │   ├── Gll.fs                  # GLL parsing algorithm for CFPQ on RSMs
+│   │   ├── RnglrTypes.fs           # RNGLR types (GSS, LR table, items)
+│   │   ├── RnglrLR.fs              # RNGLR LR(0) table construction from RSM
+│   │   ├── Rnglr.fs                # RNGLR parsing algorithm for CFPQ on RSMs
 │   │   ├── Cyk.fs                  # CYK parsing algorithm
 │   │   ├── Valiant.fs              # Valiant parsing algorithm
 │   │   ├── LLParser.fs             # LL(k) parsing table and parser

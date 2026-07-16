@@ -10,55 +10,46 @@ GLL builds a **path index** (matrix) during execution. The **SPPF** (Shared Pack
 
 ### GllTypes.fs
 
-Located in `src/FLPQ.Languages/GllTypes.fs`. Defines three type groups:
-
-#### SPPF Types
-
-```fsharp
-SppfNodeInfo<'t,'nt> = DU:
-  SppfTerminal(Terminal<'t>, leftPos: int, rightPos: int)
-  SppfNonterminal(Nonterminal<'nt>, leftPos: int, rightPos: int, fromState: int, toState: int)
-  SppfEpsilon(pos: int)
-  SppfIntermediate(state: int, pos: int)
-  SppfRange(fromState: int, fromPos: int, toState: int, toPos: int)
-
-SppfEdgeLabel = DU: SingleChild | LeftChild | RightChild | PackedAlternative
-
-SPPF<'t,'nt> = { graph: Graph<SppfNodeInfo<'t,'nt>, Option<SppfEdgeLabel>>; rootIndices: int list }
-```
-
-Between a (parent, child) pair, there cannot be two edges of different types → edge label is `Option<SppfEdgeLabel>` (not `NonEmptySet`). Packing of alternatives: one RangeNode has multiple PackedAlternative edges to different child vertices. SPPF roots are range nodes corresponding to accepted ranges.
-
-#### PathIndex Types
-
-```fsharp
-RangeKey (struct): { fromState: int; fromVertex: int; toState: int; toVertex: int }
-
-RangeDescriptor = DU: EmptyRange | NonEmptyRange of RangeKey
-
-PathIndexEntry<'t,'nt> = DU:
-  PTerminal(Terminal<'t>)
-  PNonterminal(Nonterminal<'nt>)
-  PIntermediate(state: int, pos: int)
-
-PathIndex<'t,'nt> = { matrix: Matrix<Set<PathIndexEntry<'t,'nt>>>; stateCount: int; vertexCount: int }
-```
-
-Size K×K where K = |Q| * |V|. Linear index: idx(state, vertex) = state * vertexCount + vertex.
+Located in `src/FLPQ.Languages/GllTypes.fs`. Defines GSS types and the `Descriptor` type for the GLL worklist queue.
 
 #### GSS Types
 
 ```fsharp
 GssVertexInfo (struct): { state: int; vertex: int }
 
-GssEdgeInfo (struct): { returnState: int; matchedRange: RangeDescriptor }
+GssEdgeInfo (struct):
+  { ReturnState: int
+    PreCallState: int
+    PreCallVertex: int
+    MatchedRange: RangeDescriptor }
 
-GSS = { graph: Graph<GssVertexInfo, Option<NonEmptySet<GssEdgeInfo>>>; storedPops: Set<RangeDescriptor>[] }
+GSS =
+  { Graph: Graph<GssVertexInfo, Option<NonEmptySet<GssEdgeInfo>>>
+    StoredPops: Set<RangeDescriptor> array }
 ```
 
-StoredPops is stored in a separate mutable array (not in the struct's mutable field) because Graph's immutable Map returns value copies for structs, preventing in-place mutation.
+StoredPops is stored in a separate mutable array (not in a mutable struct field) because `Graph.vertexMap` (an immutable Map) returns value copies for structs, preventing in-place mutation.
 
-Vertices are all possible (state, vertex) pairs: |Q|*|V| vertices, pre-allocated. Edges use NonEmptySet because multiple edges between the same pair are possible.
+Vertices are all possible (state, vertex) pairs: |Q|×|V| vertices, pre-allocated. Edges use NonEmptySet because multiple edges between the same pair are possible.
+
+#### Descriptor
+
+```fsharp
+Descriptor (struct):
+  { RsmState: int
+    Vertex: int
+    GssIdx: int
+    MatchedRange: RangeDescriptor }
+```
+
+The worklist queue element. Implements custom equality and hashing for handled-set deduplication.
+
+#### SPPF and PathIndex Types
+
+SPPF types (`SppfNodeInfo`, `SppfEdgeLabel`, `SPPF`) and PathIndex types (`RangeKey`, `RangeDescriptor`, `PathIndexEntry`, `PathIndex`) are defined in separate files:
+
+- [SPPF module](sppf.md) — `Sppf.fs`
+- [PathIndex module](path-index.md) — `PathIndex.fs`
 
 ## Functions
 
@@ -70,40 +61,20 @@ buildPathIndex : RSM<'t,'nt> -> Graph<int, Option<'t>> -> Set<int> -> PathIndex<
 
 Core GLL algorithm (Listing lst:gll_rsm_cfpq):
 
-1. **Initialization**: Flattens RSM state space (assigns global indices), pre-allocates GSS with all |Q|*|V| vertices. For each start vertex, creates descriptor at the extended RSM start block's start state.
+1. **Initialization**: Flattens RSM state space (assigns global indices), pre-allocates GSS with all |Q|×|V| vertices. For each start vertex, creates descriptor at the extended RSM start block's start state.
 
 2. **Main loop** (queue-based with handled set):
    - **Terminal transitions**: Match RSM terminal transitions with graph edges, add PTerminal and PIntermediate entries, extend matched range.
    - **Nonterminal transitions (calls)**: Push GSS edge with return address and current range, handle storedPops, create descriptor for called block's start state.
    - **Final state (return)**: Pop GSS, save recognized range, add PNonterminal and PIntermediate entries, create continuation descriptors.
 
-### GLL.buildSppfFromIndex
-
-```fsharp
-buildSppfFromIndex : PathIndex<'t,'nt> -> RangeKey list -> SPPF<'t,'nt>
-```
-
-Top-down SPPF construction from path index:
-- Range nodes are memoized: first visit creates SppfRange, subsequent visits add PackedAlternative edges.
-- PTerminal → SppfTerminal leaf node
-- PNonterminal → SppfNonterminal with SingleChild back to the same range
-- PIntermediate → SppfIntermediate with LeftChild/RightChild to sub-ranges
-
 ### GLL.extractDerivationTree
 
 ```fsharp
-extractDerivationTree : PathIndex<'t,'nt> -> RsmStateInfo<'nt>[] -> Dictionary<'nt,int> -> int -> int -> int -> int -> DerivationTree<'t,'nt>
+extractDerivationTree : PathIndex<'t,'nt> -> RsmStateInfo<'nt>[] -> Dictionary<'nt,int> -> Dictionary<'nt,Set<int>> -> int -> int -> int -> int -> DerivationTree<'t,'nt> option
 ```
 
-Extracts a single derivation tree directly from the path index (bypassing SPPF). Depth-limited (100) to prevent infinite recursion. Picks the first available derivation entry at each decomposition point.
-
-### GLL.extractDerivationTreeFromSppf
-
-```fsharp
-extractDerivationTreeFromSppf : SPPF<'t,'nt> -> int -> DerivationTree<'t,'nt>
-```
-
-Alternative tree extraction from an already-built SPPF graph. Uses a visited set to break Nonterminal → SingleChild → Range → PackedAlternative → Nonterminal cycles.
+Extracts a single derivation tree directly from the path index (bypassing SPPF). Depth-limited (100) to prevent infinite recursion through the index. Picks the first available derivation entry at each decomposition point: prefers PIntermediate over PTerminal over PEpsilonNonterminal over PNonterminal.
 
 ### GLL.stringToGraph
 
@@ -113,14 +84,26 @@ stringToGraph : 't list -> Graph<int, Option<'t>>
 
 Converts a list of terminals to a linear path graph: vertices 0..|list|, each edge i→i+1 carries the corresponding terminal.
 
+### GLL.isAccepted
+
+```fsharp
+isAccepted : PathIndex<'t,'nt> -> int -> int -> Set<int> -> int -> bool
+```
+
+Checks if the path index contains a path from (startGlobalState, startVertex) to any of the given final states at the end of the input graph.
+
 ## Design Decisions
 
-1. **StoredPops storage**: storedPops is in a separate mutable array (`GSS.storedPops: Set<RangeDescriptor>[]`) rather than a mutable struct field. This avoids the issue where `Graph.vertexMap` (an immutable Map) returns value copies for structs.
+1. **StoredPops storage**: storedPops is in a separate mutable array rather than a mutable struct field, avoiding the value-copy issue with immutable Maps.
 
-2. **PathIndex linear indexing**: Uses `idx(state, vertex) = state * vertexCount + vertex` to map (state, vertex) pairs to matrix row/column indices. The matrix is K×K where K = |Q| × |V|.
+2. **Epsilon acceptance**: For RSM blocks where the start state is final (regex nullable), the GLL adds PNonterminal to the path index even without parent GSS edges, ensuring epsilon acceptance is correctly recorded.
 
-3. **Epsilon acceptance**: For RSM blocks where the start state is final (regex nullable), the GLL adds PNonterminal to the path index even without parent GSS edges, ensuring epsilon acceptance is correctly recorded.
+3. **Grammar to RSM conversion**: Tests use `RsmBuilder.buildRSMFromText` via EBNF text conversion. Only alphabetic terminals (a-z) are supported due to EBNF tokenizer limitations.
 
-4. **SPPF cycles**: The SPPF inherently contains cycles (Nonterminal → SingleChild → Range → PackedAlternative → Nonterminal). Tree extraction handles this via depth limits and visited sets.
+4. **PathIndex linear indexing**: Uses `idx(state, vertex) = state * vertexCount + vertex` to map (state, vertex) pairs to matrix row/column indices. See [PathIndex module](path-index.md).
 
-5. **Grammar to RSM conversion**: Tests use `RsmBuilder.buildRSMFromText` via EBNF text conversion. Only alphabetic terminals (a-z) are supported due to EBNF tokenizer limitations.
+## See Also
+
+- [SPPF module](sppf.md) — SPPF types, construction, validation, tree enumeration
+- [PathIndex module](path-index.md) — path index types and operations
+- [RNGLR module](rnglr.md) — LR-based counterpart sharing SPPF and PathIndex
