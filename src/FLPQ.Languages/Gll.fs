@@ -68,14 +68,15 @@ module GLL =
                     ToVertex = newVertex }
 
     /// Builds the path index for the given extended RSM over the input graph.
-    /// Uses the original (unextended) RSM internally, starting from vertex 0.
+    /// Uses the extended RSM internally, starting from the S' block which has one
+    /// nonterminal transition to the original start — processed as a regular call.
     /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
     let buildPathIndex
         (_freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        let rsm = ersm.OriginalRsm
+        let rsm = ersm.ExtendedRsm
         let stateCount = RSM.stateCount rsm
         let vertexCount = Graph.vertexCount inputGraph
         let k = stateCount * vertexCount
@@ -199,19 +200,16 @@ module GLL =
                             let vFinal = popRange.ToVertex
                             let qNFinal = popRange.ToState
 
-                            // Add PNonterminal entries
+                            // Add PNonterminal entries (caller cell only — marks call site)
                             if v0 = vFinal then
                                 addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                                 addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                             else
-                                addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
                                 addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
 
                             // Add PIntermediate and create continuation
                             match desc.MatchedRange with
                             | RangeDescriptor.EmptyRange ->
-                                addToIndex qNStart v0 qRet vFinal (PathIndexEntry.PIntermediate(q0, v0))
-
                                 let newRange =
                                     RangeDescriptor.NonEmptyRange
                                         { FromState = qNStart
@@ -282,207 +280,65 @@ module GLL =
                     let vFinal = recRange.ToVertex
                     let nt = stateInfo.[qNStart].BlockNonterminal
 
-                    if List.isEmpty outgoingEdges then
+                    if vStart = vFinal then
+                        addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+
+                    for (parentGssIdx, edgeInfo) in outgoingEdges do
+                        let qRet = edgeInfo.ReturnState
+                        let parentRange = edgeInfo.MatchedRange
+
                         if vStart = vFinal then
-                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                            addToIndex
+                                edgeInfo.PreCallState
+                                edgeInfo.PreCallVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PEpsilonNonterminal nt)
                         else
-                            addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                            addToIndex
+                                edgeInfo.PreCallState
+                                edgeInfo.PreCallVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PNonterminal nt)
 
-                            if termTrans.[qNStart].Count > 0 then
-                                let (_, qNext) = termTrans.[qNStart].[0]
+                        // Add PIntermediate and create continuation descriptor
+                        match parentRange with
+                        | RangeDescriptor.EmptyRange ->
+                            let newRange =
+                                RangeDescriptor.NonEmptyRange
+                                    { FromState = qNStart
+                                      FromVertex = vStart
+                                      ToState = qRet
+                                      ToVertex = vFinal }
 
-                                addToIndex
-                                    qNStart
-                                    vStart
-                                    qNFinal
-                                    vFinal
-                                    (PathIndexEntry.PIntermediate(qNext, vStart + 1))
-                    else
-                        for (parentGssIdx, edgeInfo) in outgoingEdges do
-                            let qRet = edgeInfo.ReturnState
-                            let parentRange = edgeInfo.MatchedRange
+                            let contDesc =
+                                { RsmState = qRet
+                                  Vertex = vFinal
+                                  GssIdx = parentGssIdx
+                                  MatchedRange = newRange }
 
-                            if vStart = vFinal then
-                                addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
-                            else
-                                addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                            tryEnqueue contDesc
+                        | RangeDescriptor.NonEmptyRange rk ->
+                            addToIndex
+                                rk.FromState
+                                rk.FromVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PIntermediate(edgeInfo.PreCallState, edgeInfo.PreCallVertex))
 
-                                if termTrans.[qNStart].Count > 0 then
-                                    let (_, qNext) = termTrans.[qNStart].[0]
+                            let newRange =
+                                RangeDescriptor.NonEmptyRange
+                                    { rk with
+                                        ToState = qRet
+                                        ToVertex = vFinal }
 
-                                    addToIndex
-                                        qNStart
-                                        vStart
-                                        qNFinal
-                                        vFinal
-                                        (PathIndexEntry.PIntermediate(qNext, vStart + 1))
+                            let contDesc =
+                                { RsmState = qRet
+                                  Vertex = vFinal
+                                  GssIdx = parentGssIdx
+                                  MatchedRange = newRange }
 
-                            if vStart = vFinal then
-                                addToIndex
-                                    edgeInfo.PreCallState
-                                    edgeInfo.PreCallVertex
-                                    qRet
-                                    vFinal
-                                    (PathIndexEntry.PEpsilonNonterminal nt)
-                            else
-                                addToIndex
-                                    edgeInfo.PreCallState
-                                    edgeInfo.PreCallVertex
-                                    qRet
-                                    vFinal
-                                    (PathIndexEntry.PNonterminal nt)
-
-                            // Add PIntermediate and create continuation descriptor
-                            match parentRange with
-                            | RangeDescriptor.EmptyRange ->
-                                addToIndex
-                                    qNStart
-                                    vStart
-                                    qRet
-                                    vFinal
-                                    (PathIndexEntry.PIntermediate(edgeInfo.PreCallState, edgeInfo.PreCallVertex))
-
-                                let newRange =
-                                    RangeDescriptor.NonEmptyRange
-                                        { FromState = qNStart
-                                          FromVertex = vStart
-                                          ToState = qRet
-                                          ToVertex = vFinal }
-
-                                let contDesc =
-                                    { RsmState = qRet
-                                      Vertex = vFinal
-                                      GssIdx = parentGssIdx
-                                      MatchedRange = newRange }
-
-                                tryEnqueue contDesc
-                            | RangeDescriptor.NonEmptyRange rk ->
-                                addToIndex
-                                    rk.FromState
-                                    rk.FromVertex
-                                    qRet
-                                    vFinal
-                                    (PathIndexEntry.PIntermediate(edgeInfo.PreCallState, edgeInfo.PreCallVertex))
-
-                                let newRange =
-                                    RangeDescriptor.NonEmptyRange
-                                        { rk with
-                                            ToState = qRet
-                                            ToVertex = vFinal }
-
-                                let contDesc =
-                                    { RsmState = qRet
-                                      Vertex = vFinal
-                                      GssIdx = parentGssIdx
-                                      MatchedRange = newRange }
-
-                                tryEnqueue contDesc
+                            tryEnqueue contDesc
 
         pathIndex
-
-    /// Checks if the path index contains a path from the original start block's start state
-    /// at vertex 0 to any of its final states at the last vertex.
-    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
-        let rsm = ersm.OriginalRsm
-        let startBlock = RSM.startBlock rsm
-
-        let startGlobalState =
-            match rsm.BlockStart.TryGetValue(startBlock.Nonterminal) with
-            | true, gs -> gs
-            | false, _ -> 0
-
-        let startFinals = RSM.blockFinalStates startBlock.Nonterminal rsm
-
-        startFinals
-        |> Set.exists (fun finalState ->
-            let entries =
-                PathIndex.get pathIndex startGlobalState 0 finalState (vertexCount - 1)
-
-            not (Set.isEmpty entries))
-
-    /// Extracts a single derivation tree from a path index starting from (fromState, fromVertex) to (toState, toVertex).
-    /// Works directly with the path index entries, bypassing the SPPF.
-    /// For ambiguous grammars, picks the first available derivation.
-    /// Book reference: sec:CFPQ_GLL.
-    let extractDerivationTree
-        (pathIndex: PathIndex<'t, 'nt>)
-        (stateInfo: RsmStateInfo<'nt> array)
-        (blockStart: System.Collections.Generic.Dictionary<Nonterminal<'nt>, int>)
-        (blockFinals: System.Collections.Generic.Dictionary<Nonterminal<'nt>, Set<int>>)
-        (fromState: int)
-        (fromVertex: int)
-        (toState: int)
-        (toVertex: int)
-        : DerivationTree<'t, 'nt> option =
-        let rec extract
-            (fs: int)
-            (fv: int)
-            (ts: int)
-            (tv: int)
-            (depth: int)
-            (visited: Set<int * int * int * int>)
-            : DerivationTree<'t, 'nt> option =
-            if depth > 100 then
-                None
-            elif Set.contains (fs, fv, ts, tv) visited then
-                None
-            else
-                let nextVisited = Set.add (fs, fv, ts, tv) visited
-                let entries = PathIndex.get pathIndex fs fv ts tv
-
-                if Set.isEmpty entries then
-                    None
-                else
-                    // Priority: PIntermediate > PTerminal > PEpsilonNonterminal > PNonterminal
-                    entries
-                    |> Set.toList
-                    |> List.tryPick (fun entry ->
-                        match entry with
-                        | PathIndexEntry.PIntermediate(state, pos) ->
-                            let left = extract fs fv state pos (depth + 1) nextVisited
-                            let right = extract state pos ts tv (depth + 1) nextVisited
-
-                            match left, right with
-                            | Some l, Some r ->
-                                let nt = stateInfo.[fs].BlockNonterminal
-                                Some(Node(nt, [ l; r ]))
-                            | _ -> None
-                        | _ -> None)
-                    |> Option.orElseWith (fun () ->
-                        entries
-                        |> Set.toList
-                        |> List.tryPick (fun entry ->
-                            match entry with
-                            | PathIndexEntry.PTerminal(Terminal t) -> Some(Leaf(Symbol.T(Terminal t)))
-                            | _ -> None))
-                    |> Option.orElseWith (fun () ->
-                        entries
-                        |> Set.toList
-                        |> List.tryPick (fun entry ->
-                            match entry with
-                            | PathIndexEntry.PEpsilonNonterminal nt -> Some(Node(nt, []))
-                            | _ -> None))
-                    |> Option.orElseWith (fun () ->
-                        entries
-                        |> Set.toList
-                        |> List.tryPick (fun entry ->
-                            match entry with
-                            | PathIndexEntry.PNonterminal nt ->
-                                match blockStart.TryGetValue(nt) with
-                                | true, qNStart ->
-                                    let qNFinals =
-                                        match blockFinals.TryGetValue(nt) with
-                                        | true, finals -> finals
-                                        | false, _ -> Set.empty
-
-                                    qNFinals
-                                    |> Set.toList
-                                    |> List.tryPick (fun qNFinal ->
-                                        extract qNStart fv qNFinal tv (depth + 1) nextVisited
-                                        |> Option.map (fun children -> Node(nt, [ children ])))
-                                | false, _ -> None
-                            | _ -> None))
-
-        match extract fromState fromVertex toState toVertex 0 Set.empty with
-        | Some tree -> Some tree
-        | None -> None

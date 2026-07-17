@@ -160,3 +160,20 @@ module PathIndex =
                             errors <- msg :: errors
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
+
+    /// Checks if the path index indicates acceptance: whether there exists any entry
+    /// in the range from the extended RSM's S' start state at vertex 0 to S' final state
+    /// at the last vertex. Algorithm-independent — works for both GLL and RNGLR path indices.
+    let isAccepted (pathIndex: PathIndex<'t, 'nt>) (ersm: ExtendedRSM<'t, 'nt>) (vertexCount: int) : bool =
+        let flatExt = ersm.ExtendedRsm
+
+        let startGlobalState =
+            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
+            | true, gs -> gs
+            | false, _ -> 0
+
+        let finalGlobalState = startGlobalState + 1
+
+        let entries = get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
+
+        not (Set.isEmpty entries)

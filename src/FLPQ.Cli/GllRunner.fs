@@ -10,18 +10,6 @@ module GllRunner =
     let runGll (grammarFile: string) (inputFile: string) (outputDir: string) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
-        let startBlock = RSM.startBlock rsm
-        let (Nonterminal startNtName) = startBlock.Nonterminal
-
-        let startGlobalState =
-            match rsm.BlockStart.TryGetValue(Nonterminal startNtName) with
-            | true, gs -> gs
-            | false, _ -> failwithf "Start block %s not found in RSM" startNtName
-
-        let startBlockOffset =
-            RSM.blocks rsm
-            |> List.takeWhile (fun b -> b.Nonterminal <> startBlock.Nonterminal)
-            |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
 
         let inputText = Helpers.readFile inputFile
         let inputTokens = Tokenizer.tokenizeTerminals inputText
@@ -33,32 +21,35 @@ module GllRunner =
         let ersm = ExtendedRSM.create freshStart rsm
         let pathIndex = GLL.buildPathIndex freshStart ersm inputGraph
 
-        let accepted = GLL.isAccepted pathIndex ersm vertexCount
+        let accepted = PathIndex.isAccepted pathIndex ersm vertexCount
 
-        let startVertex = 0
+        let flatExt = ersm.ExtendedRsm
 
-        let mutable sppfRootRanges = []
+        let startGlobalState =
+            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
+            | true, gs -> gs
+            | false, _ -> failwith "Start block not found in extended RSM"
 
-        for finalLocal in startBlock.Dfa.FinalStates do
-            let finalGlobalState = startBlockOffset + finalLocal
+        let finalGlobalState = startGlobalState + 1
 
+        let rootRanges =
             let entries =
-                PathIndex.get pathIndex startGlobalState startVertex finalGlobalState (vertexCount - 1)
+                PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
 
             if not (Set.isEmpty entries) then
-                sppfRootRanges <-
-                    { FromState = startGlobalState
-                      FromVertex = startVertex
-                      ToState = finalGlobalState
-                      ToVertex = vertexCount - 1 }
-                    :: sppfRootRanges
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = finalGlobalState
+                    ToVertex = vertexCount - 1 } ]
+            else
+                []
 
         let sppf =
             Sppf.buildSppfFromIndex
                 pathIndex
-                (List.rev sppfRootRanges)
-                (Some(rsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-                (Some(RSM.blockFinalsMap rsm))
+                rootRanges
+                (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+                (Some(RSM.blockFinalsMap flatExt))
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))

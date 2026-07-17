@@ -5,11 +5,14 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
 /// Vertex in the Graph-Structured Stack (GSS).
-/// storedPops is stored in a separate array inside GSS to allow efficient mutation
-/// (struct fields in immutable Maps cannot be mutated in-place).
+/// StoredPops holds ranges recognized at this vertex — mutable because it is populated
+/// incrementally during execution.
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
-type GssVertexInfo = { State: int; Vertex: int }
+type GssVertexInfo =
+    { State: int
+      Vertex: int
+      mutable StoredPops: Set<RangeDescriptor> }
 
 /// Edge in the Graph-Structured Stack (GSS).
 /// Records the return state, pre-call context, and the matched range before the nonterminal call.
@@ -23,8 +26,8 @@ type GssEdgeInfo =
 
 /// Graph-Structured Stack — a graph encoding all active call stacks during GLL execution.
 /// Vertices are all possible (state, vertex) pairs (|Q|*|V| vertices), pre-allocated.
+/// Each vertex stores its own recognized ranges (StoredPops) directly in the vertex type.
 /// Edges carry NonEmptySet because multiple edges between the same pair are possible.
-/// storedPops[i] holds the ranges recognized at GSS vertex i.
 /// Book reference: sec:CFPQ_GLL.
 type GSS =
     { Graph: Graph<GssVertexInfo, Option<NonEmptySet<GssEdgeInfo>>>
@@ -41,7 +44,10 @@ module GSS =
 
         let vertices =
             [ for s in 0 .. stateCount - 1 do
-                  for v in 0 .. vertexCount - 1 -> { State = s; Vertex = v } ]
+                  for v in 0 .. vertexCount - 1 ->
+                      { State = s
+                        Vertex = v
+                        StoredPops = Set.empty } ]
 
         let edges = Matrix.init k k None
         let pops = Array.create k Set.empty
@@ -49,9 +55,10 @@ module GSS =
         { Graph = Graph.fromEdges vertices edges
           StoredPops = pops }
 
-    /// Adds an edge from source GSS vertex to target GSS vertex.
-    /// Returns the storedPops from the target vertex (ranges already recognized at that vertex),
-    /// and clears them.
+    /// Adds an edge from source GSS vertex (callee) to target GSS vertex (caller).
+    /// Returns the storedPops from the *source* (callee) vertex — ranges already
+    /// recognized at that vertex from prior completions. Does NOT clear them because
+    /// multiple callers may need the same pops.
     let addEdge (gss: GSS) (fromIdx: int) (toIdx: int) (edgeInfo: GssEdgeInfo) : Set<RangeDescriptor> =
         let current =
             match Matrix.get gss.Graph.Edges fromIdx toIdx with
@@ -60,14 +67,21 @@ module GSS =
 
         Matrix.set gss.Graph.Edges fromIdx toIdx (Some current)
 
-        let pops = gss.StoredPops.[toIdx]
-        gss.StoredPops.[toIdx] <- Set.empty
-        pops
+        gss.StoredPops.[fromIdx]
 
     /// Saves the recognized range to the storedPops of the GSS vertex.
     /// Returns all outgoing edges from this vertex.
     let pop (gss: GSS) (gssIdx: int) (recognizedRange: RangeDescriptor) : (int * GssEdgeInfo) list =
         gss.StoredPops.[gssIdx] <- Set.add recognizedRange gss.StoredPops.[gssIdx]
+
+        let n = gss.Graph.VertexMap.Count
+
+        [ for toIdx in 0 .. n - 1 do
+              match Matrix.get gss.Graph.Edges gssIdx toIdx with
+              | Some nes ->
+                  for ei in NonEmptySet.toSeq nes do
+                      (toIdx, ei)
+              | None -> () ]
 
         let n = gss.Graph.VertexMap.Count
 
