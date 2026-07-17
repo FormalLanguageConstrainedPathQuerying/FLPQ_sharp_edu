@@ -10,7 +10,7 @@ open FLPQ.GraphAnalysis
 type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
     | SppfTerminal of Terminal<'t> * leftPos: int * rightPos: int
     | SppfNonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int * fromState: int * toState: int
-    | SppfEpsilon of Nonterminal<'nt> option * pos: int
+    | SppfEpsilon of Nonterminal<'nt> * pos: int
     | SppfIntermediate of state: int * pos: int * fromState: int * fromPos: int * toState: int * toPos: int
     | SppfRange of fromState: int * fromPos: int * toState: int * toPos: int
 
@@ -169,7 +169,7 @@ module Sppf =
                         | _ -> ()
 
                     | PathIndexEntry.PEpsilonNonterminal nt ->
-                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(Some nt, fromPos))
+                        let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(nt, fromPos))
                         addEdge rangeIdx SppfEdgeLabel.PackedAlternative epsNode
 
                     | PathIndexEntry.PIntermediate(state, pos) ->
@@ -182,19 +182,13 @@ module Sppf =
 
                         let leftEntries = PathIndex.get pathIndex fromState fromPos state pos
 
-                        if Set.isEmpty leftEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, fromPos))
-                            addEdge interNode SppfEdgeLabel.LeftChild epsNode
-                        else
+                        if not (Set.isEmpty leftEntries) then
                             let leftChild = processRange fromState fromPos state pos
                             addEdge interNode SppfEdgeLabel.LeftChild leftChild
 
                         let rightEntries = PathIndex.get pathIndex state pos toState toPos
 
-                        if Set.isEmpty rightEntries then
-                            let epsNode = getOrCreateNode (SppfNodeInfo.SppfEpsilon(None, toPos))
-                            addEdge interNode SppfEdgeLabel.RightChild epsNode
-                        else
+                        if not (Set.isEmpty rightEntries) then
                             let rightChild = processRange state pos toState toPos
                             addEdge interNode SppfEdgeLabel.RightChild rightChild
 
