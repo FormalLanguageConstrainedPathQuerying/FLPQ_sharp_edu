@@ -161,6 +161,51 @@ module PathIndex =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Checks whether any state in the RSM is simultaneously a block start state and a final state.
+    let internal hasStartFinalOverlap
+        (blockStart: Map<Nonterminal<'nt>, int>)
+        (finalStates: Set<int>)
+        : bool =
+        blockStart
+        |> Map.exists (fun _ startState -> Set.contains startState finalStates)
+
+    /// Checks the no-epsilon invariant: if the RSM has no states that are simultaneously
+    /// start and final, then the path index must not contain PEpsilonNonterminal entries.
+    let checkNoEpsilonInvariant
+        (pi: PathIndex<'t, 'nt>)
+        (blockStart: Map<Nonterminal<'nt>, int>)
+        (finalStates: Set<int>)
+        : Result<unit, string list> =
+        if hasStartFinalOverlap blockStart finalStates then
+            Ok()
+        else
+            let k = pi.StateCount * pi.VertexCount
+            let mutable errors = []
+
+            for fromIdx in 0 .. k - 1 do
+                for toIdx in 0 .. k - 1 do
+                    for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                        match entry with
+                        | PathIndexEntry.PEpsilonNonterminal(Nonterminal nt) ->
+                            let fromState = fromIdx / pi.VertexCount
+                            let fromVertex = fromIdx % pi.VertexCount
+                            let toState = toIdx / pi.VertexCount
+                            let toVertex = toIdx % pi.VertexCount
+
+                            let msg =
+                                sprintf
+                                    "Cell (%d,%d)->(%d,%d) contains PEpsilonNonterminal %s but no start=final overlap exists"
+                                    fromState
+                                    fromVertex
+                                    toState
+                                    toVertex
+                                    nt
+
+                            errors <- msg :: errors
+                        | _ -> ()
+
+            if errors.IsEmpty then Ok() else Error(List.rev errors)
+
     /// Checks if the path index indicates acceptance: whether there exists any entry
     /// in the range from the extended RSM's S' start state at vertex 0 to S' final state
     /// at the last vertex. Algorithm-independent — works for both GLL and RNGLR path indices.

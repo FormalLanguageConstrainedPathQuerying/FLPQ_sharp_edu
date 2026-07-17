@@ -31,7 +31,7 @@ module PathIndexGolden =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex freshStart ersm graph
-        TestHelpers.assertPathIndexInvariant "GLL golden" pathIndex None None
+        TestHelpers.assertPathIndexInvariant "GLL golden" pathIndex None None None
         let tex = PathIndexTeX.toTeX string string pathIndex
         verifyGolden "path_index_gll_aa.tex" (wrapInTemplate templatePath tex)
 
@@ -60,6 +60,7 @@ module PathIndexGolden =
             pathIndex
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
+            (Some ersm.ExtendedRsm.FinalStates)
 
         let tex = PathIndexTeX.toTeX string string pathIndex
         verifyGolden "path_index_rnglr_aa.tex" (wrapInTemplate templatePath tex)
@@ -84,7 +85,7 @@ module PathIndexCompilation =
         let input = [ "a"; "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex freshStart ersm graph
-        TestHelpers.assertPathIndexInvariant "GLL compilation" pathIndex None None
+        TestHelpers.assertPathIndexInvariant "GLL compilation" pathIndex None None None
         let tex = PathIndexTeX.toTeX string string pathIndex
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
@@ -114,6 +115,7 @@ module PathIndexCompilation =
             pathIndex
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
+            (Some ersm.ExtendedRsm.FinalStates)
 
         let tex = PathIndexTeX.toTeX string string pathIndex
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
