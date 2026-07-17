@@ -36,10 +36,8 @@ module SppfDot =
                     sprintf "%s [%d,%d]" (terminalPrinter t) l r, "oval", ""
                 | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r, _, _) ->
                     sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r, "oval", ""
-                | SppfNodeInfo.SppfEpsilon(optNt, p) ->
-                    match optNt with
-                    | Some(Nonterminal nt) -> sprintf "%s^ε @%d" (nonterminalPrinter nt) p, "none", ""
-                    | None -> sprintf "ε @%d" p, "none", ""
+                | SppfNodeInfo.SppfEpsilon(Nonterminal nt, p) ->
+                    sprintf "%s^ε @%d" (nonterminalPrinter nt) p, "none", ""
                 | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]→[s%d,v%d]" fs fp ts tp, "rectangle", ""
                 | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
                     sprintf "I(%d,%d) @[s%d,v%d]→[s%d,v%d]" s p fs fp ts tp, "diamond", ""

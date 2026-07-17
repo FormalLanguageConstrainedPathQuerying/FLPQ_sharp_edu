@@ -12,6 +12,7 @@ module TestHelpers =
         (pi: PathIndex<string, string>)
         (blockStart: Map<Nonterminal<string>, int> option)
         (blockFinals: Map<Nonterminal<string>, Set<int>> option)
+        (finalStates: Set<int> option)
         : unit =
         match blockStart, blockFinals with
         | Some bs, Some bf ->
@@ -22,6 +23,18 @@ module TestHelpers =
                     $"[{source}] Path index invariant violations:\n  " + String.concat "\n  " errors
 
                 failwith msg
+
+            match finalStates with
+            | Some fs ->
+                match PathIndex.checkNoEpsilonInvariant pi bs fs with
+                | Ok() -> ()
+                | Error errors ->
+                    let msg =
+                        $"[{source}] Path index no-epsilon invariant violations:\n  "
+                        + String.concat "\n  " errors
+
+                    failwith msg
+            | None -> ()
         | _ -> ()
 
     let assertSppfInvariant (sppf: SPPF<string, string>) : unit =
@@ -158,6 +171,7 @@ module TestHelpers =
             pathIndex
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
+            (Some ersm.ExtendedRsm.FinalStates)
 
         if not (isAcc pathIndex ersm vc) then
             false
@@ -235,5 +249,6 @@ module TestHelpers =
             pathIndex
             (Some(ersm.ExtendedRsm.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap ersm.ExtendedRsm))
+            (Some ersm.ExtendedRsm.FinalStates)
 
         not (isAcc pathIndex ersm vc)
