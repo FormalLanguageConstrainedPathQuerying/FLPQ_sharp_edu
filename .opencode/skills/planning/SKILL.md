@@ -16,6 +16,7 @@ The global plan must:
 - Identify potential conflicts or overlapping changes (e.g., two tasks modifying the same file)
 - Identify shared infrastructure (types, helpers, utilities) that multiple tasks need. Create shared modules to avoid duplication across tasks
 - Identify existing reusable abstractions (types, helper functions, generators) that new tasks should use rather than reinvent
+- **Reuse analysis**: load the `reusing` skill and run the reuse checklist against existing code and documentation before creating new material
 - For each task that involves rendering/visualization, note that rendering and algorithm logic must be in separate projects/modules from the start
 - Propose an execution order that minimizes rework and avoids conflicts
 - Align tasks with the project architecture
@@ -31,6 +32,8 @@ After the global plan is created, proceed with the normal working loop: one task
 - Has a unique identifier (e.g., "S1", "S2") used in commit messages and plan tracking
 
 If a task is ambiguous or underspecified **during planning** (conflicting requirements, unclear scope, missing constraints), do not guess. Ask the user for clarification, then transfer the guidance to the task per the `user-guidance-transfer` skill before proceeding with decomposition.
+
+Before writing the detailed plan, load the `reusing` skill and run the reuse checklist: search existing documentation and code for functions, types, and doc sections that can be reused or generalized. Record what is reused in each subtask's **Code** section.
 
 ### Subtask Format
 

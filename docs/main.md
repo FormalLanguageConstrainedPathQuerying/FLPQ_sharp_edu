@@ -17,6 +17,7 @@ What our standards and principles are, and why we chose them.
 - [Design guides](developer/guides/design-guides.md) — architecture principles, separation of concerns
 - [Quality standards](developer/guides/quality-standards.md) — coverage, lint, formatting, equivalence testing
 - [Documentation conventions](developer/guides/documentation-conventions.md) — module doc structure, decision docs, mapping table, review criteria
+- [Reusing principles](developer/guides/reusing.md) — no duplicates, one source of truth, reuse checklist, patterns
 - [Tools](developer/guides/tools.md) — auxiliary Python scripts for quality control
 
 ### Project Hubs

@@ -104,3 +104,4 @@ Operational procedures are in standalone skills. Load the relevant skill for eac
 | Code review (detect + fix architecture, duplication, test gaps) | `code-review` |
 | Persist user guidance from blocked tasks back into task descriptions | `user-guidance-transfer` |
 | Debugging (print traces, test hangs, seq laziness) | `debugging` |
+| Reusing (no duplicates, one source of truth, reuse checklist) | `reusing` |
