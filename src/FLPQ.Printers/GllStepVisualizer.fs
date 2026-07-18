@@ -18,22 +18,24 @@ module GllStepVisualizer =
             Input: string
         }
 
-    /// Render a single descriptor to TeX format.
+    /// Render the matched range component of a descriptor as TeX.
+    let rangeDescriptorToTeX (range: RangeDescriptor) : string =
+        match range with
+        | RangeDescriptor.EmptyRange -> @"\emptyset"
+        | RangeDescriptor.NonEmptyRange rk ->
+            sprintf @"(%d,%d,%d,%d)" rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+
+    /// Render a single descriptor as a tuple: (rsmState, vertex, gssIdx, matchedRange).
     let descriptorToTeX (desc: Descriptor) : string =
-        let rangePart =
-            match desc.MatchedRange with
-            | RangeDescriptor.EmptyRange -> ""
-            | RangeDescriptor.NonEmptyRange rk ->
-                sprintf @"^{%d,%d}_{%d,%d}" rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+        let rangeTex = rangeDescriptorToTeX desc.MatchedRange
+        sprintf @"(%d, %d, %d, %s)" desc.RsmState desc.Vertex desc.GssIdx rangeTex
 
-        sprintf @"R_{%d,%d}^{%d}%s" desc.RsmState desc.Vertex desc.GssIdx rangePart
-
-    /// Render a list of descriptors as comma-separated TeX.
+    /// Render a list of descriptors as a TeX list of tuples.
     let queueToTeX (descriptors: Descriptor list) : string =
         if List.isEmpty descriptors then
             @"\emptyset"
         else
-            descriptors |> List.map descriptorToTeX |> String.concat ", "
+            descriptors |> List.map descriptorToTeX |> String.concat @" \\; "
 
     /// Render a single GLL parsing step to visualization output.
     let renderStep

@@ -272,6 +272,68 @@ let ``Matrix TeX compiles with lualatex`` () =
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL descriptor with empty range TeX compiles`` () =
+    let desc: Descriptor =
+        { RsmState = 1
+          Vertex = 2
+          GssIdx = 0
+          MatchedRange = RangeDescriptor.EmptyRange }
+
+    let tex = GllStepVisualizer.descriptorToTeX desc
+    Assert.Contains("(1, 2, 0,", tex)
+    Assert.Contains(@"\emptyset", tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL descriptor with non-empty range TeX compiles`` () =
+    let desc: Descriptor =
+        { RsmState = 3
+          Vertex = 1
+          GssIdx = 5
+          MatchedRange = RangeDescriptor.NonEmptyRange
+                              { FromState = 0
+                                FromVertex = 0
+                                ToState = 2
+                                ToVertex = 3 } }
+
+    let tex = GllStepVisualizer.descriptorToTeX desc
+    Assert.Contains("(3, 1, 5, (0,0,2,3))", tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL descriptor queue TeX compiles`` () =
+    let desc1: Descriptor =
+        { RsmState = 0
+          Vertex = 0
+          GssIdx = 0
+          MatchedRange = RangeDescriptor.EmptyRange }
+
+    let desc2: Descriptor =
+        { RsmState = 1
+          Vertex = 0
+          GssIdx = 1
+          MatchedRange = RangeDescriptor.NonEmptyRange
+                              { FromState = 0
+                                FromVertex = 0
+                                ToState = 1
+                                ToVertex = 1 } }
+
+    let queueTex = GllStepVisualizer.queueToTeX [ desc1; desc2 ]
+    Assert.Contains(@"(0, 0, 0, \emptyset)", queueTex)
+    Assert.Contains("(1, 0, 1, (0,0,1,1))", queueTex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath queueTex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL empty descriptor queue TeX compiles`` () =
+    let queueTex = GllStepVisualizer.queueToTeX []
+    Assert.Equal(@"\emptyset", queueTex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath queueTex)
+
+[<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``Derivation tree dot compiles with graphviz`` () =
     let tree =
