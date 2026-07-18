@@ -395,7 +395,7 @@ module GLL =
                   ActiveGssEdges = activeEdges
                   NewGssVertices = newVertices
                   NewGssEdges = newEdges
-                  PathIndexMatrix = piMatrix
+                  PathIndexMatrix = Matrix.copy piMatrix
                   ChangedCells = changedCells
                   InputPosition = inputPos }
             )

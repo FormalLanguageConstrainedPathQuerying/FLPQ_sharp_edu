@@ -34,6 +34,13 @@ module Matrix =
     /// Creates a matrix with the given dimensions where all elements are initialized to the same value.
     let init rows cols (value: 'a) : Matrix<'a> = create rows cols (fun _ _ -> value)
 
+    /// Creates a deep copy of the matrix. The backing array is cloned; element values are shared
+    /// because they are assumed immutable.
+    let copy (m: Matrix<'a>) : Matrix<'a> =
+        { Rows = m.Rows
+          Cols = m.Cols
+          Data = Array2D.copy m.Data }
+
     /// Creates a matrix from a 2D array. The resulting matrix shares the same backing array.
     let ofArray2D (arr: 'a[,]) : Matrix<'a> =
         { Rows = Array2D.length1 arr
