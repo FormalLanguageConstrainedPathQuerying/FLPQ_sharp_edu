@@ -28,38 +28,30 @@ module RnglrRunner =
         let accepted = PathIndex.isAccepted pathIndex extRsm vertexCount
 
         let flatExt = ExtendedRSM.extRsm extRsm
-        let originalStartBlock = ExtendedRSM.originalStartBlock extRsm
 
         let startGlobalState =
-            match flatExt.BlockStart.TryGetValue(originalStartBlock.Nonterminal) with
+            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
             | true, gs -> gs
-            | false, _ -> failwithf "Start block %A not found in extended RSM" originalStartBlock.Nonterminal
+            | false, _ -> failwith "Start block not found in extended RSM"
 
-        let mutable rootRanges = []
+        let finalGlobalState = startGlobalState + 1
 
-        for finalLocal in originalStartBlock.Dfa.FinalStates do
-            let startBlockOffset =
-                ExtendedRSM.extBlocks extRsm
-                |> List.takeWhile (fun b -> b.Nonterminal <> originalStartBlock.Nonterminal)
-                |> List.sumBy (fun b -> Dfa.stateCount b.Dfa)
-
-            let finalGlobalState = startBlockOffset + finalLocal
-
+        let rootRanges =
             let entries =
                 PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
 
             if not (Set.isEmpty entries) then
-                rootRanges <-
-                    { FromState = startGlobalState
-                      FromVertex = 0
-                      ToState = finalGlobalState
-                      ToVertex = vertexCount - 1 }
-                    :: rootRanges
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = finalGlobalState
+                    ToVertex = vertexCount - 1 } ]
+            else
+                []
 
         let sppf =
             Sppf.buildSppfFromIndex
                 pathIndex
-                (List.rev rootRanges)
+                (rootRanges)
                 (Some(
                     ExtendedRSM.extRsm extRsm
                     |> fun r -> r.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq
