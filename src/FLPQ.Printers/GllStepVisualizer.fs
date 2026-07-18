@@ -62,9 +62,15 @@ module GllStepVisualizer =
                 step.NewGssVertices
                 step.NewGssEdges
 
+        // Create a temporary PathIndex from the step's matrix snapshot for rendering
+        let stepPathIndex =
+            { Matrix = step.PathIndexMatrix
+              StateCount = pathIndex.StateCount
+              VertexCount = pathIndex.VertexCount }
+
         { Queue = queueToTeX step.Queue
           GssDot = gssDot
-          PathIndex = PathIndexTeX.toTeX string string pathIndex
+          PathIndex = PathIndexTeX.toTeXWithHighlights string string stepPathIndex step.ChangedCells
           Input = TeXRenderer.inputRow termPrinter inputTokens step.InputPosition }
 
     /// Render a list of GLL parsing steps to visualization steps.

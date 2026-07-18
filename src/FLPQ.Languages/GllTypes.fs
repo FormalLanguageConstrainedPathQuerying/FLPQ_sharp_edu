@@ -133,7 +133,7 @@ module GraphHelpers =
         edges
 
 /// A single step snapshot during GLL execution.
-/// Captures the descriptors queue, active GSS elements, and current input position.
+/// Captures the descriptors queue, active GSS elements, path index state, and current input position.
 type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
     {
         /// Snapshot of remaining descriptors in the worklist queue.
@@ -146,6 +146,10 @@ type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         NewGssVertices: Set<int>
         /// GSS edges added since the previous step (for highlighting).
         NewGssEdges: Set<int * int>
+        /// Current path index matrix snapshot at this step.
+        PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
+        /// Path index cells (fromIdx, toIdx) changed since the previous step (for highlighting).
+        ChangedCells: Set<int * int>
         /// Current input position being processed (from the dequeued descriptor's Vertex).
         InputPosition: int
     }

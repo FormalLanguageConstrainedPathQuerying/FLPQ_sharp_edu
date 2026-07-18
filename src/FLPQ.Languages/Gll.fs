@@ -67,7 +67,14 @@ module GLL =
     let private buildPathIndexCore
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
-        (onStep: Queue<Descriptor> -> Set<int> -> Set<int * int> -> int -> unit)
+        (onStep:
+            Queue<Descriptor>
+                -> Set<int>
+                -> Set<int * int>
+                -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
+                -> Set<int * int>
+                -> int
+                -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
         let stateCount = RSM.stateCount rsm
@@ -92,6 +99,8 @@ module GLL =
 
         let handledNonEmpty = HashSet<int * int * int>()
 
+        let mutable changedCells = Set.empty<int * int>
+
         let addToIndex
             (fromState: int)
             (fromVertex: int)
@@ -105,6 +114,7 @@ module GLL =
 
             if not (Set.contains entry current) then
                 Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
+                changedCells <- Set.add (fromIdx, toIdx) changedCells
 
         let tryEnqueue (d: Descriptor) =
             match d.MatchedRange with
@@ -137,7 +147,7 @@ module GLL =
 
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
-        onStep queue activeVerts activeEdges 0
+        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0
 
         // Main loop
         while queue.Count > 0 do
@@ -340,7 +350,8 @@ module GLL =
 
             // Collect step after descriptor processing
             let activeVerts, activeEdges = collectActiveGss gss
-            onStep queue activeVerts activeEdges v0
+            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0
+            changedCells <- Set.empty<int * int>
 
         pathIndex
 
@@ -353,10 +364,10 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ -> ())
 
     /// Builds the path index and collects step-by-step snapshots of the GLL execution.
-    /// Each step captures: descriptors queue, active GSS state, newly added elements, and input position.
+    /// Each step captures: descriptors queue, active GSS state, path index snapshot, changed cells, and input position.
     /// Steps are collected at initial state (before main loop) and after each descriptor is processed.
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
@@ -367,7 +378,14 @@ module GLL =
         let mutable prevVertices = Set.empty<int>
         let mutable prevEdges = Set.empty<int * int>
 
-        let onStep (q: Queue<Descriptor>) (activeVerts: Set<int>) (activeEdges: Set<int * int>) (inputPos: int) =
+        let onStep
+            (q: Queue<Descriptor>)
+            (activeVerts: Set<int>)
+            (activeEdges: Set<int * int>)
+            (piMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>)
+            (changedCells: Set<int * int>)
+            (inputPos: int)
+            =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
 
@@ -377,6 +395,8 @@ module GLL =
                   ActiveGssEdges = activeEdges
                   NewGssVertices = newVertices
                   NewGssEdges = newEdges
+                  PathIndexMatrix = piMatrix
+                  ChangedCells = changedCells
                   InputPosition = inputPos }
             )
 

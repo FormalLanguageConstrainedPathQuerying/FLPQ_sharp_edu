@@ -40,3 +40,31 @@ module PathIndexTeX =
             MatrixTeX.toTeXStyled false false cp pathIndex.Matrix [] [] (Some labelPrinter) (Some labelPrinter)
 
         sprintf "{\\footnotesize %s}" matrix
+
+    /// Renders a path index matrix with specified cells highlighted.
+    /// Changed cells are highlighted in yellow for step-by-step visualization.
+    let toTeXWithHighlights
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (pathIndex: PathIndex<'t, 'nt>)
+        (changedCells: Set<int * int>)
+        : string =
+        let cp = cellPrinter terminalPrinter nonterminalPrinter
+
+        let labelPrinter (idx: int) =
+            let state = idx / pathIndex.VertexCount
+            let vertex = idx % pathIndex.VertexCount
+            $"%d{state},%d{vertex}"
+
+        let highlights =
+            changedCells
+            |> Set.toList
+            |> List.map (fun (row, col) ->
+                { Matrix.Row = row
+                  Matrix.Col = col
+                  Matrix.Label = Matrix.CurrentCell })
+
+        let matrix =
+            MatrixTeX.toTeXStyled false false cp pathIndex.Matrix highlights [] (Some labelPrinter) (Some labelPrinter)
+
+        sprintf "{\\footnotesize %s}" matrix

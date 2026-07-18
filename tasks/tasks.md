@@ -500,7 +500,7 @@
       1.   Collect all grammars and inputs in TestGrammars.
       2.   Extend tests of GLL and RNGLR: final set for each of them must be the union of current sets.
       3.   Run all tests. If something fails, fix respective parsing algorithm.
- 187. Improve GLL visualization
+ 187. [done] Improve GLL visualization
       1.   Add collecting information about steps. The algorithm must collect F# data sructures that describes each step (similar to LL)
            1.   Data: descriptors queue, path index, GSS, input
            2.   Collect: 
