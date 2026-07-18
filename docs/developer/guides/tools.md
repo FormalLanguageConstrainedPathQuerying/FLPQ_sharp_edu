@@ -2,16 +2,7 @@
 
 Auxiliary Python scripts for project quality control in `tools/`.
 
-## Conventions
-
-1. All tools run **without timeout** — let each command take as long as it needs.
-2. All output is written to `tmp/<tool-name>.txt`. **Nothing** is written to console.
-3. Output files are overwritten on each run (no append).
-4. Each output file follows a structured format:
-   - **Header**: short summary of findings (PASS/BLOCKED, key counts)
-   - **Separator**: `--- DETAILED LOG ---`
-   - **Body**: detailed output of each executed command
-5. Workflow: run tool → analyze output file → fix all problems → re-run tool.
+See `tools/README.md` for output conventions (no timeout, file structure, STATUS values, incremental flushing).
 
 ## Tools
 
@@ -79,11 +70,61 @@ Full quality gate for task verification: format → build → tests with coverag
    - Filters to FLPQ source packages only (excludes `*.Tests` and `FLPQ.TestUtilities`)
 5. Lint: `dotnet-fsharplint lint` on each project with modified `.fs` files (detected via `detect_changes.py` logic). Uses `DOTNET_ROOT` from environment or `/usr/lib/dotnet`.
 
-**Exit codes:**
-- 0 — all steps PASS
-- 1 — any step BLOCKED
+**Incremental output:** the output file is flushed after each step. While the gate is running, the file shows `STATUS: IN_PROGRESS`. The final `STATUS: PASS` or `STATUS: BLOCKED` is only written when all steps complete. The exit code is the authoritative signal.
 
-**Output format:**
+**Exit codes:**
+- 0 — STATUS: PASS (all steps passed)
+- 1 — STATUS: BLOCKED (any step failed)
+
+**Merge-blocking messages** appended after the detailed log:
+
+| Status | Message |
+|--------|---------|
+| `IN_PROGRESS` | `HARD GATE IN PROGRESS. DO NOT MERGE. Await completion.` |
+| `BLOCKED` | `HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.` |
+| `PASS` | (none) |
+
+**Output format (mid-execution, after Step 2):**
+```
+HARD GATE SUMMARY
+Step 1 (Format): OK
+Step 2 (Build): OK (Build succeeded)
+
+STATUS: IN_PROGRESS
+
+--- DETAILED LOG ---
+
+--- STEP 1: FORMAT (dotnet fantomas . --check) ---
+(no output)
+
+--- STEP 2: BUILD (dotnet build) ---
+Build succeeded.
+...
+
+HARD GATE IN PROGRESS. DO NOT MERGE. Await completion.
+```
+
+**Output format (final — PASS):**
+```
+HARD GATE SUMMARY
+Step 1 (Format): OK
+Step 2 (Build): OK (Build succeeded)
+Step 3 (Tests): OK (0 failed, 0 skipped)
+Step 4 (Coverage):
+  FLPQ.Languages: 89.8% (4376/4874) — PASS
+  TOTAL: 84.2% (7056/8380) (threshold 80%) — PASS
+  Coverage gate: PASS
+Step 5 (Lint):
+  src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+  Lint gate: PASS
+
+STATUS: PASS
+
+--- DETAILED LOG ---
+[per-step detailed output]
+```
+
+**Output format (final — BLOCKED):**
 ```
 HARD GATE SUMMARY
 Step 1 (Format): OK
@@ -97,12 +138,16 @@ Step 4 (Coverage):
 Step 5 (Lint):
   src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
   Lint gate: PASS
+
 STATUS: BLOCKED
+
 --- DETAILED LOG ---
 [per-step detailed output]
+
+HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.
 ```
 
-If a step fails early (e.g., build failure), subsequent steps are not executed and STATUS is reported immediately.
+If a step fails early (e.g., build failure), subsequent steps are not executed and `STATUS: BLOCKED` is written immediately.
 
 ## Skill Integration
 

@@ -55,7 +55,7 @@ The hard gate MUST pass before merging:
 python3 tools/hard_gate.py
 ```
 
-Check the exit code. If non-zero — for ANY reason — STOP. Do not merge. Only merge when exit code 0.
+See the `quality-gates` skill for the full hard gate procedure. While the gate runs, `tmp/hard-gate.txt` shows `STATUS: IN_PROGRESS` — wait for the process to exit. Check the exit code. If non-zero — for ANY reason — STOP. Do not merge. Only merge when exit code 0.
 
 ### Merge strategy
 

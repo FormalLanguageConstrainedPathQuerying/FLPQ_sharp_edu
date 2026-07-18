@@ -35,6 +35,25 @@ PER_PROJECT_THRESHOLD = 75.0
 TOTAL_THRESHOLD = 80.0
 
 
+def flush_log(lines: list[str], detailed_logs: list[str], status: str = "IN_PROGRESS") -> None:
+    output = lines.copy()
+    output.append("")
+    output.append(f"STATUS: {status}")
+    output.append("")
+    output.append("--- DETAILED LOG ---")
+    output.append("")
+    for log in detailed_logs:
+        output.append(log)
+        output.append("")
+    if status == "BLOCKED":
+        output.append("HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.")
+        output.append("")
+    elif status == "IN_PROGRESS":
+        output.append("HARD GATE IN PROGRESS. DO NOT MERGE. Await completion.")
+        output.append("")
+    write_output_file(OUTPUT_FILE, output)
+
+
 def detect_changed_projects() -> list[str]:
     """Return list of changed .fsproj paths relative to dev, or empty list if none."""
     try:
@@ -152,6 +171,8 @@ def main() -> None:
     detailed_logs: list[str] = []
     overall_pass = True
 
+    flush_log(lines, detailed_logs)
+
     # --- Step 0: Detect changed projects (before format, to avoid false positives) ---
     changed_projects = detect_changed_projects()
 
@@ -167,6 +188,8 @@ def main() -> None:
         lines.append(f"Step 1 (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
         overall_pass = False
 
+    flush_log(lines, detailed_logs)
+
     # --- Step 2: Build ---
     build_rc, build_stdout, build_stderr = run_cmd(
         ["dotnet", "build", SOLUTION, "-c", "Debug"]
@@ -181,14 +204,11 @@ def main() -> None:
     else:
         lines.append("Step 2 (Build): FAILED")
         overall_pass = False
-        lines.append("STATUS: BLOCKED (build failed)")
-        lines.append("")
-        lines.append("--- DETAILED LOG ---")
-        lines.append("")
-        for log in detailed_logs:
-            lines.append(log)
-            lines.append("")
-        write_output_file(OUTPUT_FILE, lines)
+
+    flush_log(lines, detailed_logs)
+
+    if not build_ok:
+        flush_log(lines, detailed_logs, "BLOCKED")
         sys.exit(1)
 
     # --- Step 3: Tests + Coverage ---
@@ -236,6 +256,8 @@ def main() -> None:
             )
             overall_pass = False
 
+    flush_log(lines, detailed_logs)
+
     # --- Step 4: Coverage Gate ---
     cov_lines, _under_threshold, cov_ok = run_coverage_gate()
     detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
@@ -249,6 +271,8 @@ def main() -> None:
     else:
         lines.append("  Coverage gate: BLOCKED")
         overall_pass = False
+
+    flush_log(lines, detailed_logs)
 
     # --- Step 5: Lint on changed projects ---
     detailed_logs.append("--- STEP 5: LINT (on changed projects) ---")
@@ -309,28 +333,12 @@ def main() -> None:
         else:
             lines.append("  Lint gate: BLOCKED")
 
-    # --- Final status ---
-    lines.append("")
     if overall_pass:
-        lines.append("STATUS: PASS")
-        exit_code = 0
+        flush_log(lines, detailed_logs, "PASS")
     else:
-        lines.append("STATUS: BLOCKED")
-        exit_code = 1
+        flush_log(lines, detailed_logs, "BLOCKED")
 
-    lines.append("")
-    lines.append("--- DETAILED LOG ---")
-    lines.append("")
-    for log in detailed_logs:
-        lines.append(log)
-        lines.append("")
-
-    if not overall_pass:
-        lines.append("HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.")
-        lines.append("")
-
-    write_output_file(OUTPUT_FILE, lines)
-    sys.exit(exit_code)
+    sys.exit(0 if overall_pass else 1)
 
 
 if __name__ == "__main__":

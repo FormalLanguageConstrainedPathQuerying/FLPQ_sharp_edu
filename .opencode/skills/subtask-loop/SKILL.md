@@ -190,7 +190,7 @@ After ALL subtasks are committed, run the hard gate:
 python3 tools/hard_gate.py
 ```
 
-Check the **exit code** (`echo $?`). If non-zero — for ANY reason — STOP. Do not merge. Do not mark the task as done. Read the output file (`tmp/hard-gate.txt`) only to identify what to fix, not to decide whether the failure applies to you. Re-run until exit code 0, then proceed to merge.
+See the `quality-gates` skill for the full procedure. While the gate runs, `tmp/hard-gate.txt` shows `STATUS: IN_PROGRESS` — the gate has not finished yet. Wait for the process to exit, then check the **exit code** (`echo $?`). If non-zero — for ANY reason — STOP. Do not merge. Do not mark the task as done. Read the output file only to identify what to fix, not to decide whether the failure applies to you. Re-run until exit code 0, then proceed to merge.
 
 ## Marking Complete
 
