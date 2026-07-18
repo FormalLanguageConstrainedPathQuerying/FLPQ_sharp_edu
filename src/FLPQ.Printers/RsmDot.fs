@@ -147,7 +147,7 @@ module RsmDot =
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
 
                 if isStartState then
-                    parts <- "style=filled" :: "fillcolor=green!30" :: parts
+                    parts <- "style=filled" :: "fillcolor=lightgreen" :: parts
 
                 if isFinal then
                     parts <- "peripheries=2" :: parts
