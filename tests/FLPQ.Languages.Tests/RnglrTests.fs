@@ -80,6 +80,18 @@ module RnglrAcceptance =
         Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ], "Should accept and produce tree")
 
     [<Fact>]
+    let ``S -> a S b | eps | S S accepts empty`` () =
+        let g = TestGrammars.grammar2
+
+        Assert.True(accepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
+
+    [<Fact>]
+    let ``S -> a S b | eps | S S accepts a b (no infinite loop)`` () =
+        let g = TestGrammars.grammar2
+
+        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ], "Should accept and produce tree")
+
+    [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =
         let g = TestGrammars.grammar3
 

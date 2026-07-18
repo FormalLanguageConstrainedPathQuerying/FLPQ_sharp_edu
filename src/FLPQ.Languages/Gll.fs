@@ -252,14 +252,12 @@ module GLL =
 
             // Case 3: Final state (return)
             if stateInfo.[q0].IsFinal then
+                let myNt = stateInfo.[q0].BlockNonterminal
+
                 let recognizedRange =
                     match desc.MatchedRange with
                     | RangeDescriptor.EmptyRange ->
-                        // Empty desc.MatchedRange means we entered this block at v0 and immediately finished (epsilon-like)
-                        // Create a desc.MatchedRange from the block's start state at v0 to the final state at v0
-                        let nt = stateInfo.[q0].BlockNonterminal
-
-                        match blockStart.TryGetValue(nt) with
+                        match blockStart.TryGetValue(myNt) with
                         | true, qNStart ->
                             RangeDescriptor.NonEmptyRange
                                 { FromState = qNStart
@@ -267,7 +265,15 @@ module GLL =
                                   ToState = q0
                                   ToVertex = v0 }
                         | false, _ -> desc.MatchedRange
-                    | _ -> desc.MatchedRange
+                    | RangeDescriptor.NonEmptyRange rk ->
+                        match blockStart.TryGetValue(myNt) with
+                        | true, qNStart ->
+                            RangeDescriptor.NonEmptyRange
+                                { rk with
+                                    FromState = qNStart
+                                    ToState = q0
+                                    ToVertex = v0 }
+                        | false, _ -> desc.MatchedRange
 
                 let outgoingEdges = GSS.pop gss s0 recognizedRange
 
@@ -278,10 +284,9 @@ module GLL =
                     let vStart = recRange.FromVertex
                     let qNFinal = recRange.ToState
                     let vFinal = recRange.ToVertex
-                    let nt = stateInfo.[qNStart].BlockNonterminal
 
                     if vStart = vFinal then
-                        addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                        addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal myNt)
 
                     for (parentGssIdx, edgeInfo) in outgoingEdges do
                         let qRet = edgeInfo.ReturnState
@@ -293,21 +298,28 @@ module GLL =
                                 edgeInfo.PreCallVertex
                                 qRet
                                 vFinal
-                                (PathIndexEntry.PEpsilonNonterminal nt)
+                                (PathIndexEntry.PEpsilonNonterminal myNt)
                         else
                             addToIndex
                                 edgeInfo.PreCallState
                                 edgeInfo.PreCallVertex
                                 qRet
                                 vFinal
-                                (PathIndexEntry.PNonterminal nt)
+                                (PathIndexEntry.PNonterminal myNt)
 
                         // Add PIntermediate and create continuation descriptor
                         match parentRange with
                         | RangeDescriptor.EmptyRange ->
+                            let callerBlockNt = stateInfo.[qRet].BlockNonterminal
+
+                            let callerBlockStart =
+                                match blockStart.TryGetValue(callerBlockNt) with
+                                | true, cs -> cs
+                                | false, _ -> qNStart
+
                             let newRange =
                                 RangeDescriptor.NonEmptyRange
-                                    { FromState = qNStart
+                                    { FromState = callerBlockStart
                                       FromVertex = vStart
                                       ToState = qRet
                                       ToVertex = vFinal }

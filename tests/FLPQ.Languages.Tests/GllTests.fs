@@ -634,3 +634,123 @@ module GllPropertyTreeYield =
                 true
             with _ ->
                 false
+
+module GllAdditionalAcceptance =
+    [<Fact>]
+    let ``S -> a accepts a (TestGrammars.grammarS2a)`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarS2a) [ "a" ])
+
+    [<Fact>]
+    let ``S -> a rejects eps (TestGrammars.grammarS2a)`` () =
+        Assert.False(accepts (TestHelpers.grammarToRsm TestGrammars.grammarS2a) [])
+
+    [<Fact>]
+    let ``S -> a b accepts a b (TestGrammars.grammarAB)`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarAB) [ "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S | b accepts a a b (TestGrammars.grammar_aS_b)`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammar_aS_b) [ "a"; "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S | b rejects a a a (TestGrammars.grammar_aS_b)`` () =
+        Assert.False(accepts (TestHelpers.grammarToRsm TestGrammars.grammar_aS_b) [ "a"; "a"; "a" ])
+
+    [<Fact>]
+    let ``S -> a S b | eps accepts a a b b (TestGrammars.grammar_aSb_eps)`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammar_aSb_eps) [ "a"; "a"; "b"; "b" ])
+
+    [<Fact>]
+    let ``S -> a S b | eps rejects a a b (TestGrammars.grammar_aSb_eps)`` () =
+        Assert.False(accepts (TestHelpers.grammarToRsm TestGrammars.grammar_aSb_eps) [ "a"; "a"; "b" ])
+
+module GllRightNullable =
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts empty`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarRightNullable) [])
+
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a b`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarRightNullable) [ "a"; "b" ])
+
+    [<Fact>]
+    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a a b`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarRightNullable) [ "a"; "a"; "b" ])
+
+module GllReductionCascade =
+    [<Fact>]
+    let ``Epsilon reductions cascade at layer 0`` () =
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarCascade) [])
+
+module GllEpsilonGrammars =
+
+    let private checkAccepts (g: Grammar<string, string>) =
+        Assert.True(accepts (TestHelpers.grammarToRsm g) [])
+
+    let private checkRejects (g: Grammar<string, string>) (input: string list) =
+        Assert.False(accepts (TestHelpers.grammarToRsm g) input)
+
+    let private rejectInputs =
+        [ [ "a" ]; [ "b" ]; [ "a"; "b" ]; [ "a"; "a" ]; [ "b"; "b" ] ]
+
+    [<Fact>]
+    let ``S -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarEps input
+
+    [<Fact>]
+    let ``S -> N; N -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarNtoEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarNtoEps input
+
+    [<Fact>]
+    let ``S -> N N; N -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarNNtoEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarNNtoEps input
+
+    [<Fact>]
+    let ``S -> N*; N -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarNStarEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarNStarEps input
+
+    [<Fact>]
+    let ``S -> S S | eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarSSeps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarSSeps input
+
+    [<Fact>]
+    let ``S -> A B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarChainEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarChainEps input
+
+    [<Fact>]
+    let ``S -> A | B; A -> C D; B -> D C; D -> eps; C -> eps accepts empty, rejects non-empty`` () =
+        checkAccepts TestGrammars.grammarAltEps
+
+        for input in rejectInputs do
+            checkRejects TestGrammars.grammarAltEps input
+
+module GllGrammar159B_SaSb =
+    [<Fact>]
+    let ``S -> S a S b | eps tree yield matches input: a a a b a b b a b b`` () =
+        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarSaSb_eps) input)
+
+    [<Fact>]
+    let ``S -> S a S b | eps tree yield matches input: a a b a b b a b`` () =
+        let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
+
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarSaSb_eps) input)
