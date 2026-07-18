@@ -4,6 +4,28 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
+/// Descriptor in the GLL worklist: current RSM state, input graph vertex,
+/// current GSS node, and the range matched so far.
+/// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
+[<Struct; CustomEquality; NoComparison>]
+type Descriptor =
+    { RsmState: int
+      Vertex: int
+      GssIdx: int
+      MatchedRange: RangeDescriptor }
+
+    override this.Equals(obj: obj) =
+        match obj with
+        | :? Descriptor as other ->
+            this.RsmState = other.RsmState
+            && this.Vertex = other.Vertex
+            && this.GssIdx = other.GssIdx
+            && this.MatchedRange = other.MatchedRange
+        | _ -> false
+
+    override this.GetHashCode() =
+        hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
+
 /// Vertex in the Graph-Structured Stack (GSS).
 /// StoredPops holds ranges recognized at this vertex — mutable because it is populated
 /// incrementally during execution.
@@ -109,3 +131,21 @@ module GraphHelpers =
                 | None -> ()
 
         edges
+
+/// A single step snapshot during GLL execution.
+/// Captures the descriptors queue, active GSS elements, and current input position.
+type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
+    {
+        /// Snapshot of remaining descriptors in the worklist queue.
+        Queue: Descriptor list
+        /// All currently active GSS vertices (those with outgoing edges).
+        ActiveGssVertices: Set<int>
+        /// All currently active GSS edges (sourceIdx, targetIdx).
+        ActiveGssEdges: Set<int * int>
+        /// GSS vertices that became active since the previous step (for highlighting).
+        NewGssVertices: Set<int>
+        /// GSS edges added since the previous step (for highlighting).
+        NewGssEdges: Set<int * int>
+        /// Current input position being processed (from the dequeued descriptor's Vertex).
+        InputPosition: int
+    }

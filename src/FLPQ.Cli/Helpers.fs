@@ -37,6 +37,15 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].TreeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
 
+    let writeGllStepsVisualization (outputDir: string) (steps: GllStepVisualizer.GllVisualizationStep list) =
+        for idx in 0 .. steps.Length - 1 do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
+
+            writeOutputFile (Path.Combine(stepDir, "queue.tex")) steps.[idx].Queue
+            writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
+            writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
+            writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
+
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 

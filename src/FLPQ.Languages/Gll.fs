@@ -5,28 +5,6 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
-/// Descriptor in the GLL worklist: current RSM state, input graph vertex,
-/// current GSS node, and the range matched so far.
-/// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
-[<Struct; CustomEquality; NoComparison>]
-type Descriptor =
-    { RsmState: int
-      Vertex: int
-      GssIdx: int
-      MatchedRange: RangeDescriptor }
-
-    override this.Equals(obj: obj) =
-        match obj with
-        | :? Descriptor as other ->
-            this.RsmState = other.RsmState
-            && this.Vertex = other.Vertex
-            && this.GssIdx = other.GssIdx
-            && this.MatchedRange = other.MatchedRange
-        | _ -> false
-
-    override this.GetHashCode() =
-        hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
-
 module GLL =
 
     /// Converts a string to a path graph: vertices 0..|chars| with edges i -[char]-> i+1.
@@ -67,14 +45,29 @@ module GLL =
                     ToState = newState
                     ToVertex = newVertex }
 
-    /// Builds the path index for the given extended RSM over the input graph.
-    /// Uses the extended RSM internally, starting from the S' block which has one
-    /// nonterminal transition to the original start — processed as a regular call.
-    /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
-    let buildPathIndex
-        (_freshStart: Nonterminal<'nt>)
+    /// Collects the set of currently active GSS vertices and edges.
+    /// A vertex is active if it has any outgoing edges.
+    let private collectActiveGss (gss: GSS) : Set<int> * Set<int * int> =
+        let n = gss.Graph.VertexMap.Count
+        let mutable vertices = Set.empty<int>
+        let mutable edges = Set.empty<int * int>
+
+        for fromIdx in 0 .. n - 1 do
+            for toIdx in 0 .. n - 1 do
+                match Matrix.get gss.Graph.Edges fromIdx toIdx with
+                | Some _ ->
+                    vertices <- Set.add fromIdx vertices
+                    edges <- Set.add (fromIdx, toIdx) edges
+                | None -> ()
+
+        vertices, edges
+
+    /// Core GLL algorithm shared by buildPathIndex and buildPathIndexWithSteps.
+    /// The onStep callback is called at each step collection point with the current state.
+    let private buildPathIndexCore
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
+        (onStep: Queue<Descriptor> -> Set<int> -> Set<int * int> -> int -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
         let stateCount = RSM.stateCount rsm
@@ -88,7 +81,6 @@ module GLL =
 
         let stateInfo = rsm.StateInfo
         let blockStart = rsm.BlockStart
-        let finalStates = rsm.FinalStates
         let termTrans = RSM.termTransitions rsm
         let nontermTrans = RSM.nontermTransitions rsm
         let graphEdges = GraphHelpers.collectGraphEdges inputGraph
@@ -143,6 +135,10 @@ module GLL =
 
         tryEnqueue desc
 
+        // Collect initial state step
+        let activeVerts, activeEdges = collectActiveGss gss
+        onStep queue activeVerts activeEdges 0
+
         // Main loop
         while queue.Count > 0 do
             let desc = queue.Dequeue()
@@ -154,16 +150,13 @@ module GLL =
             for (Terminal tVal, q1) in termTrans.[q0] do
                 for (edgeTerm, v1) in graphEdges.[v0] do
                     if tVal = edgeTerm then
-                        // Add PTerminal to index
                         addToIndex q0 v0 q1 v1 (PathIndexEntry.PTerminal(Terminal tVal))
 
-                        // Add PIntermediate if we have a non-empty desc.MatchedRange
                         match desc.MatchedRange with
                         | RangeDescriptor.NonEmptyRange rk ->
                             addToIndex rk.FromState rk.FromVertex q1 v1 (PathIndexEntry.PIntermediate(q0, v0))
                         | RangeDescriptor.EmptyRange -> ()
 
-                        // Create new descriptor with extended desc.MatchedRange
                         let newRange = extendRange desc.MatchedRange q0 v0 q1 v1
 
                         let newDesc =
@@ -176,13 +169,11 @@ module GLL =
 
             // Case 2: Nonterminal transitions (calls)
             for (nt, qRet) in nontermTrans.[q0] do
-                // Find start state of the called nonterminal's block
                 match blockStart.TryGetValue(nt) with
                 | false, _ -> ()
                 | true, qNStart ->
                     let gssTarget = GSS.linearIndex vertexCount qNStart v0
 
-                    // Add GSS edge from target (callee's GSS node for N's start) to current (caller's GSS node)
                     let edgeInfo: GssEdgeInfo =
                         { ReturnState = qRet
                           PreCallState = q0
@@ -191,23 +182,19 @@ module GLL =
 
                     let storedPops = GSS.addEdge gss gssTarget s0 edgeInfo
 
-                    // Handle storedPops: these are ranges already recognized at gssTarget
                     for storedPop in storedPops do
                         match storedPop with
                         | RangeDescriptor.EmptyRange -> ()
                         | RangeDescriptor.NonEmptyRange popRange ->
-                            // block N matched from (qNStart, v0) to (popRange.ToState, popRange.ToVertex)
                             let vFinal = popRange.ToVertex
                             let qNFinal = popRange.ToState
 
-                            // Add PNonterminal entries (caller cell only — marks call site)
                             if v0 = vFinal then
                                 addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                                 addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                             else
                                 addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
 
-                            // Add PIntermediate and create continuation
                             match desc.MatchedRange with
                             | RangeDescriptor.EmptyRange ->
                                 let newRange =
@@ -241,7 +228,6 @@ module GLL =
 
                                 tryEnqueue contDesc
 
-                    // Create descriptor for the start state of the called nonterminal
                     let callDesc =
                         { RsmState = qNStart
                           Vertex = v0
@@ -307,7 +293,6 @@ module GLL =
                                 vFinal
                                 (PathIndexEntry.PNonterminal myNt)
 
-                        // Add PIntermediate and create continuation descriptor
                         match parentRange with
                         | RangeDescriptor.EmptyRange ->
                             let callerBlockNt = stateInfo.[qRet].BlockNonterminal
@@ -353,4 +338,50 @@ module GLL =
 
                             tryEnqueue contDesc
 
+            // Collect step after descriptor processing
+            let activeVerts, activeEdges = collectActiveGss gss
+            onStep queue activeVerts activeEdges v0
+
         pathIndex
+
+    /// Builds the path index for the given extended RSM over the input graph.
+    /// Uses the extended RSM internally, starting from the S' block which has one
+    /// nonterminal transition to the original start — processed as a regular call.
+    /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
+    let buildPathIndex
+        (_freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (inputGraph: Graph<int, Option<'t>>)
+        : PathIndex<'t, 'nt> =
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ -> ())
+
+    /// Builds the path index and collects step-by-step snapshots of the GLL execution.
+    /// Each step captures: descriptors queue, active GSS state, newly added elements, and input position.
+    /// Steps are collected at initial state (before main loop) and after each descriptor is processed.
+    let buildPathIndexWithSteps
+        (freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (inputGraph: Graph<int, Option<'t>>)
+        : PathIndex<'t, 'nt> * GLLParsingStep<'t, 'nt> list =
+        let steps = ResizeArray<GLLParsingStep<'t, 'nt>>()
+        let mutable prevVertices = Set.empty<int>
+        let mutable prevEdges = Set.empty<int * int>
+
+        let onStep (q: Queue<Descriptor>) (activeVerts: Set<int>) (activeEdges: Set<int * int>) (inputPos: int) =
+            let newVertices = Set.difference activeVerts prevVertices
+            let newEdges = Set.difference activeEdges prevEdges
+
+            steps.Add(
+                { Queue = q |> Seq.toList
+                  ActiveGssVertices = activeVerts
+                  ActiveGssEdges = activeEdges
+                  NewGssVertices = newVertices
+                  NewGssEdges = newEdges
+                  InputPosition = inputPos }
+            )
+
+            prevVertices <- activeVerts
+            prevEdges <- activeEdges
+
+        buildPathIndexCore ersm inputGraph onStep
+        |> fun pi -> pi, steps.ToArray() |> List.ofArray

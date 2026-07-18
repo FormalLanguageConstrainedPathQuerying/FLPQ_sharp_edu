@@ -22,6 +22,7 @@
     <Compile Include="ValiantTraceGoldenTests.fs" />
     <Compile Include="PathIndexTeXTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
+    <Compile Include="GssDotTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -105,3 +105,83 @@ module RsmDot =
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
+
+    /// Renders an extended RSM as a single DOT digraph using global state numbering.
+    /// All states from all blocks (including the fresh start block S') are rendered
+    /// with their global indices. Start states are green, final states have double border,
+    /// and fresh start block nodes are blue.
+    let extendedRsmToDot
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        : string =
+        let rsm = ersm.ExtendedRsm
+        let freshStart = ersm.FreshStart
+
+        let sb = StringBuilder()
+
+        sb.AppendLine("digraph ExtendedRSM {") |> ignore
+        sb.AppendLine("  rankdir=LR;") |> ignore
+        sb.AppendLine("  compound=true;") |> ignore
+
+        let stateInfo = rsm.StateInfo
+        let stateCount = rsm.StateCount
+
+        // Vertex declarations with global numbering
+        for globalIdx in 0 .. stateCount - 1 do
+            let info = stateInfo.[globalIdx]
+            let (Nonterminal ntName) = info.BlockNonterminal
+            let isFreshStart = info.BlockNonterminal = freshStart
+
+            let isStartState =
+                rsm.BlockStart.TryGetValue(info.BlockNonterminal)
+                |> function
+                    | true, gs -> gs = globalIdx
+                    | false, _ -> false
+
+            let isFinal = info.IsFinal
+
+            let label = sprintf "%s_%d" (nonterminalPrinter ntName) globalIdx
+
+            let attrs =
+                let mutable parts = [ sprintf "label=\"%s\"" label ]
+
+                if isStartState then
+                    parts <- "style=filled" :: "fillcolor=green!30" :: parts
+
+                if isFinal then
+                    parts <- "peripheries=2" :: parts
+
+                if isFreshStart then
+                    parts <- "fontcolor=blue" :: parts
+
+                String.concat ", " parts
+
+            sb.AppendLine(sprintf "  s%d [%s];" globalIdx attrs) |> ignore
+
+        // Edge declarations from transition matrix
+        for i in 0 .. stateCount - 1 do
+            for j in 0 .. stateCount - 1 do
+                match Matrix.get rsm.Transitions i j with
+                | Some symbols ->
+                    for symbol in NonEmptySet.toSeq symbols do
+                        let edgeLabel =
+                            match symbol with
+                            | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) -> terminalPrinter t
+                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
+                                sprintf "call %s" (nonterminalPrinter nt)
+                            | AutomatonLabel.AEpsilon -> "ε"
+
+                        let style =
+                            match symbol with
+                            | AutomatonLabel.AEpsilon -> ", style=dotted"
+                            | _ -> ""
+
+                        sb.AppendLine(
+                            sprintf "  s%d -> s%d [label=\"%s\"%s];" i j (DerivationTreeDot.escapeLabel edgeLabel) style
+                        )
+                        |> ignore
+                | None -> ()
+
+        sb.AppendLine("}") |> ignore
+        sb.ToString()

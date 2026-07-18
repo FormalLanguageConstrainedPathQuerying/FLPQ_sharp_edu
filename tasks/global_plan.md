@@ -1,35 +1,38 @@
-# Global Plan: Tasks 165–166
+# Global Plan: Tasks 185–186
 
 ## Task Summary
 
 | ID | Description | Type | Dependencies |
 |----|-------------|------|--------------|
-| 165 | Fix fsharplint invocation in `tools/hard_gate.py` — wrong binary path | Tooling fix | None |
-| 166 | Fix RNGLR SPPF DOT visualization — missing terminals and orphan range nodes | Code fix + Tests | None |
+| 185 | Add path index invariant for accepted strings | Invariant + Fixes | None |
+| 186 | Cross-test grammars/inputs between GLL and RNGLR tests | Tests + Fixes | 185 (correct algorithms needed before cross-testing) |
 
 ## Dependencies Graph
 
 ```
-Task 165 → (independent, tooling fix)
-Task 166 → (independent, SPPF DOT bug fix)
+Task 185 → (add invariant, fix any violations)
+Task 186 → (depends on 185 — cross-testing requires correct algorithms)
 ```
 
 ## Execution Order
 
-1. **Task 165** — Fix fsharplint path (quick fix)
-2. **Task 166** — Fix RNGLR SPPF DOT visualization
+1. **Task 185** — Add path index invariant for accepted strings, fix any algorithm violations
+2. **Task 186** — Collect all grammar+input pairs, extend both GLL and RNGLR tests to union
 
 ## Rationale
 
-- Both tasks are independent
-- Task 165 is a quick tooling fix — do it first
-- Task 166 requires investigation of SPPF DOT generation for RNGLR
+- Task 185 adds a new invariant that may expose bugs in GLL or RNGLR. These bugs must be fixed before cross-testing in Task 186, which would otherwise add failing tests without distinguishing broken algorithms from missing test coverage.
+- Task 186 extends both test suites to cover the union of grammars/inputs. Any failures discovered during this extension likely reflect pre-existing algorithm bugs — fixing them after Task 185's invariant additions ensures both invariants and acceptance/tree correctness are maintained.
 
 ## Conflict Analysis
 
-- **165 vs 166**: Task 165 modifies `tools/hard_gate.py` only. Task 166 touches SPPF printing and possibly RNGLR code. No conflicts.
-- Task 165 changes are in `tools/` directory (Python). Task 166 changes are in `src/` and `tests/` (F#). No overlap.
+- Both tasks modify `PathIndex.fs` (adding invariant checker), `GllTests.fs`, `RnglrTests.fs`, and `TestGrammars.fs`.
+- Task 185 (invariant addition) changes `PathIndex.fs` only for the invariant function — narrow change.
+- Task 186 (test expansion) changes `GllTests.fs`, `RnglrTests.fs`, and possibly `TestGrammars.fs` — new test cases using existing infrastructure.
+- The primary overlap is `PathIndex.fs`: Task 185 adds a function; Task 186 only reads it via TestHelpers. No conflict if executed sequentially.
 
 ## Shared Infrastructure
 
-None — tasks are fully independent.
+- `PathIndex.fs` — invariant function added in Task 185, consumed by both GLL and RNGLR test infrastructure
+- `TestGrammars.fs` — shared grammar definitions used by both GLL and RNGLR tests
+- `TestHelpers.fs` — shared test pipeline (`accepts`, `checkReject`) that calls invariant validators

@@ -150,6 +150,31 @@ module SummaryTeX =
 
         header @ pdfLine @ inputLines
 
+    /// Builds the content lines for a single GLL step.
+    /// Includes queue TeX, GSS PDF, path index TeX (resized), and input TeX.
+    let gllStepSection (stepDir: string) (stepNum: int) : string list =
+        let header = [ section (sprintf "Step %d" stepNum) ]
+
+        let queueLines =
+            match readIfExists (Path.Combine(stepDir, "queue.tex")) with
+            | Some tex -> [ section "Descriptors Queue"; wrapMath tex; "" ]
+            | None -> []
+
+        let gssPdfLine =
+            [ includePdf (sprintf "dot_pdfs/%s_gss.pdf" (Path.GetFileName stepDir)); "" ]
+
+        let pathIndexLines =
+            match readIfExists (Path.Combine(stepDir, "path_index.tex")) with
+            | Some tex -> [ section "Path Index"; wrapMathResized tex; "" ]
+            | None -> []
+
+        let inputLines =
+            match readIfExists (Path.Combine(stepDir, "input.tex")) with
+            | Some tex -> [ wrapMath tex; "" ]
+            | None -> []
+
+        header @ queueLines @ gssPdfLine @ pathIndexLines @ inputLines
+
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
     let buildContent
@@ -170,6 +195,7 @@ module SummaryTeX =
             headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmSppfPdfs
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
+        let isGll = algoKind = SummaryKind.GLL
 
         let stepLines =
             collectSteps vizDir
@@ -182,6 +208,8 @@ module SummaryTeX =
 
                 if isTableBased then
                     tableStepSection stepDir stepNum |> List.toArray
+                elif isGll then
+                    gllStepSection stepDir stepNum |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList

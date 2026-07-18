@@ -19,7 +19,7 @@ module GllRunner =
 
         let freshStart = Nonterminal "S'"
         let ersm = ExtendedRSM.create freshStart rsm
-        let pathIndex = GLL.buildPathIndex freshStart ersm inputGraph
+        let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm inputGraph
 
         let accepted = PathIndex.isAccepted pathIndex ersm vertexCount
 
@@ -61,9 +61,17 @@ module GllRunner =
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
 
+        Helpers.writeOutputFile (Path.Combine(outputDir, "ext_rsm.dot")) (RsmDot.extendedRsmToDot string string ersm)
+
         Helpers.writeOutputFile (Path.Combine(outputDir, "path_index.tex")) (PathIndexTeX.toTeX string string pathIndex)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
+        // Write step-by-step visualization
+        let vizSteps =
+            GllStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps pathIndex inputTokens vertexCount
+
+        Helpers.writeGllStepsVisualization outputDir vizSteps
+
         let status = if accepted then "Accepted" else "Rejected"
-        printfn "GLL: %s (%d tokens) — %s" status inputTokens.Length status
+        printfn "GLL: %s (%d tokens, %d steps) — %s" status inputTokens.Length steps.Length status
