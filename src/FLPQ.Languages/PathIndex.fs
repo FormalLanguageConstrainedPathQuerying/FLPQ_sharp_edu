@@ -219,3 +219,48 @@ module PathIndex =
         let entries = get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
 
         not (Set.isEmpty entries)
+
+    /// Checks the acceptance invariant: if the path index indicates acceptance
+    /// (cell (S'_start, 0)→(S'_final, vertexCount-1) is non-empty),
+    /// then that cell must contain PNonterminal(S) or PEpsilonNonterminal(S)
+    /// where S is the original grammar's start nonterminal.
+    /// q is the S' block start state, p = q+1 is the target of q -[S]-> p.
+    let checkAcceptanceInvariant
+        (pi: PathIndex<'t, 'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (vertexCount: int)
+        : Result<unit, string list> =
+        if not (isAccepted pi ersm vertexCount) then
+            Ok()
+        else
+            let flatExt = ersm.ExtendedRsm
+            let originalStart = ExtendedRSM.originalStartNonterminal ersm
+
+            let startGlobalState =
+                match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
+                | true, gs -> gs
+                | false, _ -> 0
+
+            let finalGlobalState = startGlobalState + 1
+            let entries = get pi startGlobalState 0 finalGlobalState (vertexCount - 1)
+
+            let hasStartNt =
+                entries
+                |> Set.exists (fun e ->
+                    match e with
+                    | PathIndexEntry.PNonterminal nt
+                    | PathIndexEntry.PEpsilonNonterminal nt -> nt = originalStart
+                    | _ -> false)
+
+            if hasStartNt then
+                Ok()
+            else
+                let (Nonterminal ntName) = originalStart
+
+                Error
+                    [ sprintf
+                          "Acceptance cell (%d,0)->(%d,%d) does not contain PNonterminal for original start %s"
+                          startGlobalState
+                          finalGlobalState
+                          (vertexCount - 1)
+                          ntName ]

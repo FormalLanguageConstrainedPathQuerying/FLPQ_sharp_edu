@@ -176,6 +176,15 @@ module TestHelpers =
         if not (isAcc pathIndex ersm vc) then
             false
         else
+
+            match PathIndex.checkAcceptanceInvariant pathIndex ersm vc with
+            | Ok() -> ()
+            | Error errors ->
+                let msg =
+                    "[accepts] Acceptance invariant violations:\n  " + String.concat "\n  " errors
+
+                failwith msg
+
             let flatExt = ersm.ExtendedRsm
 
             let startGlobalState =
