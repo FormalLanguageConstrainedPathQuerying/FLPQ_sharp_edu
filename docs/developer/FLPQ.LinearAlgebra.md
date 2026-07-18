@@ -1,6 +1,21 @@
 # FLPQ.LinearAlgebra
 
-Core library providing generic matrix types and linear algebra operations. No dependencies on other FLPQ projects.
+**Tags:** linear-algebra, matrix, boolean-decomposition, kronecker-product, sparse-matrix
+**Kind:** hub
+**Source:** `src/FLPQ.LinearAlgebra/`
+**Depends on:** FSharpPlus
+**Used by:** FLPQ.GraphAnalysis, FLPQ.Languages, FLPQ.RPQ, FLPQ.Printers
+**Book reference:** Chapters 1, 3, 7
+
+> **Abstract:** Core library providing generic matrix types and linear algebra operations: `Matrix<'a>` (generic 2D matrix), `mxm` (parameterized matrix multiplication), `kron` (Kronecker product), and `BooleanDecomposition` (decompose/recompose set-valued matrices into Boolean vectors). No dependencies on other FLPQ projects. Foundation for all other FLPQ modules.
+
+## Contents
+
+- [Project](#project)
+- [Modules](#modules)
+- [Role](#role)
+- [Book References](#book-references)
+- [See Also](#see-also)
 
 ## Project
 
@@ -29,3 +44,9 @@ Provides the foundation for all other projects:
 - Chapter 1: Matrix and vector definitions, Kronecker product
 - Chapter 3: Boolean semiring, boolean decomposition
 - Chapter 7: Valiant algorithm (uses boolean decomposition)
+
+## See Also
+
+- [Matrix module](matrix.md) — matrix type, TeX printing, styled printing
+- [LinearAlgebra module](linear-algebra.md) — semiring operations, Kronecker product
+- [BooleanDecomposition module](boolean-decomposition.md) — decompose/recompose set matrices

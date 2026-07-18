@@ -1,6 +1,21 @@
 # FLPQ.GraphAnalysis
 
-Graph analysis library providing generic graph type, MS-BFS, and Boolean/Mask semiring operations. Depends on `FLPQ.LinearAlgebra`.
+**Tags:** graph, ms-bfs, bfs, boolean, matrix-multiplication, semiring
+**Kind:** hub
+**Source:** `src/FLPQ.GraphAnalysis/`
+**Depends on:** FLPQ.LinearAlgebra
+**Used by:** FLPQ.Languages, FLPQ.RPQ
+**Book reference:** Chapters 3, 11
+
+> **Abstract:** Graph analysis library providing the generic `Graph<'s,'e>` type (labeled graph with vertices in a map and edges in a matrix), MS-BFS (multiple-source breadth-first search expressed as linear-algebraic operations), and Boolean/mask semiring operations. Depends on `FLPQ.LinearAlgebra` for matrix types and operations.
+
+## Contents
+
+- [Project](#project)
+- [Modules](#modules)
+- [Role](#role)
+- [Book References](#book-references)
+- [See Also](#see-also)
 
 ## Project
 
@@ -27,3 +42,8 @@ Provides graph infrastructure used by languages and RPQ algorithms:
 
 - Chapter 3: MS-BFS algorithm, Boolean semiring, mask semiring
 - Chapter 11: Kronecker-based RPQ (uses MS-BFS)
+
+## See Also
+
+- [Graph module](graph.md) — graph type, vertex/edge operations, filtering
+- [MS-BFS module](msbfs.md) — multiple-source BFS algorithm

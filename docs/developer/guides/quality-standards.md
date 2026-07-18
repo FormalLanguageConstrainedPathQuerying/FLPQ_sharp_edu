@@ -1,5 +1,23 @@
 # Quality Standards
 
+**Tags:** guide, quality, lint, format, coverage, tests, ci, gates
+**Kind:** guide
+
+> **Abstract:** Defines the project's non-negotiable quality gates: zero lint warnings, zero formatting differences, build with zero errors, all tests pass with zero skipped, equivalence tests for all algorithm variants, line coverage > 80%. A quality gate failure is a blocker — do not commit, do not merge, do not weaken tests. For execution procedures (commands, output capture), see the `quality-gates` and `dotnet-tooling` skills.
+
+## Contents
+
+- [Why quality standards matter](#why-quality-standards-matter)
+- [What our quality metrics are](#what-our-quality-metrics-are)
+- [What happens when a gate fails](#what-happens-when-a-gate-fails)
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md) | [Design Guides](design-guides.md)
+- [Documentation Conventions](documentation-conventions.md)
+- [Tools](tools.md) — Python quality tools
+- [Test Categories](test-categories.md) — Graphviz/TeX/Summary test categories
+
 ## Why quality standards matter
 
 This project's algorithms are reference implementations for a textbook. Bugs in reference code propagate to readers who trust the book's correctness. Quality gates are a non-negotiable baseline — they catch regressions before they reach the reader.
@@ -48,3 +66,10 @@ Total FLPQ source line coverage must exceed 80%. Coverage is measured across all
 A quality gate failure is a blocker. Do not commit. Do not merge. Do not comment out or weaken failing tests. The change must be fixed until all gates pass.
 
 If a problem cannot be resolved to 100% correctness, STOP, report concretely (which tests fail, why, what was tried), and ask for guidance. Never ship known-incorrect reference code.
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md)
+- [Design Guides](design-guides.md)
+- [Tools](tools.md) — quality check and hard gate scripts
+- [Test Categories](test-categories.md) — external tool dependencies

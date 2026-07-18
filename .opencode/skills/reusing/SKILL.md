@@ -21,6 +21,32 @@ Run these five questions **before** writing new code or documentation. Answer ea
 
 ## Procedure
 
+### 0. Search by metadata tags
+
+All developer docs in `docs/developer/` have a metadata block with **Tags**, **Kind**, and other fields. Use metadata to narrow the search before reading full docs. The metadata format is defined in `docs/developer/guides/documentation-conventions.md` (the canonical source for documentation requirements).
+
+```bash
+# Find all algorithm docs
+grep "\*\*Kind:\*\* algorithm" docs/developer/*.md
+
+# Find parsing-related docs
+grep "\*\*Tags:\*\*.*parsing" docs/developer/*.md
+
+# Find docs about a specific algorithm or concept
+grep "\*\*Tags:\*\*.*cyk" docs/developer/*.md
+
+# Find docs using a specific approach
+grep "\*\*Tags:\*\*.*dynamic-programming" docs/developer/*.md
+
+# Find docs that depend on a specific module
+grep "\*\*Depends on:\*\*.*Matrix" docs/developer/*.md
+
+# Find which docs a module is used by
+grep "\*\*Used by:\*\*.*PathIndex" docs/developer/*.md
+```
+
+After filtering by metadata, read the **abstract** (blockquote after metadata) of matching docs to determine which are relevant. Only then open and read the full doc.
+
 ### 1. Search documentation for existing structure
 
 Documentation describes code structure and serves as a navigation map. Use it before searching source files.
@@ -28,7 +54,7 @@ Documentation describes code structure and serves as a navigation map. Use it be
 - Read `docs/main.md` to find the relevant project hub or guide
 - Read the hub doc (e.g., `docs/developer/FLPQ.Languages.md`) to see what modules already exist
 - Read the relevant guide (e.g., `docs/developer/guides/coding-conventions.md`) for conventions and patterns
-- Use keywords from the task description to search: `grep -r "<keyword>" docs/`
+- Use keywords from the task description to search: `grep "\*\*Tags:\*\*.*<keyword>" docs/developer/*.md`
 
 ### 2. Search code for existing functions and types
 

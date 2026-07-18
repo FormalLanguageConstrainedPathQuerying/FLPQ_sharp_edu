@@ -1,5 +1,20 @@
 # Design Guides
 
+**Tags:** guide, design, architecture, separation-of-concerns, modularity, compile-time-safety
+**Kind:** guide
+
+> **Abstract:** Defines the project's architecture and design principles: separation of data from presentation (algorithms produce F# data, printers render it), one algorithm per file, project structure mapping to book chapters, variant algorithms as thin layers over shared infrastructure, avoidance of code duplication, and compile-time safety over runtime checks. Ensures algorithms stay testable, readable alongside the book, and reusable across chapters.
+
+## Contents
+
+- [Why design principles matter](#why-design-principles-matter)
+- [What our design principles are](#what-our-design-principles-are)
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md) | [Quality Standards](quality-standards.md)
+- [Documentation Conventions](documentation-conventions.md)
+
 ## Why design principles matter
 
 This project implements a family of interrelated algorithms across multiple domains (linear algebra, parsing, automata, RPQ). Without consistent architecture boundaries, algorithms become entangled with rendering logic, cross-domain coupling increases, and the code drifts from the book's structure.
@@ -54,3 +69,9 @@ If you copy-paste more than 3 non-trivial lines, extract a shared function. Afte
 Prefer types that make illegal states unrepresentable. Use discriminated unions for mutually exclusive cases. Use `NonEmptyList`/`NonEmptySet` for non-empty collections. Use the type system to enforce constraints rather than `if`/`raise` guards.
 
 **Why**: A constraint enforced by the type system is checked at compile time and documented in function signatures. A runtime check may be missed, may have the wrong error message, and is invisible in the type. For reference implementations that must be provably correct, compile-time enforcement is strictly stronger.
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md)
+- [Quality Standards](quality-standards.md)
+- [Documentation Conventions](documentation-conventions.md)

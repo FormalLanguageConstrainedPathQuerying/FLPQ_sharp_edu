@@ -1,6 +1,21 @@
 # FLPQ.Languages
 
-Languages library providing grammar types, parsing algorithms, and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
+**Tags:** grammar, parsing, automaton, cfg, regular, derivation-tree, visualization, ll, lr, cyk, valiant, gll, rnglr, cfpq, tokenizer, sppf, path-index, gss, rsm, ebnf
+**Kind:** hub
+**Source:** `src/FLPQ.Languages/`
+**Depends on:** FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FSharpPlus
+**Used by:** FLPQ.RPQ, FLPQ.Printers, FLPQ.Cli
+**Book reference:** Chapters 5, 6, 7
+
+> **Abstract:** Central library for formal language processing: grammar types (BNF parsing, CNF transformation), parsing algorithms (CYK, Valiant standard/modified, LL(k), LR(0)/SLR(1)/CLR(1), GLL for CFPQ on RSMs, RNGLR), finite automata (NFA/DFA wrapping Graph, RSM), EBNF parsing (FParsec-based, Brzozowski derivatives), derivation trees, and parsing visualization data types. Also provides tokenizer, first/follow computation, path index, and SPPF.
+
+## Contents
+
+- [Project](#project)
+- [Modules](#modules)
+- [Role](#role)
+- [Book References](#book-references)
+- [See Also](#see-also)
 
 ## Project
 
@@ -82,3 +97,9 @@ Central library for formal language processing:
 - Chapter 5: Finite automata, linear grammars
 - Chapter 6: EBNF, Recursive State Machines
 - Chapter 7: CYK, Valiant, LL(k), LR parsing
+
+## See Also
+
+- [FLPQ.Printers](FLPQ.Printers.md) — visualization output (TeX, Dot, Tikz)
+- [FLPQ.RPQ](FLPQ.RPQ.md) — regular path querying algorithms
+- [FLPQ.Cli](FLPQ.Cli.md) — CLI application for running algorithms

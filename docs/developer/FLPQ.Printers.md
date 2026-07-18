@@ -1,17 +1,26 @@
 # FLPQ.Printers
 
-Te x and Dot printing/visualization library for the FLPQ project.
+**Tags:** visualization, tex, dot, tikz, rendering, matrix, grammar, automaton, derivation-tree, ll, lr, cyk, valiant, summary
+**Kind:** hub
+**Source:** `src/FLPQ.Printers/`
+**Depends on:** FLPQ.LinearAlgebra, FLPQ.Languages
+**Used by:** FLPQ.Cli
+**Book reference:** _(rendering — no direct book reference)_
 
-## Overview
+> **Abstract:** TeX and Dot printing/visualization library centralizing all output formatting logic. Follows the data-then-print pattern: algorithms produce structured F# data (trace steps, tables, trees, automata), printers consume that data and produce TeX or Dot strings, and the CLI writes those strings to files. Separates rendering from algorithm logic — algorithms never contain formatting code, printers never contain algorithm logic.
 
-FLPQ.Printers centralizes all output formatting logic, separating it from algorithm implementations.
-Algorithms collect data as F# data structures; printers convert that data to TeX (for matrix and table rendering)
-or Dot (for graph/tree visualization).
+## Contents
 
-## Dependencies
+- [Project](#project)
+- [Modules](#modules)
+- [Design](#design)
+- [See Also](#see-also)
 
-- `FLPQ.LinearAlgebra` — Matrix types and operations
-- `FLPQ.Languages` — Grammar, parsing, and automaton types
+## Project
+
+- **Type**: F# class library (`net10.0`)
+- **Path**: `src/FLPQ.Printers/`
+- **Dependencies**: `FLPQ.LinearAlgebra`, `FLPQ.Languages`
 
 ## Modules
 
@@ -37,7 +46,14 @@ or Dot (for graph/tree visualization).
 
 The printer library follows the data-then-print pattern:
 1. Algorithms produce structured F# data (trace steps, tables, trees, automata)
-2. Priners consume that data and produce TeX or Dot strings
+2. Printers consume that data and produce TeX or Dot strings
 3. The CLI or tests write those strings to files
 
 This ensures a clean separation: algorithms never contain formatting logic, and printers never contain algorithm logic.
+
+## See Also
+
+- [FLPQ.Languages](FLPQ.Languages.md) — source data types (grammars, automata, trees)
+- [FLPQ.Cli](FLPQ.Cli.md) — CLI application that invokes printers
+- [Automaton visualization](automaton-viz.md) — Dot and Tikz for automata
+- [SummaryTeX module](summary-tex.md) — merged TeX document generation

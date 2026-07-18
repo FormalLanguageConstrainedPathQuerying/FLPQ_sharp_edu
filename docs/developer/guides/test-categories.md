@@ -1,5 +1,21 @@
 # Test Categories
 
+**Tags:** guide, testing, categories, graphviz, tex, lualatex, external-tools
+**Kind:** guide
+
+> **Abstract:** Documents xUnit `[<Trait("Category", "...")>]` attributes that group tests requiring external tools: `Graphviz` (requires `dot`), `TeX` (requires `lualatex`), `Summary` (requires `lualatex`). Categories allow selective execution in CI and document external tool dependencies at the test level.
+
+## Contents
+
+- [Categories](#categories)
+- [Why categories exist](#why-categories-exist)
+- [Adding a new category](#adding-a-new-category)
+
+## See Also
+
+- [ExternalTools module](../external-tools.md) — Graphviz and lualatex wrappers
+- [Quality Standards](quality-standards.md)
+
 Tests in this project use xUnit `[<Trait("Category", "...")>]` attributes to group tests that require external tools. Categories are cross-cutting — they span multiple test files and modules.
 
 ## Categories
@@ -25,3 +41,8 @@ When a new test requires an external tool:
 1. Add `[<Trait("Category", "Name")>]` to the test
 2. Document the category, tool, and affected test files in this file
 3. Update `docs/developer/external-tools.md` if a new tool is introduced
+
+## See Also
+
+- [ExternalTools module](../external-tools.md) — tool wrappers
+- [Quality Standards](quality-standards.md)

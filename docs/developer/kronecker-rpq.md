@@ -1,9 +1,22 @@
-# Kronecker-based RPQ Module Design
+# Kronecker-based RPQ Algorithm
 
-## Overview
+**Tags:** algorithm, rpq, regular, kronecker-product, bfs, automaton, matrix-multiplication, product-construction
+**Kind:** algorithm
+**Module:** KroneckerRPQ
+**Source:** `src/FLPQ.RPQ/KroneckerRPQ.fs`
+**Depends on:** Matrix, LinearAlgebra, Graph, Automaton, MsBfs
+**Used by:** FLPQ.Cli
+**Book reference:** Chapter 12, Section 03_TensorProduct.tex; Chapter 3, Section 05_BFS.tex
 
-The `KroneckerRPQ` module in `FLPQ.RPQ` implements the Kronecker product-based RPQ algorithm with MS-BFS filtering. Based on Chapter 12, `03_TensorProduct.tex`, adapted to RPQ.
-Accepts a DFA (query) and the graph as an NFA. Returns a |sources| × |V| boolean reachability matrix.
+> **Abstract:** Implements the Kronecker product-based Regular Path Querying algorithm with MS-BFS filtering. Computes a single Kronecker product of DFA and graph transition matrices using `Nfa.intersectEdgeSets` (set intersection) as the element-wise operation, then runs MS-BFS on the boolean mask for reachability filtering. Eliminates per-label decomposition and per-label Kronecker calls. Returns a |sources| × |V| boolean reachability matrix.
+
+## Contents
+
+- [Algorithm](#algorithm)
+- [Function Signatures](#function-signatures)
+- [Design Decisions](#design-decisions)
+- [Book Reference](#book-reference)
+- [See Also](#see-also)
 
 ## Algorithm
 
@@ -13,6 +26,8 @@ Accepts a DFA (query) and the graph as an NFA. Returns a |sources| × |V| boolea
 4. For each source `i` and vertex `v`, `v` is reachable if `∃ q_f ∈ finalStates: forwardVisited[i][(q_f, v)] = 1`.
 
 The result is a |startVertices|×|V| boolean reachability matrix.
+
+**Time complexity:** O(|Q|²·|V|²) for the Kronecker product, plus MS-BFS O(k·|Q|·|V|) where k is the number of sources.
 
 ## Function Signatures
 
@@ -32,7 +47,15 @@ Run Kronecker-based RPQ.
 | MS-BFS on boolean mask | The product matrix `P` carries label sets; `K = map Option.isSome` strips to boolean for MS-BFS. Equivalent to the old per-label OR-summation but computed in one pass via Kronecker. |
 | No `BooleanDecomposition` usage | The module no longer imports or uses `BooleanDecomposition.decomposeNonEmptySet` — the Kronecker product directly works with `Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>`. |
 
-## Relationship to the Book
+## Book Reference
 
 - Chapter 12, `03_TensorProduct.tex`: tensor product approach for intersection.
 - Chapter 3, `05_BFS.tex`: MS-BFS used for filtering reachable (state, vertex) pairs.
+
+## See Also
+
+- [Belyanin RPQ](belyanin-rpq.md) — BFS-based single-source RPQ
+- [Arroyuelo RPQ](arroyuelo-rpq.md) — matrix-based regex evaluation
+- [Automaton module](automaton.md) — NFA/DFA types and `intersectEdgeSets`
+- [MS-BFS module](msbfs.md) — multiple-source BFS
+- [LinearAlgebra module](linear-algebra.md) — Kronecker product

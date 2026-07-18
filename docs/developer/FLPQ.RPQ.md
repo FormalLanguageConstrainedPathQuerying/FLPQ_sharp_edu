@@ -1,6 +1,21 @@
 # FLPQ.RPQ
 
-Regular Path Querying library providing three RPQ algorithms and graph file reading. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
+**Tags:** rpq, regular, automaton, graph, kronecker-product, bfs, boolean-decomposition, matrix-multiplication
+**Kind:** hub
+**Source:** `src/FLPQ.RPQ/`
+**Depends on:** FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages, FSharpPlus
+**Used by:** FLPQ.Cli
+**Book reference:** Chapters 3, 11, 12
+
+> **Abstract:** Regular Path Querying library implementing three RPQ algorithms (Belyanin's BFS-based LARPQ, Arroyuelo's matrix-based regex evaluation, Kronecker-based automaton intersection) and graph file reading. All three algorithms accept a DFA query and an NFA labeled graph, returning a boolean reachability matrix. Property-based equivalence tests verify identical results across algorithms.
+
+## Contents
+
+- [Project](#project)
+- [Modules](#modules)
+- [Role](#role)
+- [Book References](#book-references)
+- [See Also](#see-also)
 
 ## Project
 
@@ -32,3 +47,11 @@ All three algorithms accept a DFA (query) and an NFA (labeled graph), returning 
 - Chapter 3: MS-BFS (used by Kronecker-based RPQ)
 - Chapter 11: Belyanin's algorithm, Arroyuelo's algorithm
 - Chapter 12: Tensor product approach (Kronecker-based RPQ)
+
+## See Also
+
+- [Belyanin RPQ module](belyanin-rpq.md) — BFS-based single-source RPQ
+- [Arroyuelo RPQ module](arroyuelo-rpq.md) — matrix-based regex evaluation
+- [Kronecker RPQ module](kronecker-rpq.md) — Kronecker product with MS-BFS
+- [Graph Reader module](graph-reader.md) — labeled graph I/O
+- [FLPQ.GraphAnalysis](FLPQ.GraphAnalysis.md) — graph and MS-BFS infrastructure

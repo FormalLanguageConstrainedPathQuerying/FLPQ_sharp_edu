@@ -1,5 +1,16 @@
 # Documentation
 
+**Tags:** hub, entry-point, navigation
+**Kind:** hub
+
+> **Abstract:** Root entry point for all project documentation. Links to project architecture, developer guides (coding conventions, design guides, quality standards, documentation conventions, reusing principles, tools), project hubs (FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages, FLPQ.RPQ, FLPQ.Printers, FLPQ.Cli), module index (all algorithm, data structure, utility, and visualization docs), and user documentation (CLI usage). Every documentation page in the project is reachable from here.
+
+## Contents
+
+- [Project Documentation](#project-documentation)
+- [Developer Documentation](#developer-documentation)
+- [User Documentation](#user-documentation)
+
 ## Project Documentation
 
 How the project is organized, where each part is located, and why.

@@ -1,9 +1,22 @@
-# Belyanin's LARPQ Module Design
+# Belyanin's LARPQ Algorithm
 
-## Overview
+**Tags:** algorithm, rpq, regular, bfs, automaton, matrix-multiplication, boolean-decomposition
+**Kind:** algorithm
+**Module:** BelyaninRPQ
+**Source:** `src/FLPQ.RPQ/BelyaninRPQ.fs`
+**Depends on:** Matrix, Graph, Automaton, BooleanDecomposition, MsBfs
+**Used by:** FLPQ.Cli
+**Book reference:** Chapter 11, Section 02_BFS.tex, Algorithm algo:RPQ_BFS_semiring
 
-The `BelyaninRPQ` module in `FLPQ.RPQ` implements Belyanin's LARPQ algorithm. Based on Chapter 11, `02_BFS.tex`, algorithm `algo:RPQ_BFS_semiring`.
-Accepts a DFA (query) and the graph as an NFA. Returns a |sources| × |V| boolean reachability matrix.
+> **Abstract:** Implements Belyanin's LARPQ algorithm — a BFS-based single-source Regular Path Querying algorithm. Accepts a DFA query and a labeled graph (as NFA). Operates on two |Q|×|V| matrices (front and accumulated results), propagating through simultaneous automaton backward + graph forward transitions. Returns a |sources| × |V| boolean reachability matrix.
+
+## Contents
+
+- [Algorithm](#algorithm)
+- [Function Signatures](#function-signatures)
+- [Design Decisions](#design-decisions)
+- [Book Reference](#book-reference)
+- [See Also](#see-also)
 
 ## Algorithm
 
@@ -17,6 +30,8 @@ Operates on two |Q|×|V| matrices: front M and accumulated results P.
    - M ← Σ_a (N^a)^T ⊗_B M ⊗_B G^a (propagate: automaton backward + graph forward)
 4. Result: F ⊗_B P where F selects final states — returns a boolean vector of reachable vertices.
 
+**Time complexity:** O(|Q|·|V|·d·|Σ|) where d is the BFS diameter.
+
 ## Function Signatures
 
 ### `evaluate: DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
@@ -27,11 +42,20 @@ Run Belyanin's RPQ algorithm.
 
 ## Design Decisions
 
-- Sources are taken from the NFA's start states; runs the single-source algorithm per source and stacks results.
-- Per-label graph matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`.
-- Uses `MsBfs.boolAdd`, `MsBfs.boolMul`, and `MsBfs.maskFilter` for Boolean semiring operations.
-- The index-based unary operator I^P_reach is implemented via `maskFilter`: filtering out already accumulated (q,v) pairs from P.
+| Decision | Rationale |
+|----------|-----------|
+| Sources from NFA start states | Runs the single-source algorithm per source, stacks results |
+| Per-label matrices via `BooleanDecomposition` | Maps automaton and graph transitions to boolean matrices by label |
+| Uses `MsBfs.boolAdd`, `MsBfs.boolMul`, `MsBfs.maskFilter` | Reuses Boolean semiring operations from the MS-BFS module |
+| Index-based unary operator via `maskFilter` | Filtering out already accumulated (q,v) pairs from P |
 
-## Relationship to the Book
+## Book Reference
 
-- Chapter 11, `02_BFS.tex`: algorithm `algo:RPQ_BFS_semiring`.
+Chapter 11, `02_BFS.tex`: algorithm `algo:RPQ_BFS_semiring`.
+
+## See Also
+
+- [Arroyuelo RPQ](arroyuelo-rpq.md) — matrix-based regex evaluation
+- [Kronecker RPQ](kronecker-rpq.md) — Kronecker product with MS-BFS
+- [MS-BFS module](msbfs.md) — Boolean semiring operations
+- [BooleanDecomposition module](boolean-decomposition.md) — per-label matrix decomposition

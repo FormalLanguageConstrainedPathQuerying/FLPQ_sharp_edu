@@ -1,26 +1,45 @@
-# Derivation Tree Dot Renderer
+# Derivation Tree DOT Renderer
 
-Module: `DerivationTreeDot` in `FLPQ.Printers`.
+**Tags:** visualization, derivation-tree, dot, graphviz, tree, ll, lr
+**Kind:** visualization
+**Module:** DerivationTreeDot
+**Source:** `src/FLPQ.Printers/`
+**Depends on:** DerivationTree, VisualizationTypes
+**Used by:** LLStepVisualizer, LRStepVisualizer
+
+> **Abstract:** Renders derivation trees as Graphviz DOT graphs. Supports plain tree rendering (`toDot`), combined tree + LL stack overlay (`toDotWithLLStack`), and combined tree + LR stack overlay (`toDotWithLRStack`). Stack leaves are located by path and connected via dashed edges with same-rank constraints. LR state frames are visually distinguished with gray fill.
+
+## Contents
+
+- [Overview](#overview)
+- [Function Signatures](#function-signatures)
+- [Design Decisions](#design-decisions)
+- [See Also](#see-also)
 
 ## Overview
 
-Renders derivation trees as Graphviz DOT graphs. Supports plain tree rendering and combined stack+tree overlay rendering for LL/LR parser step visualization.
+The module provides three rendering modes:
+1. **Plain tree**: single derivation tree, leaf nodes as boxes, internal nodes as ovals, top-to-bottom layout.
+2. **Tree + LL stack**: tree rendered once with path-to-node-id map; stack leaves located by path, connected via dashed edges, constrained to same rank.
+3. **Tree + LR stack**: combined stack including LR state frames (gray fill, labeled "sN"), connected by dashed edges, same-rank constraint.
 
-## Types
+## Function Signatures
 
-Uses `DerivationTree<'t,'nt>` from `DerivationTree.fs` and `LRStackFrame<'t,'nt>` from `VisualizationTypes.fs`. No new types.
+- `toDot: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> string` — renders plain tree to DOT
+- `toDotWithLLStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> LLStackLeaf<'t,'nt> list -> string` — tree + LL stack chain overlay
+- `toDotWithLRStack: (Symbol<'t,'nt> -> string) -> LRStackFrame<'t,'nt> list -> string` — tree + LR stack chain overlay with state frames
 
-## Functions
+## Design Decisions
 
-- `toDot: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> string` — renders tree to DOT with leaf nodes as boxes, internal nodes as ovals, top-to-bottom layout.
-- `toDotWithLLStack: (Symbol<'t,'nt> -> string) -> DerivationTree<'t,'nt> -> LLStackLeaf<'t,'nt> list -> string` — renders the full partial derivation tree with a stack chain overlay. The tree is rendered in a single pass with a path-to-node-id map. Stack leaves are located by their path and connected via dashed edges with a same-rank constraint.
-- `toDotWithLRStack: (Symbol<'t,'nt> -> string) -> LRStackFrame<'t,'nt> list -> string` — renders a derivation tree with an LR stack chain including all stack frames. `LRSymbol` frames render as tree nodes; `LRState(n)` frames render as labeled "sN" nodes with gray fill. All frames are connected via dashed edges and constrained to the same rank.
+| Decision | Rationale |
+|----------|-----------|
+| Symbol visualizer callback | Flexible label rendering for any symbol type |
+| Unique node IDs via mutable counter | Ensures no ID collisions in the generated DOT |
+| Full tree as base for LL overlay | Tree rendered once; stack leaves located by path |
+| LR state frames visually distinguished | Gray fill separates automaton states from tree symbols |
 
-## Design decisions
+## See Also
 
-- Symbol visualizer callback for flexible label rendering
-- Unique node ID generated via mutable counter
-- `toDotWithLLStack` uses full tree as base: renders tree once, then overlays stack chain by locating frontier leaves via path
-- LR state frames visually distinguished (gray fill) from symbol frames
-
-Tests carry the `Graphviz` category (require `dot`). See [test categories](guides/test-categories.md).
+- [Visualization Types](visualization-types.md) — LLStackLeaf, LRStackFrame types
+- [DerivationTree module](derivation-tree.md) — tree types
+- [Automaton visualization](automaton-viz.md) — automaton DOT/Tikz rendering

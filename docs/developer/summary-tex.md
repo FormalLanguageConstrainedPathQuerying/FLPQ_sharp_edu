@@ -1,87 +1,61 @@
 # SummaryTeX Module
 
-## Module Purpose
+**Tags:** visualization, tex, summary, rendering, latex, cli, pdf
+**Kind:** visualization
+**Module:** SummaryTeX
+**Source:** `src/FLPQ.Printers/SummaryTeX.fs`
+**Depends on:** GrammarTeX, MatrixTeX, ExternalTools
+**Used by:** FLPQ.Cli (summary generation)
 
-Generates TeX content for merged summary documents produced by the CLI.
-Provides LaTeX helper functions and structured section builders that
-assemble per-step artifacts (tables, stacks, dot-generated PDFs) into
-a single compilable TeX document.
+> **Abstract:** Generates TeX content for merged summary documents produced by the CLI. Provides LaTeX helper functions (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `includePdf`, `section`) and structured section builders (`headerSection`, `tableStepSection`, `stackStepSection`, `buildContent`) that assemble per-step artifacts (tables, stacks, dot-generated PDFs, Tikz diagrams) into a single compilable TeX document. Operates purely on string content — file I/O is handled by the CLI.
+
+## Contents
+
+- [Overview](#overview)
+- [Function Signatures](#function-signatures)
+- [Design Decisions](#design-decisions)
+- [See Also](#see-also)
+
+## Overview
+
+The SummaryTeX module assembles per-algorithm visualization artifacts into one merged TeX document per algorithm. The merged document includes:
+- Algorithm header (original grammar, CNF grammar, input string)
+- LL/LR parsing table and automaton (for LL/LR algorithms)
+- Per-step sections (tables for CYK/Valiant, stack+tree PDFs for LL/LR)
 
 ## Function Signatures
 
-### `wrapMath`
+### LaTeX Helpers
 ```fsharp
 val wrapMath: string -> string
-```
-Wraps TeX content in `\[...\]` math display mode inside a `\begin{center}` environment.
-
-### `wrapCenter`
-```fsharp
 val wrapCenter: string -> string
-```
-Wraps content in a `\begin{center}...\end{center}` environment.
-
-### `wrapTikzCenter`
-```fsharp
 val wrapTikzCenter: string -> string
-```
-Wraps a `\begin{tikzpicture}...\end{tikzpicture}` block in a
-`\resizebox{0.98\textwidth}{!}{...}` inside a `\begin{center}` environment.
-This ensures the Tikz diagram fits the page width in the merged summary.
-Standalone tikzpicture blocks (e.g., for the Tikz template) are generated without resizebox.
-
-### `includePdf`
-```fsharp
 val includePdf: string -> string
-```
-Generates an `\includegraphics` command in a centered block, referencing a PDF
-by relative path (e.g., `../dot_pdfs/lr_automaton.pdf`).
-
-### `section`
-```fsharp
 val section: string -> string
 ```
-Generates a `\subsection*{...}` heading.
 
-### `headerSection`
+### Section Builders
 ```fsharp
 val headerSection: vizDir:string -> algoKind:string -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
-```
-Builds the header portion of the merged document: original grammar, CNF grammar
-(for table-based algorithms), input string, LL/LR parsing table, and LR automaton.
-The `algoKind` parameter is `"table"` (CYK/Valiant), `"ll"`, or `"lr"`.
-The `lrAutomatonPdf` is a relative path to a pre-compiled PDF (dot-based rendering).
-The `lrAutomatonTikz` is inline Tikz code; it is wrapped with `wrapTikzCenter` for page fitting.
-
-### `tableStepSection`
-```fsharp
 val tableStepSection: stepDir:string -> stepNum:int -> string list
-```
-Builds a per-step section for table-based algorithms (CYK, Valiant), including
-the table TeX and any boolean decomposition files (`bool_decomp_*.tex`).
-
-### `stackStepSection`
-```fsharp
 val stackStepSection: stepDir:string -> stepNum:int -> stepName:string -> string list
-```
-Builds a per-step section for stack-based algorithms (LL, LR), including
-the compiled tree-and-stack PDF and the input TeX.
-
-### `buildContent`
-```fsharp
 val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 ```
-Assembles the complete merged TeX content for one algorithm: algorithm header,
-header section, and all per-step sections in sorted order.
-The `algo` parameter is a string (`"CYK"`, `"Valiant"`, `"LL"`, `"LR"`).
+- `algoKind`: `"table"` (CYK/Valiant), `"ll"`, or `"lr"`
+- `buildContent` assembles the complete merged TeX for one algorithm
 
 ## Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| Separate module in Printers | TeX content generation belongs in the printers layer, not CLI. CLI orchestrates file I/O and algorithm dispatch; content assembly is formatting logic. |
-| String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; module can be reused or tested independently. |
-| File I/O via `readIfExists` | Headers and steps read existing artifact files; module does not create files. Produces only string content. |
-| `\includegraphics` for dot PDFs | The merged TeX references PDFs compiled from dot files by the CLI (via `ExternalTools.compileDotFileToPdf`). The module assumes these PDFs exist at the expected relative paths. |
+| Separate module in Printers | TeX content generation is formatting logic, not CLI orchestration |
+| String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; testable independently |
+| File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
+| `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
+| `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary |
 
-Tests carry the `Summary` category (require `lualatex`). See [test categories](guides/test-categories.md).
+## See Also
+
+- [GrammarTeX module](grammar-tex.md) — grammar rendering used in headers
+- [ExternalTools module](external-tools.md) — Dot/TeX compilation for summary PDFs
+- [CLI user documentation](../user/cli.md) — `--summary` flag usage

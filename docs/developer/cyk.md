@@ -1,8 +1,47 @@
-# CYK Module
+# CYK Algorithm
 
-## Module Purpose
+**Tags:** algorithm, parsing, CYK, Chomsky Normal Form, dynamic programming, matrix
+**Kind:** algorithm
+**Module:** Cyk
+**Source:** `src/FLPQ.Languages/Cyk.fs`
+**Depends on:** Matrix, Grammar
+**Used by:** Valiant
+**Book reference:** Chapter 7, Section sec:CYK
 
-Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. Provides table visualization via TeX output. Uses the common `ParsingTable<'nt>` type (matrix of nonterminal sets) shared with the Valiant algorithm.
+> **Abstract:** Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. Uses a set-based triangular parsing table where cell (i,j) stores the set of nonterminals deriving substring w[i..j]. Provides table visualization via TeX output. Shares the `ParsingTable<'nt>` type with the Valiant algorithm.
+
+## Contents
+
+- [Algorithm](#algorithm)
+- [Type Definitions](#type-definitions)
+- [Function Signatures](#function-signatures)
+- [Design Decisions](#design-decisions)
+- [Book Reference](#book-reference)
+- [See Also](#see-also)
+
+## Algorithm
+
+**Input:** CNF grammar G, input string w of length n
+**Output:** `true` iff w ∈ L(G)
+
+```
+1. Convert G to CNF via Grammar.toCnf
+2. If n = 0: accept iff start symbol has epsilon production
+3. Create n×n table T of Set<Nonterminal<'nt>>, all cells empty
+4. For i = 0..n-1:                    // diagonal: span 1
+     T[i,i] ← {A | A → w[i] ∈ rules}
+5. For len = 2..n:                    // increasing span lengths
+     For i = 0..n-len:
+       j ← i + len - 1
+       For k = i..j-1:                 // split point
+         For each A → B C ∈ rules:
+           If B ∈ T[i,k] ∧ C ∈ T[k+1,j]:
+             T[i,j] ← T[i,j] ∪ {A}
+6. Accept iff start ∈ T[0,n-1]
+```
+
+**Time complexity:** O(n³ · |P|) where n is input length and |P| is the number of productions.
+**Space complexity:** O(n²)
 
 ## Type Definitions
 
@@ -20,18 +59,7 @@ A snapshot of the CYK working table at one step, with cells modified at this ste
 ```fsharp
 val parse: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> bool
 ```
-Determines whether the token sequence belongs to the language of grammar `g`.
-
-**Algorithm**:
-1. Converts `g` to CNF via `Grammar.toCnf`
-2. For an empty input, checks if the CNF start symbol has an epsilon production
-3. For non-empty input of length n:
-   - Creates an n×n table of `Set<Nonterminal<'nt>>`, all cells empty
-   - Fills diagonal (span 1): `table[i,i] = {A | A → input[i] is a rule}`
-   - For span lengths 2..n, for each start position i, fills `table[i, i+len-1]` by trying all split points k and checking for binary productions `A → B C` where B is in `table[i,k]` and C is in `table[k+1, i+len-1]`
-4. Returns `true` iff the start symbol is in `table[0, n-1]`
-
-**Time complexity**: `O(n³ · |P|)` where n is the input length and |P| is the number of productions.
+Determines whether the token sequence belongs to the language of grammar `g`. Auto-converts the grammar to CNF internally.
 
 ### `parseWithTable`
 ```fsharp
@@ -43,7 +71,7 @@ Runs CYK and returns both the final parsing table (n × n matrix where cell `[i,
 ```fsharp
 val parseWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> CykTraceStep<'nt> list
 ```
-Runs CYK and returns the sequence of working table states, one per diagonal. Useful for visualizing the algorithm step by step. The first element is the table after filling the diagonal, subsequent elements show the state after each span length.
+Runs CYK and returns the sequence of working table states, one per diagonal. The first element is the table after filling the diagonal, subsequent elements show the state after each span length. Useful for step-by-step visualization.
 
 ## Design Decisions
 
@@ -55,10 +83,14 @@ Runs CYK and returns the sequence of working table states, one per diagonal. Use
 | Terminals passed as `Terminal<'t> list` | Consistent with Valiant; no Symbol conversion needed |
 | `parseWithTrace` returns one matrix per diagonal | Enables step-by-step visualization of the algorithm's progress |
 
-## Test Grammars (from Task 6 Specification)
-
-(unchanged)
-
-## Relationship to the Book
+## Book Reference
 
 CYK is a fundamental dynamic programming algorithm for context-free language parsing. The algorithm uses a triangular matrix (upper triangle of an n×n matrix) where each cell (i,j) stores the set of nonterminals that derive the substring w[i..j]. The `ParsingTable<'nt>` type (equivalent to `Matrix<Set<Nonterminal<'nt>>>`) directly corresponds to this structure.
+
+Chapter 7, Section sec:CYK.
+
+## See Also
+
+- [Valiant algorithm](valiant.md) — reduces parsing to matrix multiplication, shares `ParsingTable<'nt>` type
+- [Grammar module](grammar.md) — CNF transformation
+- [Matrix module](matrix.md) — underlying matrix type and TeX rendering

@@ -1,8 +1,13 @@
 # Tools
 
-Auxiliary Python scripts for project quality control in `tools/`.
+**Tags:** guide, tools, python, quality, ci, detect-changes, format, build, test, coverage, lint
+**Kind:** guide
 
-See `tools/README.md` for output conventions (no timeout, file structure, STATUS values, incremental flushing).
+> **Abstract:** Documents auxiliary Python scripts for project quality control in `tools/`: `detect_changes.py` (detect modified projects), `quality_check.py` (inter-subtask format + build gate), `hard_gate.py` (full format → build → tests + coverage → lint gate). For execution procedures, see the `quality-gates` and `dotnet-tooling` skills. For output conventions, see `tools/README.md`.
+
+## Contents
+
+- [Tools](#tools)
 
 ## Tools
 
@@ -155,3 +160,8 @@ The skills that reference these tools:
 
 - `.opencode/skills/quality-gates/SKILL.md` — commit gate and task verification sections reference `quality_check.py` and `hard_gate.py`
 - `.opencode/skills/subtask-loop/SKILL.md` — pre-commit check step references `quality_check.py`; task completion verification references `hard_gate.py`
+
+## See Also
+
+- [tools/README.md](../../../tools/README.md) — output conventions
+- [Quality Standards](quality-standards.md) — quality metrics and thresholds

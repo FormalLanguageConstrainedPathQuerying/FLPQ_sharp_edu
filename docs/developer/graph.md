@@ -1,10 +1,33 @@
 # Graph Module
 
-Namespace: `FLPQ.GraphAnalysis`. Project: `FLPQ.GraphAnalysis`.
+**Tags:** data-structure, graph, matrix, adjacency-matrix
+**Kind:** data-structure
+**Module:** Graph
+**Source:** `src/FLPQ.GraphAnalysis/Graph.fs`
+**Depends on:** Matrix, LinearAlgebra
+**Used by:** Automaton, GLL, RNGLR, all RPQ, SPPF, PathIndex
+**Book reference:** Chapter 1, Section 07_MatricesAndVectors.tex; Chapter 3, Section 05_BFS.tex
+
+> **Abstract:** Provides the generic `Graph<'v,'e>` type: vertices identified by integer indices stored in a map, edges in a square adjacency matrix. Used as the foundation for finite automata (NFA/DFA wrap Graph), SPPF, GSS, and all graph-based algorithms. Supports vertex/edge transformations, vertex removal with deterministic remapping, and generic Boolean matrix-based filtering.
+
+## Contents
+
+- [Data Structure](#data-structure)
+- [Type Definition](#type-definition)
+- [Module Functions](#module-functions)
+- [Design Decisions](#design-decisions)
+- [Integration with Automaton Types](#integration-with-automaton-types)
+- [See Also](#see-also)
+
+## Data Structure
+
+A `Graph<'v,'e>` is a labeled directed graph where:
+- **Vertices** are integer-indexed (0..n-1) with labels stored in a `Map<int, 'v>`. Integer indices enable efficient matrix operations.
+- **Edges** are stored in a square `Matrix<'e>` where cell `[i,j]` is the edge from vertex i to vertex j.
+
+This representation follows the book's adjacency matrix model — enabling linear-algebraic operations such as Boolean matrix multiplication for BFS, Kronecker products for automaton intersection, and diagonal-matrix filtering for vertex selection.
 
 ## Type Definition
-
-### `Graph<'v, 'e>`
 
 ```fsharp
 type Graph<'v, 'e> =
@@ -12,57 +35,40 @@ type Graph<'v, 'e> =
       edges: Matrix<'e> }
 ```
 
-Generic graph structure where:
-- Vertices are identified by integer indices and stored in a map (`vertexMap`). Each vertex has an associated value of type `'v` (the vertex label).
-- Edges are stored in a square matrix of type `Matrix<'e>` where element `[i, j]` represents the edge from vertex `i` to vertex `j`.
-
-**Design rationale**: The graph is the fundamental structure in the book. Vertices are indexed by integers for efficient matrix operations. The map associates indices to labels, supporting arbitrary label types. Edges are stored as a matrix to enable linear-algebraic operations (Boolean matrix multiplication, Kronecker product, etc.).
-
-**Relationship to the book**: Chapter 1, `07_MatricesAndVectors.tex` — the adjacency matrix representation of graphs. Chapter 3, `05_BFS.tex` — using Boolean matrix operations for graph algorithms.
-
-## Function Signatures
+## Module Functions
 
 ### Construction
-
-- `fromEdges: 'v list -> Matrix<'e> -> Graph<'v, 'e>` — creates a graph from a list of vertex labels and an edge matrix. Vertices are indexed 0..n-1 in order.
+- `fromEdges: 'v list -> Matrix<'e> -> Graph<'v, 'e>` — creates a graph from a list of vertex labels and an edge matrix.
 
 ### Accessors
-
-- `vertexCount: Graph<'v, 'e> -> int` — returns the number of vertices.
-- `vertices: Graph<'v, 'e> -> (int * 'v) list` — returns all vertices as (index, label) pairs, sorted by index.
-- `tryGetVertex: int -> Graph<'v, 'e> -> 'v option` — returns the vertex label at the given index, or `None` if out of range.
-- `getVertex: int -> Graph<'v, 'e> -> 'v` — returns the vertex label at the given index. Fails if out of range.
-- `edge: Graph<'v, 'e> -> int -> int -> 'e` — returns the edge value between two vertices.
+- `vertexCount: Graph<'v, 'e> -> int`
+- `vertices: Graph<'v, 'e> -> (int * 'v) list` — all (index, label) pairs, sorted by index
+- `tryGetVertex: int -> Graph<'v, 'e> -> 'v option`
+- `getVertex: int -> Graph<'v, 'e> -> 'v`
+- `edge: Graph<'v, 'e> -> int -> int -> 'e`
 
 ### Transformations
-
-- `mapVertices: ('v -> 'w) -> Graph<'v, 'e> -> Graph<'w, 'e>` — transforms vertex labels.
-- `mapEdges: ('e -> 'f) -> Graph<'v, 'e> -> Graph<'v, 'f>` — transforms edge values.
+- `mapVertices: ('v -> 'w) -> Graph<'v, 'e> -> Graph<'w, 'e>`
+- `mapEdges: ('e -> 'f) -> Graph<'v, 'e> -> Graph<'v, 'f>`
 
 ### Vertex Removal
-
-- `keepVertices: Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only the specified vertices and edges between them. Vertex indices are remapped to 0..|keep|-1 preserving ascending order. Useful states are retained with their original labels; edges are extracted from the original matrix at the corresponding positions.
+- `keepVertices: Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only specified vertices and edges between them. Indices remapped to 0..|keep|-1 preserving ascending order.
 
 ### Generic Graph Filtering
-
-- `filterOutgoingGeneric: zero:'e -> maskOp:(bool -> 'e -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only outgoing edges from selected vertices. Multiplies `diagonal(selected)` by `edges` using `maskOp` (keep flag × edge) and `combineOp` (merge multiple edges between same pair). Generalized for arbitrary edge types, not just `bool`.
-
-- `filterIncomingGeneric: zero:'e -> maskOp:('e -> bool -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only incoming edges to selected vertices. Multiplies `edges` by `diagonal(selected)`.
+- `filterOutgoingGeneric: zero:'e -> maskOp:(bool -> 'e -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps outgoing edges from selected vertices via diagonal matrix multiplication.
+- `filterIncomingGeneric: zero:'e -> maskOp:('e -> bool -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps incoming edges to selected vertices.
 
 ### Boolean Graph Filtering
+- `filterOutgoing: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>`
+- `filterIncoming: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>`
 
-- `filterOutgoing: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only outgoing edges from selected vertices. Delegates to `filterOutgoingGeneric` with `zero=false`, `maskOp=(&&)`, `combineOp=(||)`.
-- `filterIncoming: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>` — keeps only incoming edges to selected vertices. Delegates to `filterIncomingGeneric`.
-
-**Relationship to the book**: Chapter 3, `05_BFS.tex` — filtering is done via multiplication by diagonal matrices that serve as vertex selectors. For selecting vertices i, j, k, multiply the adjacency matrix by a diagonal matrix with ones at (i,i), (j,j), (k,k) and zeros elsewhere.
-
-### Design Decisions
+## Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| Generic filter functions parameterized by `zero`/`maskOp`/`combineOp` | Enables filtering on graphs with arbitrary edge types (e.g., `Option<NonEmptySet<AutomatonLabel<'t>>>`) without requiring Boolean decomposition. Boolean versions delegate to generic ones. |
-| `keepVertices` instead of filter-combinations | Removing vertices automatically removes all incident edges — no separate edge-filtering step needed. More direct than `filterOutgoing |> filterIncoming`. |
-| `keepVertices` preserves ascending order | Remapped indices are deterministic and predictable. Callers building maps from old to new indices can rely on this order. |
+| Generic filter functions parameterized by `zero`/`maskOp`/`combineOp` | Enables filtering on graphs with arbitrary edge types without Boolean decomposition |
+| `keepVertices` instead of filter-combinations | Removing vertices automatically removes all incident edges — no separate edge-filtering step needed |
+| `keepVertices` preserves ascending order | Remapped indices are deterministic and predictable |
 
 ## Integration with Automaton Types
 
@@ -73,8 +79,13 @@ type NFA<'t, 's when 't: comparison> =
     { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startStates: Set<int>
       finalStates: Set<int> }
-    member this.states = this.graph |> Graph.vertices |> List.map snd
-    member this.transitions = this.graph.edges
 ```
 
-This separation follows the book's hierarchy: a graph is a generic structure, and an automaton is a graph with additional information about start and final states.
+This separation follows the book's hierarchy: a graph is a generic structure, and an automaton is a graph with additional start/final state annotations.
+
+## See Also
+
+- [Automaton module](automaton.md) — NFA/DFA wrapping Graph
+- [MS-BFS module](msbfs.md) — BFS using Boolean graph adjacency
+- [Matrix module](matrix.md) — underlying edge storage
+- [SPPF module](sppf.md) — SPPF as a Graph

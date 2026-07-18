@@ -1,6 +1,19 @@
 # Coding Conventions
 
-See also: [Design Guides](design-guides.md) | [Quality Standards](quality-standards.md)
+**Tags:** guide, coding-conventions, style, naming, genericity, immutability, documentation
+**Kind:** guide
+
+> **Abstract:** Defines the project's coding conventions: PascalCase for types/modules/record fields, camelCase for functions/values, immutability-first, types+modules at same level, maximal genericity over hardcoded types, non-empty collections by type (NonEmptyList/NonEmptySet), XML documentation comments for public APIs. Every implementation must be directly traceable to a specific algorithm or example in the book.
+
+## Contents
+
+- [Why conventions matter](#why-conventions-matter)
+- [What our conventions are](#what-our-conventions-are)
+
+## See Also
+
+- [Design Guides](design-guides.md) | [Quality Standards](quality-standards.md)
+- [Documentation Conventions](documentation-conventions.md)
 
 ## Why conventions matter
 
@@ -80,3 +93,9 @@ Use `NonEmptyList<'t>` and `NonEmptySet<'t>` from FSharpPlus for any collection 
 Unit tests may instantiate generic types at `string` for readability, but the implementation must never depend on it.
 
 **Why**: Tests must be readable without decoding abstract type variables. But `string` is a concrete type — if the implementation requires `string` (e.g., calls `.Length` on a terminal), the genericity is broken.
+
+## See Also
+
+- [Design Guides](design-guides.md)
+- [Quality Standards](quality-standards.md)
+- [Documentation Conventions](documentation-conventions.md)

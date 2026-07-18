@@ -1,38 +1,65 @@
-# LR Parser Module Design and Logic
+# LR Parser Module
 
-## Overview
+**Tags:** algorithm, parsing, lr, shift-reduce, automaton, subset-construction, derivation-tree, grammar
+**Kind:** algorithm
+**Module:** LRParser
+**Source:** `src/FLPQ.Languages/LRParser.fs`
+**Depends on:** Grammar, Automaton, DerivationTree, FirstFollow
+**Used by:** FLPQ.Cli
+**Book reference:** LR parsing chapters
 
-Implements LR(0), SLR(1), and CLR(1) parsing table construction and an LR parser
-interpreter with derivation tree building. Also provides LR(0) and LR(1) automaton
-construction as cases of the generic deterministic finite automaton type from `Automaton.fs`.
+> **Abstract:** Implements LR(0), SLR(1), and CLR(1) parsing table construction and an LR parser interpreter with derivation tree building. Also provides LR(0) and LR(1) automaton construction as cases of the generic deterministic finite automaton type from `Automaton.fs`. Uses unified stack (states + tree nodes), augmented grammar for accept detection, and conflict recording.
 
-## Files
+## Contents
 
-| File | Purpose |
-|------|---------|
-| `src/FLPQ.Core/LRParser.fs` | LR item types, automata construction, table building, parser |
-| `docs/lr-parser.md` | This documentation |
+- [Algorithm](#algorithm)
+- [Type Definitions](#type-definitions)
+- [LRAutomaton Functions](#lrautomaton-functions)
+- [LRParser Functions](#lrparser-functions)
+- [Design Decisions](#design-decisions)
+- [Book Reference](#book-reference)
+- [See Also](#see-also)
 
-## Relation to the Book
+## Algorithm
 
-Corresponds to the LR parsing chapters of the book.
+### LR Automaton Construction
+
+LR automata are built via BFS state-space exploration from the initial closure state:
+1. Start with closure of `S' → ·S` (augmented grammar's first item).
+2. For each discovered state and each grammar symbol X, compute `goto(state, X)`:
+   - Advance dot past X in all items where dot precedes X.
+   - Apply closure to the result.
+3. Add transitions and new states; repeat until fixpoint.
+
+### Table Construction
+
+**LR(0):** Completed items reduce on ALL grammar terminals + end-of-input `Epsilon`. Most non-trivial grammars have conflicts.
+
+**SLR(1):** Reduces restricted to terminals in LHS nonterminal's follow set.
+
+**CLR(1):** Uses lookahead from LR(1) items for precise reduce decisions. Most powerful — resolves all conflicts SLR(1) cannot.
+
+### Parser (Shift-Reduce Interpreter)
+
+Uses a unified stack of `LRStackFrame` (state + tree node):
+1. **Shift**: push `LRSymbol(Leaf(token))` then `LRState(nextState)`, advance input.
+2. **Reduce**: pop `2·|β|` frames (state + tree pairs), build `Node(lhs, children)`, push `LRSymbol(Node(...))` then `LRState(gotoState)`.
+3. **Accept**: triggered by `S' → S·` item.
+
+A step limit of 10000 prevents infinite loops from epsilon-reduction cycles.
 
 ## Type Definitions
 
 ### LR(0) Item
-
 ```fsharp
 type LR0Item =
     { Lhs: Nonterminal<string>
       Rhs: Symbol<string, string> list
       Dot: int }
 ```
-
-Represents a production rule with a dot marking how much of the RHS has been consumed.
-E.g., `A → α·β` means `α` has been parsed and `β` is yet to be parsed.
+Represents a production rule with a dot marking how much of the RHS has been consumed. E.g., `A → α·β`.
 
 ### LR(1) Item
-
 ```fsharp
 type LR1Item =
     { Lhs: Nonterminal<string>
@@ -40,13 +67,9 @@ type LR1Item =
       Dot: int
       Lookahead: Symbol<string, string> }
 ```
-
-Extends LR(0) items with a lookahead symbol for more precise reduce decisions.
-E.g., `A → α·β, a` means reduce `A → αβ` only when the next input token is `a`.
-End-of-input lookahead is represented as `Epsilon` (matching the Symbol type).
+Extends LR(0) items with a lookahead symbol for more precise reduce decisions. End-of-input lookahead is `Epsilon`.
 
 ### LR Action
-
 ```fsharp
 type LRAction =
     | Shift of int      // Push state and consume input
@@ -55,176 +78,82 @@ type LRAction =
 ```
 
 ### LR Conflict
-
 ```fsharp
 type LRConflict =
     | ShiftReduce of state: int * symbol: string * shiftTo: int * reduceRule: int
     | ReduceReduce of state: int * symbol: string * rule1: int * rule2: int
 ```
-
-Records conflicts detected during table construction. Stored as data (not exceptions)
-so callers can inspect them.
+Records conflicts detected during table construction. Stored as data (not exceptions) so callers can inspect them.
 
 ### LR Table
-
 ```fsharp
 type LRTable =
     { action: Map<int * Symbol<string, string>, LRAction>
       goto: Map<int * Nonterminal<string>, int>
       conflicts: LRConflict list }
 ```
+`action` maps `(stateIndex, terminalString) → LRAction`. `goto` maps `(stateIndex, nonterminal) → stateIndex`.
 
-`action` maps `(stateIndex, terminalString) → LRAction`.
-`goto` maps `(stateIndex, nonterminal) → stateIndex`.
+## LRAutomaton Functions
 
-## Design Decisions
-
-### Automaton as Generic DFA (Task 17)
-
-LR automata are returned as `Automaton<Symbol<string, string>, Set<LR0Item>>` and
-`Automaton<Symbol<string, string>, Set<LR1Item>>`, leveraging the generic finite
-automaton type from `Automaton.fs`. This means:
-- State labels are sets of items
-- Transition labels are grammar symbols
-- Start state is always index 0 (the initial closure state)
-- Final states are those containing the augmented rule's completed item `S' → S·`
-
-### Conflict Detection (Task 18)
-
-Conflicts are detected during table construction and recorded in the `LRTable.conflicts`
-field. The resolution strategy follows standard LR practice:
-- **Shift-reduce**: prefer shift (added first from transitions)
-- **Reduce-reduce**: keep the first rule encountered
-
-This is done by adding shift actions first (from the automaton transitions), then
-attempting to add reduce actions only for unoccupied table slots.
-
-### Parser (Task 19)
-
-The parser is a stack-based shift-reduce interpreter with a unified stack:
-- A single unified stack (`LRStackFrame`) holds both states and tree nodes
-- Tree nodes are symbols: roots of partial trees are placed in stack and used as symbols
-- On shift: push `LRSymbol(Leaf(token))` then `LRState(nextState)`, advance input
-- On reduce: pop `2·|β|` frames (pairwise: state + tree), build `Node(lhs, children)`, push `LRSymbol(Node(...))` then `LRState(gotoState)`
-- On accept: return the single remaining tree node (from the last `LRSymbol` frame)
-
-A step limit of 10000 prevents infinite loops from epsilon-reduction cycles.
-
-### Augmentation
-
-All table construction and parsing uses an augmented grammar internally:
-`S' → S` where `S'` is a fresh start symbol. This ensures the parser knows when to
-accept (the item `S' → S·` triggers Accept).
-
-## Module `LRAutomaton`
-
-### Functions
-
-#### `buildLR0`
+### `buildLR0`
 ```fsharp
 val buildLR0: Grammar<string, string> -> Automaton<Symbol<string, string>, Set<LR0Item>>
 ```
-Builds the canonical LR(0) automaton. Each state is computed via the `closureLR0`
-function, then BFS explores all reachable states through `gotoLR0` transitions.
+Builds the canonical LR(0) automaton via closure + BFS goto exploration.
 
-#### `buildLR1`
+### `buildLR1`
 ```fsharp
 val buildLR1: Grammar<string, string> -> Automaton<Symbol<string, string>, Set<LR1Item>>
 ```
-Builds the canonical LR(1) automaton. Same BFS structure as LR(0), but `closureLR1`
-propagates lookahead symbols using `firstK` computations.
+Builds the canonical LR(1) automaton. Same BFS structure as LR(0), but `closureLR1` propagates lookahead via firstK computations.
 
-#### `closureLR0` (private)
-```fsharp
-val closureLR0: Rule<string, string> list -> Set<LR0Item> -> Set<LR0Item>
-```
-Adds all item derivations reachable without consuming input. For each item with dot
-before a nonterminal `B`, adds `B → ·γ` for all rules of `B`.
+## LRParser Functions
 
-#### `gotoLR0` (private)
-```fsharp
-val gotoLR0: Rule<string, string> list -> Set<LR0Item> -> Symbol<string, string> -> Set<LR0Item>
-```
-Advances the dot past a symbol and computes closure. Filters items with dot before the
-symbol, advances the dot, then applies closure.
-
-#### `closureLR1` (private)
-Like `closureLR0` but also propagates lookahead terminals. When adding
-`B → ·γ, l`, the lookahead `l` is computed from `first_k(β l)` where `β` is the
-string following `B` in the source item.
-
-#### `gotoLR1` (private)
-Like `gotoLR0` but preserves lookahead terminals from the source items.
-
-## Module `LRParser`
-
-### Table Building Functions
-
-#### `buildLR0Table`
+### `buildLR0Table`
 ```fsharp
 val buildLR0Table: Grammar<string, string> -> LRTable
 ```
-No lookahead information: completed items reduce on ALL grammar terminals plus
-end-of-input marker `Epsilon`. Most non-trivial grammars will have conflicts.
-Epsilon items (`rhs = [Epsilon]`) are treated as immediately completed (dot at 0 counts as completed).
+LR(0) table: completed items reduce on ALL grammar terminals plus end-of-input `Epsilon`.
 
-#### `buildSLR1Table`
+### `buildSLR1Table`
 ```fsharp
 val buildSLR1Table: Grammar<string, string> -> LRTable
 ```
-Uses `followK` sets to restrict reduce actions. Completed items reduce only on
-terminals in the LHS nonterminal's follow set.
+SLR(1) table: uses `followK` sets to restrict reduce actions.
 
-#### `buildCLR1Table`
+### `buildCLR1Table`
 ```fsharp
 val buildCLR1Table: Grammar<string, string> -> LRTable
 ```
-Uses lookahead from LR(1) items for precise reduce decisions. The most powerful
-LR construction — resolves all conflicts that SLR(1) cannot.
+CLR(1) table: uses lookahead from LR(1) items for precise reduce decisions.
 
-### Parser Function
-
-#### `parse`
+### `parse`
 ```fsharp
 val parse: Grammar<string, string> -> LRTable -> string -> Option<DerivationTree<string, string>>
 ```
-Parses an input string using an LR parsing table. Returns `Some(tree)` on success,
-`None` on failure or if the step limit is exceeded. Each character is treated as
-a separate terminal token.
+Parses an input string using an LR parsing table. Returns `Some(tree)` on success, `None` on failure or if the step limit is exceeded. Each character is treated as a separate terminal token.
 
-Preconditions: none (handles all inputs gracefully).
-Postconditions: if `Some(tree)`, then `leaves(tree)` concatenated equals the input string
-(modulo epsilon nodes, which produce no leaves).
+## Design Decisions
 
-#### `leaves`
-```fsharp
-val leaves: DerivationTree<string, string> -> string list
-```
-Collects all leaf terminal strings from a derivation tree in left-to-right order.
-Delegates to `LLParser.leaves`.
+| Decision | Rationale |
+|----------|-----------|
+| Automaton as Generic DFA | Leverages `Automaton<Symbol, Set<items>>` — states are item sets, transitions are grammar symbols |
+| Conflict detection as data, not exceptions | `LRTable.conflicts` list records all conflicts; callers can inspect them |
+| Conflict resolution: prefer shift, then first reduce | Standard LR practice: shifts added first from transitions, then reduces for unoccupied slots |
+| Unified stack (states + tree nodes) | Single `LRStackFrame` type holds both LR states and tree symbols — avoids parallel stack bookkeeping |
+| Augmented grammar internally | `S' → S` ensures accept detection; fresh start symbol guards against name collisions |
+| Step limit of 10000 | Prevents infinite loops from epsilon-reduction cycles |
+| Single-character tokens | Reference implementation simplicity; multi-character tokenization is outside scope |
 
-## Testing
+## Book Reference
 
-Tests are in `tests/FLPQ.Core.Tests/LRParserTests.fs`:
+Corresponds to the LR parsing chapters of the book. LR(0)/SLR(1)/CLR(1) table construction follows the standard textbook algorithms. LR automata leverage the generic finite automaton infrastructure from `Automaton.fs`.
 
-| Test Category | What is Verified |
-|---------------|-----------------|
-| Grammar1 | SLR(1)/CLR(1) acceptance, rejection, tree leaves |
-| Grammar2 | Tables buildable, conflicts detected (ambiguous grammar) |
-| Grammar3 | SLR(1)/CLR(1) acceptance, rejection, tree leaves, no conflicts |
-| Grammar6 | All table types have conflicts (ambiguous arithmetic) |
-| Grammar7 | SLR(1)/CLR(1) acceptance, rejection, tree leaves, no conflicts |
-| Grammar8 | SLR(1)/CLR(1) acceptance, rejection, tree leaves, no conflicts |
-| Automaton | Expected structure: states > 1, deterministic, one start/final state |
-| Cross-parser | SLR(1) and CLR(1) agree on acceptance for each grammar |
-| Cross-grammar | grammar7 and grammar8 CLR(1) agree on same-language strings |
-| Property tests | Leaves match input, SLR(1)/CLR(1) agree, for random strings |
+## See Also
 
-## Limitations
-
-- Current implementation uses single-character tokens. Multi-character tokenization
-  is outside the scope of this reference implementation.
-- Step limit of 10000 prevents infinite loops but also limits maximum parse depth.
-- Grammar2 (`S → aSb | eps | SS`) is ambiguous and not LR(k) for any k; tables
-  contain conflicts and the parser may fail to parse even valid strings.
-- Grammar6 (ambiguous arithmetic) has conflicts in all table types.
+- [LL parser](ll-parser.md) — top-down counterpart
+- [Automaton module](automaton.md) — generic DFA type
+- [DerivationTree module](derivation-tree.md) — derivation tree types
+- [First/Follow module](first-follow.md) — followK for SLR(1)
+- [Grammar module](grammar.md) — grammar types, ExtendedGrammar

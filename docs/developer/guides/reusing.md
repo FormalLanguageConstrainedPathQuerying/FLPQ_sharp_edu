@@ -1,6 +1,22 @@
 # Reusing Principles
 
-See also: [Coding Conventions](coding-conventions.md) | [Design Guides](design-guides.md) | [Quality Standards](quality-standards.md)
+**Tags:** guide, reusing, no-duplicates, single-source-of-truth, cross-reference, generalization
+**Kind:** guide
+
+> **Abstract:** Defines the project's reuse principles: no duplicates (each piece of knowledge exists in exactly one place), one source of truth (one canonical file per topic), and the reuse checklist (five questions to answer before adding new code or docs). For the *how* of executing reuse checks (search procedures, tag-based metadata search), see the `reusing` skill.
+
+## Contents
+
+- [What our reusing principles are](#what-our-reusing-principles-are)
+- [Why reusing matters](#why-reusing-matters)
+- [What the reuse checklist is](#what-the-reuse-checklist-is)
+- [What patterns enable reuse](#what-patterns-enable-reuse)
+- [What documentation structure enables navigation](#what-documentation-structure-enables-navigation)
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md) | [Design Guides](design-guides.md) | [Quality Standards](quality-standards.md)
+- [Documentation Conventions](documentation-conventions.md) — document metadata template for tag-based search
 
 ## What our reusing principles are
 
@@ -68,3 +84,9 @@ Documentation mirrors code structure and serves as a fast lookup map:
 - `docs/developer/<module-name>.md` — per-module documentation
 
 When searching for existing functionality, read the relevant hub doc first to see what modules exist, then use keywords to search module docs. This is faster than scanning source files directly.
+
+## See Also
+
+- [Coding Conventions](coding-conventions.md)
+- [Design Guides](design-guides.md)
+- [Documentation Conventions](documentation-conventions.md) — document metadata and tag taxonomy
