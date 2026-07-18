@@ -443,7 +443,7 @@
   | Sppf.fs:303-306 | `validateNonterminalChildren` | Remove `SppfEpsilon` from allowed children — only `SppfRange`. |
 
   Golden test `path_index_rnglr_aa.tex` will need regeneration after RNGLR path index changes.
- 183. Deep GLL refactoring: common isAccepted, parameterized accepts/checkReject, remove GLL.extractDerivationTree.
+ 183. [done] Deep GLL refactoring: common isAccepted, parameterized accepts/checkReject, remove GLL.extractDerivationTree.
         1.    Move `isAccepted` from Rnglr.fs to PathIndex.fs as a shared function.
               - Signature: `PathIndex<'t,'nt> -> ExtendedRSM<'t,'nt> -> int -> bool`
               - Checks range (startGlobalState, 0) → (startGlobalState+1, vertexCount-1) where startGlobalState = flatExt.BlockStart[flatExt.StartBlock]
@@ -487,5 +487,34 @@
         7.    Remove `Gll.extractDerivationTree` from Gll.fs (~85 lines).
               - Tree extraction goes through SPPF (`Sppf.enumerateTrees`) for both algorithms
               - No other code references `Gll.extractDerivationTree` after the above changes
- 184. blockFinalStates
+ 184. [done] GLL is incorrect. Fix it.
+      1.   To see problem add one more PathIndex invariant: of RSM does not contains states that simultaneously start and final, then path index does not contains epsilon nodes in cells.
+      2.   Run GLL tests. All must pass.
+      3.   Be careful. While path index incorrect, some tests may fall in infinite loop in enumarate trees. Add trace to see it.
+      4.   Run RNGLR tests. All must pass. If someone ail --- report to the user.
+ 185. [done] Add more invarinats.
+      1.   For accepted strings, path index invariant: path index cell (q,0)(p,l-1) contains start nonterminal of the original grammar. l is a length of input, q is a start state of box for S`, p is a target state for start nonterminal transition (suppose S is a start nonterminal of the original grammar): q -[S]-> p.
+      2.   Run all tests. All must pass.
+      3.   If something fail, fix respective parsing algorithm
+ 186. [done] Check that all tests (grammars, inputs) form RNGLR ests in GLL tests and back. 
+      1.   Collect all grammars and inputs in TestGrammars.
+      2.   Extend tests of GLL and RNGLR: final set for each of them must be the union of current sets.
+      3.   Run all tests. If something fails, fix respective parsing algorithm.
+ 187. Improve GLL visualization
+      1.   Add collecting information about steps. The algorithm must collect F# data sructures that describes each step (similar to LL)
+           1.   Data: descriptors queue, path index, GSS, input
+           2.   Collect: 
+                1.   Initial state (prior main loop iteration) 
+                2.   At the end of main loop body: when single descriptor processing fully finished.
+      2.   Add steps visualization
+           1.   Reuse exidting functions
+           2.   Each step is separsted subfolder (look at LL visualization)
+           3.   Descriptors queue: tex, descriptors separsted by comma
+           4.   GSS --- graph in DOT. Parametrize graph visualizarion by vertices and edges vizualization
+                1.   Highlight newly added edges and vertices with color.
+      3.   Impriove summary content
+           1.   Add original grammar
+           2.   Add RSM for extended grammar
+                1.   in visualization of RSM-s use global states numbering (all states stored in common Matrix)
+ 188. blockFinalStates
 
