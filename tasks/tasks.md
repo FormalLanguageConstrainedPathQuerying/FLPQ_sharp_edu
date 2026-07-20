@@ -522,11 +522,11 @@
       1.   Remove \footnotesize from path index wrapper 
       2.   Use R^{from_state, from_pos}_{to_state, to pos} to render matched range in descriptor
       3.   Highliight current GSS node
- 191. Improve hard gate python script.
+ 191. [done] Improve hard gate python script.
       1.   Run tests project-by project. Update status project-by-peoject: update total status, add status fro each project. Note: all tests must be run. Colect tests project, do not hardocde them.
       2.   Run linting for touched projects project-by-project. Update status project-by-peoject: update total status, add status fro each project.
       3.   IN overall status add `<steps done>/<total steps>`. For testing and linting --- one project is one step
- 192. Improve GLL visualization
+ 192. [done] Improve GLL visualization
       1.   Add handled descriptors set to each step
       2.   Add all newly created descriptors for each step.
       3.   Visualize descriptors to precess and handled descriptors as e on table with following structure
@@ -537,4 +537,14 @@
            5.   Blocks separated with two hlines
       4.   Highlight current descriptior in the table (fill row with yellow!20 color). Note: do not collect currentGSS vertex. It is a part of curretn descriptor.
       5.   Render newly created descriptors as a set of tuples. Highlight (with filled box) already handled with red!20, really new with green!20 
+ 193. Improve GLL summary visualization
+      1.   In descriptors table highlight cirrent descriptor (yellow!20)
+      2.   Do not show descriptors queue. Descriptors  Table only.
+      3.   Add original grammar
+      4.   Replace RSM with extended RSM. Use global states numbering.
+      5.   At the start add colours legent for all highlighting. What color of what used for what.
+ 194. Fix GLL summary visualization. Summary generated with `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -s -i data/example_input_a_a_a.txt -g data/example_grammar_a_a_a.bnf -a gll -o viz_output/gll` has some some strange places. Investigate and fix if necessary.
+      1.   Sppf contains 5 intermediate nodes. But final PathIndex contains only one IntermediateNode. In steps, path index does not contain all intermediate nodes. Why?
+      2.   In some steps (eg step 5, step 12, step 19) no highlighted cirrent gss node.
+      3.   No highlighting of modified path index cells each step.
 
