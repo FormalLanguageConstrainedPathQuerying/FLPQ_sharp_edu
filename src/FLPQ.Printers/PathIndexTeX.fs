@@ -39,7 +39,7 @@ module PathIndexTeX =
         let matrix =
             MatrixTeX.toTeXStyled false false cp pathIndex.Matrix [] [] (Some labelPrinter) (Some labelPrinter)
 
-        sprintf "{\\footnotesize %s}" matrix
+        matrix
 
     /// Renders a path index matrix with specified cells highlighted.
     /// Changed cells are highlighted in yellow for step-by-step visualization.
@@ -67,4 +67,4 @@ module PathIndexTeX =
         let matrix =
             MatrixTeX.toTeXStyled false false cp pathIndex.Matrix highlights [] (Some labelPrinter) (Some labelPrinter)
 
-        sprintf "{\\footnotesize %s}" matrix
+        matrix

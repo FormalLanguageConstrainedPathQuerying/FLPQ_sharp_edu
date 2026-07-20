@@ -74,6 +74,7 @@ module GLL =
                 -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
                 -> Set<int * int>
                 -> int
+                -> int option
                 -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
@@ -147,7 +148,7 @@ module GLL =
 
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
-        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0
+        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None
 
         // Main loop
         while queue.Count > 0 do
@@ -350,7 +351,7 @@ module GLL =
 
             // Collect step after descriptor processing
             let activeVerts, activeEdges = collectActiveGss gss
-            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0
+            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0 (Some s0)
             changedCells <- Set.empty<int * int>
 
         pathIndex
@@ -364,7 +365,7 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ -> ())
 
     /// Builds the path index and collects step-by-step snapshots of the GLL execution.
     /// Each step captures: descriptors queue, active GSS state, path index snapshot, changed cells, and input position.
@@ -385,6 +386,7 @@ module GLL =
             (piMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>)
             (changedCells: Set<int * int>)
             (inputPos: int)
+            (currentGssIdx: int option)
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
@@ -397,7 +399,8 @@ module GLL =
                   NewGssEdges = newEdges
                   PathIndexMatrix = Matrix.copy piMatrix
                   ChangedCells = changedCells
-                  InputPosition = inputPos }
+                  InputPosition = inputPos
+                  CurrentGssIdx = currentGssIdx }
             )
 
             prevVertices <- activeVerts

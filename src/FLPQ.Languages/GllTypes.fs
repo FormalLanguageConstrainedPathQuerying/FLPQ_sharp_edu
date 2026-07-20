@@ -152,4 +152,7 @@ type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         ChangedCells: Set<int * int>
         /// Current input position being processed (from the dequeued descriptor's Vertex).
         InputPosition: int
+        /// GSS node currently being processed (the descriptor's GssIdx).
+        /// None for the initial step before any descriptor is dequeued.
+        CurrentGssIdx: int option
     }

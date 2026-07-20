@@ -292,14 +292,15 @@ let ``GLL descriptor with non-empty range TeX compiles`` () =
         { RsmState = 3
           Vertex = 1
           GssIdx = 5
-          MatchedRange = RangeDescriptor.NonEmptyRange
-                              { FromState = 0
-                                FromVertex = 0
-                                ToState = 2
-                                ToVertex = 3 } }
+          MatchedRange =
+            RangeDescriptor.NonEmptyRange
+                { FromState = 0
+                  FromVertex = 0
+                  ToState = 2
+                  ToVertex = 3 } }
 
     let tex = GllStepVisualizer.descriptorToTeX desc
-    Assert.Contains("(3, 1, 5, (0,0,2,3))", tex)
+    Assert.Contains("(3, 1, 5, R^{0,0}_{2,3})", tex)
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -315,15 +316,16 @@ let ``GLL descriptor queue TeX compiles`` () =
         { RsmState = 1
           Vertex = 0
           GssIdx = 1
-          MatchedRange = RangeDescriptor.NonEmptyRange
-                              { FromState = 0
-                                FromVertex = 0
-                                ToState = 1
-                                ToVertex = 1 } }
+          MatchedRange =
+            RangeDescriptor.NonEmptyRange
+                { FromState = 0
+                  FromVertex = 0
+                  ToState = 1
+                  ToVertex = 1 } }
 
     let queueTex = GllStepVisualizer.queueToTeX [ desc1; desc2 ]
     Assert.Contains(@"(0, 0, 0, \emptyset)", queueTex)
-    Assert.Contains("(1, 0, 1, (0,0,1,1))", queueTex)
+    Assert.Contains("(1, 0, 1, R^{0,0}_{1,1})", queueTex)
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath queueTex)
 
 [<Fact>]

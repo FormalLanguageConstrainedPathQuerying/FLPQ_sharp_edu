@@ -23,7 +23,7 @@ module GllStepVisualizer =
         match range with
         | RangeDescriptor.EmptyRange -> @"\emptyset"
         | RangeDescriptor.NonEmptyRange rk ->
-            sprintf @"(%d,%d,%d,%d)" rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+            sprintf @"R^{%d,%d}_{%d,%d}" rk.FromState rk.FromVertex rk.ToState rk.ToVertex
 
     /// Render a single descriptor as a tuple: (rsmState, vertex, gssIdx, matchedRange).
     let descriptorToTeX (desc: Descriptor) : string =
@@ -63,6 +63,7 @@ module GllStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
+                step.CurrentGssIdx
 
         // Create a temporary PathIndex from the step's matrix snapshot for rendering
         let stepPathIndex =

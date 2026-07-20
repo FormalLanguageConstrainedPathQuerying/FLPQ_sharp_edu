@@ -13,11 +13,13 @@ module GssDot =
     /// Renders a GSS as a Graphviz DOT digraph.
     /// Only active vertices (those with outgoing edges) are rendered.
     /// Highlighted vertices are filled with yellow!30, highlighted edges are red with penwidth=2.
+    /// The current vertex (if specified) is filled with lightblue, overriding the highlighted color.
     let toDot
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (currentVertex: int option)
         (gss: GSS)
         : string =
         let sb = StringBuilder()
@@ -44,19 +46,28 @@ module GssDot =
         for vidx in activeVertices do
             let label = vertexLabelPrinter vidx |> DerivationTreeDot.escapeLabel
 
-            let attrs =
-                let isHighlighted = Set.contains vidx highlightedVertices
+            let isCurrent =
+                match currentVertex with
+                | Some cv -> cv = vidx
+                | None -> false
 
-                let parts =
-                    if isHighlighted then
-                        [ sprintf "label=\"%s\"" label
-                          "shape=ellipse"
-                          "style=filled"
-                          "fillcolor=lightyellow" ]
-                    else
-                        [ sprintf "label=\"%s\"" label; "shape=ellipse" ]
+            let isHighlighted = Set.contains vidx highlightedVertices
 
-                String.concat ", " parts
+            let parts =
+                if isCurrent then
+                    [ sprintf "label=\"%s\"" label
+                      "shape=ellipse"
+                      "style=filled"
+                      "fillcolor=lightblue" ]
+                elif isHighlighted then
+                    [ sprintf "label=\"%s\"" label
+                      "shape=ellipse"
+                      "style=filled"
+                      "fillcolor=lightyellow" ]
+                else
+                    [ sprintf "label=\"%s\"" label; "shape=ellipse" ]
+
+            let attrs = String.concat ", " parts
 
             sb.AppendLine(sprintf "  v%d [%s];" vidx attrs) |> ignore
 
@@ -86,6 +97,7 @@ module GssDot =
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (currentVertex: int option)
         : string =
         let sb = StringBuilder()
 
@@ -97,10 +109,20 @@ module GssDot =
         for vidx in activeVertices do
             let label = vertexLabelPrinter vidx |> DerivationTreeDot.escapeLabel
 
+            let isCurrent =
+                match currentVertex with
+                | Some cv -> cv = vidx
+                | None -> false
+
             let isHighlighted = Set.contains vidx highlightedVertices
 
             let parts =
-                if isHighlighted then
+                if isCurrent then
+                    [ sprintf "label=\"%s\"" label
+                      "shape=ellipse"
+                      "style=filled"
+                      "fillcolor=lightblue" ]
+                elif isHighlighted then
                     [ sprintf "label=\"%s\"" label
                       "shape=ellipse"
                       "style=filled"
