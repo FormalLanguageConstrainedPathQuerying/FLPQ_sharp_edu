@@ -336,6 +336,41 @@ let ``GLL empty descriptor queue TeX compiles`` () =
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath queueTex)
 
 [<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL descriptors table TeX compiles`` () =
+    let desc1: Descriptor =
+        { RsmState = 0
+          Vertex = 0
+          GssIdx = 0
+          MatchedRange = RangeDescriptor.EmptyRange }
+
+    let desc2: Descriptor =
+        { RsmState = 1
+          Vertex = 0
+          GssIdx = 1
+          MatchedRange =
+            RangeDescriptor.NonEmptyRange
+                { FromState = 0
+                  FromVertex = 0
+                  ToState = 1
+                  ToVertex = 1 } }
+
+    let tex =
+        GllStepVisualizer.descriptorsTableToTeX (Some desc1) [ desc1; desc2 ] (Set.ofList [ desc2 ])
+
+    Assert.Contains(@"q & i & g & \mathcal{MR}", tex)
+    Assert.Contains(@"\colorbox{yellow!20}", tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL descriptors table with empty blocks TeX compiles`` () =
+    let tex = GllStepVisualizer.descriptorsTableToTeX None [] Set.empty
+
+    Assert.Contains(@"\emptyset", tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+
+[<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``Derivation tree dot compiles with graphviz`` () =
     let tree =
