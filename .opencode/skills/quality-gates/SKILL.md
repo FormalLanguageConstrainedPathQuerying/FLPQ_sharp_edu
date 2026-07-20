@@ -74,7 +74,33 @@ Then read and analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all pr
 
 ## Task Verification
 
-Run once when all subtasks are done. The full hard gate may take more than 30 minutes, so it is run **asynchronously** with periodic status polling.
+Run once when all subtasks are done. The full hard gate typically takes 10–30 minutes depending on how many projects changed, so it is run **asynchronously** with periodic status polling.
+
+### Steps and Timing
+
+| Step | What | Approx. Time |
+|------|------|-------------|
+| 1. Format | `dotnet fantomas . --check` | <5 s |
+| 2. Build | `dotnet build FLPQ.slnx` | ~1 min |
+| 3. Tests | Per-project `dotnet test` with coverage | 2–5 min (Printers.Tests slowest due to TeX compilation) |
+| 4. Coverage | Per-project + total threshold check | <1 min |
+| 5. Lint | `fsharplint lint` on changed projects | 5–20 min (slowest step) |
+
+Total: ~10 min when only 1–2 projects changed, up to ~30 min with many changed projects.
+
+### File Structure of `tmp/hard-gate.txt`
+
+The output has two sections separated by `--- DETAILED LOG ---`:
+
+- **Top (~15 lines)**: step summary — shows `Step N/M` counters and per-project results. **Always read this first** to see overall progress.
+- **Bottom (after the separator)**: raw command output for the currently running or most recently completed step.
+
+**During polling, read BOTH sections:**
+
+```bash
+head -15 tmp/hard-gate.txt   # step summary
+tail -20 tmp/hard-gate.txt   # current detailed output
+```
 
 ### Starting the Gate
 
@@ -87,17 +113,36 @@ The gate runs in background and writes progress incrementally to `tmp/hard-gate.
 
 ### Polling Status
 
-Every **5 minutes**, check the current status:
+**Poll interval: every 5 minutes.** Set a timer — do not poll more frequently as the gate file may not be updated between flushes.
 
 ```bash
 grep "STATUS:" tmp/hard-gate.txt
 ```
 
 - **`STATUS: PASS`** — gate finished successfully (exit code 0). Proceed to merge.
-- **`STATUS: BLOCKED`** — gate finished with exit code non-zero. Read `tmp/hard-gate.txt` to identify all failures, fix them, and **re-run the gate from the start**.
-- **`STATUS: IN_PROGRESS`** — gate is still running. Check the step counter (lines like `Step N/M`) to verify progress. If the step number advanced since the last check, the gate is making progress — continue waiting and poll again in 5 minutes. If the step counter has not advanced after multiple polling cycles (>15 minutes with no progress), investigate the detailed log section in `tmp/hard-gate.txt` for the currently running command. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
+- **`STATUS: BLOCKED`** — gate finished with exit code non-zero. Read the step summary at the top of `tmp/hard-gate.txt` to identify which step(s) failed, then read the detailed log to identify the failure, fix all problems, and **re-run the gate from the start**.
+- **`STATUS: IN_PROGRESS`** — gate is still running. Read `head -15` for the step summary: if step numbers advanced since the last poll, the gate is making progress — continue waiting. If the step counter has not advanced after 3+ polling cycles (>15 minutes with no progress), check `tail -20` for the currently executing command and verify it hasn't hung. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
+
+**What to expect at each poll:**
+
+| Poll # | Time Elapsed | Likely State |
+|--------|-------------|--------------|
+| 1 | 5 min | Step 3 (tests in progress, Printers.Tests usually running) |
+| 2 | 10 min | Step 4 or 5 (coverage or lint started) |
+| 3 | 15 min | Step 5 (lint — may still be running) |
+| 4+ | 20+ min | Should be PASS or BLOCKED; if still IN_PROGRESS, investigate |
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
+
+### Verifying Failures
+
+When a step reports `FAILED` but shows `0 failed, 0 skipped`, the tool itself may be misreading the test output. **Verify manually by running the project directly:**
+
+```bash
+dotnet test tests/<Project>/<Project>.fsproj 2>&1
+```
+
+If the manual run passes (0 failed, 0 skipped), the gate tool has a false positive — report it and proceed. If the manual run also fails, fix the failing tests and re-run the full gate.
 
 ### After Completion
 
