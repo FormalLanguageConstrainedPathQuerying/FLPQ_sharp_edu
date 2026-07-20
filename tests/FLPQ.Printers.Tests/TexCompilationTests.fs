@@ -338,6 +338,9 @@ let ``GLL empty descriptor queue TeX compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL descriptors table TeX compiles`` () =
+    let colorTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+
     let desc1: Descriptor =
         { RsmState = 0
           Vertex = 0
@@ -360,19 +363,25 @@ let ``GLL descriptors table TeX compiles`` () =
 
     Assert.Contains(@"q & i & g & \mathcal{MR}", tex)
     Assert.Contains(@"\colorbox{yellow!20}", tex)
-    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate colorTemplatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL descriptors table with empty blocks TeX compiles`` () =
+    let colorTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+
     let tex = GllStepVisualizer.descriptorsTableToTeX None [] Set.empty
 
     Assert.Contains(@"\emptyset", tex)
-    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate colorTemplatePath tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL new descriptors TeX compiles`` () =
+    let colorTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+
     let desc1: Descriptor =
         { RsmState = 0
           Vertex = 0
@@ -401,10 +410,13 @@ let ``GLL new descriptors TeX compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL new descriptors empty set TeX compiles`` () =
+    let colorTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+
     let tex = GllStepVisualizer.newDescriptorsToTeX Set.empty Set.empty
 
     Assert.Contains(@"\emptyset", tex)
-    Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate colorTemplatePath tex)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
