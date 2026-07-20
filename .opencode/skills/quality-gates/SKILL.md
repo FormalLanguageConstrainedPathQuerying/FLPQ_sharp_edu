@@ -74,19 +74,19 @@ Then read and analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all pr
 
 ## Task Verification
 
-Run once when all subtasks are done. The full hard gate typically takes 10–30 minutes depending on how many projects changed, so it is run **asynchronously** with periodic status polling.
+Run once when all subtasks are done. The full hard gate runs format → build → tests → coverage → lint and may take tens of minutes depending on project size and how many projects changed. Run it **asynchronously** with periodic status polling.
 
 ### Steps and Timing
 
-| Step | What | Approx. Time |
-|------|------|-------------|
-| 1. Format | `dotnet fantomas . --check` | <5 s |
-| 2. Build | `dotnet build FLPQ.slnx` | ~1 min |
-| 3. Tests | Per-project `dotnet test` with coverage | 2–5 min (Printers.Tests slowest due to TeX compilation) |
-| 4. Coverage | Per-project + total threshold check | <1 min |
-| 5. Lint | `fsharplint lint` on changed projects | 5–20 min (slowest step) |
+Times are baseline estimates for the current codebase and will grow as the project grows.
 
-Total: ~10 min when only 1–2 projects changed, up to ~30 min with many changed projects.
+| Step | What | Notes |
+|------|------|-------|
+| 1. Format | `dotnet fantomas . --check` | Negligible |
+| 2. Build | `dotnet build FLPQ.slnx` | Builds all projects |
+| 3. Tests | Per-project `dotnet test` with coverage | Printers.Tests is the slowest (TeX compilation) |
+| 4. Coverage | Per-project + total threshold check | Negligible |
+| 5. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects |
 
 ### File Structure of `tmp/hard-gate.txt`
 
@@ -122,15 +122,6 @@ grep "STATUS:" tmp/hard-gate.txt
 - **`STATUS: PASS`** — gate finished successfully (exit code 0). Proceed to merge.
 - **`STATUS: BLOCKED`** — gate finished with exit code non-zero. Read the step summary at the top of `tmp/hard-gate.txt` to identify which step(s) failed, then read the detailed log to identify the failure, fix all problems, and **re-run the gate from the start**.
 - **`STATUS: IN_PROGRESS`** — gate is still running. Read `head -15` for the step summary: if step numbers advanced since the last poll, the gate is making progress — continue waiting. If the step counter has not advanced after 3+ polling cycles (>15 minutes with no progress), check `tail -20` for the currently executing command and verify it hasn't hung. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
-
-**What to expect at each poll:**
-
-| Poll # | Time Elapsed | Likely State |
-|--------|-------------|--------------|
-| 1 | 5 min | Step 3 (tests in progress, Printers.Tests usually running) |
-| 2 | 10 min | Step 4 or 5 (coverage or lint started) |
-| 3 | 15 min | Step 5 (lint — may still be running) |
-| 4+ | 20+ min | Should be PASS or BLOCKED; if still IN_PROGRESS, investigate |
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
 
