@@ -106,7 +106,11 @@ module GssDot =
         sb.AppendLine("  compound=true;") |> ignore
 
         // Vertex declarations
+        let renderedVertices = HashSet<int>()
+
         for vidx in activeVertices do
+            renderedVertices.Add(vidx) |> ignore
+
             let label = vertexLabelPrinter vidx |> DerivationTreeDot.escapeLabel
 
             let isCurrent =
@@ -133,6 +137,17 @@ module GssDot =
             let attrs = String.concat ", " parts
 
             sb.AppendLine(sprintf "  v%d [%s];" vidx attrs) |> ignore
+
+        // Ensure current vertex is always rendered even if not in active set
+        match currentVertex with
+        | Some cv when not (renderedVertices.Contains(cv)) ->
+            let label = vertexLabelPrinter cv |> DerivationTreeDot.escapeLabel
+
+            let attrs =
+                sprintf "label=\"%s\", shape=ellipse, style=filled, fillcolor=lightblue" label
+
+            sb.AppendLine(sprintf "  v%d [%s];" cv attrs) |> ignore
+        | _ -> ()
 
         // Edge declarations
         for fromIdx, toIdx in activeEdges do

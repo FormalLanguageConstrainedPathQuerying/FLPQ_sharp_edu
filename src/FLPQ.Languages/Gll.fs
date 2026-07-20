@@ -418,6 +418,11 @@ module GLL =
             (handledSnapshot: Set<Descriptor>)
             (attemptedDescriptors: Set<Descriptor>)
             =
+            let activeVerts =
+                match currentGssIdx with
+                | Some idx when idx >= 0 -> Set.add idx activeVerts
+                | _ -> activeVerts
+
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
             let newDescriptors = Set.difference handledSnapshot prevHandled

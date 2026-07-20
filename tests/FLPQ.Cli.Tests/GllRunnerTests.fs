@@ -96,3 +96,35 @@ let ``runGll produces step visualization with descriptors table`` () =
     Assert.True(FileInfo(Path.Combine(step0Dir, "descriptors_table.tex")).Length > 0L)
     Assert.True(FileInfo(Path.Combine(step0Dir, "new_descriptors.tex")).Length > 0L)
     cleanup outDir
+
+[<Fact>]
+let ``runGll step GSS dot has current vertex highlighted`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+
+    let checkStep stepNum =
+        let gssDot = Path.Combine(outDir, sprintf "step_%d" stepNum, "gss.dot")
+
+        if File.Exists gssDot then
+            let content = File.ReadAllText gssDot
+            Assert.Contains("fillcolor=lightblue", content)
+
+    checkStep 5
+    checkStep 12
+    checkStep 19
+    cleanup outDir
+
+[<Fact>]
+let ``runGll step descriptors table has current descriptor highlighted`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+
+    let checkStep stepNum =
+        let table = Path.Combine(outDir, sprintf "step_%d" stepNum, "descriptors_table.tex")
+
+        if File.Exists table then
+            let content = File.ReadAllText table
+            Assert.Contains(@"\colorbox{yellow!20}", content)
+
+    checkStep 5
+    checkStep 12
+    checkStep 19
+    cleanup outDir

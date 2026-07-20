@@ -90,7 +90,15 @@ module GllStepVisualizer =
             if Set.isEmpty handled then
                 [ @"\emptyset & & & \\" ]
             else
-                handled |> Set.toList |> List.map (fun d -> renderRow d false)
+                handled
+                |> Set.toList
+                |> List.map (fun d ->
+                    let isCurrent =
+                        match currentDescriptor with
+                        | Some cd -> cd.Equals(d)
+                        | None -> false
+
+                    renderRow d isCurrent)
 
         let rows = toHandleRows @ [ @"\hline\hline" ] @ handledRows |> String.concat "\n"
 
