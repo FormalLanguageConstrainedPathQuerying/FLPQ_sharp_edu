@@ -39,7 +39,8 @@ module GllStepVisualizer =
         if List.isEmpty descriptors then
             @"\emptyset"
         else
-            descriptors |> List.map descriptorToTeX |> String.concat @" \\; "
+            let items = descriptors |> List.map descriptorToTeX |> String.concat @" \\; "
+            sprintf @"\begin{gathered} %s \end{gathered}" items
 
     /// Render descriptor components as TeX cells for table row.
     let private descriptorToRowCells (desc: Descriptor) : string * string * string * string =

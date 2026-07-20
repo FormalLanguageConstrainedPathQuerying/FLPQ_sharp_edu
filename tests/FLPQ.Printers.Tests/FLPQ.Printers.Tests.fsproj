@@ -46,6 +46,10 @@
       <Link>tex_summary_template.tex</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\data\tex_math_wrap_template.tex">
+      <Link>tex_math_wrap_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\data\example_grammar.bnf">
       <Link>example_grammar.bnf</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

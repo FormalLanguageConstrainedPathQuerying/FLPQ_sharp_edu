@@ -3,6 +3,7 @@ module TexCompilationTests
 open System.IO
 open Xunit
 open FLPQ.Languages
+open FLPQ.GraphAnalysis
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
@@ -326,7 +327,14 @@ let ``GLL descriptor queue TeX compiles`` () =
     let queueTex = GllStepVisualizer.queueToTeX [ desc1; desc2 ]
     Assert.Contains(@"(0, 0, 0, \emptyset)", queueTex)
     Assert.Contains("(1, 0, 1, R^{0,0}_{1,1})", queueTex)
+    Assert.Contains(@"\begin{gathered}", queueTex)
+    Assert.Contains(@"\end{gathered}", queueTex)
+
+    let mathWrapTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_math_wrap_template.tex")
+
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath queueTex)
+    Assert.True(ExternalTools.compileTexStringWithTemplate mathWrapTemplatePath queueTex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -432,3 +440,83 @@ let ``Derivation tree dot compiles with graphviz`` () =
     let info = ExternalTools.compileDotStringToInfo dot
     Assert.True(info.NodeCount > 0)
     Assert.True(info.EdgeCount > 0)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``GLL merged summary TeX compiles with lualatex`` () =
+    let ebnfText = "S -> a | eps"
+
+    let rsm = RsmBuilder.buildRSMFromText ebnfText
+    let freshStart = Nonterminal "S'"
+    let input = [ "a" ]
+    let graph = GLL.stringToGraph input
+    let vertexCount = Graph.vertexCount graph
+    let ersm = ExtendedRSM.create freshStart rsm
+    let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
+    let inputTokens = input |> List.map Terminal
+
+    let vizSteps =
+        GllStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps pathIndex inputTokens vertexCount
+
+    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
+
+    if Directory.Exists tempDir then
+        Directory.Delete(tempDir, true)
+
+    Directory.CreateDirectory(tempDir) |> ignore
+    Directory.CreateDirectory(dotPdfDir) |> ignore
+
+    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
+    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
+
+    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
+    |> ignore
+
+    File.Delete(Path.Combine(tempDir, "_stub.dot"))
+
+    for idx in 0 .. vizSteps.Length - 1 do
+        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+        Directory.CreateDirectory(stepDir) |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "queue.tex"), vizSteps.[idx].Queue)
+        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
+        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
+        File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
+        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+        File.WriteAllText(Path.Combine(stepDir, "input.tex"), vizSteps.[idx].Input)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
+
+    File.WriteAllText(
+        Path.Combine(tempDir, "input.tex"),
+        TeXRenderer.inputRow (SymbolTeX.terminalContent string) inputTokens -1
+    )
+
+    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+
+    let rsmSppfPdfs =
+        [ ("RSM", "dot_pdfs/rsm_blocks.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+
+    let content =
+        SummaryTeX.buildContent "GLL" SummaryTeX.SummaryKind.GLL tempDir vizSteps.Length None None rsmSppfPdfs
+        |> String.concat "\n"
+
+    let summaryTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
+
+    let template = File.ReadAllText summaryTemplatePath
+
+    let fullTex =
+        template.Replace("__ALGORITHM__", "GLL").Replace("__CONTENT__", content)
+
+    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+    File.WriteAllText(mergedTexPath, fullTex)
+
+    try
+        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir)
+    finally
+        try
+            Directory.Delete(tempDir, true)
+        with _ ->
+            ()
