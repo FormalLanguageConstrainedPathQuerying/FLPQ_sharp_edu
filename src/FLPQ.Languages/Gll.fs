@@ -77,6 +77,7 @@ module GLL =
                 -> int option
                 -> Descriptor option
                 -> Set<Descriptor>
+                -> Set<Descriptor>
                 -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
@@ -103,6 +104,7 @@ module GLL =
         let handledNonEmpty = HashSet<int * int * int>()
 
         let mutable changedCells = Set.empty<int * int>
+        let mutable attemptedInStep = Set.empty<Descriptor>
 
         let addToIndex
             (fromState: int)
@@ -120,6 +122,8 @@ module GLL =
                 changedCells <- Set.add (fromIdx, toIdx) changedCells
 
         let tryEnqueue (d: Descriptor) =
+            attemptedInStep <- Set.add d attemptedInStep
+
             match d.MatchedRange with
             | RangeDescriptor.NonEmptyRange _ ->
                 if not (handledNonEmpty.Add(d.RsmState, d.Vertex, d.GssIdx)) then
@@ -150,7 +154,9 @@ module GLL =
 
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
-        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty
+        let initAttempted = attemptedInStep
+        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty initAttempted
+        attemptedInStep <- Set.empty<Descriptor>
 
         // Main loop
         let mutable handledSnapshot = Set.empty<Descriptor>
@@ -356,9 +362,23 @@ module GLL =
             // Collect step after descriptor processing
             let activeVerts, activeEdges = collectActiveGss gss
             let currentHandled = handled |> Set.ofSeq
-            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0 (Some s0) (Some desc) currentHandled
+            let stepAttempted = attemptedInStep
+
+            onStep
+                queue
+                activeVerts
+                activeEdges
+                pathIndex.Matrix
+                changedCells
+                v0
+                (Some s0)
+                (Some desc)
+                currentHandled
+                stepAttempted
+
             handledSnapshot <- currentHandled
             changedCells <- Set.empty<int * int>
+            attemptedInStep <- Set.empty<Descriptor>
 
         pathIndex
 
@@ -371,7 +391,7 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ -> ())
 
     /// Builds the path index and collects step-by-step snapshots of the GLL execution.
     /// Each step captures: descriptors queue, active GSS state, path index snapshot, changed cells, and input position.
@@ -396,6 +416,7 @@ module GLL =
             (currentGssIdx: int option)
             (currentDescriptor: Descriptor option)
             (handledSnapshot: Set<Descriptor>)
+            (attemptedDescriptors: Set<Descriptor>)
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
@@ -413,7 +434,8 @@ module GLL =
                   CurrentGssIdx = currentGssIdx
                   CurrentDescriptor = currentDescriptor
                   HandledDescriptors = handledSnapshot
-                  NewDescriptors = newDescriptors }
+                  NewDescriptors = newDescriptors
+                  AttemptedDescriptors = attemptedDescriptors }
             )
 
             prevVertices <- activeVerts

@@ -184,4 +184,6 @@ type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         HandledDescriptors: Set<Descriptor>
         /// Descriptors newly created in this step.
         NewDescriptors: Set<Descriptor>
+        /// All descriptors passed to tryEnqueue during this step (including those already handled).
+        AttemptedDescriptors: Set<Descriptor>
     }

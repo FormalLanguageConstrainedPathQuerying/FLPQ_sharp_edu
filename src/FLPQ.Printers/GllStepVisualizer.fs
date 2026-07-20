@@ -95,6 +95,27 @@ module GllStepVisualizer =
 
         sprintf @"\begin{array}{cccc} %s %s \end{array}" header rows
 
+    /// Render newly created descriptors as a set of tuples with color-coded highlighting.
+    /// Green background: genuinely new descriptors (not previously handled).
+    /// Red background: already handled descriptors that were attempted again in this step.
+    let newDescriptorsToTeX (newDescriptors: Set<Descriptor>) (attemptedDescriptors: Set<Descriptor>) : string =
+        if Set.isEmpty attemptedDescriptors then
+            @"\{ \emptyset \}"
+        else
+            let renderEntry (desc: Descriptor) (isReallyNew: bool) =
+                let tex = descriptorToTeX desc
+
+                if isReallyNew then
+                    sprintf @"\colorbox{green!20}{$%s$}" tex
+                else
+                    sprintf @"\colorbox{red!20}{$%s$}" tex
+
+            attemptedDescriptors
+            |> Set.toList
+            |> List.map (fun d -> renderEntry d (Set.contains d newDescriptors))
+            |> String.concat @",\; "
+            |> sprintf @"\{ %s \}"
+
     /// Render a single GLL parsing step to visualization output.
     let renderStep
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
@@ -131,7 +152,7 @@ module GllStepVisualizer =
 
         { Queue = queueToTeX step.Queue
           DescriptorsTable = descriptorsTableToTeX step.CurrentDescriptor step.Queue step.HandledDescriptors
-          NewDescriptors = ""
+          NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
           GssDot = gssDot
           PathIndex = PathIndexTeX.toTeXWithHighlights string string stepPathIndex step.ChangedCells
           Input = TeXRenderer.inputRow termPrinter inputTokens step.InputPosition }
