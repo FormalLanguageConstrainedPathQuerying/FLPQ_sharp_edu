@@ -41,6 +41,29 @@ def find_source_packages(root_dir: Optional[str] = None) -> list[str]:
     )
 
 
+def find_test_packages(root_dir: Optional[str] = None) -> list[str]:
+    """Return list of test project names (end with .Tests, exclude TestUtilities)."""
+    all_projects = find_fsproj_paths(root_dir)
+    return sorted(
+        name
+        for name in all_projects
+        if name.endswith(".Tests") and name != "FLPQ.TestUtilities"
+    )
+
+
+def find_project_for_file(fs_file: str, all_projects: dict[str, str]) -> str | None:
+    """Map a changed .fs file to its .fsproj by finding the first matching
+    parent directory that contains a .fsproj file."""
+    parts = Path(fs_file).parts
+    for i in range(len(parts)):
+        candidate = Path(*parts[: i + 1])
+        for _proj_name, proj_path in all_projects.items():
+            proj_p = Path(proj_path)
+            if str(candidate) == str(proj_p.parent):
+                return proj_path
+    return None
+
+
 def ensure_output_dir(dirpath: str = "tmp") -> None:
     """Create output directory if it does not exist."""
     os.makedirs(dirpath, exist_ok=True)

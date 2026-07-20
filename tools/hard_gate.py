@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Hard gate quality check: format + build + tests with coverage + lint on changed projects.
+"""Hard gate quality check: format + build + tests (per project) + coverage + lint on changed projects.
 
 Sequence:
-  1. Format: dotnet fantomas .
+  1. Format: dotnet fantomas . --check
   2. Build: dotnet build FLPQ.slnx -c Debug
-  3. Tests + Coverage: dotnet dotnet-coverage collect dotnet test FLPQ.slnx ...
+  3. Tests: dotnet test per project with per-project coverage collection, then merge
   4. Coverage gate: per-project >= 75% line, total >= 80% line
   5. Lint: dotnet-fsharplint lint on changed projects only
 
@@ -17,12 +17,13 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 from common import (
     run_cmd,
     find_fsproj_paths,
+    find_project_for_file,
     find_source_packages,
+    find_test_packages,
     ensure_output_dir,
     remove_output_file,
     write_output_file,
@@ -73,13 +74,9 @@ def detect_changed_projects() -> list[str]:
     all_projects = find_fsproj_paths()
     projects: set[str] = set()
     for fs_file in changed_files:
-        parts = Path(fs_file).parts
-        for i in range(len(parts)):
-            candidate = Path(*parts[: i + 1])
-            for _pkg_name, proj_path in all_projects.items():
-                proj = Path(proj_path)
-                if str(candidate) == str(proj.parent):
-                    projects.add(proj_path)
+        proj = find_project_for_file(fs_file, all_projects)
+        if proj:
+            projects.add(proj)
     return sorted(projects)
 
 
@@ -161,6 +158,70 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
     return per_project_lines, under_threshold, all_ok
 
 
+def parse_test_output(test_output: str) -> tuple[int, int]:
+    failed_count = 0
+    skipped_count = 0
+    for line in test_output.split("\n"):
+        if "Failed:" in line or "Failed!" in line:
+            m = re.search(r"Failed[:\!]\s*(\d+)", line)
+            if m:
+                failed_count = max(failed_count, int(m.group(1)))
+        if "Skipped:" in line:
+            m = re.search(r"Skipped:\s*(\d+)", line)
+            if m:
+                skipped_count = max(skipped_count, int(m.group(1)))
+    return failed_count, skipped_count
+
+
+def run_tests_per_project() -> tuple[list[str], bool]:
+    test_packages = find_test_packages()
+    all_projects = find_fsproj_paths()
+    results: list[str] = []
+    cov_files: list[str] = []
+    all_ok = True
+
+    for pkg_name in test_packages:
+        proj_path = all_projects[pkg_name]
+        cov_file = f"tmp/coverage_{pkg_name}.cobertura"
+        cov_files.append(cov_file)
+
+        test_rc, test_stdout, test_stderr = run_cmd(
+            [
+                "dotnet",
+                "dotnet-coverage",
+                "collect",
+                "dotnet",
+                "test",
+                proj_path,
+                "-o",
+                cov_file,
+                "-f",
+                "cobertura",
+                "--nologo",
+            ]
+        )
+        test_output = test_stdout + test_stderr
+        failed, skipped = parse_test_output(test_output)
+
+        if test_rc != 0 or failed > 0 or skipped > 0:
+            all_ok = False
+            results.append(
+                f"  {pkg_name}: FAILED ({failed} failed, {skipped} skipped)"
+            )
+        else:
+            results.append(f"  {pkg_name}: OK (0 failed, 0 skipped)")
+
+    if cov_files:
+        run_cmd(
+            ["dotnet", "dotnet-coverage", "merge", *cov_files,
+             "-o", "tmp/coverage.cobertura", "-f", "cobertura"]
+        )
+        for f in cov_files:
+            remove_output_file(f)
+
+    return results, all_ok
+
+
 def main() -> None:
     ensure_output_dir("tmp")
     remove_output_file(OUTPUT_FILE)
@@ -176,16 +237,26 @@ def main() -> None:
     # --- Step 0: Detect changed projects (before format, to avoid false positives) ---
     changed_projects = detect_changed_projects()
 
+    test_projects = find_test_packages()
+    total_steps = 1 + 1 + len(test_projects) + 1 + len(changed_projects)
+    current_step = 0
+
+    def next_step() -> int:
+        nonlocal current_step
+        current_step += 1
+        return current_step
+
     # --- Step 1: Format ---
     fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
     detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas . --check) ---")
     detailed_logs.append(fmt_stdout.strip() if fmt_stdout else "(no output)")
     if fmt_stderr.strip():
         detailed_logs.append(fmt_stderr.strip())
+    s = next_step()
     if fmt_rc == 0:
-        lines.append("Step 1 (Format): OK")
+        lines.append(f"Step {s}/{total_steps} (Format): OK")
     else:
-        lines.append(f"Step 1 (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
+        lines.append(f"Step {s}/{total_steps} (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
         overall_pass = False
 
     flush_log(lines, detailed_logs)
@@ -199,10 +270,11 @@ def main() -> None:
     detailed_logs.append(build_output.strip())
 
     build_ok = build_rc == 0 and "Build succeeded" in build_output
+    s = next_step()
     if build_ok:
-        lines.append("Step 2 (Build): OK (Build succeeded)")
+        lines.append(f"Step {s}/{total_steps} (Build): OK (Build succeeded)")
     else:
-        lines.append("Step 2 (Build): FAILED")
+        lines.append(f"Step {s}/{total_steps} (Build): FAILED")
         overall_pass = False
 
     flush_log(lines, detailed_logs)
@@ -211,50 +283,21 @@ def main() -> None:
         flush_log(lines, detailed_logs, "BLOCKED")
         sys.exit(1)
 
-    # --- Step 3: Tests + Coverage ---
-    test_rc, test_stdout, test_stderr = run_cmd(
-        [
-            "dotnet",
-            "dotnet-coverage",
-            "collect",
-            "dotnet",
-            "test",
-            SOLUTION,
-            "-o",
-            "tmp/coverage.cobertura",
-            "-f",
-            "cobertura",
-            "--nologo",
-        ]
-    )
-    test_output = test_stdout + test_stderr
-    detailed_logs.append("--- STEP 3: TESTS WITH COVERAGE ---")
-    detailed_logs.append(test_output.strip())
-
-    if test_rc != 0:
-        lines.append(f"Step 3 (Tests): FAILED (test runner exit code {test_rc})")
-        overall_pass = False
+    # --- Step 3: Tests (per project) ---
+    test_results, test_all_ok = run_tests_per_project()
+    detailed_logs.append("--- STEP 3: TESTS (per project) ---")
+    for tr in test_results:
+        detailed_logs.append(tr)
+    lines.append(f"Step {current_step + 1}-{current_step + len(test_projects)}/{total_steps} (Tests):")
+    for tr in test_results:
+        s = next_step()
+        prefix = f"Step {s}/{total_steps}"
+        lines.append(f"  {prefix} {tr.removeprefix('  ')}")
+    if test_all_ok:
+        lines.append("  Test gate: PASS")
     else:
-        failed_count = 0
-        skipped_count = 0
-        for line in test_output.split("\n"):
-            if "Failed:" in line or "Failed!" in line:
-                m = re.search(r"Failed[:\!]\s*(\d+)", line)
-                if m:
-                    failed_count = max(failed_count, int(m.group(1)))
-            if "Skipped:" in line:
-                m = re.search(r"Skipped:\s*(\d+)", line)
-                if m:
-                    skipped_count = max(skipped_count, int(m.group(1)))
-
-        test_ok = failed_count == 0 and skipped_count == 0
-        if test_ok:
-            lines.append("Step 3 (Tests): OK (0 failed, 0 skipped)")
-        else:
-            lines.append(
-                f"Step 3 (Tests): BLOCKED ({failed_count} failed, {skipped_count} skipped)"
-            )
-            overall_pass = False
+        lines.append("  Test gate: BLOCKED")
+        overall_pass = False
 
     flush_log(lines, detailed_logs)
 
@@ -263,7 +306,8 @@ def main() -> None:
     detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
     for cl in cov_lines:
         detailed_logs.append(cl)
-    lines.append("Step 4 (Coverage):")
+    s = next_step()
+    lines.append(f"Step {s}/{total_steps} (Coverage):")
     for cl in cov_lines:
         lines.append(cl)
     if cov_ok:
@@ -278,7 +322,7 @@ def main() -> None:
     detailed_logs.append("--- STEP 5: LINT (on changed projects) ---")
 
     if not changed_projects:
-        lines.append("Step 5 (Lint): SKIP (no changed .fs files)")
+        lines.append("Lint: SKIP (no changed .fs files)")
         detailed_logs.append("(no changed .fs files — lint skipped)")
     else:
         lint_all_ok = True
@@ -308,24 +352,25 @@ def main() -> None:
             detailed_logs.append(f"--- LINT: {proj} ---")
             detailed_logs.append(lint_output.strip())
 
+            s = next_step()
             if lint_rc != 0:
                 lint_all_ok = False
                 overall_pass = False
                 if "ERROR running fsharplint" in lint_output:
-                    per_project_lint.append(f"  {proj}: TOOL FAILED — {lint_output}")
+                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log")
                 else:
-                    per_project_lint.append(f"  {proj}: TOOL FAILED (exit code {lint_rc})")
+                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})")
             else:
-                warning_match = re.search(r"(\d+) warnings", lint_output)
+                warning_match = re.search(r"(\d+) warnings?", lint_output)
                 warn_count = int(warning_match.group(1)) if warning_match else 0
                 if warn_count > 0:
                     lint_all_ok = False
                     overall_pass = False
-                    per_project_lint.append(f"  {proj}: {warn_count} warnings — BLOCKED")
+                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED")
                 else:
-                    per_project_lint.append(f"  {proj}: 0 warnings — PASS")
+                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: 0 warnings — PASS")
 
-        lines.append("Step 5 (Lint):")
+        lines.append(f"Step {current_step + 1}-{current_step + len(changed_projects)}/{total_steps} (Lint):")
         for pl in per_project_lint:
             lines.append(pl)
         if lint_all_ok:

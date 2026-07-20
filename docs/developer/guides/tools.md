@@ -61,19 +61,23 @@ STATUS: PASS
 
 ### `hard_gate.py`
 
-Full quality gate for task verification: format → build → tests with coverage → coverage verification → lint on changed projects.
+Full quality gate for task verification: format → build → tests per project with coverage → coverage verification → lint on changed projects.
 
 **Output:** `tmp/hard-gate.txt`
 
+**Step counter:** Each step shows `<N>/<M>` where `M` is the total number of steps. For tests and linting, one project = one step. Format, build, and coverage are one step each.
+
 **Steps:**
-1. Format: `dotnet fantomas .`
+1. Format: `dotnet fantomas . --check`
 2. Build: `dotnet build FLPQ.slnx -c Debug`
-3. Tests + Coverage: `dotnet dotnet-coverage collect dotnet test FLPQ.slnx -o tmp/coverage.cobertura -f cobertura --nologo`
+3. Tests: `dotnet dotnet-coverage collect dotnet test <project> -o tmp/coverage_<project>.cobertura -f cobertura --nologo` for each test project (discovered dynamically via `find_test_packages()`). After all projects, merge coverage files: `dotnet dotnet-coverage merge tmp/coverage_*.cobertura -o tmp/coverage.cobertura -f cobertura` and clean up per-project files.
 4. Coverage gate: parse `tmp/coverage.cobertura` XML
    - Per-project threshold: **75%** line coverage minimum
    - Total threshold: **80%** line coverage minimum
    - Filters to FLPQ source packages only (excludes `*.Tests` and `FLPQ.TestUtilities`)
-5. Lint: `dotnet-fsharplint lint` on each project with modified `.fs` files (detected via `detect_changes.py` logic). Uses `DOTNET_ROOT` from environment or `/usr/lib/dotnet`.
+5. Lint: `dotnet-fsharplint lint` on each project with modified `.fs` files (detected via `detect_changes.py` logic). Uses `DOTNET_ROOT` from environment or `/usr/lib/dotnet`. If no `.fs` files changed, lint is skipped (not counted as a step).
+
+**Test project discovery:** `find_test_packages()` in `common.py` dynamically discovers test projects by scanning `*.fsproj` files ending with `.Tests` (excluding `FLPQ.TestUtilities`). No project names are hardcoded.
 
 **Incremental output:** the output file is flushed after each step. While the gate is running, the file shows `STATUS: IN_PROGRESS`. The final `STATUS: PASS` or `STATUS: BLOCKED` is only written when all steps complete. The exit code is the authoritative signal.
 
@@ -92,8 +96,8 @@ Full quality gate for task verification: format → build → tests with coverag
 **Output format (mid-execution, after Step 2):**
 ```
 HARD GATE SUMMARY
-Step 1 (Format): OK
-Step 2 (Build): OK (Build succeeded)
+Step 1/11 (Format): OK
+Step 2/11 (Build): OK (Build succeeded)
 
 STATUS: IN_PROGRESS
 
@@ -112,16 +116,46 @@ HARD GATE IN PROGRESS. DO NOT MERGE. Await completion.
 **Output format (final — PASS):**
 ```
 HARD GATE SUMMARY
-Step 1 (Format): OK
-Step 2 (Build): OK (Build succeeded)
-Step 3 (Tests): OK (0 failed, 0 skipped)
-Step 4 (Coverage):
+Step 1/11 (Format): OK
+Step 2/11 (Build): OK (Build succeeded)
+Step 3-8/11 (Tests):
+  Step 3/11 FLPQ.Cli.Tests: OK (0 failed, 0 skipped)
+  Step 4/11 FLPQ.GraphAnalysis.Tests: OK (0 failed, 0 skipped)
+  Step 5/11 FLPQ.Languages.Tests: OK (0 failed, 0 skipped)
+  Step 6/11 FLPQ.LinearAlgebra.Tests: OK (0 failed, 0 skipped)
+  Step 7/11 FLPQ.Printers.Tests: OK (0 failed, 0 skipped)
+  Step 8/11 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
+  Test gate: PASS
+Step 9/11 (Coverage):
   FLPQ.Languages: 89.8% (4376/4874) — PASS
   TOTAL: 84.2% (7056/8380) (threshold 80%) — PASS
   Coverage gate: PASS
-Step 5 (Lint):
-  src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+Step 10-11/11 (Lint):
+  Step 10/11 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+  Step 11/11 src/FLPQ.Cli/FLPQ.Cli.fsproj: 0 warnings — PASS
   Lint gate: PASS
+
+STATUS: PASS
+
+--- DETAILED LOG ---
+[per-step detailed output]
+```
+
+**Output format (final — no changed files, PASS):**
+```
+HARD GATE SUMMARY
+Step 1/9 (Format): OK
+Step 2/9 (Build): OK (Build succeeded)
+Step 3-8/9 (Tests):
+  Step 3/9 FLPQ.Cli.Tests: OK (0 failed, 0 skipped)
+  ...
+  Step 8/9 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
+  Test gate: PASS
+Step 9/9 (Coverage):
+  FLPQ.Languages: 89.8% (4376/4874) — PASS
+  TOTAL: 84.2% (7056/8380) (threshold 80%) — PASS
+  Coverage gate: PASS
+Lint: SKIP (no changed .fs files)
 
 STATUS: PASS
 
@@ -132,16 +166,20 @@ STATUS: PASS
 **Output format (final — BLOCKED):**
 ```
 HARD GATE SUMMARY
-Step 1 (Format): OK
-Step 2 (Build): OK (Build succeeded)
-Step 3 (Tests): OK (0 failed, 0 skipped)
-Step 4 (Coverage):
+Step 1/11 (Format): OK
+Step 2/11 (Build): OK (Build succeeded)
+Step 3-8/11 (Tests):
+  Step 3/11 FLPQ.Cli.Tests: OK (0 failed, 0 skipped)
+  ...
+  Test gate: PASS
+Step 9/11 (Coverage):
   FLPQ.Languages: 89.8% (4376/4874) — PASS
   FLPQ.Cli: 55.0% (438/796) — BLOCKED (below 75%)
   TOTAL: 84.2% (7056/8380) (threshold 80%) — PASS
   Coverage gate: BLOCKED
-Step 5 (Lint):
-  src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+Step 10-11/11 (Lint):
+  Step 10/11 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
+  Step 11/11 src/FLPQ.Cli/FLPQ.Cli.fsproj: 0 warnings — PASS
   Lint gate: PASS
 
 STATUS: BLOCKED

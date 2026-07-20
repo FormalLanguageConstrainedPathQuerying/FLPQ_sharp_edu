@@ -22,7 +22,7 @@ For detailed per-tool documentation (steps, thresholds, output format examples),
 |--------|---------|
 | `detect_changes.py` | Detect projects with modified `.fs` files relative to `dev` |
 | `quality_check.py` | Inter-subtask check: format + build |
-| `hard_gate.py` | Full gate: format + build + tests with coverage + lint on changed projects |
+| `hard_gate.py` | Full gate: format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
 
 ## Usage
 

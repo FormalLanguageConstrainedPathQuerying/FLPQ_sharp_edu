@@ -8,6 +8,46 @@ Report generated: 2026-07-11. Prior reports: 2026-07-09, 2026-07-08, 2026-07-05,
 
 ---
 
+## 2026-07-20 Report — Task 191: Improve Hard Gate Python Script
+
+### Reviewed Files
+
+- `tools/common.py` — added `find_project_for_file`
+- `tools/hard_gate.py` — per-project tests, step counter, lint, dedup
+- `tools/detect_changes.py` — use shared mapping function
+
+### Findings
+
+| # | Category | Problem | Severity | Fixed |
+|---|----------|---------|----------|-------|
+| R1 | Duplication | File-to-project mapping logic duplicated in `detect_changes.py:find_project_for_file` and `hard_gate.py:detect_changed_projects`. Identical algorithm: iterate path parts, compare candidate against `.fsproj` parent directories. | High | ✅ Extracted to `common.py:find_project_for_file`. Both scripts now import and use it. |
+| R2 | Bug | Lint warning regex `r"(\d+) warnings"` at `hard_gate.py:368` does not match singular `"1 warning"`. A project with exactly 1 warning would silently pass. | High | ✅ Changed to `r"(\d+) warnings?"`. |
+| R3 | Dead code | `candidate == proj_p` check at `detect_changes.py:31` (old local function). Candidate is built from `.fs` file parts, `proj_p` is a `.fsproj` path — can never be equal. | Low | ✅ Removed. |
+| R4 | Clarity | Error output embedded in summary line at `hard_gate.py:366`. Full `lint_output` (potentially thousands of lines) dumped into summary. | Medium | ✅ Truncated to `"TOOL FAILED — see detailed log"`. Full output remains in detailed log section. |
+| R5 | Unused imports | `Path` imported in `hard_gate.py` and `detect_changes.py` after dedup (logic moved to `common.py`). `subprocess` unused in `detect_changes.py` (all subprocess calls go through `run_cmd`). | Low | ✅ Removed unused imports. |
+
+### Architecture Assessment
+
+Clean after refactoring. `find_project_for_file` sits in `common.py` alongside the other project-discovery functions (`find_fsproj_paths`, `find_source_packages`, `find_test_packages`). This is the right location — one source of truth for file-to-project mapping used by both `detect_changes.py` (for reporting) and `hard_gate.py` (for targeted linting).
+
+### Tests
+
+No test gaps. Tooling scripts are verified by running `hard_gate.py` and checking output, per the detailed plan. No separate test framework exists for Python tools.
+
+### Documentation
+
+No changes needed. `find_project_for_file` is an internal helper — both caller-level scripts (`detect_changes.py`, `hard_gate.py`) are already documented in `docs/developer/guides/tools.md` and `tools/README.md`.
+
+### Genericity and Type Safety
+
+N/A — Python tooling scripts. Function signatures use `str` and `dict[str, str]` which are appropriate for the domain.
+
+### Zero Findings — Review Pass Complete
+
+All issues identified and fixed. One review pass produced the above findings; second pass on all changed files found zero problems.
+
+---
+
 ## 2026-07-11 Report — Task 160 Refactoring (GLL and RNGLR)
 
 ### Task 160 Changes: Architecture and Code Review

@@ -5,32 +5,18 @@ Writes results to tmp/detect-changes.txt.
 No console output. No timeout on subprocess calls.
 """
 
-import subprocess
 import sys
-from pathlib import Path
 
 from common import (
     run_cmd,
     find_fsproj_paths,
+    find_project_for_file,
     ensure_output_dir,
     remove_output_file,
     write_output_file,
 )
 
 OUTPUT_FILE = "tmp/detect-changes.txt"
-
-
-def find_project_for_file(fs_file: str, all_projects: dict[str, str]) -> str | None:
-    """Map a changed .fs file to its .fsproj by finding the first matching
-    parent directory that contains a .fsproj file."""
-    parts = Path(fs_file).parts
-    for i in range(len(parts)):
-        candidate = Path(*parts[: i + 1])
-        for proj_name, proj_path in all_projects.items():
-            proj_p = Path(proj_path)
-            if str(candidate) == str(proj_p.parent) or candidate == proj_p:
-                return proj_path
-    return None
 
 
 def main() -> None:
