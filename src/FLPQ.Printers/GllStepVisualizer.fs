@@ -10,6 +10,10 @@ module GllStepVisualizer =
         {
             /// Descriptors queue rendered as TeX.
             Queue: string
+            /// Descriptors table (to-handle and handled) rendered as TeX.
+            DescriptorsTable: string
+            /// Newly added descriptors rendered as TeX with coloring.
+            NewDescriptors: string
             /// GSS graph rendered as DOT.
             GssDot: string
             /// Path index matrix rendered as TeX.
@@ -36,6 +40,81 @@ module GllStepVisualizer =
             @"\emptyset"
         else
             descriptors |> List.map descriptorToTeX |> String.concat @" \\; "
+
+    /// Render descriptor components as TeX cells for table row.
+    let private descriptorToRowCells (desc: Descriptor) : string * string * string * string =
+        let rangeTex = rangeDescriptorToTeX desc.MatchedRange
+        string desc.RsmState, string desc.Vertex, string desc.GssIdx, rangeTex
+
+    /// Render a table of descriptors with to-handle and handled blocks,
+    /// highlighting the current descriptor with yellow background.
+    /// Table structure:
+    ///   Header: q | i | g | \mathcal{MR}
+    ///   \hline\hline
+    ///   Block 1: descriptors to handle (queue)
+    ///   \hline\hline
+    ///   Block 2: handled descriptors
+    let descriptorsTableToTeX
+        (currentDescriptor: Descriptor option)
+        (toHandle: Descriptor list)
+        (handled: Set<Descriptor>)
+        : string =
+        let header = @"q & i & g & \mathcal{MR} \\ \hline\hline"
+
+        let renderRow (desc: Descriptor) (isCurrent: bool) : string =
+            let q, i, g, mr = descriptorToRowCells desc
+
+            let cell tex =
+                if isCurrent then
+                    sprintf @"\mbox{\colorbox{yellow!20}{$%s$}}" tex
+                else
+                    tex
+
+            sprintf @"%s & %s & %s & %s \\" (cell q) (cell i) (cell g) (cell mr)
+
+        let toHandleRows =
+            if List.isEmpty toHandle then
+                [ @"\emptyset & & & \\" ]
+            else
+                toHandle
+                |> List.map (fun d ->
+                    let isCurrent =
+                        match currentDescriptor with
+                        | Some cd -> cd.Equals(d)
+                        | None -> false
+
+                    renderRow d isCurrent)
+
+        let handledRows =
+            if Set.isEmpty handled then
+                [ @"\emptyset & & & \\" ]
+            else
+                handled |> Set.toList |> List.map (fun d -> renderRow d false)
+
+        let rows = toHandleRows @ [ @"\hline\hline" ] @ handledRows |> String.concat "\n"
+
+        sprintf @"\begin{array}{cccc} %s %s \end{array}" header rows
+
+    /// Render newly created descriptors as a set of tuples with color-coded highlighting.
+    /// Green background: genuinely new descriptors (not previously handled).
+    /// Red background: already handled descriptors that were attempted again in this step.
+    let newDescriptorsToTeX (newDescriptors: Set<Descriptor>) (attemptedDescriptors: Set<Descriptor>) : string =
+        if Set.isEmpty attemptedDescriptors then
+            @"\{ \emptyset \}"
+        else
+            let renderEntry (desc: Descriptor) (isReallyNew: bool) =
+                let tex = descriptorToTeX desc
+
+                if isReallyNew then
+                    sprintf @"\colorbox{green!20}{$%s$}" tex
+                else
+                    sprintf @"\colorbox{red!20}{$%s$}" tex
+
+            attemptedDescriptors
+            |> Set.toList
+            |> List.map (fun d -> renderEntry d (Set.contains d newDescriptors))
+            |> String.concat @",\; "
+            |> sprintf @"\{ %s \}"
 
     /// Render a single GLL parsing step to visualization output.
     let renderStep
@@ -72,6 +151,8 @@ module GllStepVisualizer =
               VertexCount = pathIndex.VertexCount }
 
         { Queue = queueToTeX step.Queue
+          DescriptorsTable = descriptorsTableToTeX step.CurrentDescriptor step.Queue step.HandledDescriptors
+          NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
           GssDot = gssDot
           PathIndex = PathIndexTeX.toTeXWithHighlights string string stepPathIndex step.ChangedCells
           Input = TeXRenderer.inputRow termPrinter inputTokens step.InputPosition }

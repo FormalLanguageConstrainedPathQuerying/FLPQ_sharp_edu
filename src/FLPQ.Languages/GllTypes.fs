@@ -7,7 +7,7 @@ open FLPQ.GraphAnalysis
 /// Descriptor in the GLL worklist: current RSM state, input graph vertex,
 /// current GSS node, and the range matched so far.
 /// Book reference: sec:CFPQ_GLL, Listing lst:gll_rsm_cfpq.
-[<Struct; CustomEquality; NoComparison>]
+[<Struct; CustomEquality; CustomComparison>]
 type Descriptor =
     { RsmState: int
       Vertex: int
@@ -25,6 +25,28 @@ type Descriptor =
 
     override this.GetHashCode() =
         hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
+
+    interface System.IComparable with
+        member this.CompareTo(obj: obj) =
+            match obj with
+            | :? Descriptor as other ->
+                let c = compare this.RsmState other.RsmState
+
+                if c <> 0 then
+                    c
+                else
+                    let c = compare this.Vertex other.Vertex
+
+                    if c <> 0 then
+                        c
+                    else
+                        let c = compare this.GssIdx other.GssIdx
+
+                        if c <> 0 then
+                            c
+                        else
+                            compare this.MatchedRange other.MatchedRange
+            | _ -> invalidArg (nameof obj) "not a Descriptor"
 
 /// Vertex in the Graph-Structured Stack (GSS).
 /// StoredPops holds ranges recognized at this vertex — mutable because it is populated
@@ -155,4 +177,13 @@ type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         /// GSS node currently being processed (the descriptor's GssIdx).
         /// None for the initial step before any descriptor is dequeued.
         CurrentGssIdx: int option
+        /// The descriptor currently being processed in this step.
+        /// None for the initial step.
+        CurrentDescriptor: Descriptor option
+        /// Snapshot of all descriptors processed so far.
+        HandledDescriptors: Set<Descriptor>
+        /// Descriptors newly created in this step.
+        NewDescriptors: Set<Descriptor>
+        /// All descriptors passed to tryEnqueue during this step (including those already handled).
+        AttemptedDescriptors: Set<Descriptor>
     }

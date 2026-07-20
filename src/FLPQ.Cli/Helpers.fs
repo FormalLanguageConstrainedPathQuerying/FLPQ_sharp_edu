@@ -42,6 +42,8 @@ module Helpers =
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
             writeOutputFile (Path.Combine(stepDir, "queue.tex")) steps.[idx].Queue
+            writeOutputFile (Path.Combine(stepDir, "descriptors_table.tex")) steps.[idx].DescriptorsTable
+            writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
             writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input

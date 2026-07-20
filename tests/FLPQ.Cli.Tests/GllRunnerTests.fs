@@ -72,3 +72,19 @@ let ``runGll handles ambiguous grammar with S -> S S production`` () =
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir
+
+[<Fact>]
+let ``runGll produces step visualization with descriptors table`` () =
+    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let step0Dir = Path.Combine(outDir, "step_0")
+
+    Assert.True(File.Exists(Path.Combine(step0Dir, "queue.tex")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "descriptors_table.tex")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "new_descriptors.tex")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "gss.dot")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "path_index.tex")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "input.tex")))
+
+    Assert.True(FileInfo(Path.Combine(step0Dir, "descriptors_table.tex")).Length > 0L)
+    Assert.True(FileInfo(Path.Combine(step0Dir, "new_descriptors.tex")).Length > 0L)
+    cleanup outDir
