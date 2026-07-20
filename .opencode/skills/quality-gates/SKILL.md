@@ -74,16 +74,36 @@ Then read and analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all pr
 
 ## Task Verification
 
-Run once when all subtasks are done. Use the hard gate tool:
+Run once when all subtasks are done. The full hard gate may take more than 30 minutes, so it is run **asynchronously** with periodic status polling.
+
+### Starting the Gate
 
 ```bash
-python3 tools/hard_gate.py
+python3 tools/hard_gate.py > tmp/hard-gate-stderr.txt 2>&1 &
+echo $! > tmp/hard-gate.pid
 ```
 
-The hard gate writes output incrementally to `tmp/hard-gate.txt`. While it runs, the file shows `STATUS: IN_PROGRESS` — the gate has not finished yet. **Never interpret `IN_PROGRESS` as a pass or failure.** Wait for the process to exit, then check the exit code (`echo $?`):
+The gate runs in background and writes progress incrementally to `tmp/hard-gate.txt` after each step.
 
-- **Exit code 0** → `STATUS: PASS` — proceed to merge.
-- **Exit code non-zero** → `STATUS: BLOCKED` — read `tmp/hard-gate.txt` to identify what to fix, then re-run. Repeat until exit code 0.
+### Polling Status
+
+Every **5 minutes**, check the current status:
+
+```bash
+grep "STATUS:" tmp/hard-gate.txt
+```
+
+- **`STATUS: PASS`** — gate finished successfully (exit code 0). Proceed to merge.
+- **`STATUS: BLOCKED`** — gate finished with exit code non-zero. Read `tmp/hard-gate.txt` to identify all failures, fix them, and **re-run the gate from the start**.
+- **`STATUS: IN_PROGRESS`** — gate is still running. Check the step counter (lines like `Step N/M`) to verify progress. If the step number advanced since the last check, the gate is making progress — continue waiting and poll again in 5 minutes. If the step counter has not advanced after multiple polling cycles (>15 minutes with no progress), investigate the detailed log section in `tmp/hard-gate.txt` for the currently running command. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
+
+**Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
+
+### After Completion
+
+When the gate finishes, check the exit status:
+- If any step shows `BLOCKED` in the summary, read the detailed log to identify the failure, fix all problems, and re-run from the start.
+- Exit code 0 and `STATUS: PASS` means proceed to merge.
 
 The hard gate runs: format → build → tests with coverage → coverage verification → lint on changed projects. See `docs/developer/guides/tools.md` for detailed step descriptions, thresholds, and output format examples.
 
