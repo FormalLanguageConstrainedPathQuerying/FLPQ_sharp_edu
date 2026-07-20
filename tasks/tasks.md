@@ -517,4 +517,24 @@
            2.   Add RSM for extended grammar
                 1.   in visualization of RSM-s use global states numbering (all states stored in common Matrix)
  188. blockFinalStates
+ 189. [done] Redesign documentation structure with metadata, abstracts, TOCs, and consistent sections. Add tag taxonomy for grep-based search. Update documentation conventions guide and reusing skill. Apply template to all developer docs (44 docs).
+ 190. [done] Inprove visualization
+      1.   Remove \footnotesize from path index wrapper 
+      2.   Use R^{from_state, from_pos}_{to_state, to pos} to render matched range in descriptor
+      3.   Highliight current GSS node
+ 191. Improve hard gate python script.
+      1.   Run tests project-by project. Update status project-by-peoject: update total status, add status fro each project. Note: all tests must be run. Colect tests project, do not hardocde them.
+      2.   Run linting for touched projects project-by-project. Update status project-by-peoject: update total status, add status fro each project.
+      3.   IN overall status add `<steps done>/<total steps>`. For testing and linting --- one project is one step
+ 192. Improve GLL visualization
+      1.   Add handled descriptors set to each step
+      2.   Add all newly created descriptors for each step.
+      3.   Visualize descriptors to precess and handled descriptors as e on table with following structure
+           1.   Header --- components of descriptor: q or rsm state, i for input, g for gss vertex, MR fro matched range,
+           2.   Header splitted by two hlines.
+           3.   first block of rows --- descriptors to handle.
+           4.   Second block of rows --- handled descriptors.
+           5.   Blocks separated with two hlines
+      4.   Highlight current descriptior in the table (fill row with yellow!20 color). Note: do not collect currentGSS vertex. It is a part of curretn descriptor.
+      5.   Render newly created descriptors as a set of tuples. Highlight (with filled box) already handled with red!20, really new with green!20 
 
