@@ -93,8 +93,8 @@ module Summary =
                         (None, None, [])
                 | AlgorithmTypes.GLL ->
                     let pdfs =
-                        [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
-                              ("RSM", "dot_pdfs/rsm_blocks.pdf")
+                        [ if File.Exists(Path.Combine(vizDir, "ext_rsm.dot")) then
+                              ("Extended RSM", "dot_pdfs/ext_rsm.pdf")
                           if File.Exists(Path.Combine(vizDir, "sppf.dot")) then
                               ("SPPF", "dot_pdfs/sppf.pdf") ]
 

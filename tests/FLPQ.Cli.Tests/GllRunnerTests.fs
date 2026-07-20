@@ -26,6 +26,14 @@ let private cleanup (outDir: string) =
         ()
 
 [<Fact>]
+let ``runGll produces grammar_original.tex`` () =
+    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "grammar_original.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
 let ``runGll produces grammar_ebnf.tex`` () =
     let outDir = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "grammar_ebnf.tex")

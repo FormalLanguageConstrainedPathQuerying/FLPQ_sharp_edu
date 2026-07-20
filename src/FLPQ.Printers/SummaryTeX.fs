@@ -64,6 +64,30 @@ module SummaryTeX =
         else
             None
 
+    /// Generates the color legend for GLL summary visualization.
+    let private gllColorLegend () : string =
+        let colorBox (color: string) =
+            sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
+
+        let coloredEdge (color: string) =
+            sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
+
+        let rows =
+            [ colorBox "yellow!20", "Current descriptor in descriptors table"
+              colorBox "yellow", "Modified path index cells"
+              colorBox "blue!20", "Current GSS node"
+              colorBox "yellow!30", "Newly added GSS vertices"
+              coloredEdge "red", "Newly added GSS edges"
+              colorBox "green!20", "Genuinely new descriptors"
+              colorBox "red!20", "Already-handled descriptors attempted again" ]
+
+        let rowLines =
+            rows
+            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
+            |> String.concat "\n"
+
+        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+
     /// Enumerates step directories in the given visualization directory,
     /// sorted by step number. Returns an empty array if the directory does not exist.
     let collectSteps (vizDir: string) : string[] =
@@ -112,7 +136,8 @@ module SummaryTeX =
                    | None -> [])
 
             | SummaryKind.GLL ->
-                maybe "input.tex" "Input String" wrapMath
+                [ section "Color Legend"; gllColorLegend (); "" ]
+                @ maybe "input.tex" "Input String" wrapMath
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
                 @ maybe "path_index.tex" "Path Index" wrapMathResized
@@ -151,14 +176,9 @@ module SummaryTeX =
         header @ pdfLine @ inputLines
 
     /// Builds the content lines for a single GLL step.
-    /// Includes queue TeX, GSS PDF, path index TeX (resized), and input TeX.
+    /// Includes descriptors table TeX, GSS PDF, path index TeX (resized), and input TeX.
     let gllStepSection (stepDir: string) (stepNum: int) : string list =
         let header = [ section (sprintf "Step %d" stepNum) ]
-
-        let queueLines =
-            match readIfExists (Path.Combine(stepDir, "queue.tex")) with
-            | Some tex -> [ section "Descriptors Queue"; wrapMath tex; "" ]
-            | None -> []
 
         let descriptorsTableLines =
             match readIfExists (Path.Combine(stepDir, "descriptors_table.tex")) with
@@ -184,7 +204,6 @@ module SummaryTeX =
             | None -> []
 
         header
-        @ queueLines
         @ descriptorsTableLines
         @ newDescriptorsLines
         @ gssPdfLine

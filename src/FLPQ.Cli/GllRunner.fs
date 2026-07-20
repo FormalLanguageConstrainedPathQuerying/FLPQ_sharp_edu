@@ -52,6 +52,10 @@ module GllRunner =
                 (Some(RSM.blockFinalsMap flatExt))
 
         Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
+
+        Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))
             (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
 

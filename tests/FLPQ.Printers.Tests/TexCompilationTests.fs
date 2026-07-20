@@ -492,11 +492,11 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     )
 
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
 
     let rsmSppfPdfs =
-        [ ("RSM", "dot_pdfs/rsm_blocks.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+        [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
 
     let content =
         SummaryTeX.buildContent "GLL" SummaryTeX.SummaryKind.GLL tempDir vizSteps.Length None None rsmSppfPdfs
