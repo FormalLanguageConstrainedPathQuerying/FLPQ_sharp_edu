@@ -400,7 +400,10 @@ module GLL =
                   PathIndexMatrix = Matrix.copy piMatrix
                   ChangedCells = changedCells
                   InputPosition = inputPos
-                  CurrentGssIdx = currentGssIdx }
+                  CurrentGssIdx = currentGssIdx
+                  CurrentDescriptor = None
+                  HandledDescriptors = Set.empty
+                  NewDescriptors = Set.empty }
             )
 
             prevVertices <- activeVerts
