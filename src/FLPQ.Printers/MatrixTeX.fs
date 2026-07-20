@@ -44,8 +44,8 @@ module MatrixTeX =
             else
                 "[" + String.concat "," pniceOptions + "]"
 
-        let dataRowOffset = if showColNumbers then 1 else 0
-        let dataColOffset = if showRowNumbers then 1 else 0
+        let dataRowOffset = if hasColHdr then 1 else 0
+        let dataColOffset = if hasRowHdr then 1 else 0
 
         let totalRows = Matrix.rows matrix + dataRowOffset
         let totalCols = Matrix.cols matrix + dataColOffset

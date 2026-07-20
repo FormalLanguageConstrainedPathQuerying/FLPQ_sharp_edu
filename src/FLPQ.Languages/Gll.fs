@@ -68,7 +68,7 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         (onStep:
-            Queue<Descriptor>
+            Descriptor list
                 -> Set<int>
                 -> Set<int * int>
                 -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
@@ -155,13 +155,14 @@ module GLL =
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
         let initAttempted = attemptedInStep
-        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty initAttempted
+        onStep (queue |> Seq.toList) activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty initAttempted
         attemptedInStep <- Set.empty<Descriptor>
 
         // Main loop
         let mutable handledSnapshot = Set.empty<Descriptor>
 
         while queue.Count > 0 do
+            let queueBefore = queue |> Seq.toList
             let desc = queue.Dequeue()
             let q0 = desc.RsmState
             let v0 = desc.Vertex
@@ -365,7 +366,7 @@ module GLL =
             let stepAttempted = attemptedInStep
 
             onStep
-                queue
+                queueBefore
                 activeVerts
                 activeEdges
                 pathIndex.Matrix
@@ -407,7 +408,7 @@ module GLL =
         let mutable prevHandled = Set.empty<Descriptor>
 
         let onStep
-            (q: Queue<Descriptor>)
+            (q: Descriptor list)
             (activeVerts: Set<int>)
             (activeEdges: Set<int * int>)
             (piMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>)
@@ -428,7 +429,7 @@ module GLL =
             let newDescriptors = Set.difference handledSnapshot prevHandled
 
             steps.Add(
-                { Queue = q |> Seq.toList
+                { Queue = q
                   ActiveGssVertices = activeVerts
                   ActiveGssEdges = activeEdges
                   NewGssVertices = newVertices
