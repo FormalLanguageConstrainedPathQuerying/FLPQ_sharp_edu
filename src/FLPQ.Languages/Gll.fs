@@ -75,6 +75,8 @@ module GLL =
                 -> Set<int * int>
                 -> int
                 -> int option
+                -> Descriptor option
+                -> Set<Descriptor>
                 -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
@@ -148,9 +150,11 @@ module GLL =
 
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
-        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None
+        onStep queue activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty
 
         // Main loop
+        let mutable handledSnapshot = Set.empty<Descriptor>
+
         while queue.Count > 0 do
             let desc = queue.Dequeue()
             let q0 = desc.RsmState
@@ -351,7 +355,9 @@ module GLL =
 
             // Collect step after descriptor processing
             let activeVerts, activeEdges = collectActiveGss gss
-            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0 (Some s0)
+            let currentHandled = handled |> Set.ofSeq
+            onStep queue activeVerts activeEdges pathIndex.Matrix changedCells v0 (Some s0) (Some desc) currentHandled
+            handledSnapshot <- currentHandled
             changedCells <- Set.empty<int * int>
 
         pathIndex
@@ -365,7 +371,7 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ -> ())
 
     /// Builds the path index and collects step-by-step snapshots of the GLL execution.
     /// Each step captures: descriptors queue, active GSS state, path index snapshot, changed cells, and input position.
@@ -378,6 +384,7 @@ module GLL =
         let steps = ResizeArray<GLLParsingStep<'t, 'nt>>()
         let mutable prevVertices = Set.empty<int>
         let mutable prevEdges = Set.empty<int * int>
+        let mutable prevHandled = Set.empty<Descriptor>
 
         let onStep
             (q: Queue<Descriptor>)
@@ -387,9 +394,12 @@ module GLL =
             (changedCells: Set<int * int>)
             (inputPos: int)
             (currentGssIdx: int option)
+            (currentDescriptor: Descriptor option)
+            (handledSnapshot: Set<Descriptor>)
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
+            let newDescriptors = Set.difference handledSnapshot prevHandled
 
             steps.Add(
                 { Queue = q |> Seq.toList
@@ -401,13 +411,14 @@ module GLL =
                   ChangedCells = changedCells
                   InputPosition = inputPos
                   CurrentGssIdx = currentGssIdx
-                  CurrentDescriptor = None
-                  HandledDescriptors = Set.empty
-                  NewDescriptors = Set.empty }
+                  CurrentDescriptor = currentDescriptor
+                  HandledDescriptors = handledSnapshot
+                  NewDescriptors = newDescriptors }
             )
 
             prevVertices <- activeVerts
             prevEdges <- activeEdges
+            prevHandled <- handledSnapshot
 
         buildPathIndexCore ersm inputGraph onStep
         |> fun pi -> pi, steps.ToArray() |> List.ofArray
