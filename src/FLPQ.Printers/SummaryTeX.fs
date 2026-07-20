@@ -160,6 +160,16 @@ module SummaryTeX =
             | Some tex -> [ section "Descriptors Queue"; wrapMath tex; "" ]
             | None -> []
 
+        let descriptorsTableLines =
+            match readIfExists (Path.Combine(stepDir, "descriptors_table.tex")) with
+            | Some tex -> [ section "Descriptors Table"; wrapMath tex; "" ]
+            | None -> []
+
+        let newDescriptorsLines =
+            match readIfExists (Path.Combine(stepDir, "new_descriptors.tex")) with
+            | Some tex -> [ section "New Descriptors"; wrapMath tex; "" ]
+            | None -> []
+
         let gssPdfLine =
             [ includePdf (sprintf "dot_pdfs/%s_gss.pdf" (Path.GetFileName stepDir)); "" ]
 
@@ -173,7 +183,13 @@ module SummaryTeX =
             | Some tex -> [ wrapMath tex; "" ]
             | None -> []
 
-        header @ queueLines @ gssPdfLine @ pathIndexLines @ inputLines
+        header
+        @ queueLines
+        @ descriptorsTableLines
+        @ newDescriptorsLines
+        @ gssPdfLine
+        @ pathIndexLines
+        @ inputLines
 
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
