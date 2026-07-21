@@ -500,7 +500,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
         File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
         File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
         File.WriteAllText(Path.Combine(stepDir, "input.tex"), vizSteps.[idx].Input)
-        File.WriteAllText(Path.Combine(stepDir, "rsm_step.dot"), vizSteps.[idx].RsmDot)
+        File.WriteAllText(Path.Combine(stepDir, "rsm.dot"), vizSteps.[idx].RsmDot)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_rsm.pdf" idx), true)
 
