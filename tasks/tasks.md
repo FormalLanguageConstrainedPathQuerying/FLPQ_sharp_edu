@@ -537,14 +537,23 @@
            5.   Blocks separated with two hlines
       4.   Highlight current descriptior in the table (fill row with yellow!20 color). Note: do not collect currentGSS vertex. It is a part of curretn descriptor.
       5.   Render newly created descriptors as a set of tuples. Highlight (with filled box) already handled with red!20, really new with green!20 
- 193. Improve GLL summary visualization
+193. [done] Improve GLL summary visualization
       1.   In descriptors table highlight cirrent descriptor (yellow!20)
       2.   Do not show descriptors queue. Descriptors  Table only.
       3.   Add original grammar
       4.   Replace RSM with extended RSM. Use global states numbering.
       5.   At the start add colours legent for all highlighting. What color of what used for what.
- 194. Fix GLL summary visualization. Summary generated with `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -s -i data/example_input_a_a_a.txt -g data/example_grammar_a_a_a.bnf -a gll -o viz_output/gll` has some some strange places. Investigate and fix if necessary.
+194. [done] Fix GLL summary visualization. Summary generated with `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -s -i data/example_input_a_a_a.txt -g data/example_grammar_a_a_a.bnf -a gll -o viz_output/gll` has some some strange places. Investigate and fix if necessary.
       1.   Sppf contains 5 intermediate nodes. But final PathIndex contains only one IntermediateNode. In steps, path index does not contain all intermediate nodes. Why?
       2.   In some steps (eg step 5, step 12, step 19) no highlighted cirrent gss node.
       3.   No highlighting of modified path index cells each step.
+195. Add invarinat to GLL and RNGLR tests (accepts function). Invariant for accepted strings:
+     1.   total numaber of nonterminals in path index not less than total numaber of SPPF nonterminal nodes
+     2.   total numaber of terminals in path index not less than total numaber of SPPF terminal nodes
+     3.   total numaber of epsilon-nonterminals in path index not less than total numaber of SPPF epsilon-nonterminal nodes
+     4.   total numaber of intermediate nodes in path index not less than total numaber of SPPF intermediate nodes
+     5.   If SPPF constriction adds some nodes not represented in PathIndex (excluding range nodes: range nodes are cells in Pathindex, so they are not expliitly represented ass cells content) --- remove respective code. All nodes in SPPF must be represented in PathIndex.
+     6.   Run all GLL and RNGLR tests. All must pass. If something fail, fix apth index creation for respective algorithm. 
+
+196. GLL path index misses PIntermediate entries. For grammar `S -> a | S S | S S S` and input `a a a`, SPPF contains 5 intermediate nodes but path index has only one PIntermediate entry. Missing: PIntermediate(3,2) at cell (0,0)→(1,3), PIntermediate(2,1) at (0,0)→(3,2) and (0,0)→(3,3), PIntermediate(2,2) at (0,1)→(3,3). Compare with RNGLR path index for the same input — RNGLR must have these entries. Fix GLL to add them.
 

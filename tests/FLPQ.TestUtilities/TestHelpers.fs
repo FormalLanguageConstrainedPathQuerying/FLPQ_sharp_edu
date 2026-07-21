@@ -75,6 +75,14 @@ module TestHelpers =
 
             failwith msg
 
+    let assertSppfCoverageInvariant (pi: PathIndex<string, string>) (sppf: SPPF<string, string>) : unit =
+        match Sppf.checkSppfCoverageInvariant pi sppf with
+        | Ok() -> ()
+        | Error errors ->
+            let msg = "SPPF coverage invariant violations:\n  " + String.concat "\n  " errors
+
+            failwith msg
+
     let grammarToEbnfText (g: Grammar<string, string>) : string =
         g.Rules
         |> List.map (fun r ->
@@ -213,6 +221,7 @@ module TestHelpers =
                     (Some(RSM.blockFinalsMap flatExt))
 
             assertSppfInvariant sppf
+            assertSppfCoverageInvariant pathIndex sppf
 
             let tree =
                 sppf.RootIndices

@@ -211,6 +211,100 @@ module Sppf =
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndices = rootIndices }
 
+    let countNonterminals (sppf: SPPF<'t, 'nt>) : int =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable count = 0
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfNonterminal _ -> count <- count + 1
+            | _ -> ()
+
+        count
+
+    let countTerminals (sppf: SPPF<'t, 'nt>) : int =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable count = 0
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfTerminal _ -> count <- count + 1
+            | _ -> ()
+
+        count
+
+    let countEpsilons (sppf: SPPF<'t, 'nt>) : int =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable count = 0
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfEpsilon _ -> count <- count + 1
+            | _ -> ()
+
+        count
+
+    let countIntermediates (sppf: SPPF<'t, 'nt>) : int =
+        let vc = Graph.vertexCount sppf.Graph
+        let mutable count = 0
+
+        for i in 0 .. vc - 1 do
+            match Graph.getVertex i sppf.Graph with
+            | SppfNodeInfo.SppfIntermediate _ -> count <- count + 1
+            | _ -> ()
+
+        count
+
+    /// Checks that every SPPF node has a corresponding entry in the path index.
+    /// Range nodes are excluded (they correspond to path index cells, not cell content).
+    /// For each node type, the path index must have at least as many entries as the SPPF has nodes.
+    let checkSppfCoverageInvariant (pi: PathIndex<'t, 'nt>) (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+        let piNonterminals = PathIndex.countPNonterminals pi
+        let piTerminals = PathIndex.countPTerminals pi
+        let piEpsilons = PathIndex.countPEpsilons pi
+        let piIntermediates = PathIndex.countPIntermediates pi
+
+        let sppfNonterminals = countNonterminals sppf
+        let sppfTerminals = countTerminals sppf
+        let sppfEpsilons = countEpsilons sppf
+        let sppfIntermediates = countIntermediates sppf
+
+        let mutable errors = []
+
+        if piNonterminals < sppfNonterminals then
+            errors <-
+                sprintf
+                    "PathIndex has %d PNonterminal entries but SPPF has %d SppfNonterminal nodes"
+                    piNonterminals
+                    sppfNonterminals
+                :: errors
+
+        if piTerminals < sppfTerminals then
+            errors <-
+                sprintf
+                    "PathIndex has %d PTerminal entries but SPPF has %d SppfTerminal nodes"
+                    piTerminals
+                    sppfTerminals
+                :: errors
+
+        if piEpsilons < sppfEpsilons then
+            errors <-
+                sprintf
+                    "PathIndex has %d PEpsilonNonterminal entries but SPPF has %d SppfEpsilon nodes"
+                    piEpsilons
+                    sppfEpsilons
+                :: errors
+
+        if piIntermediates < sppfIntermediates then
+            errors <-
+                sprintf
+                    "PathIndex has %d PIntermediate entries but SPPF has %d SppfIntermediate nodes"
+                    piIntermediates
+                    sppfIntermediates
+                :: errors
+
+        if errors.IsEmpty then Ok() else Error(List.rev errors)
+
     let validateRangeNodesHaveChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []

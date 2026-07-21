@@ -77,6 +77,62 @@ module PathIndex =
             | PathIndexEntry.PEpsilonNonterminal _ -> true
             | _ -> false)
 
+    /// Counts PNonterminal entries across all cells in the path index.
+    let countPNonterminals (pi: PathIndex<'t, 'nt>) : int =
+        let k = pi.StateCount * pi.VertexCount
+        let mutable count = 0
+
+        for fromIdx in 0 .. k - 1 do
+            for toIdx in 0 .. k - 1 do
+                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                    match entry with
+                    | PathIndexEntry.PNonterminal _ -> count <- count + 1
+                    | _ -> ()
+
+        count
+
+    /// Counts PTerminal entries across all cells in the path index.
+    let countPTerminals (pi: PathIndex<'t, 'nt>) : int =
+        let k = pi.StateCount * pi.VertexCount
+        let mutable count = 0
+
+        for fromIdx in 0 .. k - 1 do
+            for toIdx in 0 .. k - 1 do
+                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                    match entry with
+                    | PathIndexEntry.PTerminal _ -> count <- count + 1
+                    | _ -> ()
+
+        count
+
+    /// Counts PEpsilonNonterminal entries across all cells in the path index.
+    let countPEpsilons (pi: PathIndex<'t, 'nt>) : int =
+        let k = pi.StateCount * pi.VertexCount
+        let mutable count = 0
+
+        for fromIdx in 0 .. k - 1 do
+            for toIdx in 0 .. k - 1 do
+                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                    match entry with
+                    | PathIndexEntry.PEpsilonNonterminal _ -> count <- count + 1
+                    | _ -> ()
+
+        count
+
+    /// Counts PIntermediate entries across all cells in the path index.
+    let countPIntermediates (pi: PathIndex<'t, 'nt>) : int =
+        let k = pi.StateCount * pi.VertexCount
+        let mutable count = 0
+
+        for fromIdx in 0 .. k - 1 do
+            for toIdx in 0 .. k - 1 do
+                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                    match entry with
+                    | PathIndexEntry.PIntermediate _ -> count <- count + 1
+                    | _ -> ()
+
+        count
+
     /// Checks the callee-reachability invariant: if cell (i,p)(j,q) contains PNonterminal(A)
     /// or PEpsilonNonterminal(A), then at least one callee cell (s_A,p)(f_A,q) is non-empty,
     /// where s_A = blockStart[A] and f_A ∈ blockFinals[A].
