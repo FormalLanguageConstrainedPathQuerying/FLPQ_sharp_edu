@@ -1,89 +1,81 @@
-# Detailed Plan: Task 195 — Add PathIndex-to-SPPF node count invariants
+# Detailed Plan: Task 196 — Improve GLL visualization
 
 ## Task Description
 
-Add invariants to GLL and RNGLR tests (`accepts` function) comparing node counts between PathIndex and SPPF. If SPPF construction adds nodes not represented in PathIndex, fix the SPPF construction code.
-
-## Analysis
-
-### Current State
-- `accepts` function in `TestHelpers.fs` runs PathIndex invariants (`assertPathIndexInvariant`) and SPPF invariants (`assertSppfInvariant`) but has no cross-structure node count checks
-- No counting/aggregation functions exist in `PathIndex.fs` or `Sppf.fs` — only per-node validation predicates
-- Range nodes are implicit in the PathIndex (each cell corresponds to a range) so they are excluded from SPPF counting
-
-### Reuse Checklist
-1. **Existing invariant structure** (`TestHelpers.fs:10-76`) — `assertPathIndexInvariant` and `assertSppfInvariant` pattern; new checks follow the same `Result<unit, string list>` pattern
-2. **`PathIndex.get`** — existing accessor to iterate all matrix cells, reused for counting
-3. **`Graph.vertexCount`, `Graph.getVertex`** — existing SPPF graph accessors, reused for counting
-4. **`Result<unit, string list>` pattern** — all existing validators return this type; new invariant follows same convention
+1. In descriptors table highlight full row instead of individual cells.
+2. Fix GSS vertex labels: use nonterminal names from RsmStateInfo instead of raw state index numbers.
+3. Show GSS node numbers explicitly in vertex labels (e.g., `v5: (<S'_start>,0)`).
+4. Add per-step RSM with highlighted current state, same color as current GSS node.
 
 ---
 
-## Subtasks
+### S1: Highlight full row instead of individual cells in descriptors table
 
-### S1: Add counting functions to PathIndex and SPPF modules
-
-**Code:**
-- `src/FLPQ.Languages/PathIndex.fs` — add `countPNonterminals`, `countPTerminals`, `countPEpsilons`, `countPIntermediates`
-- `src/FLPQ.Languages/Sppf.fs` — add `countNonterminals`, `countTerminals`, `countEpsilons`, `countIntermediates`
-
-**Tests:** None (private helper functions, tested indirectly via invariant enforcement)
-**Docs:** None
+**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — `descriptorsTableToTeX` function;
+         `data/tex_color_template.tex` — add `[table]` option to `\usepackage{xcolor}`
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update assertion
+**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
 
 **Spec:**
-- PathIndex counting functions iterate all K×K cells, sum counts per entry type:
-  - `countPNonterminals (pi: PathIndex<'t,'nt>) : int` — count all `PNonterminal` entries across all cells
-  - `countPTerminals (pi: PathIndex<'t,'nt>) : int` — count all `PTerminal` entries across all cells
-  - `countPEpsilons (pi: PathIndex<'t,'nt>) : int` — count all `PEpsilonNonterminal` entries across all cells
-  - `countPIntermediates (pi: PathIndex<'t,'nt>) : int` — count all `PIntermediate` entries across all cells
-- SPPF counting functions iterate all vertices in the SPPF graph, count per node type:
-  - `countNonterminals (sppf: SPPF<'t,'nt>) : int` — count all `SppfNonterminal` vertices
-  - `countTerminals (sppf: SPPF<'t,'nt>) : int` — count all `SppfTerminal` vertices
-  - `countEpsilons (sppf: SPPF<'t,'nt>) : int` — count all `SppfEpsilon` vertices
-  - `countIntermediates (sppf: SPPF<'t,'nt>) : int` — count all `SppfIntermediate` vertices
-  - Note: `SppfRange` nodes are NOT counted (they correspond to PathIndex cells, not cell content)
+- In `GllStepVisualizer.descriptorsTableToTeX` (line 65-74), replace per-cell `\colorbox{yellow!20}` wrapping with `\rowcolor{yellow!20}` command before the row's `\\`.
+- The `xcolor` package with `table` option provides `\rowcolor`. Summary template already has `\usepackage[table]{xcolor}`.
+- For `tex_color_template.tex`: change `\usepackage{xcolor}` to `\usepackage[table]{xcolor}` so `\rowcolor` works in compilation tests.
+- Update the `renderRow` function: when `isCurrent`, emit `\rowcolor{yellow!20}` before the row content, followed by `q & i & g & mr \\`. When not current, just `q & i & g & mr \\`.
+- The `\rowcolor` command colors from its position to the end of the current row, so it must appear at the start of the row (before any `&`).
+- Update test assertion: `\colorbox{yellow!20}` → `\rowcolor{yellow!20}`.
 
-### S2: Add invariant validation function
+---
 
-**Code:** `src/FLPQ.Languages/PathIndex.fs` — add `checkSppfCoverageInvariant`
+### S2: Fix GSS vertex labels to show nonterminal names and GSS node numbers
 
-**Tests:** None (called from `accepts`, failure is visible as test failure)
-**Docs:** None
+**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — `renderStep` and `renderSteps` functions
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — add GSS DOT compilation test
+**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
 
 **Spec:**
-- `checkSppfCoverageInvariant (pi: PathIndex<'t,'nt>) (sppf: SPPF<'t,'nt>) : Result<unit, string list>`
-- Compare counts:
-  1. `countPNonterminals pi >= countNonterminals sppf` (no SPPF nonterminal without PathIndex entry)
-  2. `countPTerminals pi >= countTerminals sppf` (no SPPF terminal without PathIndex entry)
-  3. `countPEpsilons pi >= countEpsilons sppf` (no SPPF epsilon without PathIndex entry)
-  4. `countPIntermediates pi >= countIntermediates sppf` (no SPPF intermediate without PathIndex entry)
-- Return `Error` with list of violated conditions if any check fails
-- Range nodes excluded: they are cells in PathIndex, not cell content
+- Add `stateLabelPrinter: int -> string` parameter to `renderStep` and `renderSteps`.
+- In `renderStep`, modify the vertex label printer (lines 132-135): change from `sprintf "(%d,%d)" state vertex` to `sprintf "v%d: (%s,%d)" idx (stateLabelPrinter state) vertex`.
+- The `stateLabelPrinter` function maps global RSM state index → nonterminal name. For the initial state of the fresh start block S', the label should look like `<S'_start>`. For other states: `<nonterminalName>`.
+- For edge labels (lines 136-141): use `stateLabelPrinter` there too for the state parts.
+- In `GllRunner.runGll`: pre-compute the state label mapping from `flatExt.StateInfo`:
+  ```
+  let stateLabel state =
+      let info = flatExt.StateInfo.[state]
+      let (Nonterminal ntName) = info.BlockNonterminal
+      sprintf "<%s>" ntName
+  ```
+  Pass this as the `stateLabelPrinter` parameter.
+- Add a new compiled test: generate GSS DOT for a simple grammar and verify that vertex labels contain `v<number>: (<...>,<number>)` pattern and compile with Graphviz.
 
-### S3: Integrate invariant into `accepts` function
+---
 
-**Code:** `tests/FLPQ.TestUtilities/TestHelpers.fs` — add `assertSppfCoverageInvariant` and call it in `accepts`
+### S3: Add per-step RSM with highlighted current state
 
-**Tests:** None (integration — existing tests verify behavior)
-**Docs:** None
-
-**Spec:**
-- Add `assertSppfCoverageInvariant (pi: PathIndex<string,string>) (sppf: SPPF<string,string>) : unit` to TestHelpers.fs
-  - Calls `PathIndex.checkSppfCoverageInvariant`, fails with descriptive message if violation found
-- Insert call in `accepts` after `assertSppfInvariant sppf` line (line 215), before tree extraction
-  - `assertSppfCoverageInvariant pathIndex sppf`
-
-### S4: Run all tests, fix violations if any
-
-**Code:** Fix any code in Sppf.fs or algorithm modules (Gll.fs, Rnglr.fs) if the invariant reveals violations per task clause 5
-
-**Tests:** Run `dotnet test FLPQ.slnx` — all must pass
-**Docs:** None
+**Code:** `src/FLPQ.Printers/RsmDot.fs` — add `extendedRsmToDotWithHighlight` function;
+         `src/FLPQ.Printers/GllStepVisualizer.fs` — add `RsmDot` field to `GllVisualizationStep`, update `renderStep`;
+         `src/FLPQ.Cli/GllRunner.fs` — pass extended RSM to `renderSteps`;
+         `src/FLPQ.Cli/Helpers.fs` — write `rsm_step.dot` per step;
+         `src/FLPQ.Printers/SummaryTeX.fs` — include per-step RSM PDF in `gllStepSection`
+**Tests:** `tests/FLPQ.Printers.Tests/RsmDotTests.fs` — add compilation test for highlighted RSM DOT;
+         `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update `GLL merged summary TeX compiles` to include rsm_step.dot files
+**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
 
 **Spec:**
-- Run `dotnet test FLPQ.slnx`
-- If any test fails due to the new invariant:
-  - Identify which node type is over-counted in SPPF
-  - Per task clause 5: "If SPPF construction adds some nodes not represented in PathIndex — remove respective code"
-  - Fix Sppf.buildSppfFromIndex to not create SPPF nodes that lack corresponding PathIndex entries
-- Iterate until 0 failures, 0 skipped
+- Add new function `extendedRsmToDotWithHighlight` in `RsmDot.fs`: same signature as `extendedRsmToDot` plus `highlightedState: int option`. When `highlightedState = Some s`, render state `s` with `fillcolor=lightblue, style=filled` (same color as current GSS node).
+- Add `RsmDot: string` field to `GllVisualizationStep` type.
+- In `GllStepVisualizer.renderStep`: generate the per-step RSM DOT:
+  ```
+  let rsmDot =
+      let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
+      RsmDot.extendedRsmToDotWithHighlight terminalPrinter nonterminalPrinter currentState ersm
+  ```
+- `renderStep` needs access to the extended RSM for state rendering. Pass either the `ExtendedRSM` or the `RsmStateInfo[]` array. For cleanliness, pass the `ExtendedRSM` since `extendedRsmToDotWithHighlight` needs it.
+- Update `GllRunner.runGll` to pass the extended RSM to `renderSteps`.
+- Update `Helpers.writeGllStepsVisualization` to write `rsm_step.dot` in each step directory.
+- Update `SummaryTeX.gllStepSection` to include the per-step RSM PDF:
+  ```
+  let rsmPdfLine = [ includePdf (sprintf "dot_pdfs/%s_rsm.pdf" (Path.GetFileName stepDir)); "" ]
+  ```
+- Add `rsmPdfLine` to the step section output in `gllStepSection`.
+- In the `GLL merged summary TeX compiles` test: add `rsm_step.dot` file writes and stub PDF copies for per-step RSM.
+- Add a Graphviz compilation test for `extendedRsmToDotWithHighlight` in `RsmDotTests.fs`: build an extended RSM from `S -> a | eps`, render with a highlighted state, verify Graphviz compiles.

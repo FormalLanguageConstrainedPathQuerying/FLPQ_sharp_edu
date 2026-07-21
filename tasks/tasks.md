@@ -554,7 +554,7 @@
      4.   total numaber of intermediate nodes in path index not less than total numaber of SPPF intermediate nodes
      5.   If SPPF constriction adds some nodes not represented in PathIndex (excluding range nodes: range nodes are cells in Pathindex, so they are not expliitly represented ass cells content) --- remove respective code. All nodes in SPPF must be represented in PathIndex.
      6.   Run all GLL and RNGLR tests. All must pass. If something fail, fix apth index creation for respective algorithm. 
-196. Improve Gll visualization
+[done] 196. Improve Gll visualization
      1.   In descriptors table highlight not cells in row, but full row.
      2.   In some GSS figures, initial vertex rendered correctly as (<S`_start>,0), but in some figures it renders as v<number>. It is wrong. Right id first variant: (<S`_start>,0)
      3.   In Descriptors we use numbers of GSS nodes. Render this numbers in GSS nodes explicitly. Eg: <gss_v_number>: (<q>,<i>)
