@@ -547,13 +547,16 @@
       1.   Sppf contains 5 intermediate nodes. But final PathIndex contains only one IntermediateNode. In steps, path index does not contain all intermediate nodes. Why?
       2.   In some steps (eg step 5, step 12, step 19) no highlighted cirrent gss node.
       3.   No highlighting of modified path index cells each step.
-195. Add invarinat to GLL and RNGLR tests (accepts function). Invariant for accepted strings:
+195. [done] Add invarinat to GLL and RNGLR tests (accepts function). Invariant for accepted strings:
      1.   total numaber of nonterminals in path index not less than total numaber of SPPF nonterminal nodes
      2.   total numaber of terminals in path index not less than total numaber of SPPF terminal nodes
      3.   total numaber of epsilon-nonterminals in path index not less than total numaber of SPPF epsilon-nonterminal nodes
      4.   total numaber of intermediate nodes in path index not less than total numaber of SPPF intermediate nodes
      5.   If SPPF constriction adds some nodes not represented in PathIndex (excluding range nodes: range nodes are cells in Pathindex, so they are not expliitly represented ass cells content) --- remove respective code. All nodes in SPPF must be represented in PathIndex.
      6.   Run all GLL and RNGLR tests. All must pass. If something fail, fix apth index creation for respective algorithm. 
-
-196. GLL path index misses PIntermediate entries. For grammar `S -> a | S S | S S S` and input `a a a`, SPPF contains 5 intermediate nodes but path index has only one PIntermediate entry. Missing: PIntermediate(3,2) at cell (0,0)→(1,3), PIntermediate(2,1) at (0,0)→(3,2) and (0,0)→(3,3), PIntermediate(2,2) at (0,1)→(3,3). Compare with RNGLR path index for the same input — RNGLR must have these entries. Fix GLL to add them.
+196. Improve Gll visualization
+     1.   In descriptors table highlight not cells in row, but full row.
+     2.   In some GSS figures, initial vertex rendered correctly as (<S`_start>,0), but in some figures it renders as v<number>. It is wrong. Right id first variant: (<S`_start>,0)
+     3.   In Descriptors we use numbers of GSS nodes. Render this numbers in GSS nodes explicitly. Eg: <gss_v_number>: (<q>,<i>)
+     4.   Add to each step RSM with highlighted current state. Use the same color as for current gss node.
 
