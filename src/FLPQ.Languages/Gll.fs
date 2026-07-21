@@ -155,7 +155,19 @@ module GLL =
         // Collect initial state step
         let activeVerts, activeEdges = collectActiveGss gss
         let initAttempted = attemptedInStep
-        onStep (queue |> Seq.toList) activeVerts activeEdges pathIndex.Matrix changedCells 0 None None Set.empty initAttempted
+
+        onStep
+            (queue |> Seq.toList)
+            activeVerts
+            activeEdges
+            pathIndex.Matrix
+            changedCells
+            0
+            None
+            None
+            Set.empty
+            initAttempted
+
         attemptedInStep <- Set.empty<Descriptor>
 
         // Main loop
