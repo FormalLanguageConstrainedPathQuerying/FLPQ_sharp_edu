@@ -370,7 +370,7 @@ let ``GLL descriptors table TeX compiles`` () =
         GllStepVisualizer.descriptorsTableToTeX (Some desc1) [ desc1; desc2 ] (Set.ofList [ desc2 ])
 
     Assert.Contains(@"q & i & g & \mathcal{MR}", tex)
-    Assert.Contains(@"\colorbox{yellow!20}", tex)
+    Assert.Contains(@"\rowcolor{yellow!20}", tex)
     Assert.True(ExternalTools.compileTexStringWithTemplate colorTemplatePath tex)
 
 [<Fact>]
@@ -455,8 +455,24 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
     let inputTokens = input |> List.map Terminal
 
+    let flatExt = ersm.ExtendedRsm
+
+    let stateLabel state =
+        let info = flatExt.StateInfo.[state]
+        let (Nonterminal ntName) = info.BlockNonterminal
+        sprintf "<%s>" ntName
+
     let vizSteps =
-        GllStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps pathIndex inputTokens vertexCount
+        GllStepVisualizer.renderSteps
+            (SymbolTeX.toLaTeX string string)
+            stateLabel
+            string
+            string
+            ersm
+            steps
+            pathIndex
+            inputTokens
+            vertexCount
 
     let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
@@ -484,7 +500,9 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
         File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
         File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
         File.WriteAllText(Path.Combine(stepDir, "input.tex"), vizSteps.[idx].Input)
+        File.WriteAllText(Path.Combine(stepDir, "rsm_step.dot"), vizSteps.[idx].RsmDot)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_rsm.pdf" idx), true)
 
     File.WriteAllText(
         Path.Combine(tempDir, "input.tex"),

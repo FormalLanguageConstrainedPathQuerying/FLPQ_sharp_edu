@@ -122,7 +122,7 @@ let ``runGll step descriptors table has current descriptor highlighted`` () =
 
         if File.Exists table then
             let content = File.ReadAllText table
-            Assert.Contains(@"\colorbox{yellow!20}", content)
+            Assert.Contains(@"\rowcolor{yellow!20}", content)
 
     checkStep 5
     checkStep 12

@@ -193,6 +193,9 @@ module SummaryTeX =
         let gssPdfLine =
             [ includePdf (sprintf "dot_pdfs/%s_gss.pdf" (Path.GetFileName stepDir)); "" ]
 
+        let rsmPdfLine =
+            [ includePdf (sprintf "dot_pdfs/%s_rsm.pdf" (Path.GetFileName stepDir)); "" ]
+
         let pathIndexLines =
             match readIfExists (Path.Combine(stepDir, "path_index.tex")) with
             | Some tex -> [ section "Path Index"; wrapMathResized tex; "" ]
@@ -207,6 +210,7 @@ module SummaryTeX =
         @ descriptorsTableLines
         @ newDescriptorsLines
         @ gssPdfLine
+        @ rsmPdfLine
         @ pathIndexLines
         @ inputLines
 

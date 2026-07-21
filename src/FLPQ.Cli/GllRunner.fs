@@ -65,15 +65,31 @@ module GllRunner =
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "ext_rsm.dot")) (RsmDot.extendedRsmToDot string string ersm)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "ext_rsm.dot"))
+            (RsmDot.extendedRsmToDot string string ersm None)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "path_index.tex")) (PathIndexTeX.toTeX string string pathIndex)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
         // Write step-by-step visualization
+        let stateLabel (state: int) : string =
+            let info = flatExt.StateInfo.[state]
+            let (Nonterminal ntName) = info.BlockNonterminal
+            sprintf "<%s>" ntName
+
         let vizSteps =
-            GllStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps pathIndex inputTokens vertexCount
+            GllStepVisualizer.renderSteps
+                (SymbolTeX.toLaTeX string string)
+                stateLabel
+                string
+                string
+                ersm
+                steps
+                pathIndex
+                inputTokens
+                vertexCount
 
         Helpers.writeGllStepsVisualization outputDir vizSteps
 

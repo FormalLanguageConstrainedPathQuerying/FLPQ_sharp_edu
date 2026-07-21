@@ -110,10 +110,12 @@ module RsmDot =
     /// All states from all blocks (including the fresh start block S') are rendered
     /// with their global indices. Start states are green, final states have double border,
     /// and fresh start block nodes are blue.
+    /// If highlightedState is specified, that state is filled lightblue (same as current GSS node).
     let extendedRsmToDot
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
+        (highlightedState: int option)
         : string =
         let rsm = ersm.ExtendedRsm
         let freshStart = ersm.FreshStart
@@ -140,13 +142,16 @@ module RsmDot =
                     | false, _ -> false
 
             let isFinal = info.IsFinal
+            let isHighlighted = highlightedState |> Option.exists (fun hs -> hs = globalIdx)
 
             let label = sprintf "%s_%d" (nonterminalPrinter ntName) globalIdx
 
             let attrs =
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
 
-                if isStartState then
+                if isHighlighted then
+                    parts <- "style=filled" :: "fillcolor=lightblue" :: parts
+                elif isStartState then
                     parts <- "style=filled" :: "fillcolor=lightgreen" :: parts
 
                 if isFinal then
