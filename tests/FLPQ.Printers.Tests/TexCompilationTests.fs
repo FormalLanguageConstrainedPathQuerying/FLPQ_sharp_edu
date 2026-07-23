@@ -453,7 +453,6 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     let vertexCount = Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
-    let inputTokens = input |> List.map Terminal
 
     let vizSteps =
         GllStepVisualizer.renderSteps
@@ -463,8 +462,8 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
             ersm
             steps
             pathIndex
-            inputTokens
             vertexCount
+            graph
 
     let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
@@ -491,15 +490,14 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
         File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
         File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
         File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
-        File.WriteAllText(Path.Combine(stepDir, "input.tex"), vizSteps.[idx].Input)
+        File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
         File.WriteAllText(Path.Combine(stepDir, "rsm.dot"), vizSteps.[idx].RsmDot)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_rsm.pdf" idx), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
 
-    File.WriteAllText(
-        Path.Combine(tempDir, "input.tex"),
-        TeXRenderer.inputRow (SymbolTeX.terminalContent string) inputTokens -1
-    )
+    File.WriteAllText(Path.Combine(tempDir, "input.dot"), InputGraphDot.toDot string graph None)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "input.pdf"), true)
 
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)

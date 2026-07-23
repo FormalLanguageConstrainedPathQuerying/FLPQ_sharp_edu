@@ -71,6 +71,7 @@ What our standards and principles are, and why we chose them.
 - [DerivationTreeDot module](developer/derivation-tree-viz.md)
 - [LL and LR steps visualization](developer/visualization-types.md)
 - [GrammarTeX module](developer/grammar-tex.md)
+- [InputGraphDot module](developer/input-graph-dot.md)
 - [SummaryTeX module](developer/summary-tex.md)
 - [ExternalTools module](developer/external-tools.md)
 

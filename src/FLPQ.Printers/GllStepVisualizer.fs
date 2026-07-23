@@ -1,6 +1,7 @@
 namespace FLPQ.Printers
 
 open FLPQ.Languages
+open FLPQ.GraphAnalysis
 
 /// GLL parser step-by-step visualization.
 module GllStepVisualizer =
@@ -124,10 +125,9 @@ module GllStepVisualizer =
         (ersm: ExtendedRSM<'t, 'nt>)
         (step: GLLParsingStep<'t, 'nt>)
         (pathIndex: PathIndex<'t, 'nt>)
-        (inputTokens: Terminal<'t> list)
         (vertexCount: int)
+        (inputGraph: Graph<int, Option<'t>>)
         : GllVisualizationStep =
-        let termPrinter = TeXRenderer.termPrinterFromSymbolVisualizer symbolVisualizer
 
         let gssDot =
             GssDot.toDotFromSets
@@ -162,7 +162,7 @@ module GllStepVisualizer =
           NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
           GssDot = gssDot
           PathIndex = PathIndexTeX.toTeXWithHighlights string string stepPathIndex step.ChangedCells
-          Input = TeXRenderer.inputRow termPrinter inputTokens step.InputPosition
+          Input = InputGraphDot.toDot terminalPrinter inputGraph (Some step.InputPosition)
           RsmDot = rsmDot }
 
     /// Render a list of GLL parsing steps to visualization steps.
@@ -173,9 +173,9 @@ module GllStepVisualizer =
         (ersm: ExtendedRSM<'t, 'nt>)
         (steps: GLLParsingStep<'t, 'nt> list)
         (pathIndex: PathIndex<'t, 'nt>)
-        (inputTokens: Terminal<'t> list)
         (vertexCount: int)
+        (inputGraph: Graph<int, Option<'t>>)
         : GllVisualizationStep list =
         steps
         |> List.map (fun step ->
-            renderStep symbolVisualizer terminalPrinter nonterminalPrinter ersm step pathIndex inputTokens vertexCount)
+            renderStep symbolVisualizer terminalPrinter nonterminalPrinter ersm step pathIndex vertexCount inputGraph)

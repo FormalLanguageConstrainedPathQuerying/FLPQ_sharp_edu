@@ -16,6 +16,7 @@
     <Compile Include="SppfDot.fs" />
     <Compile Include="RsmDot.fs" />
     <Compile Include="GssDot.fs" />
+    <Compile Include="InputGraphDot.fs" />
     <Compile Include="GllStepVisualizer.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />

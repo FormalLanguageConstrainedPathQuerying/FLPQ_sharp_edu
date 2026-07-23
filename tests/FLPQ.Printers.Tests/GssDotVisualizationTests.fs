@@ -23,7 +23,6 @@ let private renderGssDots (ebnfText: string) (input: string list) : string list 
     let vertexCount = Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
-    let inputTokens = input |> List.map Terminal
 
     let vizSteps =
         GllStepVisualizer.renderSteps
@@ -33,8 +32,8 @@ let private renderGssDots (ebnfText: string) (input: string list) : string list 
             ersm
             steps
             pathIndex
-            inputTokens
             vertexCount
+            graph
 
     vizSteps |> List.map (fun s -> s.GssDot)
 

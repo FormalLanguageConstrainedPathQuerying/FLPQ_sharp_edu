@@ -76,6 +76,7 @@ module SummaryTeX =
             [ colorBox "yellow!20", "Current descriptor in descriptors table"
               colorBox "yellow", "Modified path index cells"
               colorBox "blue!20", "Current GSS node"
+              colorBox "green!30", "Current input position"
               colorBox "yellow!30", "Newly added GSS vertices"
               coloredEdge "red", "Newly added GSS edges"
               colorBox "green!20", "Genuinely new descriptors"
@@ -137,7 +138,7 @@ module SummaryTeX =
 
             | SummaryKind.GLL ->
                 [ section "Color Legend"; gllColorLegend (); "" ]
-                @ maybe "input.tex" "Input String" wrapMath
+                @ [ section "Input String"; includePdf "dot_pdfs/input.pdf"; "" ]
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
                 @ maybe "path_index.tex" "Path Index" wrapMathResized
@@ -202,9 +203,7 @@ module SummaryTeX =
             | None -> []
 
         let inputLines =
-            match readIfExists (Path.Combine(stepDir, "input.tex")) with
-            | Some tex -> [ wrapMath tex; "" ]
-            | None -> []
+            [ includePdf (sprintf "dot_pdfs/%s_input.pdf" (Path.GetFileName stepDir)); "" ]
 
         header
         @ descriptorsTableLines

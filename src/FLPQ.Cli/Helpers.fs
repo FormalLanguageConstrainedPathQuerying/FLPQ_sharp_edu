@@ -46,7 +46,7 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
             writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
-            writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
+            writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
             writeOutputFile (Path.Combine(stepDir, "rsm.dot")) steps.[idx].RsmDot
 
     let naturalSortKey (dirName: string) : int =

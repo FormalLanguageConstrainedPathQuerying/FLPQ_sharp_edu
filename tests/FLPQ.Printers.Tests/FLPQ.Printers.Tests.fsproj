@@ -24,6 +24,7 @@
     <Compile Include="TexCompilationTests.fs" />
     <Compile Include="GssDotTests.fs" />
     <Compile Include="GssDotVisualizationTests.fs" />
+    <Compile Include="InputGraphDotTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -42,9 +42,9 @@ let ``runGll produces grammar_ebnf.tex`` () =
     cleanup outDir
 
 [<Fact>]
-let ``runGll produces input.tex`` () =
+let ``runGll produces input.dot`` () =
     let outDir = runGllRunner "S -> a S b | eps" "a a b b"
-    let f = Path.Combine(outDir, "input.tex")
+    let f = Path.Combine(outDir, "input.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir
@@ -91,7 +91,7 @@ let ``runGll produces step visualization with descriptors table`` () =
     Assert.True(File.Exists(Path.Combine(step0Dir, "new_descriptors.tex")))
     Assert.True(File.Exists(Path.Combine(step0Dir, "gss.dot")))
     Assert.True(File.Exists(Path.Combine(step0Dir, "path_index.tex")))
-    Assert.True(File.Exists(Path.Combine(step0Dir, "input.tex")))
+    Assert.True(File.Exists(Path.Combine(step0Dir, "input.dot")))
 
     Assert.True(FileInfo(Path.Combine(step0Dir, "descriptors_table.tex")).Length > 0L)
     Assert.True(FileInfo(Path.Combine(step0Dir, "new_descriptors.tex")).Length > 0L)
@@ -127,4 +127,39 @@ let ``runGll step descriptors table has current descriptor highlighted`` () =
     checkStep 5
     checkStep 12
     checkStep 19
+    cleanup outDir
+
+[<Fact>]
+let ``runGll step input DOT has current vertex highlighted`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+
+    let checkStep stepNum =
+        let inputDot = Path.Combine(outDir, sprintf "step_%d" stepNum, "input.dot")
+
+        if File.Exists inputDot then
+            let content = File.ReadAllText inputDot
+            Assert.Contains("fillcolor=\"green!30\"", content)
+
+    checkStep 5
+    checkStep 12
+    checkStep 19
+    cleanup outDir
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
+let ``runGll input DOT compiles with graphviz`` () =
+    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+
+    let checkInputDot path =
+        let content = File.ReadAllText path
+        Assert.True(FLPQ.Printers.ExternalTools.compileDotString content)
+
+    checkInputDot (Path.Combine(outDir, "input.dot"))
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let inputDot = Path.Combine(stepDir, "input.dot")
+
+        if File.Exists inputDot then
+            checkInputDot inputDot
+
     cleanup outDir

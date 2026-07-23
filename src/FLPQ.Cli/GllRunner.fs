@@ -59,9 +59,7 @@ module GllRunner =
             (Path.Combine(outputDir, "grammar_ebnf.tex"))
             (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
 
-        Helpers.writeOutputFile
-            (Path.Combine(outputDir, "input.tex"))
-            (TeXRenderer.inputRow (SymbolTeX.terminalContent string) inputTokens -1)
+        Helpers.writeOutputFile (Path.Combine(outputDir, "input.dot")) (InputGraphDot.toDot string inputGraph None)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
 
@@ -82,8 +80,8 @@ module GllRunner =
                 ersm
                 steps
                 pathIndex
-                inputTokens
                 vertexCount
+                inputGraph
 
         Helpers.writeGllStepsVisualization outputDir vizSteps
 
