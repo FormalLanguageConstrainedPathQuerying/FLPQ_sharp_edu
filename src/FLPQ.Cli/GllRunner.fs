@@ -74,15 +74,9 @@ module GllRunner =
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
         // Write step-by-step visualization
-        let stateLabel (state: int) : string =
-            let info = flatExt.StateInfo.[state]
-            let (Nonterminal ntName) = info.BlockNonterminal
-            sprintf "<%s>" ntName
-
         let vizSteps =
             GllStepVisualizer.renderSteps
                 (SymbolTeX.toLaTeX string string)
-                stateLabel
                 string
                 string
                 ersm

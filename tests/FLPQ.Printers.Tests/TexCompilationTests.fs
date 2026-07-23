@@ -455,17 +455,9 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
     let inputTokens = input |> List.map Terminal
 
-    let flatExt = ersm.ExtendedRsm
-
-    let stateLabel state =
-        let info = flatExt.StateInfo.[state]
-        let (Nonterminal ntName) = info.BlockNonterminal
-        sprintf "<%s>" ntName
-
     let vizSteps =
         GllStepVisualizer.renderSteps
             (SymbolTeX.toLaTeX string string)
-            stateLabel
             string
             string
             ersm
