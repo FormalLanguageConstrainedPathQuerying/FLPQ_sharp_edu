@@ -506,8 +506,29 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     let rsmSppfPdfs =
         [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
 
+    let gllStepTemplatePath =
+        [ Path.Combine("data", "GLL_step_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "GLL_step_template.tex") ]
+        |> List.tryFind File.Exists
+        |> Option.defaultWith (fun () ->
+            failwithf
+                "Could not locate GLL_step_template.tex. Tried: %A"
+                [ Path.Combine("data", "GLL_step_template.tex")
+                  Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex") ])
+
+    let gllStepTemplate = File.ReadAllText gllStepTemplatePath
+
     let content =
-        SummaryTeX.buildContent "GLL" SummaryTeX.SummaryKind.GLL tempDir vizSteps.Length None None rsmSppfPdfs
+        SummaryTeX.buildContent
+            "GLL"
+            SummaryTeX.SummaryKind.GLL
+            tempDir
+            vizSteps.Length
+            None
+            None
+            rsmSppfPdfs
+            gllStepTemplate
         |> String.concat "\n"
 
     let summaryTemplatePath =

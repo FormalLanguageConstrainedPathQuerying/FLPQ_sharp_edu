@@ -111,6 +111,13 @@ module Summary =
 
             let algoKind = algorithmToKind algo
 
+            let gllStepTemplate =
+                if algoKind = SummaryTeX.SummaryKind.GLL then
+                    let templatePath = Helpers.findGllStepTemplate ()
+                    File.ReadAllText templatePath
+                else
+                    ""
+
             let content =
                 SummaryTeX.buildContent
                     (AlgorithmTypes.displayName algo)
@@ -120,6 +127,7 @@ module Summary =
                     lrAutomatonPdf
                     lrAutomatonTikz
                     rsmSppfPdfs
+                    gllStepTemplate
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

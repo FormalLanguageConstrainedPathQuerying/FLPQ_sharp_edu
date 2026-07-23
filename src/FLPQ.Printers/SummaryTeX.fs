@@ -176,42 +176,41 @@ module SummaryTeX =
 
         header @ pdfLine @ inputLines
 
-    /// Builds the content lines for a single GLL step.
-    /// Includes descriptors table TeX, GSS PDF, path index TeX (resized), and input TeX.
-    let gllStepSection (stepDir: string) (stepNum: int) : string list =
-        let header = [ section (sprintf "Step %d" stepNum) ]
+    /// Builds the content lines for a single GLL step using the side-by-side template layout.
+    let gllStepSection (stepDir: string) (stepNum: int) (template: string) : string list =
+        let header = section (sprintf "Step %d" stepNum)
 
-        let descriptorsTableLines =
+        let stepName = Path.GetFileName(stepDir)
+
+        let descriptorsTable =
             match readIfExists (Path.Combine(stepDir, "descriptors_table.tex")) with
-            | Some tex -> [ section "Descriptors Table"; wrapMath tex; "" ]
-            | None -> []
+            | Some tex -> tex
+            | None -> ""
 
-        let newDescriptorsLines =
+        let newDescriptors =
             match readIfExists (Path.Combine(stepDir, "new_descriptors.tex")) with
-            | Some tex -> [ section "New Descriptors"; wrapMath tex; "" ]
-            | None -> []
+            | Some tex -> tex
+            | None -> ""
 
-        let gssPdfLine =
-            [ includePdf (sprintf "dot_pdfs/%s_gss.pdf" (Path.GetFileName stepDir)); "" ]
-
-        let rsmPdfLine =
-            [ includePdf (sprintf "dot_pdfs/%s_rsm.pdf" (Path.GetFileName stepDir)); "" ]
-
-        let pathIndexLines =
+        let pathIndex =
             match readIfExists (Path.Combine(stepDir, "path_index.tex")) with
-            | Some tex -> [ section "Path Index"; wrapMathResized tex; "" ]
-            | None -> []
+            | Some tex -> tex
+            | None -> ""
 
-        let inputLines =
-            [ includePdf (sprintf "dot_pdfs/%s_input.pdf" (Path.GetFileName stepDir)); "" ]
+        let gssPdf = sprintf "dot_pdfs/%s_gss.pdf" stepName
+        let rsmPdf = sprintf "dot_pdfs/%s_rsm.pdf" stepName
+        let inputPdf = sprintf "dot_pdfs/%s_input.pdf" stepName
 
-        header
-        @ descriptorsTableLines
-        @ newDescriptorsLines
-        @ gssPdfLine
-        @ rsmPdfLine
-        @ pathIndexLines
-        @ inputLines
+        let filledTemplate =
+            template
+                .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                .Replace("__STEP_GSS_PDF__", gssPdf)
+                .Replace("__STEP_RSM_PDF__", rsmPdf)
+                .Replace("__STEP_INPUT_PDF__", inputPdf)
+                .Replace("__PATH_INDEX__", pathIndex)
+                .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+
+        [ header; filledTemplate; "" ]
 
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
@@ -223,6 +222,7 @@ module SummaryTeX =
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
         (rsmSppfPdfs: (string * string) list)
+        (gllStepTemplate: string)
         : string list =
         let prefix =
             [ section ("Algorithm: " + algo)
@@ -247,7 +247,7 @@ module SummaryTeX =
                 if isTableBased then
                     tableStepSection stepDir stepNum |> List.toArray
                 elif isGll then
-                    gllStepSection stepDir stepNum |> List.toArray
+                    gllStepSection stepDir stepNum gllStepTemplate |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList

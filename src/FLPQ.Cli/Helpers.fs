@@ -91,3 +91,22 @@ module Helpers =
         match candidates |> List.tryFind File.Exists with
         | Some p -> p
         | None -> failwithf "Could not locate tex_tikz_template.tex. Tried: %A" candidates
+
+    let findGllStepTemplate () : string =
+        let candidates =
+            [ Path.Combine("data", "GLL_step_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "GLL_step_template.tex"
+              ) ]
+
+        match candidates |> List.tryFind File.Exists with
+        | Some p -> p
+        | None -> failwithf "Could not locate GLL_step_template.tex. Tried: %A" candidates
