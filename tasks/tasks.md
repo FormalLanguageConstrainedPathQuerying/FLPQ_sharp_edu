@@ -565,4 +565,10 @@
      3.   Verify that in generated DOT file all edges has labael of form `rsm_state, input_position -> rsm_state, input_position`. Eg `1,0 -> 2,1`  Use unicode symbol for arrow. Current to dot serialization does not use this template, so fix it first.
      4.   Verify that in generated DOT file there is exactly one blue colored vertex.
      5.   Run all tests. They must pass. If no, fix GSS to dot generartion. 
+198. [done] Gll input visualization improvement. For visualizaiotn
+     1.   Convert linera string to graph: `abc` to  `0-[a]->1-[b]->2-[c]->3` Use existing Graph type
+     2.   Render graph to dot. 
+     3.   Use this graph in summary instead of current input representation. Highlight current position: vertex (get position form current descriptor)
+199. GLL step layout for summary.
+     1.  For summary use template `data/GLL_step_template.tex` to layout each step.
 
