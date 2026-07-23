@@ -45,8 +45,8 @@ let ``input graph DOT highlights current vertex`` () =
     let input = [ "a"; "b"; "c" ]
     let graph = GLL.stringToGraph input
     let dot = InputGraphDot.toDot string graph (Some 1)
-    Assert.Contains("fillcolor=\"green!30\"", dot)
-    Assert.Contains("v1 [label=\"1\", shape=circle, style=filled, fillcolor=\"green!30\"]", dot)
+    Assert.Contains("fillcolor=lightgreen", dot)
+    Assert.Contains("v1 [label=\"1\", shape=circle, style=filled, fillcolor=lightgreen]", dot)
 
 [<Fact>]
 let ``input graph DOT has edge labels for all terminals`` () =

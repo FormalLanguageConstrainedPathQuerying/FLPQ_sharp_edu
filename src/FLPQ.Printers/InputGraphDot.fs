@@ -25,8 +25,7 @@ module InputGraphDot =
 
             let attrs =
                 match currentVertex with
-                | Some cv when cv = i ->
-                    sprintf "label=\"%s\", shape=circle, style=filled, fillcolor=\"green!30\"" label
+                | Some cv when cv = i -> sprintf "label=\"%s\", shape=circle, style=filled, fillcolor=lightgreen" label
                 | _ -> sprintf "label=\"%s\", shape=circle" label
 
             sb.AppendLine(sprintf "  v%d [%s];" i attrs) |> ignore

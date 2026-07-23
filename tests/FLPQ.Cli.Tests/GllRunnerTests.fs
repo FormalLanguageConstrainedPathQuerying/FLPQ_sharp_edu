@@ -138,7 +138,7 @@ let ``runGll step input DOT has current vertex highlighted`` () =
 
         if File.Exists inputDot then
             let content = File.ReadAllText inputDot
-            Assert.Contains("fillcolor=\"green!30\"", content)
+            Assert.Contains("fillcolor=lightgreen", content)
 
     checkStep 5
     checkStep 12
