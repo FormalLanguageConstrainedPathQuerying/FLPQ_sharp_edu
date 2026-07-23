@@ -89,13 +89,16 @@ module ExternalTools =
                 let tokens = tokenizePlainLine line
 
                 match tokens with
-                | "node" :: _name :: _x :: _y :: _w :: _h :: label :: _style :: _shape :: _color :: fillcolor :: _ ->
-                    nodeCount <- nodeCount + 1
-                    nodeLabels <- label :: nodeLabels
-                    nodeFillColors <- fillcolor :: nodeFillColors
-                | "node" :: _name :: _x :: _y :: _w :: _h :: label :: _ ->
-                    nodeCount <- nodeCount + 1
-                    nodeLabels <- label :: nodeLabels
+                | "node" :: _ ->
+                    let labelIdx = 6
+
+                    if tokens.Length > labelIdx then
+                        nodeCount <- nodeCount + 1
+                        nodeLabels <- tokens.[labelIdx] :: nodeLabels
+
+                        let fillIdx = 10
+                        let fc = if tokens.Length > fillIdx then tokens.[fillIdx] else ""
+                        nodeFillColors <- fc :: nodeFillColors
                 | "edge" :: _tail :: _head :: n :: rest ->
                     let numPts = Int32.Parse n
 

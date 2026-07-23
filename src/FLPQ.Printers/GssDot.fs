@@ -33,6 +33,7 @@ module GssDot =
         // Collect active vertices (those with outgoing edges) and all edges
         let activeVertices = HashSet<int>()
         let allEdges: ResizeArray<int * int> = ResizeArray()
+        let allVertices = HashSet<int>()
 
         for fromIdx in 0 .. n - 1 do
             for toIdx in 0 .. n - 1 do
@@ -40,10 +41,12 @@ module GssDot =
                 | Some _ ->
                     activeVertices.Add(fromIdx) |> ignore
                     allEdges.Add((fromIdx, toIdx))
+                    allVertices.Add(fromIdx) |> ignore
+                    allVertices.Add(toIdx) |> ignore
                 | None -> ()
 
         // Vertex declarations
-        for vidx in activeVertices do
+        for vidx in allVertices do
             let label = vertexLabelPrinter vidx |> DerivationTreeDot.escapeLabel
 
             let isCurrent =
@@ -108,9 +111,7 @@ module GssDot =
         // Vertex declarations
         let renderedVertices = HashSet<int>()
 
-        for vidx in activeVertices do
-            renderedVertices.Add(vidx) |> ignore
-
+        let renderVertex (vidx: int) =
             let label = vertexLabelPrinter vidx |> DerivationTreeDot.escapeLabel
 
             let isCurrent =
@@ -138,15 +139,25 @@ module GssDot =
 
             sb.AppendLine(sprintf "  v%d [%s];" vidx attrs) |> ignore
 
+        for vidx in activeVertices do
+            renderedVertices.Add(vidx) |> ignore
+            renderVertex vidx
+
+        // Collect all vertices referenced by edges that are not in active set
+        let edgeVertices =
+            activeEdges
+            |> Set.fold (fun acc (from, to_) -> Set.add from (Set.add to_ acc)) Set.empty
+
+        for vidx in edgeVertices do
+            if not (renderedVertices.Contains(vidx)) then
+                renderedVertices.Add(vidx) |> ignore
+                renderVertex vidx
+
         // Ensure current vertex is always rendered even if not in active set
         match currentVertex with
         | Some cv when not (renderedVertices.Contains(cv)) ->
-            let label = vertexLabelPrinter cv |> DerivationTreeDot.escapeLabel
-
-            let attrs =
-                sprintf "label=\"%s\", shape=ellipse, style=filled, fillcolor=lightblue" label
-
-            sb.AppendLine(sprintf "  v%d [%s];" cv attrs) |> ignore
+            renderedVertices.Add(cv) |> ignore
+            renderVertex cv
         | _ -> ()
 
         // Edge declarations
