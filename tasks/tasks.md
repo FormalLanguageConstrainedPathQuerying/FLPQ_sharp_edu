@@ -554,9 +554,15 @@
      4.   total numaber of intermediate nodes in path index not less than total numaber of SPPF intermediate nodes
      5.   If SPPF constriction adds some nodes not represented in PathIndex (excluding range nodes: range nodes are cells in Pathindex, so they are not expliitly represented ass cells content) --- remove respective code. All nodes in SPPF must be represented in PathIndex.
      6.   Run all GLL and RNGLR tests. All must pass. If something fail, fix apth index creation for respective algorithm. 
-[done] 196. Improve Gll visualization
+196. [done] Improve Gll visualization
      1.   In descriptors table highlight not cells in row, but full row.
      2.   In some GSS figures, initial vertex rendered correctly as (<S`_start>,0), but in some figures it renders as v<number>. It is wrong. Right id first variant: (<S`_start>,0)
      3.   In Descriptors we use numbers of GSS nodes. Render this numbers in GSS nodes explicitly. Eg: <gss_v_number>: (<q>,<i>)
      4.   Add to each step RSM with highlighted current state. Use the same color as for current gss node.
+197. [done] Add tests on GSS to dot visualization (for GLL). Reuse existing dot reader. Extend it if necessary.
+     1.   Use all files produced by full trace visualization, not one isolated dot file for arbitrary step.
+     2.   Verify that in generated DOT file all vertices has labael of form `idx: (rsm_state, input_position)`. E.g `1: (2,0)` Current to dot serialization does not use this template, so fix it first.
+     3.   Verify that in generated DOT file all edges has labael of form `rsm_state, input_position -> rsm_state, input_position`. Eg `1,0 -> 2,1`  Use unicode symbol for arrow. Current to dot serialization does not use this template, so fix it first.
+     4.   Verify that in generated DOT file there is exactly one blue colored vertex.
+     5.   Run all tests. They must pass. If no, fix GSS to dot generartion. 
 
