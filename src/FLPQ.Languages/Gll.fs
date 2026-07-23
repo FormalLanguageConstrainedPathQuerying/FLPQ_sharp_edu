@@ -163,7 +163,7 @@ module GLL =
             pathIndex.Matrix
             changedCells
             0
-            None
+            (Some gssIdx)
             None
             Set.empty
             initAttempted
