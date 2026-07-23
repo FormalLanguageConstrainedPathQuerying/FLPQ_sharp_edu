@@ -374,7 +374,6 @@ module GLL =
 
             // Collect step after descriptor processing
             let activeVerts, activeEdges = collectActiveGss gss
-            let currentHandled = handled |> Set.ofSeq
             let stepAttempted = attemptedInStep
 
             onStep
@@ -386,10 +385,10 @@ module GLL =
                 v0
                 (Some s0)
                 (Some desc)
-                currentHandled
+                handledSnapshot
                 stepAttempted
 
-            handledSnapshot <- currentHandled
+            handledSnapshot <- handled |> Set.ofSeq
             changedCells <- Set.empty<int * int>
             attemptedInStep <- Set.empty<Descriptor>
 
