@@ -13,7 +13,8 @@ module ExternalTools =
         { NodeCount: int
           EdgeCount: int
           NodeLabels: string list
-          EdgeLabels: string list }
+          EdgeLabels: string list
+          NodeFillColors: string list }
 
     let private tokenizePlainLine (line: string) : string list =
         let mutable tokens = []
@@ -82,14 +83,22 @@ module ExternalTools =
             let mutable edgeCount = 0
             let mutable nodeLabels = []
             let mutable edgeLabels = []
+            let mutable nodeFillColors = []
 
             for line in out.Split('\n', StringSplitOptions.RemoveEmptyEntries) do
                 let tokens = tokenizePlainLine line
 
                 match tokens with
-                | "node" :: _name :: _x :: _y :: _w :: _h :: label :: _ ->
-                    nodeCount <- nodeCount + 1
-                    nodeLabels <- label :: nodeLabels
+                | "node" :: _ ->
+                    let labelIdx = 6
+
+                    if tokens.Length > labelIdx then
+                        nodeCount <- nodeCount + 1
+                        nodeLabels <- tokens.[labelIdx] :: nodeLabels
+
+                        let fillIdx = 10
+                        let fc = if tokens.Length > fillIdx then tokens.[fillIdx] else ""
+                        nodeFillColors <- fc :: nodeFillColors
                 | "edge" :: _tail :: _head :: n :: rest ->
                     let numPts = Int32.Parse n
 
@@ -104,7 +113,8 @@ module ExternalTools =
             { NodeCount = nodeCount
               EdgeCount = edgeCount
               NodeLabels = List.rev nodeLabels
-              EdgeLabels = List.rev edgeLabels }
+              EdgeLabels = List.rev edgeLabels
+              NodeFillColors = List.rev nodeFillColors }
         finally
             File.Delete(tempFile)
 

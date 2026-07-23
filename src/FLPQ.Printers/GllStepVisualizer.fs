@@ -119,7 +119,6 @@ module GllStepVisualizer =
     /// Render a single GLL parsing step to visualization output.
     let renderStep
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
-        (stateLabelPrinter: int -> string)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -135,13 +134,13 @@ module GllStepVisualizer =
                 (fun idx ->
                     let state = idx / vertexCount
                     let vertex = idx % vertexCount
-                    sprintf "v%d: (%s,%d)" idx (stateLabelPrinter state) vertex)
+                    sprintf "%d: (%d,%d)" idx state vertex)
                 (fun (from, to_) ->
                     let s1 = from / vertexCount
                     let v1 = from % vertexCount
                     let s2 = to_ / vertexCount
                     let v2 = to_ % vertexCount
-                    sprintf "%s,%d→%s,%d" (stateLabelPrinter s1) v1 (stateLabelPrinter s2) v2)
+                    sprintf "%d,%d → %d,%d" s1 v1 s2 v2)
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
@@ -169,7 +168,6 @@ module GllStepVisualizer =
     /// Render a list of GLL parsing steps to visualization steps.
     let renderSteps
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
-        (stateLabelPrinter: int -> string)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -180,13 +178,4 @@ module GllStepVisualizer =
         : GllVisualizationStep list =
         steps
         |> List.map (fun step ->
-            renderStep
-                symbolVisualizer
-                stateLabelPrinter
-                terminalPrinter
-                nonterminalPrinter
-                ersm
-                step
-                pathIndex
-                inputTokens
-                vertexCount)
+            renderStep symbolVisualizer terminalPrinter nonterminalPrinter ersm step pathIndex inputTokens vertexCount)

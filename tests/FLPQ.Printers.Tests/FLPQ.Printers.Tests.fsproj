@@ -23,6 +23,7 @@
     <Compile Include="PathIndexTeXTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
     <Compile Include="GssDotTests.fs" />
+    <Compile Include="GssDotVisualizationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
