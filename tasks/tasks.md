@@ -569,6 +569,5 @@
      1.   Convert linera string to graph: `abc` to  `0-[a]->1-[b]->2-[c]->3` Use existing Graph type
      2.   Render graph to dot. 
      3.   Use this graph in summary instead of current input representation. Highlight current position: vertex (get position form current descriptor)
-199. GLL step layout for summary.
-     1.  For summary use template `data/GLL_step_template.tex` to layout each step.
+199. GLL step content layout for summary. For summary, for each step content use template `data/GLL_step_template.tex` to layout each step.
 
