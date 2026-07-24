@@ -569,5 +569,9 @@
      1.   Convert linera string to graph: `abc` to  `0-[a]->1-[b]->2-[c]->3` Use existing Graph type
      2.   Render graph to dot. 
      3.   Use this graph in summary instead of current input representation. Highlight current position: vertex (get position form current descriptor)
-199. GLL step content layout for summary. For summary, for each step content use template `data/GLL_step_template.tex` to layout each step.
+199. [done] GLL step content layout for summary.
+     1.   For summary, for each step content use template `data/GLL_step_template.tex` to layout each step.
+     2.   Reuse all currently generated parts "as-is", just use prvided teplate to layout parts.
+200. Add tests on GLL steps visualization
+201. [done] Refactor RNGLR algorithm to classical descriptor-based working set structure. Replace per-vertex pending queues and recursive cascade with a single global descriptor queue (descriptors to handle) and handled descriptors set. Main loop takes next descriptor from queue, consults LR table for actions (shift/reduce), performs all defined actions, and enqueues new descriptors for future processing. Remove recursive processNode cascade by enqueuing descriptors for reduction targets instead. Remove the depth guard (1000). All existing tests must pass without changes.
 
