@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli, TestHelpers
 **Book reference:** Section sec:CFPQ_RNGLR (Chapter 6)
 
-> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution using a layered shift-then-reduce approach with per-vertex fixpoint. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
+> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution using per-vertex `RnglrDescriptor` worklist queues with a recursive shift-then-reduce cascade. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
 
 ## Contents
 
@@ -129,7 +129,10 @@ Checks whether the input graph is accepted. Inspects the path index cell `(start
 | StoredStates in mutable array outside Graph type | Same reason as GLL: value-copy structs prevent in-place mutation via vertexMap |
 | Vertices pre-allocated as |Q_lr| * |V| | All possible GSS vertices exist from initialization |
 | Deduplication of cascades via processedGotos | Prevents reprocessing same (reduceNt, predecessor) pair at same GSS vertex |
-| Layered shift-then-reduce with per-vertex fixpoint | Ensures completeness at each input position before advancing |
+| Per-vertex fixpoint (not a single global queue) | storedStates are consumed during shifts and set during product BFS. If a descriptor at vertex v+1 is processed before all descriptors at vertex v complete, storedStates at v+1 may be incomplete — later-set states are lost because the vertex is already handled. Per-vertex queues guarantee all v-work completes before v+1 begins |
+| Recursive cascade via processNode ↔ processReduction | storedStates deposited by earlier reductions at the same vertex are consumed by shifts within the same cascade. A flat descriptor queue (non-recursive) interleaves shift targets at vNext with cascaded reduction descriptors at v, violating the per-vertex ordering invariant. The cascade ensures reduction-then-shift ordering at each level of recursion |
+| RnglrDescriptor struct type (not raw tuples) | Replaces `int*int` tuples in pending queues and dedup sets. Unlike GLL's Descriptor, omits `GssIdx` (derivable as `lrState * vertexCount + vertex`) and `MatchedRange` (range tracking is done by product BFS storedStates propagation, not accumulated in the descriptor) |
+| Depth guard (1000) on processNode | Prevents infinite recursion in pathological grammars with unbounded epsilon-reduction chains |
 
 ## Book Reference
 
