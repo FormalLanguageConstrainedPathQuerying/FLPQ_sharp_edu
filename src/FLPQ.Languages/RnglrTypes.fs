@@ -11,6 +11,14 @@ type RnglrItem<'nt when 'nt: comparison> =
     { BlockNonterminal: Nonterminal<'nt>
       RsmState: int }
 
+/// RNGLR descriptor — a parsing position (LR automaton state, input graph vertex)
+/// in the working set. Unlike GLL descriptors, the GSS vertex is derivable from
+/// (LrState, Vertex) via lrState * vertexCount + vertex, and range tracking is
+/// handled by the product BFS (storedStates mechanism), not carried in the descriptor.
+/// Book reference: sec:CFPQ_RNGLR.
+[<Struct>]
+type RnglrDescriptor = { LrState: int; Vertex: int }
+
 /// RNGLR parsing table built from an RSM.
 /// Action maps (automatonState, symbol) to an LR action.
 /// Goto maps (automatonState, nonterminal) to an automaton state.

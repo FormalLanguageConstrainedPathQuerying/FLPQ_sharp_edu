@@ -53,6 +53,13 @@ type RnglrItem<'nt> = { BlockNonterminal: Nonterminal<'nt>; RsmState: int }
 ```
 An LR item over an RSM: a position in a specific RSM block's DFA. Unlike grammar-based LR items (production + dot position), RSM items track which block nonterminal and which state within that block.
 
+### RnglrDescriptor (struct)
+```fsharp
+[<Struct>]
+type RnglrDescriptor = { LrState: int; Vertex: int }
+```
+A descriptor in the RNGLR worklist: a parsing position (LR automaton state, input graph vertex). Unlike GLL descriptors, the GSS vertex is derivable as `lrState * vertexCount + vertex`, and range tracking is handled by the product BFS (storedStates mechanism). Serves as the worklist item in per-vertex pending queues and deduplication sets.
+
 ### RnglrTable
 ```fsharp
 type RnglrTable<'t, 'nt> =

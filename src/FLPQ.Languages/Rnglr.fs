@@ -120,11 +120,6 @@ module Rnglr =
             | Symbol.N nt -> Some(RsmSymbol.RNonterm nt)
             | Symbol.Epsilon -> None
 
-        /// Performs product BFS over (gssIdx, invState) pairs with propagated range-end coordinates.
-        /// Each BFS node carries (gssIdx, invState, rangeEndState, rangeEndVertex) where
-        /// rangeEnd identifies the block's final state and position for which this BFS was started.
-        /// At each forward step, adds PTerminal entries and PIntermediate entries at the correct granularity.
-        /// Also updates storedStates at intermediate GSS vertices for the passing mechanism.
         let productBfs
             (invData: InvBlockData<'t, 'nt>)
             (starts: (int * int * int * int) list)
@@ -209,10 +204,6 @@ module Rnglr =
 
             predecessors
 
-        /// Finds predecessors by running product BFS from (gssIdx, block final states).
-        /// Each BFS node carries the range end (final state, final vertex) coordinates
-        /// so that PIntermediate entries are added at the correct granularity during traversal.
-        /// StoredStates updates are handled inside productBfs.
         let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : (int * int * int * int) list =
             match Map.tryFind nt invBlockData with
             | Some invData ->
@@ -231,8 +222,7 @@ module Rnglr =
                     preds
             | None -> []
 
-
-        let pending = Array.init vertexCount (fun _ -> Queue<int * int>())
+        let pending = Array.init vertexCount (fun _ -> Queue<RnglrDescriptor>())
 
         let processedGotos: Set<Nonterminal<'nt> * int> array = Array.create lrK Set.empty
 
@@ -269,7 +259,6 @@ module Rnglr =
                     processNode gotoTarget vEnd (depth + 1)
             | None -> ()
 
-        /// Processes reductions and shifts at a GSS node (lrState, vertex v), cascading recursively.
         and processNode (lrState: int) (v: int) (depth: int) : unit =
             if depth > 1000 then
                 failwith "Reduction cascade depth exceeded"
@@ -303,18 +292,20 @@ module Rnglr =
                                     processReduction storedNt storedInv lrStatePre gssIdxPre vPre vNext depth
                             | None -> ()
 
-                        pending.[vNext].Enqueue(targetLrState, targetGssIdx)
+                        pending.[vNext].Enqueue
+                            { LrState = targetLrState
+                              Vertex = vNext }
                     | _ -> ()
 
-        pending.[0].Enqueue(0, linearIdx 0 0)
+        pending.[0].Enqueue { LrState = 0; Vertex = 0 }
 
         for v in 0 .. vertexCount - 1 do
-            let processed = HashSet<int * int>()
+            let processed = HashSet<RnglrDescriptor>()
 
             while pending.[v].Count > 0 do
-                let (lrState, _gssIdx) = pending.[v].Dequeue()
+                let desc = pending.[v].Dequeue()
 
-                if processed.Add((lrState, v)) then
-                    processNode lrState v 0
+                if processed.Add(desc) then
+                    processNode desc.LrState v 0
 
         pathIndex
