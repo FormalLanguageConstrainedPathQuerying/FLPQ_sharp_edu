@@ -22,8 +22,8 @@ module RnglrRunner =
         let inputGraph = GLL.stringToGraph rawTokens
         let vertexCount = Graph.vertexCount inputGraph
 
-        let pathIndex =
-            Rnglr.buildPathIndex (ExtendedRSM.freshStart extRsm) extRsm inputGraph
+        let pathIndex, steps =
+            Rnglr.buildPathIndexWithSteps (ExtendedRSM.freshStart extRsm) extRsm inputGraph
 
         let accepted = PathIndex.isAccepted pathIndex extRsm vertexCount
 
@@ -76,5 +76,10 @@ module RnglrRunner =
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
+        let vizSteps =
+            RnglrStepVisualizer.renderSteps string string lrTable lrStateCount steps pathIndex vertexCount inputGraph
+
+        Helpers.writeRnglrStepsVisualization outputDir vizSteps
+
         let status = if accepted then "Accepted" else "Rejected"
-        printfn "RNGLR: %s (%d tokens) — %s" status inputTokens.Length status
+        printfn "RNGLR: %s (%d tokens, %d steps) — %s" status inputTokens.Length steps.Length status

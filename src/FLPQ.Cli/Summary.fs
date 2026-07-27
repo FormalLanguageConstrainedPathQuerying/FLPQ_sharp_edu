@@ -104,7 +104,9 @@ module Summary =
                         [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
                               ("RSM", "dot_pdfs/rsm_blocks.pdf")
                           if File.Exists(Path.Combine(vizDir, "sppf.dot")) then
-                              ("SPPF", "dot_pdfs/sppf.pdf") ]
+                              ("SPPF", "dot_pdfs/sppf.pdf")
+                          if File.Exists(Path.Combine(vizDir, "lr_automaton.dot")) then
+                              ("LR Automaton", "dot_pdfs/lr_automaton.pdf") ]
 
                     (None, None, pdfs)
                 | _ -> (None, None, [])
@@ -114,6 +116,13 @@ module Summary =
             let gllStepTemplate =
                 if algoKind = SummaryTeX.SummaryKind.GLL then
                     let templatePath = Helpers.findGllStepTemplate ()
+                    File.ReadAllText templatePath
+                else
+                    ""
+
+            let rnglrStepTemplate =
+                if algoKind = SummaryTeX.SummaryKind.RNGLR then
+                    let templatePath = Helpers.findRnglrStepTemplate ()
                     File.ReadAllText templatePath
                 else
                     ""
@@ -128,6 +137,7 @@ module Summary =
                     lrAutomatonTikz
                     rsmSppfPdfs
                     gllStepTemplate
+                    rnglrStepTemplate
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

@@ -529,6 +529,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
             None
             rsmSppfPdfs
             gllStepTemplate
+            ""
         |> String.concat "\n"
 
     let summaryTemplatePath =

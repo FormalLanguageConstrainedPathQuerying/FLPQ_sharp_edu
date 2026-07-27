@@ -1,0 +1,4 @@
+digraph GSS {
+  rankdir=LR;
+  compound=true;
+}

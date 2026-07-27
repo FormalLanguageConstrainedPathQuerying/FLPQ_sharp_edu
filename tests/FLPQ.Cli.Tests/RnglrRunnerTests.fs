@@ -70,3 +70,23 @@ let ``runRnglr produces sppf.dot`` () =
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir
+
+[<Fact>]
+let ``runRnglr produces step visualization files`` () =
+    let outDir = runRnglrRunner "S -> a a" "a a"
+    let step0Dir = Path.Combine(outDir, "step_0")
+
+    let expected =
+        [ "descriptors_table.tex"
+          "new_descriptors.tex"
+          "gss.dot"
+          "path_index.tex"
+          "input.dot"
+          "lr_automaton.dot" ]
+
+    for f in expected do
+        let path = Path.Combine(step0Dir, f)
+        Assert.True(File.Exists path, sprintf "Missing: %s" f)
+        Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
+
+    cleanup outDir

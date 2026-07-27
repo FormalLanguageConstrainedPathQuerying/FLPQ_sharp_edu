@@ -25,6 +25,7 @@
     <Compile Include="GssDotTests.fs" />
     <Compile Include="GssDotVisualizationTests.fs" />
     <Compile Include="InputGraphDotTests.fs" />
+    <Compile Include="RnglrStepVisualizationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

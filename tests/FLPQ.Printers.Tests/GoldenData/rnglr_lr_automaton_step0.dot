@@ -1,0 +1,10 @@
+digraph LRAutomaton {
+  rankdir=LR;
+  s0 [style=filled, fillcolor=green, label="State 0\nS / 0\nS' / 0"];
+  s1 [label="State 1\nS / 1"];
+  s2 [peripheries=2, label="State 2\nS' / 1"];
+  s3 [label="State 3\nS / 2"];
+  s0 -> s1 [label="\"a\""];
+  s0 -> s2 [label="S"];
+  s1 -> s3 [label="\"a\""];
+}

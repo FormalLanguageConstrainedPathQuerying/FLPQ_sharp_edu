@@ -116,3 +116,21 @@ module RnglrGSS =
                   for edge in NonEmptySet.toSeq nes do
                       (toIdx, edge.EdgeSymbol)
               | None -> () ]
+
+/// A single step snapshot during RNGLR execution.
+/// Captures per-vertex pending queues, active GSS elements, path index state,
+/// LR automaton position, and descriptor accounting.
+type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
+    { PendingQueues: RnglrDescriptor list[]
+      ActiveGssVertices: Set<int>
+      ActiveGssEdges: Set<int * int>
+      NewGssVertices: Set<int>
+      NewGssEdges: Set<int * int>
+      PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
+      ChangedCells: Set<int * int>
+      InputVertex: int
+      CurrentLrState: int option
+      CurrentDescriptor: RnglrDescriptor option
+      HandledDescriptors: Set<RnglrDescriptor>
+      NewDescriptors: Set<RnglrDescriptor>
+      AttemptedDescriptors: Set<RnglrDescriptor> }

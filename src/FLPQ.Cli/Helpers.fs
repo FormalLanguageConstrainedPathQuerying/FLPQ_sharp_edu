@@ -49,6 +49,17 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
             writeOutputFile (Path.Combine(stepDir, "rsm.dot")) steps.[idx].RsmDot
 
+    let writeRnglrStepsVisualization (outputDir: string) (steps: RnglrStepVisualizer.RnglrVisualizationStep list) =
+        for idx in 0 .. steps.Length - 1 do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
+
+            writeOutputFile (Path.Combine(stepDir, "descriptors_table.tex")) steps.[idx].DescriptorsTable
+            writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
+            writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
+            writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
+            writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
+            writeOutputFile (Path.Combine(stepDir, "lr_automaton.dot")) steps.[idx].LrAutomatonDot
+
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
@@ -110,3 +121,22 @@ module Helpers =
         match candidates |> List.tryFind File.Exists with
         | Some p -> p
         | None -> failwithf "Could not locate GLL_step_template.tex. Tried: %A" candidates
+
+    let findRnglrStepTemplate () : string =
+        let candidates =
+            [ Path.Combine("data", "RNGLR_step_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "RNGLR_step_template.tex"
+              ) ]
+
+        match candidates |> List.tryFind File.Exists with
+        | Some p -> p
+        | None -> failwithf "Could not locate RNGLR_step_template.tex. Tried: %A" candidates

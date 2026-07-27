@@ -89,6 +89,30 @@ module SummaryTeX =
 
         sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
 
+    let private rnglrColorLegend () : string =
+        let colorBox (color: string) =
+            sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
+
+        let coloredEdge (color: string) =
+            sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
+
+        let rows =
+            [ colorBox "yellow!20", "Current descriptor in descriptors table"
+              colorBox "yellow", "Modified path index cells"
+              colorBox "lightblue!20", "Current GSS node"
+              colorBox "green!30", "Current input position"
+              colorBox "yellow!30", "Newly added GSS vertices"
+              coloredEdge "red", "Newly added GSS edges"
+              colorBox "green!20", "Genuinely new descriptors"
+              colorBox "red!20", "Already-handled descriptors attempted again" ]
+
+        let rowLines =
+            rows
+            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
+            |> String.concat "\n"
+
+        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+
     /// Enumerates step directories in the given visualization directory,
     /// sorted by step number. Returns an empty array if the directory does not exist.
     let collectSteps (vizDir: string) : string[] =
@@ -144,7 +168,7 @@ module SummaryTeX =
                 @ maybe "path_index.tex" "Path Index" wrapMathResized
 
             | SummaryKind.RNGLR ->
-                maybe "input.tex" "Input String" wrapMath
+                [ section "Color Legend"; rnglrColorLegend (); "" ]
                 @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapCenter
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
@@ -212,6 +236,41 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
+    let rnglrStepSection (stepDir: string) (stepNum: int) (template: string) : string list =
+        let header = section (sprintf "Step %d" stepNum)
+
+        let stepName = Path.GetFileName(stepDir)
+
+        let descriptorsTable =
+            match readIfExists (Path.Combine(stepDir, "descriptors_table.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let newDescriptors =
+            match readIfExists (Path.Combine(stepDir, "new_descriptors.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let pathIndex =
+            match readIfExists (Path.Combine(stepDir, "path_index.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let gssPdf = sprintf "dot_pdfs/%s_gss.pdf" stepName
+        let lrAutomatonPdf = sprintf "dot_pdfs/%s_lr_automaton.pdf" stepName
+        let inputPdf = sprintf "dot_pdfs/%s_input.pdf" stepName
+
+        let filledTemplate =
+            template
+                .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                .Replace("__STEP_GSS_PDF__", gssPdf)
+                .Replace("__STEP_LR_AUTOMATON_PDF__", lrAutomatonPdf)
+                .Replace("__STEP_INPUT_PDF__", inputPdf)
+                .Replace("__PATH_INDEX__", pathIndex)
+                .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+
+        [ header; filledTemplate; "" ]
+
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
     let buildContent
@@ -223,6 +282,7 @@ module SummaryTeX =
         (lrAutomatonTikz: string option)
         (rsmSppfPdfs: (string * string) list)
         (gllStepTemplate: string)
+        (rnglrStepTemplate: string)
         : string list =
         let prefix =
             [ section ("Algorithm: " + algo)
@@ -234,6 +294,7 @@ module SummaryTeX =
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
         let isGll = algoKind = SummaryKind.GLL
+        let isRnglr = algoKind = SummaryKind.RNGLR
 
         let stepLines =
             collectSteps vizDir
@@ -248,6 +309,8 @@ module SummaryTeX =
                     tableStepSection stepDir stepNum |> List.toArray
                 elif isGll then
                     gllStepSection stepDir stepNum gllStepTemplate |> List.toArray
+                elif isRnglr then
+                    rnglrStepSection stepDir stepNum rnglrStepTemplate |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList

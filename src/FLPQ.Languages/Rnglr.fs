@@ -34,10 +34,21 @@ module Rnglr =
           InvTrans: Map<int * RsmSymbol<'t, 'nt>, int list>
           GlobalOffset: int }
 
-    let buildPathIndex
-        (_freshStart: Nonterminal<'nt>)
+    let private buildPathIndexCore
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
+        (onStep:
+            RnglrDescriptor list[]
+                -> Set<int>
+                -> Set<int * int>
+                -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
+                -> Set<int * int>
+                -> int
+                -> int option
+                -> RnglrDescriptor option
+                -> Set<RnglrDescriptor>
+                -> Set<RnglrDescriptor>
+                -> unit)
         : PathIndex<'t, 'nt> =
         let extRsm = ersm.ExtendedRsm
         let lrTable = RnglrLR.buildLR0Table extRsm
@@ -85,6 +96,8 @@ module Rnglr =
 
         let linearIdx (state: int) (vertex: int) = state * vertexCount + vertex
 
+        let mutable changedCells = Set.empty<int * int>
+
         let addToIndex
             (fromState: int)
             (fromVertex: int)
@@ -98,6 +111,7 @@ module Rnglr =
 
             if not (Set.contains entry current) then
                 Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
+                changedCells <- Set.add (fromIdx, toIdx) changedCells
 
         let getReduceNtWithStates (lrState: int) : (Nonterminal<'nt> * int) list =
             let items = lrTable.Automaton.States.[lrState]
@@ -297,6 +311,41 @@ module Rnglr =
                               Vertex = vNext }
                     | _ -> ()
 
+        let collectActiveGss () : Set<int> * Set<int * int> =
+            let n = gss.GssGraph.VertexMap.Count
+            let mutable vertices = Set.empty<int>
+            let mutable edges = Set.empty<int * int>
+
+            for fromIdx in 0 .. n - 1 do
+                for toIdx in 0 .. n - 1 do
+                    match Matrix.get gss.GssGraph.Edges fromIdx toIdx with
+                    | Some _ ->
+                        vertices <- Set.add fromIdx vertices
+                        edges <- Set.add (fromIdx, toIdx) edges
+                    | None -> ()
+
+            vertices, edges
+
+        let pendingSnapshot () =
+            Array.init vertexCount (fun v -> pending.[v] |> List.ofSeq)
+
+        let mutable handledAccum = Set.empty<RnglrDescriptor>
+
+        let stepChanged = changedCells
+        changedCells <- Set.empty<int * int>
+
+        onStep
+            (pendingSnapshot ())
+            Set.empty
+            Set.empty
+            (Matrix.copy pathIndex.Matrix)
+            stepChanged
+            -1
+            None
+            None
+            handledAccum
+            Set.empty
+
         pending.[0].Enqueue { LrState = 0; Vertex = 0 }
 
         for v in 0 .. vertexCount - 1 do
@@ -306,6 +355,84 @@ module Rnglr =
                 let desc = pending.[v].Dequeue()
 
                 if processed.Add(desc) then
+                    let handledBefore = handledAccum
+                    handledAccum <- Set.add desc handledAccum
+
                     processNode desc.LrState v 0
 
+                    let activeVerts, activeEdges = collectActiveGss ()
+
+                    let stepChanged = changedCells
+                    changedCells <- Set.empty<int * int>
+
+                    let attemptedThisStep = handledAccum - handledBefore
+
+                    onStep
+                        (pendingSnapshot ())
+                        activeVerts
+                        activeEdges
+                        (Matrix.copy pathIndex.Matrix)
+                        stepChanged
+                        v
+                        (Some desc.LrState)
+                        (Some desc)
+                        handledAccum
+                        attemptedThisStep
+
         pathIndex
+
+    let buildPathIndex
+        (_freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (inputGraph: Graph<int, Option<'t>>)
+        : PathIndex<'t, 'nt> =
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ -> ())
+
+    let buildPathIndexWithSteps
+        (freshStart: Nonterminal<'nt>)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (inputGraph: Graph<int, Option<'t>>)
+        : PathIndex<'t, 'nt> * RnglrParsingStep<'t, 'nt> list =
+        let steps = ResizeArray<RnglrParsingStep<'t, 'nt>>()
+        let mutable prevVertices = Set.empty<int>
+        let mutable prevEdges = Set.empty<int * int>
+        let mutable prevAttempted = Set.empty<RnglrDescriptor>
+
+        let onStep
+            pendingQueues
+            activeVerts
+            activeEdges
+            piMatrix
+            changedCells
+            inputVertex
+            currentLrState
+            currentDescriptor
+            handledAccum
+            attemptedThisStep
+            =
+            let newVertices = Set.difference activeVerts prevVertices
+            let newEdges = Set.difference activeEdges prevEdges
+            let newDescriptors = Set.difference attemptedThisStep prevAttempted
+
+            prevVertices <- activeVerts
+            prevEdges <- activeEdges
+            prevAttempted <- Set.union prevAttempted attemptedThisStep
+
+            steps.Add(
+                { PendingQueues = pendingQueues
+                  ActiveGssVertices = activeVerts
+                  ActiveGssEdges = activeEdges
+                  NewGssVertices = newVertices
+                  NewGssEdges = newEdges
+                  PathIndexMatrix = piMatrix
+                  ChangedCells = changedCells
+                  InputVertex = inputVertex
+                  CurrentLrState = currentLrState
+                  CurrentDescriptor = currentDescriptor
+                  HandledDescriptors = handledAccum
+                  NewDescriptors = newDescriptors
+                  AttemptedDescriptors = attemptedThisStep }
+            )
+
+        buildPathIndexCore ersm inputGraph onStep
+        |> fun pi -> pi, steps.ToArray() |> List.ofArray
