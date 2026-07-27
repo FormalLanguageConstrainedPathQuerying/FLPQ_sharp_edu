@@ -605,5 +605,5 @@
          - Adaptable (same structure, new function): GLL's `descriptorsTableToTeX` → RNGLR version (2 columns vs 4), GLL's `newDescriptorsToTeX` → RNGLR version (simpler descriptor format), GLL's `descriptorToTeX` → RNGLR version, `GssDot.toDotFromSets` → RNGLR label printers, `SummaryTeX.gllStepSection` → `rnglrStepSection` (different placeholder names).
          - New required: `RnglrParsingStep` type, `Rnglr.buildPathIndexWithSteps`, `RnglrStepVisualizer` module + `RnglrVisualizationStep` type, `Helpers.writeRnglrStepsVisualization`, `Helpers.findRnglrStepTemplate`, `RNGLR_step_template.tex`, LR automaton DOT with state highlighting wrapper, RNGLR GSS label printers.
     8.   All existing RNGLR tests must pass without changes. Step visualization must not alter algorithm behavior — `buildPathIndex` remains unchanged, `buildPathIndexWithSteps` must produce identical `PathIndex` output.
-203. Add solution level `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn all warnings to errors. Compile all projects, fix all problems.
+203. [done] Add solution level `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn all warnings to errors. Compile all projects, fix all problems.
 
