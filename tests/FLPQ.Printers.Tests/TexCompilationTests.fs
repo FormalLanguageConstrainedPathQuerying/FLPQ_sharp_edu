@@ -54,7 +54,7 @@ let ``LR step input TeX compiles with lualatex`` () =
     let g = Grammar.parseGrammar "S -> a S\nS -> a"
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "a a"
 
     let _, steps = LRParser.parseWithSteps aug table tokens
@@ -186,7 +186,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
 
     let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
@@ -203,7 +203,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
     let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildLR0Table aug
+    let table = LRParser.buildLR0Table aug Grammar.eoiSymbol
 
     let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 
@@ -239,7 +239,7 @@ F -> x
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
 
     let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
 

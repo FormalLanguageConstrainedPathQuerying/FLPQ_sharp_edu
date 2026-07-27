@@ -25,8 +25,8 @@ module LRRunner =
 
         let table =
             match algo with
-            | AlgorithmTypes.LR0 -> LRParser.buildLR0Table aug
-            | AlgorithmTypes.SLR1 -> LRParser.buildSLR1Table aug
+            | AlgorithmTypes.LR0 -> LRParser.buildLR0Table aug Grammar.eoiSymbol
+             | AlgorithmTypes.SLR1 -> LRParser.buildSLR1Table aug Grammar.eoiSymbol
             | AlgorithmTypes.CLR1 -> LRParser.buildCLR1Table aug
             | _ -> failwithf "Unexpected algorithm in LR runner: %A" algo
 

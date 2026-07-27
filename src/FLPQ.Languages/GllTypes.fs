@@ -127,15 +127,6 @@ module GSS =
                       (toIdx, ei)
               | None -> () ]
 
-        let n = gss.Graph.VertexMap.Count
-
-        [ for toIdx in 0 .. n - 1 do
-              match Matrix.get gss.Graph.Edges gssIdx toIdx with
-              | Some nes ->
-                  for ei in NonEmptySet.toSeq nes do
-                      (toIdx, ei)
-              | None -> () ]
-
 /// Shared graph utilities for GLL/RNGLR path-index construction.
 module GraphHelpers =
 

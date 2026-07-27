@@ -180,7 +180,7 @@ module PropertyTests =
 module CrossParserPropertyTests =
 
     let private llTable = LLParser.buildTable grammar1 1
-    let private slrTable = LRParser.buildSLR1Table augGrammar1
+    let private slrTable = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Grammar1Agreement =

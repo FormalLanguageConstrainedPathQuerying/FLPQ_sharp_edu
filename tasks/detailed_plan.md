@@ -1,81 +1,119 @@
-# Detailed Plan: Task 196 — Improve GLL visualization
+# Detailed Plan: Task 203 — TreatWarningsAsErrors
 
 ## Task Description
 
-1. In descriptors table highlight full row instead of individual cells.
-2. Fix GSS vertex labels: use nonterminal names from RsmStateInfo instead of raw state index numbers.
-3. Show GSS node numbers explicitly in vertex labels (e.g., `v5: (<S'_start>,0)`).
-4. Add per-step RSM with highlighted current state, same color as current GSS node.
+Add solution level `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn all warnings to errors. Compile all projects, fix all problems.
 
----
+## Warning Inventory (21 unique warnings)
 
-### S1: Highlight full row instead of individual cells in descriptors table
+| File | Line | Code | Count | Description |
+|------|------|------|-------|-------------|
+| LRParser.fs | 299, 349 | FS0064 | 4 | `'t` and `'nt` constrained to `string` via `Grammar.eoiSymbol` |
+| PathIndex.fs | 255, 322 | FS0064 | 2 | `'nt` constrained to `string` via `sprintf` with `Nonterminal<'nt>` |
+| Sppf.fs | 381, 645 | FS0064 | 2 | `'nt` constrained to `string` via `sprintf` / literal string |
+| RnglrStepVisualizer.fs | 107, 189, 219 | FS0064 | 3 | `'nt` constrained to `string` via pattern match on `Nonterminal<'nt>` |
+| GllTypes.fs | 123 | FS0020 | 1 | Implicitly ignored `(int * GssEdgeInfo) list` |
+| GllTests.fs | 8 lines | FS0020 | 8 | Implicitly ignored `bool` from `accepts` calls |
+| TokenizerTests.fs | 108 | FS0686 | 1 | Explicit type arg on non-generic function |
 
-**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — `descriptorsTableToTeX` function;
-         `data/tex_color_template.tex` — add `[table]` option to `\usepackage{xcolor}`
-**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update assertion
-**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
+## Subtasks
 
-**Spec:**
-- In `GllStepVisualizer.descriptorsTableToTeX` (line 65-74), replace per-cell `\colorbox{yellow!20}` wrapping with `\rowcolor{yellow!20}` command before the row's `\\`.
-- The `xcolor` package with `table` option provides `\rowcolor`. Summary template already has `\usepackage[table]{xcolor}`.
-- For `tex_color_template.tex`: change `\usepackage{xcolor}` to `\usepackage[table]{xcolor}` so `\rowcolor` works in compilation tests.
-- Update the `renderRow` function: when `isCurrent`, emit `\rowcolor{yellow!20}` before the row content, followed by `q & i & g & mr \\`. When not current, just `q & i & g & mr \\`.
-- The `\rowcolor` command colors from its position to the end of the current row, so it must appear at the start of the row (before any `&`).
-- Update test assertion: `\colorbox{yellow!20}` → `\rowcolor{yellow!20}`.
+### S1: Create Directory.Build.props with TreatWarningsAsErrors
 
----
+**Code:** New file `Directory.Build.props` at project root
+**Tests:** None
+**Docs:** None
 
-### S2: Fix GSS vertex labels to show nonterminal names and GSS node numbers
+Create `Directory.Build.props`:
+```xml
+<Project>
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
+```
 
-**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — `renderStep` and `renderSteps` functions
-**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — add GSS DOT compilation test
-**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
+### S2: Fix FS0064 in LRParser.fs (lines 299, 349)
 
-**Spec:**
-- Add `stateLabelPrinter: int -> string` parameter to `renderStep` and `renderSteps`.
-- In `renderStep`, modify the vertex label printer (lines 132-135): change from `sprintf "(%d,%d)" state vertex` to `sprintf "v%d: (%s,%d)" idx (stateLabelPrinter state) vertex`.
-- The `stateLabelPrinter` function maps global RSM state index → nonterminal name. For the initial state of the fresh start block S', the label should look like `<S'_start>`. For other states: `<nonterminalName>`.
-- For edge labels (lines 136-141): use `stateLabelPrinter` there too for the state parts.
-- In `GllRunner.runGll`: pre-compute the state label mapping from `flatExt.StateInfo`:
-  ```
-  let stateLabel state =
-      let info = flatExt.StateInfo.[state]
-      let (Nonterminal ntName) = info.BlockNonterminal
-      sprintf "<%s>" ntName
-  ```
-  Pass this as the `stateLabelPrinter` parameter.
-- Add a new compiled test: generate GSS DOT for a simple grammar and verify that vertex labels contain `v<number>: (<...>,<number>)` pattern and compile with Graphviz.
+**Root cause:** `Grammar.eoiSymbol` has type `Symbol<string, string>`. Used inside generic functions `buildLR0Table` and `buildSLR1Table`, constraining `'t` and `'nt` to `string`.
 
----
+**Fix:** Change function signatures from `Grammar<'t, 'nt>` to `Grammar<string, string>`. All callers already use `Grammar<string, string>`.
 
-### S3: Add per-step RSM with highlighted current state
+### S3: Fix FS0064 in PathIndex.fs (lines 255, 322)
 
-**Code:** `src/FLPQ.Printers/RsmDot.fs` — add `extendedRsmToDotWithHighlight` function;
-         `src/FLPQ.Printers/GllStepVisualizer.fs` — add `RsmDot` field to `GllVisualizationStep`, update `renderStep`;
-         `src/FLPQ.Cli/GllRunner.fs` — pass extended RSM to `renderSteps`;
-         `src/FLPQ.Cli/Helpers.fs` — write `rsm_step.dot` per step;
-         `src/FLPQ.Printers/SummaryTeX.fs` — include per-step RSM PDF in `gllStepSection`
-**Tests:** `tests/FLPQ.Printers.Tests/RsmDotTests.fs` — add compilation test for highlighted RSM DOT;
-         `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update `GLL merged summary TeX compiles` to include rsm_step.dot files
-**Docs:** `docs/developer/guides/documentation-conventions.md` — check if any relevant docs
+**Root cause:** `sprintf` with `Nonterminal<'nt>` value directly.
 
-**Spec:**
-- Add new function `extendedRsmToDotWithHighlight` in `RsmDot.fs`: same signature as `extendedRsmToDot` plus `highlightedState: int option`. When `highlightedState = Some s`, render state `s` with `fillcolor=lightblue, style=filled` (same color as current GSS node).
-- Add `RsmDot: string` field to `GllVisualizationStep` type.
-- In `GllStepVisualizer.renderStep`: generate the per-step RSM DOT:
-  ```
-  let rsmDot =
-      let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
-      RsmDot.extendedRsmToDotWithHighlight terminalPrinter nonterminalPrinter currentState ersm
-  ```
-- `renderStep` needs access to the extended RSM for state rendering. Pass either the `ExtendedRSM` or the `RsmStateInfo[]` array. For cleanliness, pass the `ExtendedRSM` since `extendedRsmToDotWithHighlight` needs it.
-- Update `GllRunner.runGll` to pass the extended RSM to `renderSteps`.
-- Update `Helpers.writeGllStepsVisualization` to write `rsm_step.dot` in each step directory.
-- Update `SummaryTeX.gllStepSection` to include the per-step RSM PDF:
-  ```
-  let rsmPdfLine = [ includePdf (sprintf "dot_pdfs/%s_rsm.pdf" (Path.GetFileName stepDir)); "" ]
-  ```
-- Add `rsmPdfLine` to the step section output in `gllStepSection`.
-- In the `GLL merged summary TeX compiles` test: add `rsm_step.dot` file writes and stub PDF copies for per-step RSM.
-- Add a Graphviz compilation test for `extendedRsmToDotWithHighlight` in `RsmDotTests.fs`: build an extended RSM from `S -> a | eps`, render with a highlighted state, verify Graphviz compiles.
+**Fix:** Pattern-match to extract inner value before sprintf:
+- Line 255: `(Nonterminal nt)` already bound above, use `nt` in sprintf (it's already the inner value)
+- Line 322: `(Nonterminal ntName)` already bound, use `ntName` (already the inner value)
+
+Wait - looking at the code again, line 255 uses `nt` which is from `PathIndexEntry.PEpsilonNonterminal nt` where `nt : Nonterminal<'nt>`. Need to destructure.
+Line 322 uses `ntName` which is already destructured from `(Nonterminal ntName) = originalStart`.
+
+Actually the warning says line 255 col 37 - that's the `nt` in the sprintf format argument position. The variable `nt` has type `Nonterminal<'nt>` and sprintf treats it as a string. Need to destructure.
+
+For line 322, `ntName` is already the inner value (string), but the warning points to col 27 which is `(vertexCount - 1)`. Wait, that doesn't make sense. Let me re-read... The warning says "The type variable 'nt has been constrained to be type 'string" at line 322 col 27. Col 27 on line 322 is `ntName`. But `ntName` was extracted from `(Nonterminal ntName) = originalStart` where `originalStart : Nonterminal<'nt>`. So `ntName : 'nt`. When passed to sprintf, it constrains `'nt` to `string`.
+
+Fix: Both need explicit string conversion. Since these are validation functions used only with string grammars, add `[<EntryPoint>]`-style constraint or use `box/unbox` pattern. Actually, the simplest fix is to add a type annotation `'nt = string` to these validation functions since they're only called with string grammars.
+
+Better approach: Add `when 'nt : equality` constraint isn't enough. The real fix is to either:
+a) Constrain these specific functions to `'nt = string`
+b) Use a printer function parameter
+
+Since these are test/validation functions, option (a) is appropriate.
+
+### S4: Fix FS0064 in Sppf.fs (lines 381, 645)
+
+**Line 381:** `sprintf "...%s" i ntName` where `ntName : 'nt`. Same pattern - validation function.
+**Line 645:** `Node(Nonterminal "$root", childList)` - literal string `"$root"` constrains `'nt` to `string`.
+
+Fix for 381: Constrain validation function to `'nt = string` or destructure `Nonterminal<'nt>`.
+Fix for 645: This is in `enumerateTrees` which creates a root node. The `"$root"` is a sentinel name. Since this function is only called with string-based SPPFs, constrain appropriately.
+
+### S5: Fix FS0064 in RnglrStepVisualizer.fs (lines 107, 189, 219)
+
+**Line 107:** `let (Nonterminal ntName) = item.BlockNonterminal` then `sprintf "%s / %d" ntName item.RsmState` - `ntName : 'nt` passed to sprintf.
+**Lines 189, 219:** These are at function call sites where type inference flows back.
+
+Fix: The `lrAutomatonToDot` function uses `sprintf` with the extracted `'nt` value. Since this is a printer/visualizer, it already takes printer functions (`terminals`, `nonterminals`). Use the `nonterminals` printer instead of sprintf directly.
+
+### S6: Fix FS0020 in GllTypes.fs (line 123)
+
+**Issue:** List expression result implicitly ignored in `pop` function.
+**Fix:** The first list comprehension at line 123 is dead code (followed by a second identical one at line 132). Remove the duplicate.
+
+### S7: Fix FS0020 in GllTests.fs (8 lines)
+
+**Issue:** `accepts` returns `bool` that's implicitly ignored in property tests.
+**Fix:** Change `accepts rsm input` to `accepts rsm input |> ignore` or use as the property result directly.
+
+Looking at the pattern:
+```fsharp
+try
+    accepts (TestHelpers.grammarToRsm grammarG1) input
+    true
+with _ ->
+    false
+```
+The `accepts` call result is ignored, then `true` is returned. Since `accepts` already validates tree leaves internally and returns `bool`, the fix is to use `accepts ... || true` or just `accepts ...` (since if it returns true, the property passes; if false, we still return true because the string might legitimately be rejected).
+
+Actually, looking more carefully: these are property tests where the contract is "if accepted, tree yield matches input". The `accepts` function already validates this internally. So the property should just be `accepts rsm input` - it returns true if accepted (and tree validated), false if rejected. Either outcome is valid for the property.
+
+Fix: Replace `accepts ... ; true` with `accepts ... || true` to use the bool result.
+
+Wait, that's not right either. The intent is: "for any string, either it's accepted (with correct tree) or rejected - both are fine". So the property should always return true unless an exception occurs. The `accepts` call is the validation. Fix: `let _ = accepts ... ; true` or `accepts ... |> ignore ; true`.
+
+Simplest fix: `accepts rsm input |> ignore`
+
+### S8: Fix FS0686 in TokenizerTests.fs (line 108)
+
+**Issue:** `Tokenizer.terminalsToSymbols<int, string> []` - explicit type args on a function that doesn't declare them.
+**Fix:** Remove explicit type args and use a let binding for inference:
+```fsharp
+let result : Symbol<int, string> list = Tokenizer.terminalsToSymbols []
+Assert.Empty(result)
+```
+
+### S9: Verify clean build, run tests, merge
+
+Build with TreatWarningsAsErrors, verify 0 warnings. Run all tests. Code review. Merge to dev.

@@ -225,6 +225,7 @@ module PathIndex =
     /// Checks the no-epsilon invariant: if the RSM has no states that are simultaneously
     /// start and final, then the path index must not contain PEpsilonNonterminal entries.
     let checkNoEpsilonInvariant
+        (ntPrinter: 'nt -> string)
         (pi: PathIndex<'t, 'nt>)
         (blockStart: Map<Nonterminal<'nt>, int>)
         (finalStates: Set<int>)
@@ -252,7 +253,7 @@ module PathIndex =
                                     fromVertex
                                     toState
                                     toVertex
-                                    nt
+                                    (ntPrinter nt)
 
                             errors <- msg :: errors
                         | _ -> ()
@@ -282,6 +283,7 @@ module PathIndex =
     /// where S is the original grammar's start nonterminal.
     /// q is the S' block start state, p = q+1 is the target of q -[S]-> p.
     let checkAcceptanceInvariant
+        (ntPrinter: 'nt -> string)
         (pi: PathIndex<'t, 'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (vertexCount: int)
@@ -319,4 +321,4 @@ module PathIndex =
                           startGlobalState
                           finalGlobalState
                           (vertexCount - 1)
-                          ntName ]
+                           (ntPrinter ntName) ]

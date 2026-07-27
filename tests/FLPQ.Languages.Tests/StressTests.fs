@@ -140,6 +140,6 @@ module LRStress =
         let grammar = multiLevelGrammar 35
         let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
         let aug = LRAutomaton.augmentGrammar freshStart grammar
-        let table = LRParser.buildLR0Table aug
+        let table = LRParser.buildLR0Table aug Grammar.eoiSymbol
         Assert.True(Map.count table.Action > 0)
         Assert.True(Map.count table.GoTo > 0)

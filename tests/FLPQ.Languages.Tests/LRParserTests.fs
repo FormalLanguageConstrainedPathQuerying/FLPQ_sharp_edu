@@ -42,11 +42,11 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar1 strings`` () =
-            testAcceptReject LRParser.buildSLR1Table augGrammar1 grammar1Accept grammar1Reject
+            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar1 grammar1Accept grammar1Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar1`` () =
-            testLeaves LRParser.buildSLR1Table augGrammar1 grammar1Accept
+            testLeaves (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar1 grammar1Accept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar1 strings`` () =
@@ -60,8 +60,8 @@ module FactTests =
 
         [<Fact>]
         let ``grammar2 is not LR(k) — has conflicts in all table types`` () =
-            let lr0 = LRParser.buildLR0Table augGrammar2
-            let slr1 = LRParser.buildSLR1Table augGrammar2
+            let lr0 = LRParser.buildLR0Table augGrammar2 Grammar.eoiSymbol
+            let slr1 = LRParser.buildSLR1Table augGrammar2 Grammar.eoiSymbol
             let clr1 = LRParser.buildCLR1Table augGrammar2
 
             Assert.NotEmpty(lr0.Conflicts)
@@ -70,7 +70,7 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) table can be built for grammar2`` () =
-            let table = LRParser.buildSLR1Table augGrammar2
+            let table = LRParser.buildSLR1Table augGrammar2 Grammar.eoiSymbol
             Assert.NotNull(table.Action)
             Assert.NotNull(table.GoTo)
 
@@ -84,11 +84,11 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar3 strings`` () =
-            testAcceptReject LRParser.buildSLR1Table augGrammar3 grammar3Accept grammar3Reject
+            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar3 grammar3Accept grammar3Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar3`` () =
-            testLeaves LRParser.buildSLR1Table augGrammar3 grammar3Accept
+            testLeaves (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar3 grammar3Accept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar3 strings`` () =
@@ -100,7 +100,7 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar3`` () =
-            testNoConflicts LRParser.buildSLR1Table augGrammar3
+            testNoConflicts (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar3
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar3`` () =
@@ -108,17 +108,17 @@ module FactTests =
 
         [<Fact>]
         let ``LR(0) table has conflicts for grammar3`` () =
-            testHasConflicts LRParser.buildLR0Table augGrammar3
+            testHasConflicts (fun g -> LRParser.buildLR0Table g Grammar.eoiSymbol) augGrammar3
 
     module Grammar7 =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar7 strings`` () =
-            testAcceptReject LRParser.buildSLR1Table augGrammar7 exprAccept exprReject
+            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar7 exprAccept exprReject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar7`` () =
-            testLeaves LRParser.buildSLR1Table augGrammar7 exprAccept
+            testLeaves (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar7 exprAccept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar7 strings`` () =
@@ -130,7 +130,7 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar7`` () =
-            testNoConflicts LRParser.buildSLR1Table augGrammar7
+            testNoConflicts (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar7
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar7`` () =
@@ -140,11 +140,11 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar8 strings`` () =
-            testAcceptReject LRParser.buildSLR1Table augGrammar8 exprAccept exprReject
+            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar8 exprAccept exprReject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar8`` () =
-            testLeaves LRParser.buildSLR1Table augGrammar8 exprAccept
+            testLeaves (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar8 exprAccept
 
         [<Fact>]
         let ``CLR(1) parser accepts and rejects grammar8 strings`` () =
@@ -156,7 +156,7 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) table has no conflicts for grammar8`` () =
-            testNoConflicts LRParser.buildSLR1Table augGrammar8
+            testNoConflicts (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar8
 
         [<Fact>]
         let ``CLR(1) table has no conflicts for grammar8`` () =
@@ -166,8 +166,8 @@ module FactTests =
 
         [<Fact>]
         let ``ambiguous grammar6 has conflicts in all table types`` () =
-            let lr0 = LRParser.buildLR0Table augGrammar6
-            let slr1 = LRParser.buildSLR1Table augGrammar6
+            let lr0 = LRParser.buildLR0Table augGrammar6 Grammar.eoiSymbol
+            let slr1 = LRParser.buildSLR1Table augGrammar6 Grammar.eoiSymbol
             let clr1 = LRParser.buildCLR1Table augGrammar6
 
             Assert.NotEmpty(lr0.Conflicts)
@@ -207,7 +207,7 @@ module FactTests =
     module CrossParserTests =
 
         let private testAgree augGrammar slrBuilder clrBuilder accept reject =
-            let slr = slrBuilder augGrammar
+            let slr = slrBuilder augGrammar Grammar.eoiSymbol
             let clr = clrBuilder augGrammar
 
             for s in accept @ reject do
@@ -249,7 +249,7 @@ module PropertyTests =
 
     module Grammar3PropertyTests =
 
-        let private slrTable = LRParser.buildSLR1Table augGrammar3
+        let private slrTable = LRParser.buildSLR1Table augGrammar3 Grammar.eoiSymbol
         let private clrTable = LRParser.buildCLR1Table augGrammar3
 
         let private leavesMatch augGrammar table (s: string) =
@@ -284,7 +284,7 @@ module PropertyTests =
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Grammar1PropertyTests =
 
-        let private slrTable = LRParser.buildSLR1Table augGrammar1
+        let private slrTable = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
         let private clrTable = LRParser.buildCLR1Table augGrammar1
 
         let private leavesMatch augGrammar table (s: string) =
@@ -315,7 +315,7 @@ module PropertyTests =
 
 module CrossParserPropertyTests =
 
-    let private slrGrammar1 = LRParser.buildSLR1Table augGrammar1
+    let private slrGrammar1 = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
     let private clrGrammar3 = LRParser.buildCLR1Table augGrammar3
 
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
@@ -367,7 +367,7 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``LR(0) table for grammar3 has shift-reduce conflicts`` () =
-        let table = LRParser.buildLR0Table augGrammar3
+        let table = LRParser.buildLR0Table augGrammar3 Grammar.eoiSymbol
 
         Assert.NotEmpty(table.Conflicts)
 
@@ -381,7 +381,7 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``LR(0) table for grammar1 has shift-reduce conflicts`` () =
-        let table = LRParser.buildLR0Table augGrammar1
+        let table = LRParser.buildLR0Table augGrammar1 Grammar.eoiSymbol
 
         Assert.NotEmpty(table.Conflicts)
 
@@ -396,13 +396,13 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``Ambiguous grammar6 has conflicts in LR(0) table`` () =
-        let table = LRParser.buildLR0Table augGrammar6
+        let table = LRParser.buildLR0Table augGrammar6 Grammar.eoiSymbol
         Assert.True(table.Conflicts.Length > 0)
 
     [<Fact>]
     let ``SLR(1) resolves LR(0) conflicts for grammar3`` () =
-        let lr0 = LRParser.buildLR0Table augGrammar3
-        let slr1 = LRParser.buildSLR1Table augGrammar3
+        let lr0 = LRParser.buildLR0Table augGrammar3 Grammar.eoiSymbol
+        let slr1 = LRParser.buildSLR1Table augGrammar3 Grammar.eoiSymbol
 
         let lr0ConflictCount = lr0.Conflicts.Length
         let slr1ConflictCount = slr1.Conflicts.Length
@@ -412,8 +412,8 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``SLR(1) resolves LR(0) conflicts for grammar1`` () =
-        let lr0 = LRParser.buildLR0Table augGrammar1
-        let slr1 = LRParser.buildSLR1Table augGrammar1
+        let lr0 = LRParser.buildLR0Table augGrammar1 Grammar.eoiSymbol
+        let slr1 = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
 
         let lr0ConflictCount = lr0.Conflicts.Length
         let slr1ConflictCount = slr1.Conflicts.Length
@@ -424,9 +424,9 @@ module ConflictBehaviorTests =
     [<Fact>]
     let ``SLR(1) table has no conflicts for LR(1) grammars`` () =
         let tables =
-            [ LRParser.buildSLR1Table augGrammar3
-              LRParser.buildSLR1Table augGrammar7
-              LRParser.buildSLR1Table augGrammar8 ]
+            [ LRParser.buildSLR1Table augGrammar3 Grammar.eoiSymbol
+              LRParser.buildSLR1Table augGrammar7 Grammar.eoiSymbol
+              LRParser.buildSLR1Table augGrammar8 Grammar.eoiSymbol ]
 
         for table in tables do
             Assert.Empty(table.Conflicts)
@@ -443,8 +443,8 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``Non-LR grammar2 has conflicts in all table types`` () =
-        let lr0 = LRParser.buildLR0Table augGrammar2
-        let slr1 = LRParser.buildSLR1Table augGrammar2
+        let lr0 = LRParser.buildLR0Table augGrammar2 Grammar.eoiSymbol
+        let slr1 = LRParser.buildSLR1Table augGrammar2 Grammar.eoiSymbol
         let clr1 = LRParser.buildCLR1Table augGrammar2
 
         Assert.NotEmpty(lr0.Conflicts)
@@ -453,7 +453,7 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``LR(0) table for grammar7 has shift-reduce on epsilon`` () =
-        let table = LRParser.buildLR0Table augGrammar7
+        let table = LRParser.buildLR0Table augGrammar7 Grammar.eoiSymbol
 
         let hasEpsilonReduce =
             table.Conflicts
@@ -467,7 +467,7 @@ module ConflictBehaviorTests =
 
     [<Fact>]
     let ``Conflict states reference valid state indices`` () =
-        let lr0 = LRParser.buildLR0Table augGrammar6
+        let lr0 = LRParser.buildLR0Table augGrammar6 Grammar.eoiSymbol
 
         let autStateCount =
             match lr0.Automaton with

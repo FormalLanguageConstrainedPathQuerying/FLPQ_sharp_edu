@@ -26,7 +26,7 @@ module TestHelpers =
 
             match finalStates with
             | Some fs ->
-                match PathIndex.checkNoEpsilonInvariant pi bs fs with
+                match PathIndex.checkNoEpsilonInvariant id pi bs fs with
                 | Ok() -> ()
                 | Error errors ->
                     let msg =
@@ -52,7 +52,7 @@ module TestHelpers =
 
             failwith msg
 
-        match Sppf.validateNonterminalChildren sppf with
+        match Sppf.validateNonterminalChildren id sppf with
         | Ok() -> ()
         | Error errors ->
             let msg =
@@ -185,7 +185,7 @@ module TestHelpers =
             false
         else
 
-            match PathIndex.checkAcceptanceInvariant pathIndex ersm vc with
+            match PathIndex.checkAcceptanceInvariant id pathIndex ersm vc with
             | Ok() -> ()
             | Error errors ->
                 let msg =
@@ -227,7 +227,7 @@ module TestHelpers =
                 sppf.RootIndices
                 |> List.tryHead
                 |> Option.map (fun rootIdx ->
-                    let trees = Sppf.enumerateTrees sppf rootIdx
+                    let trees = Sppf.enumerateTrees (Nonterminal "$root") sppf rootIdx
 
                     trees |> Seq.head)
 

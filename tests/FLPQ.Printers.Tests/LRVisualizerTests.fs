@@ -19,7 +19,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
@@ -45,7 +45,7 @@ let ``LR step visualization includes input position marker`` () =
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "a a b a b b"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
@@ -67,7 +67,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "x + x"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
@@ -89,7 +89,7 @@ let ``LR step visualization includes state frames with sN labels`` () =
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps

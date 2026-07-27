@@ -17,7 +17,7 @@ let ``LR steps dot grammar3 aa`` () =
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "a a"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
@@ -40,7 +40,7 @@ let ``LR steps dot grammar7 x+x`` () =
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
-    let table = LRParser.buildSLR1Table aug
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
     let tokens = Tokenizer.tokenizeTerminals "x + x"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps

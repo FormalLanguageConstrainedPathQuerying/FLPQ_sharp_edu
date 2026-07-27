@@ -263,7 +263,7 @@ module LRParser =
                 | None -> ()
 
     /// Build the LR(0) parsing table from an augmented grammar.
-    let buildLR0Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
+    let buildLR0Table (aug: Grammar<'t, 'nt>) (eoiSymbol: Symbol<'t, 'nt>) : LRTable<'t, 'nt> =
         let augmentedRule = aug.Rules.[0]
         let lr0 = LRAutomaton.buildLR0 aug
         let states = lr0.States
@@ -296,9 +296,9 @@ module LRParser =
                         | Some LRAction.Accept -> ()
                         | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
 
-                        match Map.tryFind (stateIdx, Grammar.eoiSymbol) action with
-                        | Some _ -> ()
-                        | None -> action <- Map.add (stateIdx, Grammar.eoiSymbol) LRAction.Accept action
+                        match Map.tryFind (stateIdx, eoiSymbol) action with
+                         | Some _ -> ()
+                         | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
 
                     else
                         let ruleIdx =
@@ -320,7 +320,7 @@ module LRParser =
           Automaton = LR0 lr0 }
 
     /// Build the SLR(1) parsing table from an augmented grammar.
-    let buildSLR1Table (aug: Grammar<'t, 'nt>) : LRTable<'t, 'nt> =
+    let buildSLR1Table (aug: Grammar<'t, 'nt>) (eoiSymbol: Symbol<'t, 'nt>) : LRTable<'t, 'nt> =
         let augmentedRule = aug.Rules.[0]
         let lr0 = LRAutomaton.buildLR0 aug
         let states = lr0.States
@@ -346,9 +346,9 @@ module LRParser =
                         | Some LRAction.Accept -> ()
                         | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
 
-                        match Map.tryFind (stateIdx, Grammar.eoiSymbol) action with
-                        | Some _ -> ()
-                        | None -> action <- Map.add (stateIdx, Grammar.eoiSymbol) LRAction.Accept action
+                        match Map.tryFind (stateIdx, eoiSymbol) action with
+                         | Some _ -> ()
+                         | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
 
                     else
                         let ruleIdx =

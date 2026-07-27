@@ -360,7 +360,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
-    let validateNonterminalChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
+    let validateNonterminalChildren (ntPrinter: 'nt -> string) (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []
 
@@ -378,7 +378,7 @@ module Sppf =
                     let (Nonterminal ntName) = nt
 
                     errors <-
-                        sprintf "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1" i ntName
+                        sprintf "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1" i (ntPrinter ntName)
                         :: errors
                 else
                     for childIdx in singleChildTargets do
@@ -394,7 +394,7 @@ module Sppf =
                                 sprintf
                                     "Nonterminal node %d (%s) child %d is not a range or epsilon node: %A"
                                     i
-                                    ntName
+                                    (ntPrinter ntName)
                                     childIdx
                                     childInfo
                                 :: errors
@@ -559,7 +559,7 @@ module Sppf =
     /// across depth levels. No depth limit — caller controls consumption via Seq.head etc.
     /// Each yielded tree is a correct derivation if the SPPF is constructed correctly.
     /// Book reference: sec:CFPQ_GLL.
-    let enumerateTrees (sppf: SPPF<'t, 'nt>) (rootIdx: int) : seq<DerivationTree<'t, 'nt>> =
+    let enumerateTrees (rootNt: Nonterminal<'nt>) (sppf: SPPF<'t, 'nt>) (rootIdx: int) : seq<DerivationTree<'t, 'nt>> =
         let vc = Graph.vertexCount sppf.Graph
 
         let edgeTo (nodeIdx: int) (label: SppfEdgeLabel) : int option =
@@ -642,7 +642,7 @@ module Sppf =
                 for childList in treeLists do
                     match childList with
                     | [ tree ] -> yield tree
-                    | _ -> yield Node(Nonterminal "$root", childList)
+                    | _ -> yield Node(rootNt, childList)
 
                 depth <- depth + 1
         }

@@ -21,12 +21,12 @@ module private Grammars =
     let private augGrammar7 =
         LRAutomaton.augmentGrammar (freshStart grammar7Bnf) grammar7Bnf
 
-    let lr0TableGrammar1 = LRParser.buildLR0Table augGrammar1
-    let slr1TableGrammar1 = LRParser.buildSLR1Table augGrammar1
+    let lr0TableGrammar1 = LRParser.buildLR0Table augGrammar1 Grammar.eoiSymbol
+    let slr1TableGrammar1 = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
     let clr1TableGrammar1 = LRParser.buildCLR1Table augGrammar1
 
-    let lr0TableGrammar7 = LRParser.buildLR0Table augGrammar7
-    let slr1TableGrammar7 = LRParser.buildSLR1Table augGrammar7
+    let lr0TableGrammar7 = LRParser.buildLR0Table augGrammar7 Grammar.eoiSymbol
+    let slr1TableGrammar7 = LRParser.buildSLR1Table augGrammar7 Grammar.eoiSymbol
     let clr1TableGrammar7 = LRParser.buildCLR1Table augGrammar7
 
     let texLr0Grammar1 =

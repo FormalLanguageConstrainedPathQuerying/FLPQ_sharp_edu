@@ -105,7 +105,8 @@ module TerminalsToSymbolsTests =
 
     [<Fact>]
     let ``empty list returns empty`` () =
-        Assert.Empty(Tokenizer.terminalsToSymbols<int, string> [])
+        let result: Symbol<int, string> list = Tokenizer.terminalsToSymbols []
+        Assert.Empty(result)
 
     [<Fact>]
     let ``wraps terminals as T symbols`` () =

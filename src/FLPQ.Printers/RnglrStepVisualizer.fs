@@ -104,7 +104,7 @@ module RnglrStepVisualizer =
                 |> Set.toList
                 |> List.map (fun item ->
                     let (Nonterminal ntName) = item.BlockNonterminal
-                    sprintf "%s / %d" ntName item.RsmState)
+                    sprintf "%s / %d" (nonterminalPrinter ntName) item.RsmState)
                 |> String.concat "\\n"
 
             let label = sprintf "State %d\\n%s" idx itemLines |> DerivationTreeDot.escapeLabel

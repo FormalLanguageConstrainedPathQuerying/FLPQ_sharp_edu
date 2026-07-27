@@ -539,7 +539,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG1) input
+                accepts (TestHelpers.grammarToRsm grammarG1) input |> ignore
                 true
             with _ ->
                 false
@@ -552,7 +552,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG2) input
+                accepts (TestHelpers.grammarToRsm grammarG2) input |> ignore
                 true
             with _ ->
                 false
@@ -565,7 +565,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG3) input
+                accepts (TestHelpers.grammarToRsm grammarG3) input |> ignore
                 true
             with _ ->
                 false
@@ -578,7 +578,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG4) input
+                accepts (TestHelpers.grammarToRsm grammarG4) input |> ignore
                 true
             with _ ->
                 false
@@ -591,7 +591,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG5) input
+                accepts (TestHelpers.grammarToRsm grammarG5) input |> ignore
                 true
             with _ ->
                 false
@@ -604,7 +604,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG6) input
+                accepts (TestHelpers.grammarToRsm grammarG6) input |> ignore
                 true
             with _ ->
                 false
@@ -617,7 +617,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG7) input
+                accepts (TestHelpers.grammarToRsm grammarG7) input |> ignore
                 true
             with _ ->
                 false
@@ -630,7 +630,7 @@ module GllPropertyTreeYield =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammarG8) input
+                accepts (TestHelpers.grammarToRsm grammarG8) input |> ignore
                 true
             with _ ->
                 false
