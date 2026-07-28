@@ -19,6 +19,7 @@
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
     <Compile Include="StressTests.fs" />
+    <Compile Include="SharedParsingTests.fs" />
     <Compile Include="GllTests.fs" />
     <Compile Include="RnglrTests.fs" />
   </ItemGroup>
