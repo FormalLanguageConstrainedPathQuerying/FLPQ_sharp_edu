@@ -7,7 +7,6 @@ open FLPQ.Languages
 
 /// Kronecker-based RPQ algorithm with MS-BFS filtering.
 /// Book: Chapter 12, 03_TensorProduct.tex (adapted to RPQ).
-///
 /// Algorithm:
 /// 1. Compute Kronecker product of transition matrices: K_a = N^a ⊗ G^a
 /// 2. Sum all K_a element-wise: K = Σ_a K_a

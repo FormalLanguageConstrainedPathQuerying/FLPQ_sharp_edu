@@ -6,7 +6,6 @@ open FLPQ.Languages
 
 /// Arroyuelo's RPQ algorithm.
 /// Book: Chapter 11, 03_Arroyuelo.tex.
-///
 /// Translates a regular expression into a Boolean matrix expression and evaluates it.
 /// Uses dense Boolean matrices.
 module ArroyueloRPQ =

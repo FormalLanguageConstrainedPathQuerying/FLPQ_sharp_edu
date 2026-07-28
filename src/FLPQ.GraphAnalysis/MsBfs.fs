@@ -4,7 +4,6 @@ open FLPQ.LinearAlgebra
 
 /// Multiple-source BFS and supporting matrix operations for RPQ algorithms.
 /// Based on Chapter 3, 05_BFS.tex, algorithm algo:MS-BFS_linal.
-///
 /// Uses two algebraic structures:
 /// - B = ⟨{0,1}, ∨, ∧⟩ — standard Boolean semiring
 /// - M = ⟨{0,1}, ⊕⟩ — mask structure with inverted mask
@@ -31,7 +30,6 @@ module MsBfs =
     /// Multiple-source BFS (MS-BFS).
     /// Performs independent BFS traversals from k starting vertices simultaneously.
     /// The front is a k×|V| boolean matrix where row i is the BFS front for source K[i].
-    ///
     /// Algorithm (Chapter 3, 05_BFS.tex, algo:MS-BFS_linal):
     ///   current_front ← 0^{k×n}
     ///   visited ← 0^{k×n}

@@ -7,7 +7,6 @@ open FLPQ.Languages
 
 /// Belyanin's LARPQ algorithm (BFS-based single-source RPQ).
 /// Book: Chapter 11, 02_BFS.tex, algorithm algo:RPQ_BFS_semiring.
-///
 /// Operates on two |Q|×|V| matrices: front M and accumulated results P.
 /// Propagates simultaneously through the automaton (backward) and the graph (forward).
 module BelyaninRPQ =

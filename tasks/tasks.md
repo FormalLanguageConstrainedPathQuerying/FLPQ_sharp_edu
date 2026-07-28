@@ -624,7 +624,7 @@
        1. `regexToDfa` in `RPQTests.fs:237` duplicates `RsmBuilder.buildBlockDfa` (`EbnfParser.fs:268`). Both use Brzozowski derivatives.
        2. Either move shared implementation to a common location or have the test reuse `buildBlockDfa`.
        3. All existing tests must pass without changes.
-208. Deduplicate SPPF-extraction logic in CLI runners (code review N7).
+208. [done] Deduplicate SPPF-extraction logic in CLI runners (code review N7).
        1. `gllTree`/`rnglrTree` share ~30 lines of nearly identical SPPF-extraction logic in `GllRunner.fs:26-52` and `RnglrRunner.fs:30-59`.
        2. Extract shared rootRanges construction and `Sppf.buildSppfFromIndex` calls into a common helper for SPPF.
        3. All existing tests must pass without changes.
