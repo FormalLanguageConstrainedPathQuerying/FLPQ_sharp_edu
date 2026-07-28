@@ -187,6 +187,24 @@ type AbStringGenerators =
             |> MyGen.map (fun bits -> bits |> List.map (fun b -> if b = 0 then "a" else "b") |> String.concat " "))
         |> MyArb.fromGen
 
+type AbcxdStringGenerators =
+
+    static member AbcxdString() : Arbitrary<string> =
+        let chars = [ "a"; "b"; "c"; "x"; "d" ]
+
+        MyGen.choose (0, 8)
+        |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
+        |> MyArb.fromGen
+
+type AbcdxyStringGenerators =
+
+    static member AbcdxyString() : Arbitrary<string> =
+        let chars = [ "a"; "b"; "c"; "d"; "x"; "y" ]
+
+        MyGen.choose (0, 8)
+        |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
+        |> MyArb.fromGen
+
 type AStringGenerators =
 
     static member AString() : Arbitrary<string> =

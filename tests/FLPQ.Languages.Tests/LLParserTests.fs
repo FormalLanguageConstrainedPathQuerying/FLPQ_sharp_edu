@@ -297,3 +297,73 @@ module LLHigherKTests =
         for s in reject do
             let result = LLParser.parse ll3Grammar table 3 (Tokenizer.tokenizeTerminals s)
             Assert.True(result.IsNone, s)
+
+    [<Properties(Arbitrary = [| typeof<AbcxdStringGenerators> |])>]
+    module LL2PropertyTests =
+
+        let private ll2Table = LLParser.buildTable ll2Grammar 2
+
+        [<Property>]
+        let ``LL(2) and CYK agree on acceptance`` (s: string) =
+            let llResult =
+                LLParser.parse ll2Grammar ll2Table 2 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
+
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal ll2Grammar (Tokenizer.tokenizeTerminals s)
+
+            llResult = cykResult
+
+        [<Property>]
+        let ``LL(2) and Valiant agree on acceptance`` (s: string) =
+            let llResult =
+                LLParser.parse ll2Grammar ll2Table 2 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal ll2Grammar (Tokenizer.tokenizeTerminals s)
+
+            llResult = valResult
+
+        [<Property>]
+        let ``LL(2) leaves match input when accepted`` (s: string) =
+            match LLParser.parse ll2Grammar ll2Table 2 (Tokenizer.tokenizeTerminals s) with
+            | Some tree ->
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
+                leafTokens = s
+            | None -> true
+
+    [<Properties(Arbitrary = [| typeof<AbcdxyStringGenerators> |])>]
+    module LL3PropertyTests =
+
+        let private ll3Table = LLParser.buildTable ll3Grammar 3
+
+        [<Property>]
+        let ``LL(3) and CYK agree on acceptance`` (s: string) =
+            let llResult =
+                LLParser.parse ll3Grammar ll3Table 3 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
+
+            let cykResult =
+                Cyk.parse Grammar.freshStringNonterminal ll3Grammar (Tokenizer.tokenizeTerminals s)
+
+            llResult = cykResult
+
+        [<Property>]
+        let ``LL(3) and Valiant agree on acceptance`` (s: string) =
+            let llResult =
+                LLParser.parse ll3Grammar ll3Table 3 (Tokenizer.tokenizeTerminals s)
+                |> Option.isSome
+
+            let valResult =
+                Valiant.parse Grammar.freshStringNonterminal ll3Grammar (Tokenizer.tokenizeTerminals s)
+
+            llResult = valResult
+
+        [<Property>]
+        let ``LL(3) leaves match input when accepted`` (s: string) =
+            match LLParser.parse ll3Grammar ll3Table 3 (Tokenizer.tokenizeTerminals s) with
+            | Some tree ->
+                let leafTokens = DerivationTree.leaves tree |> String.concat " "
+                leafTokens = s
+            | None -> true
