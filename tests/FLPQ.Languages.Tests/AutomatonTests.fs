@@ -92,6 +92,49 @@ module FactTests =
 
         Assert.Equal(3, Nfa.stateCount a)
 
+    [<Fact>]
+    let ``epsilonClosure single epsilon edge`` () =
+        let a =
+            Nfa.fromTransitions [ "q0"; "q1" ] [] (set [ (0, 1) ]) (set [ 0 ]) (set [ 1 ])
+
+        Assert.Equal<int>(set [ 0; 1 ], Nfa.epsilonClosure a 0)
+        Assert.Equal<int>(set [ 1 ], Nfa.epsilonClosure a 1)
+
+    [<Fact>]
+    let ``epsilonClosure multi-step chain`` () =
+        let a =
+            Nfa.fromTransitions [ "q0"; "q1"; "q2"; "q3" ] [] (set [ (0, 1); (1, 2); (2, 3) ]) (set [ 0 ]) (set [ 3 ])
+
+        Assert.Equal<int>(set [ 0; 1; 2; 3 ], Nfa.epsilonClosure a 0)
+        Assert.Equal<int>(set [ 1; 2; 3 ], Nfa.epsilonClosure a 1)
+        Assert.Equal<int>(set [ 2; 3 ], Nfa.epsilonClosure a 2)
+        Assert.Equal<int>(set [ 3 ], Nfa.epsilonClosure a 3)
+
+    [<Fact>]
+    let ``epsilonClosure self-loop`` () =
+        let a =
+            Nfa.fromTransitions [ "q0"; "q1" ] [] (set [ (0, 0) ]) (set [ 0 ]) (set [ 1 ])
+
+        Assert.Equal<int>(set [ 0 ], Nfa.epsilonClosure a 0)
+        Assert.Equal<int>(set [ 1 ], Nfa.epsilonClosure a 1)
+
+    [<Fact>]
+    let ``epsilonClosure cycle`` () =
+        let a =
+            Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [] (set [ (0, 1); (1, 0) ]) (set [ 0 ]) (set [ 2 ])
+
+        Assert.Equal<int>(set [ 0; 1 ], Nfa.epsilonClosure a 0)
+        Assert.Equal<int>(set [ 0; 1 ], Nfa.epsilonClosure a 1)
+        Assert.Equal<int>(set [ 2 ], Nfa.epsilonClosure a 2)
+
+    [<Fact>]
+    let ``epsilonClosure no epsilon transitions`` () =
+        let a =
+            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+        Assert.Equal<int>(set [ 0 ], Nfa.epsilonClosure a 0)
+        Assert.Equal<int>(set [ 1 ], Nfa.epsilonClosure a 1)
+
 module AcceptanceTests =
 
     let T s = Terminal s

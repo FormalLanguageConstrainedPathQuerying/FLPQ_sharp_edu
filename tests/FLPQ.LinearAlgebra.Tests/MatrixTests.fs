@@ -76,6 +76,42 @@ module FactTests =
         Assert.Equal(Matrix.get m 1 1, Matrix.get t 1 1)
         Assert.Equal(Matrix.get m 1 2, Matrix.get t 2 1)
 
+    [<Fact>]
+    let ``copy produces independent matrix`` () =
+        let m = Matrix.create 2 2 (fun i j -> i * 10 + j)
+        let c = Matrix.copy m
+        Assert.Equal(2, Matrix.rows c)
+        Assert.Equal(2, Matrix.cols c)
+        Assert.Equal(0, Matrix.get c 0 0)
+        Assert.Equal(11, Matrix.get c 1 1)
+        Matrix.set c 0 0 999
+        Assert.Equal(0, Matrix.get m 0 0)
+
+    [<Fact>]
+    let ``ofArray2D creates matrix from 2D array`` () =
+        let arr = Array2D.init 3 2 (fun i j -> i * 100 + j)
+        let m = Matrix.ofArray2D arr
+        Assert.Equal(3, Matrix.rows m)
+        Assert.Equal(2, Matrix.cols m)
+        Assert.Equal(0, Matrix.get m 0 0)
+        Assert.Equal(101, Matrix.get m 1 1)
+
+    [<Fact>]
+    let ``reduceByColumn reduces each column`` () =
+        let m = Matrix.create 3 2 (+)
+        let result = Matrix.reduceByColumn (+) 0 m
+        Assert.Equal(2, Array.length result)
+        Assert.Equal(3, result.[0])
+        Assert.Equal(6, result.[1])
+
+    [<Fact>]
+    let ``reduceByColumn with non-trivial init`` () =
+        let m = Matrix.create 2 2 (fun i j -> 1)
+        let result = Matrix.reduceByColumn (*) 1 m
+        Assert.Equal(2, Array.length result)
+        Assert.Equal(1, result.[0])
+        Assert.Equal(1, result.[1])
+
 [<Fact>]
 let ``diagonal matrix has ones on diagonal for selected indices`` () =
     let d = Matrix.diagonal 5 (set [ 0; 2; 4 ]) 1 0

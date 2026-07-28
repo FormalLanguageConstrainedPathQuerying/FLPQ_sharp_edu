@@ -149,6 +149,34 @@ type RPQGenerators =
                                       Sources = Array.ofList sources })))))))
         |> MyArb.fromGen
 
+type RPQExtendedAlphabetGenerators =
+
+    static member RPQTestDataExtended() : Arbitrary<RPQTestData> =
+        let alphabet = [ "a"; "b"; "c"; "d"; "e" ]
+
+        MyGen.choose (2, 5)
+        |> MyGen.bind (fun n ->
+            MyGen.choose (2, n * 2)
+            |> MyGen.bind (fun edgeCount ->
+                MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                |> MyGen.bind (fun fromList ->
+                    MyGen.listOfLength edgeCount (MyGen.choose (0, n - 1))
+                    |> MyGen.bind (fun toList ->
+                        MyGen.listOfLength edgeCount (MyGen.elements alphabet)
+                        |> MyGen.bind (fun labelList ->
+                            MyGen.choose (1, n)
+                            |> MyGen.bind (fun k ->
+                                MyGen.listOfLength k (MyGen.choose (0, n - 1))
+                                |> MyGen.map (fun sources ->
+                                    let edges =
+                                        List.zip3 fromList labelList toList
+                                        |> List.filter (fun (f, _, t) -> f <> t)
+
+                                    { VertexCount = n
+                                      Edges = edges
+                                      Sources = Array.ofList sources })))))))
+        |> MyArb.fromGen
+
 type AbStringGenerators =
 
     static member AbString() : Arbitrary<string> =

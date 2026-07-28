@@ -322,10 +322,69 @@ module RegexPropertyTests =
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
                 let mutable ok = true
+                let rows = Matrix.rows arroResult
 
-                for i in 0 .. Matrix.rows arroResult - 1 do
+                for i in 0 .. rows - 1 do
                     for j in 0 .. v - 1 do
                         if Matrix.get arroResult i j <> Matrix.get kronResult i j then
                             ok <- false
 
                 ok
+
+// --- Extended alphabet tests (task 210) ---
+
+[<Properties(Arbitrary = [| typeof<RPQExtendedAlphabetGenerators> |])>]
+module ExtendedAlphabetTests =
+
+    [<Property>]
+    let ``Belyanin and Kronecker identical with extended alphabet`` (d: RPQTestData) =
+        if d.Sources.Length = 0 then
+            true
+        else
+            let v = d.VertexCount
+
+            if v = 0 then
+                true
+            else
+                let source = min d.Sources.[0] (v - 1)
+                let nfa = TestHelpers.nfaFromEdges v d.Edges [| source |]
+
+                let alphabet = d.Edges |> List.map (fun (_, s, _) -> s) |> Set.ofList |> Set.toList
+
+                if List.isEmpty alphabet then
+                    true
+                else
+                    let firstSym = List.head alphabet
+                    let dfa = TestHelpers.buildDfa [ (0, firstSym, 1) ] 0 [ 1 ]
+                    let belyResult = BelyaninRPQ.evaluate dfa nfa
+                    let kronResult = KroneckerRPQ.evaluate dfa nfa
+
+                    let mutable ok = true
+
+                    for j in 0 .. v - 1 do
+                        if Matrix.get belyResult 0 j <> Matrix.get kronResult 0 j then
+                            ok <- false
+
+                    ok
+
+    [<Fact>]
+    let ``Belyanin with multi-symbol graph and extended alphabet`` () =
+        let nfa = nfaWithSources [ (0, "a", 1); (1, "c", 2); (2, "e", 3) ] [ 0 ]
+        let dfa = TestHelpers.buildDfa [ (0, "a", 1); (1, "c", 2); (2, "e", 3) ] 0 [ 3 ]
+        let result = BelyaninRPQ.evaluate dfa nfa
+        Assert.True(Matrix.get result 0 3)
+
+    [<Fact>]
+    let ``Arroyuelo with extended alphabet regex`` () =
+        let nfa =
+            nfaWithSources [ (0, "a", 1); (1, "d", 2); (0, "b", 3); (3, "e", 4) ] [ 0 ]
+
+        let regexp =
+            Regexp.RAlt(
+                Regexp.RSeq(Regexp.RTerm(Terminal "a"), Regexp.RTerm(Terminal "d")),
+                Regexp.RSeq(Regexp.RTerm(Terminal "b"), Regexp.RTerm(Terminal "e"))
+            )
+
+        let result = ArroyueloRPQ.evaluate nfa regexp
+        Assert.True(Matrix.get result 0 2)
+        Assert.True(Matrix.get result 0 4)

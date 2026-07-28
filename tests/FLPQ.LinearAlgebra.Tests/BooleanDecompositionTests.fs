@@ -5,6 +5,37 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
+open FSharpPlus.Data
+
+[<Fact>]
+let ``decomposeNonEmptySet decomposes option non-empty set matrix`` () =
+    let m =
+        Matrix.create 2 2 (fun i j ->
+            if i = 0 && j = 0 then Some(NonEmptySet.ofList [ "a"; "b" ])
+            elif i = 1 && j = 1 then Some(NonEmptySet.singleton "a")
+            else None)
+
+    let decomp = BooleanDecomposition.decomposeNonEmptySet m
+    Assert.Equal(2, Map.count decomp)
+    Assert.True(Map.containsKey "a" decomp)
+    Assert.True(Map.containsKey "b" decomp)
+
+[<Fact>]
+let ``decomposeNonEmptySet handles None cells`` () =
+    let m =
+        Matrix.create 2 2 (fun i j ->
+            if i = 0 && j = 0 then
+                Some(NonEmptySet.singleton "x")
+            else
+                None)
+
+    let decomp = BooleanDecomposition.decomposeNonEmptySet m
+    Assert.Equal(1, Map.count decomp)
+    let matX = Map.find "x" decomp
+    Assert.True(Matrix.get matX 0 0)
+    Assert.False(Matrix.get matX 0 1)
+    Assert.False(Matrix.get matX 1 0)
+    Assert.False(Matrix.get matX 1 1)
 
 [<Fact>]
 let ``decompose produces correct number of matrices`` () =
@@ -69,6 +100,35 @@ let ``decompose preserves matrix dimensions`` () =
 
 [<Properties(Arbitrary = [| typeof<SetMatrixGenerators> |])>]
 module PropertyTests =
+
+    [<Property>]
+    let ``all decomposition matrices have same dimensions as original`` (m: Matrix<Set<int>>) =
+        let decomp = BooleanDecomposition.decompose m
+
+        if Map.isEmpty decomp then
+            true
+        else
+            let origRows = Matrix.rows m
+            let origCols = Matrix.cols m
+
+            decomp
+            |> Map.forall (fun _ mat -> Matrix.rows mat = origRows && Matrix.cols mat = origCols)
+
+    [<Property>]
+    let ``recompose produces matrix with same dimensions as decomposition matrices`` (m: Matrix<Set<int>>) =
+        let hasNonEmpty =
+            [ for i in 0 .. Matrix.rows m - 1 do
+                  for j in 0 .. Matrix.cols m - 1 do
+                      if not (Set.isEmpty (Matrix.get m i j)) then
+                          yield true ]
+            |> List.contains true
+
+        if not hasNonEmpty then
+            true
+        else
+            let decomp = BooleanDecomposition.decompose m
+            let restored = BooleanDecomposition.recompose decomp
+            Matrix.rows m = Matrix.rows restored && Matrix.cols m = Matrix.cols restored
 
     [<Property>]
     let ``decompose then recompose is identity`` (m: Matrix<Set<int>>) =

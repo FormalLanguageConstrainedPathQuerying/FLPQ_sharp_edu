@@ -24,9 +24,9 @@ let ``mxm of 200x200 integer matrices succeeds`` () =
 let ``kron of 50x50 matrices produces 2500x2500 result`` () =
     let n = 50
 
-    let a = Array2D.init n n (fun i j -> i + j) |> Matrix.ofArray2D
+    let a = Array2D.init n n (+) |> Matrix.ofArray2D
 
-    let b = Array2D.init n n (fun i j -> i * j) |> Matrix.ofArray2D
+    let b = Array2D.init n n (*) |> Matrix.ofArray2D
 
     let c = LinearAlgebra.kron a b (*) 0
     Assert.Equal(n * n, Matrix.rows c)
@@ -37,9 +37,9 @@ let ``kron of 50x50 matrices produces 2500x2500 result`` () =
 let ``map2 of 200x200 matrices succeeds`` () =
     let n = 200
 
-    let a = Array2D.init n n (fun i j -> i + j) |> Matrix.ofArray2D
+    let a = Array2D.init n n (+) |> Matrix.ofArray2D
 
-    let b = Array2D.init n n (fun i j -> i * j) |> Matrix.ofArray2D
+    let b = Array2D.init n n (*) |> Matrix.ofArray2D
 
     let c = Matrix.map2 (+) a b
     Assert.Equal(n, Matrix.rows c)
