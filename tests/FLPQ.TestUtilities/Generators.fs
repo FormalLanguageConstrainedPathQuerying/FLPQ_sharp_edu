@@ -196,6 +196,14 @@ type AbcxdStringGenerators =
         |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
         |> MyArb.fromGen
 
+type TokenStringGenerators =
+
+    static member TokenString() : Arbitrary<string> =
+        MyGen.choose (0, 5)
+        |> MyGen.bind (fun n -> MyGen.listOfLength n (MyGen.elements [ "a"; "b"; "c" ]))
+        |> MyGen.map (String.concat " ")
+        |> MyArb.fromGen
+
 type AbcdxyStringGenerators =
 
     static member AbcdxyString() : Arbitrary<string> =

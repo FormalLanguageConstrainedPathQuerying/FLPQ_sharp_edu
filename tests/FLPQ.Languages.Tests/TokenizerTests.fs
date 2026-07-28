@@ -141,15 +141,6 @@ module TokenizeGenTests =
 
 module PropertyTests =
 
-    type TokenStringGenerators =
-
-        static member TokenString() : Arbitrary<string> =
-            FsCheck.FSharp.Gen.choose (0, 5)
-            |> FsCheck.FSharp.Gen.bind (fun n ->
-                FsCheck.FSharp.Gen.listOfLength n (FsCheck.FSharp.Gen.elements [ "a"; "b"; "c" ]))
-            |> FsCheck.FSharp.Gen.map (String.concat " ")
-            |> FsCheck.FSharp.Arb.fromGen
-
     [<Properties(Arbitrary = [| typeof<TokenStringGenerators> |])>]
     module TokenizeStringsProperties =
 
