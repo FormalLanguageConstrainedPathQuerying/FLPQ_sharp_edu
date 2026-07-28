@@ -23,33 +23,7 @@ module GllRunner =
 
         let accepted = PathIndex.isAccepted pathIndex ersm vertexCount
 
-        let flatExt = ersm.ExtendedRsm
-
-        let startGlobalState =
-            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
-            | true, gs -> gs
-            | false, _ -> failwith "Start block not found in extended RSM"
-
-        let finalGlobalState = startGlobalState + 1
-
-        let rootRanges =
-            let entries =
-                PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
-
-            if not (Set.isEmpty entries) then
-                [ { FromState = startGlobalState
-                    FromVertex = 0
-                    ToState = finalGlobalState
-                    ToVertex = vertexCount - 1 } ]
-            else
-                []
-
-        let sppf =
-            Sppf.buildSppfFromIndex
-                pathIndex
-                rootRanges
-                (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
-                (Some(RSM.blockFinalsMap flatExt))
+        let sppf = Sppf.buildSppfFromExtendedRsm pathIndex ersm.ExtendedRsm vertexCount
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))

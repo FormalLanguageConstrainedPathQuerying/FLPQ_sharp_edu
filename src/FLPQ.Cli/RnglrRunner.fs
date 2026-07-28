@@ -27,36 +27,8 @@ module RnglrRunner =
 
         let accepted = PathIndex.isAccepted pathIndex extRsm vertexCount
 
-        let flatExt = ExtendedRSM.extRsm extRsm
-
-        let startGlobalState =
-            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
-            | true, gs -> gs
-            | false, _ -> failwith "Start block not found in extended RSM"
-
-        let finalGlobalState = startGlobalState + 1
-
-        let rootRanges =
-            let entries =
-                PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
-
-            if not (Set.isEmpty entries) then
-                [ { FromState = startGlobalState
-                    FromVertex = 0
-                    ToState = finalGlobalState
-                    ToVertex = vertexCount - 1 } ]
-            else
-                []
-
         let sppf =
-            Sppf.buildSppfFromIndex
-                pathIndex
-                (rootRanges)
-                (Some(
-                    ExtendedRSM.extRsm extRsm
-                    |> fun r -> r.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq
-                ))
-                (Some(ExtendedRSM.extRsm extRsm |> RSM.blockFinalsMap))
+            Sppf.buildSppfFromExtendedRsm pathIndex (ExtendedRSM.extRsm extRsm) vertexCount
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))

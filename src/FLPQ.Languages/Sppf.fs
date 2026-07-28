@@ -211,6 +211,39 @@ module Sppf =
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndices = rootIndices }
 
+    /// Builds the SPPF from a path index using an extended RSM to determine root ranges.
+    /// Convenience wrapper that computes root ranges from the extended RSM's start block
+    /// and delegates to buildSppfFromIndex.
+    let buildSppfFromExtendedRsm
+        (pathIndex: PathIndex<'t, 'nt>)
+        (flatExt: RSM<'t, 'nt>)
+        (vertexCount: int)
+        : SPPF<'t, 'nt> =
+        let startGlobalState =
+            match flatExt.BlockStart.TryGetValue(flatExt.StartBlock) with
+            | true, gs -> gs
+            | false, _ -> failwith "Start block not found in extended RSM"
+
+        let finalGlobalState = startGlobalState + 1
+
+        let rootRanges =
+            let entries =
+                PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vertexCount - 1)
+
+            if not (Set.isEmpty entries) then
+                [ { FromState = startGlobalState
+                    FromVertex = 0
+                    ToState = finalGlobalState
+                    ToVertex = vertexCount - 1 } ]
+            else
+                []
+
+        buildSppfFromIndex
+            pathIndex
+            rootRanges
+            (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+            (Some(RSM.blockFinalsMap flatExt))
+
     let countNonterminals (sppf: SPPF<'t, 'nt>) : int =
         let vc = Graph.vertexCount sppf.Graph
         let mutable count = 0
