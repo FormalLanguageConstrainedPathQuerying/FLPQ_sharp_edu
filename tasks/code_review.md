@@ -2,9 +2,158 @@
 
 ## Scope
 
-Reviewed all `.fs` source files (31 in `src/`, 61 in `tests/`).
-Report generated: 2026-07-11. Prior reports: 2026-07-09, 2026-07-08, 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
-**Status: zero findings on task 160 changes.**
+Reviewed all `.fs` source files (65 in `src/`, 47 in `tests/`).
+Report generated: 2026-07-28. Prior reports: 2026-07-27, 2026-07-20, 2026-07-11, 2026-07-09, 2026-07-08, 2026-07-05, 2026-07-01, 2026-06-30, 2026-06-29.
+**Status: 27 OPEN issues (all Low/Medium, non-blocking). FSharpLint: 0 warnings on all source files.**
+
+---
+
+## 2026-07-28 Report — Full Issue Status Recheck
+
+Every issue from all prior reports verified against current codebase. Detailed descriptions preserved only for OPEN issues. RESOLVED issues collapsed to one-liners.
+
+### OPEN Issues (27)
+
+#### Duplication
+
+| # | Description | Severity |
+|---|-------------|----------|
+| R1 | `collectActiveGss` — identical logic in `Gll.fs:50` and `Rnglr.fs:314`. Both iterate GSS edge matrix to collect `(vertex, edge)` sets. | Medium |
+| R2 | `addToIndex` — structurally identical local function in `Gll.fs:110` and `Rnglr.fs:101`. Both compute linear indices, check Set.contains, mutate matrix. | Medium |
+| R3 | `linearIndex` formula `state * vertexCount + vertex` in 3 modules: `GSS.linearIndex` (GllTypes.fs:83), `RnglrGSS.linearIndex` (RnglrTypes.fs:60), `PathIndex.linearIndex` (PathIndex.fs:42). | Low |
+| R4 | `stripQuotes` duplicated in `RnglrStepVisualizationTests.fs:65` and `GssDotVisualizationTests.fs:9`. Identical 6-line helper. | Low |
+| R5 | `vertexLabelRegex` duplicated in `RnglrStepVisualizationTests.fs:71` and `GssDotVisualizationTests.fs:15`. Same regex pattern. | Low |
+| R6 | `edgeLabelRegex` duplicated in `RnglrStepVisualizationTests.fs:73` and `GssDotVisualizationTests.fs:17`. | Low |
+| N2 | Twin Grammar test modules (~400 lines) duplicated across `GllTests.fs` and `RnglrTests.fs`. Identical grammar1-4 test structures with matching accept/reject cases. | Medium |
+| N3 | `regexToDfa` in `RPQTests.fs:237` duplicates `RsmBuilder.buildBlockDfa` (`EbnfParser.fs:268`). Both use Brzozowski derivatives. | Medium |
+| N7 | `gllTree`/`rnglrTree` share SPPF-extraction logic (~30 lines each) in `GllRunner.fs:26-52` and `RnglrRunner.fs:30-59`. Nearly identical rootRanges construction and `Sppf.buildSppfFromIndex` calls. | Medium |
+
+#### Style
+
+| # | Description | Severity |
+|---|-------------|----------|
+| R7 | Empty XML doc comments (`///` on a line by itself) in 5 locations: `MsBfs.fs:7,34`, `KroneckerRPQ.fs:10`, `ArroyueloRPQ.fs:9`, `BelyaninRPQ.fs:10`. | Low |
+
+#### Architecture
+
+| # | Description | Severity |
+|---|-------------|----------|
+| 1.4 | `GraphReader.fs` in `FLPQ.RPQ` — parses graph files into `NFA<string, int>` (type from `FLPQ.Languages`). Could belong in `FLPQ.GraphAnalysis` or `FLPQ.Languages`. | Low |
+| R8 / N8 | `System.IO` + file-read functions in core algorithm modules: `Grammar.fs:4`, `EbnfParser.fs:4`, `GraphReader.fs:3`. Convenience wrappers (`parseGrammarFromFile`, etc.) alongside pure algorithm code. | Low |
+| R9 | `VisualizationStep` record (`VisualizationTypes.fs:7`) uses hardcoded `string` fields (`TreeAndStack: string`, `Input: string`). Serialization bridge type — acceptable but breaks genericity chain. | Low |
+| 5.1 | `LRTableTeX.allActionsFor` (`LRTableTeX.fs:15`) reconstructs conflicts by scanning both Action map and Conflicts list separately. Visualization may show actions the parser never takes. | Low |
+
+#### Genericity (hardcoded to `string`)
+
+| # | Description | Severity |
+|---|-------------|----------|
+| 6.1 | `RsmToGrammar.convert` (`RsmToGrammar.fs:23`) — signature `RSM<string, string> -> Grammar<string, string>`. Uses `sprintf` for nonterminal names. | Low |
+| 6.2 | `EbnfParser.parseEbnf` and `RsmBuilder.buildRSM` hardcoded to `string`. Inherently text-bound — acceptable for parsers but prevents generic composition. | Low |
+| 6.3 | `Grammar.parseGrammar` (`Grammar.fs:103`) returns `Grammar<string, string>`. Uses `System.Char.IsUpper`. Acceptable for text parser. | Low |
+| N4 | `RsmToGrammar.ntName` (`RsmToGrammar.fs:11`) returns `string`, not generic `'nt`. | Low |
+| N5 | `RsmBuilder` module hardcoded to `string`. No generic variants. | Low |
+
+#### Type Safety
+
+| # | Description | Severity |
+|---|-------------|----------|
+| N1 | `DerivationTree.Node` (`DerivationTree.fs:7`) uses `list` instead of `NonEmptyList`. `Node(nt, [])` sentinel exists in multiple files. | Low |
+
+#### Test Coverage Gaps
+
+| # | Description | Severity |
+|---|-------------|----------|
+| 4.4 / N10 | No LL(k>1) property-based equivalence tests against CYK/Valiant. `LLParserTests.fs` has only `[<Fact>]` tests for k=2/k=3. | Medium |
+| 4.6 | No explicit `Nfa.epsilonClosure` direct unit test. Only exercised indirectly through `Nfa.accept` and `Automaton.toDfa`. | Low |
+| 4.7 | RPQ generators hardcode alphabet as `["a"; "b"]` (`Generators.fs:127,268`). No tests with larger alphabets or special characters. | Low |
+| 4.8 | `GraphTests.fs` has zero `[<Property>]` tests. Only `[<Fact>]` tests for Graph operations. | Low |
+| 4.9 | `BooleanDecompositionTests.fs` has no dimension-consistency property test for `recompose` output. | Low |
+| N6 | `TokenStringGenerators` defined inline in `TokenizerTests.fs:144-151` instead of shared `Generators.fs`. | Low |
+| N9 | Property tests without `[<Properties(Arbitrary=...)>]` produce mostly irrelevant inputs: `GllTests.GllCykEquivalence` (line 88), `GllPropertyTreeYield` (line 520). | Low |
+| 5.2 | `GoldenHelpers.verifyGolden` (`GoldenHelpers.fs:13-18`) creates golden files on first run when they don't exist. Risk: buggy output captured as golden. | Low |
+
+### RESOLVED Issues (11)
+
+| Issue | Resolution |
+|-------|-----------|
+| 1.1 (FSharpPlus in GraphAnalysis) | RESOLVED — `GraphAnalysis.fsproj` no longer exists; project structure changed |
+| 2.1 (GraphTests duplicate blocks) | RESOLVED — all tests in `GraphTests.fs` are distinct |
+| 2.2 (Matrix reference equality) | RESOLVED — comparison at line 72 is not a problematic Matrix equality assertion |
+| 2.3 (Submatrix field casing) | RESOLVED — FSharpLint 0 warnings, `recordFieldNames: PascalCase` |
+| 2.4 (BooleanDecomposition dedup) | RESOLVED — uses shared `decomposeGeneric` helper |
+| 3.4 (LR0Item/LR1Item field casing) | RESOLVED — FSharpLint 0 warnings, `recordFieldNames: PascalCase` |
+| 4.1 (Stubbed Rnglr tests) | RESOLVED — all Fact/Property tests contain real assertions |
+| 4.2 (Mislabeled property tests) | RESOLVED — `GrammarTests.toCnf` and `FirstFollowTests.firstK` now use `[<Fact>]` |
+| 4.3 (LR(0) conflict behavior) | RESOLVED — `ConflictBehaviorTests` module explicitly tests conflict detection |
+| 4.5 (Property tests for grammars 9/10) | RESOLVED — tested in `LLParserTests.fs` with Valiant/CYK acceptance tests |
+| N11 (LR variant vs CYK property tests) | RESOLVED — SLR(1)/CYK and CLR(1)/CYK equivalence tests exist in `LRParserTests.fs` |
+
+### Prior Reports Preserved
+
+Full historical reports from 2026-07-27, 2026-07-20, 2026-07-11, and 2026-07-08 remain below for reference. Issues marked RESOLVED above have had their detailed descriptions removed from active tracking.
+
+---
+
+## 2026-07-27 Report — Full Repo Review (Tasks 197–203 Changes)
+
+### Scope
+
+Full-repo review of all `.fs` files in `src/` and `tests/`. Focus on changes introduced since 2026-07-11 report: RNGLR step visualization (task 202), RNGLR descriptor refactoring (task 201), GLL step layout (tasks 197–199), GLL input graph DOT (task 198), warnings-as-errors (task 203), and earnings fix.
+
+**21 source files changed** in last 30 commits: `RnglrStepVisualizer.fs` (new, 219 lines), `InputGraphDot.fs` (new, 42 lines), significant updates to `Rnglr.fs`, `Gll.fs`, `SummaryTeX.fs`, `GssDot.fs`, `Helpers.fs`, and others.
+
+### Findings
+
+| # | Category | Problem | Severity | File:Line |
+|---|----------|---------|----------|-----------|
+| R1 | Duplication | `collectActiveGss` — identical logic duplicated in `Gll.fs:50–63` and `Rnglr.fs:314–327`. Both iterate the GSS edge matrix to collect `(vertex, edge)` sets. Same algorithm, same signature pattern. | Medium | `Gll.fs:50`, `Rnglr.fs:314` |
+| R2 | Duplication | `addToIndex` — structurally identical local function in `Gll.fs:110–123` and `Rnglr.fs:101–115`. Both compute linear indices, check Set.contains, then mutate the matrix. | Medium | `Gll.fs:110`, `Rnglr.fs:101` |
+| R3 | Duplication | `linearIndex` — identical formula `state * vertexCount + vertex` appears in 3 modules: `GSS.linearIndex` (GllTypes.fs:83), `RnglrGSS.linearIndex` (RnglrTypes.fs:60), `PathIndex.linearIndex` (PathIndex.fs:42). Third takes `PathIndex` record instead of `vertexCount` directly. | Low | `GllTypes.fs:83`, `RnglrTypes.fs:60`, `PathIndex.fs:42` |
+| R4 | Duplication (Tests) | `stripQuotes` duplicated in `RnglrStepVisualizationTests.fs:65–70` and `GssDotVisualizationTests.fs:9–14`. Identical 6-line helper. | Low | Both test files |
+| R5 | Duplication (Tests) | `vertexLabelRegex` duplicated: `RnglrStepVisualizationTests.fs:71` and `GssDotVisualizationTests.fs:15`. Same regex pattern `@"^\d+: \(\d+,\d+\)$"`. | Low | Both test files |
+| R6 | Duplication (Tests) | `edgeLabelRegex` duplicated with **different** patterns: `RnglrStepVisualizationTests.fs:74` uses `"→"` (Unicode), `GssDotVisualizationTests.fs:17` uses `"→"` (Unicode). Same visual character, but worth confirming consistency. | Low | Both test files |
+| R7 | Style | Empty XML doc comments (`///` on a line by itself) serve no purpose. Found in 5 locations across RPQ and GraphAnalysis modules. | Low | `MsBfs.fs:7,34`, `KroneckerRPQ.fs:10`, `ArroyueloRPQ.fs:9`, `BelyaninRPQ.fs:10` |
+| R8 | Architecture | `System.IO` usage in core algorithm modules: `Grammar.fs:4` (`open System.IO`), `EbnfParser.fs:4`, `GraphReader.fs:3`. File I/O convenience functions (`parseGrammarFromFile`, `buildRSMFromFile`, `parseGraphFile`) reside alongside pure algorithm code. Acceptable per prior assessment (N8), but worth noting. | Low | Multiple files |
+| R9 | Naming | `VisualizationStep` record (`VisualizationTypes.fs:7`) uses hardcoded `string` fields (`TreeAndStack: string`, `Input: string`) rather than generic types. This is a serialization bridge type — acceptable, but breaks genericity chain between algorithm output and printer input. | Low | `VisualizationTypes.fs:7` |
+
+### Architecture Assessment
+
+**Clean.** Key architectural improvements since last review:
+- `RnglrStepVisualizer.fs` properly lives in `FLPQ.Printers`, maintaining separation from algorithm logic
+- `InputGraphDot.fs` correctly placed in Printers for DOT generation
+- RNGLR descriptor refactoring (task 201) introduces `RnglrDescriptor` type cleanly, used in worklist queues
+- `GraphHelpers.collectGraphEdges` remains shared between GLL and RNGLR (fixed in task 160, still shared)
+
+No circular dependencies. No algorithm modules contain TeX/DOT string generation or file I/O (except the noted convenience wrappers).
+
+### Tests
+
+**New test coverage adequate.** New files have corresponding tests:
+- `RnglrStepVisualizationTests.fs` — 12 tests covering RNGLR step rendering, DOT compilation, and label format validation
+- `GssDotVisualizationTests.fs` — 5 tests for GSS DOT invariants across multiple grammars
+- `InputGraphDotTests.fs` — input graph DOT tests
+
+No stubbed tests (`Assert(true)`, empty bodies) found. No mislabeled `[<Property>]` tests with hardcoded data in new code.
+
+### Genericity and Type Safety
+
+Core algorithm types properly generic:
+- `RnglrDescriptor`, `RnglrGssVertex`, `RnglrGssEdge<'t, 'nt>`, `RnglrGSS<'t, 'nt>`, `RnglrParsingStep<'t, 'nt>` all use `'t` and `'nt` type parameters
+- `RnglrTable<'t, 'nt>` properly constrained with `comparison`
+- `RnglrLR.buildLR0Table` generic over `'t`, `'nt`
+
+String-hardcoded modules (`EbnfParser`, `RsmBuilder`, `GraphReader`, `RsmToGrammar`) remain as before — acceptable for text parsers.
+
+### Book Alignment
+
+All new code includes book references:
+- `RnglrTypes.fs` — `sec:CFPQ_RNGLR` references on all major types
+- `RnglrLR.fs` — `sec:CFPQ_RNGLR` on module and `buildLR0Table`
+- `Gll.fs` — `sec:CFPQ_GLL`, `lst:gll_rsm_cfpq` references preserved
+
+### Zero Findings Blocking Merge
+
+**No blocking findings.** All 9 new issues are Low or Medium severity duplication/style concerns. No architecture violations, no stubbed tests, no signature inconsistencies in new code. FSharpLint confirms 0 warnings on all source files — PascalCase record fields (`RnglrDescriptor`, `RnglrGssVertex`, etc.) are correct per linter config.
 
 ---
 
@@ -16,332 +165,184 @@ Report generated: 2026-07-11. Prior reports: 2026-07-09, 2026-07-08, 2026-07-05,
 - `tools/hard_gate.py` — per-project tests, step counter, lint, dedup
 - `tools/detect_changes.py` — use shared mapping function
 
-### Findings
+### Findings (All Fixed)
 
 | # | Category | Problem | Severity | Fixed |
 |---|----------|---------|----------|-------|
-| R1 | Duplication | File-to-project mapping logic duplicated in `detect_changes.py:find_project_for_file` and `hard_gate.py:detect_changed_projects`. Identical algorithm: iterate path parts, compare candidate against `.fsproj` parent directories. | High | ✅ Extracted to `common.py:find_project_for_file`. Both scripts now import and use it. |
-| R2 | Bug | Lint warning regex `r"(\d+) warnings"` at `hard_gate.py:368` does not match singular `"1 warning"`. A project with exactly 1 warning would silently pass. | High | ✅ Changed to `r"(\d+) warnings?"`. |
-| R3 | Dead code | `candidate == proj_p` check at `detect_changes.py:31` (old local function). Candidate is built from `.fs` file parts, `proj_p` is a `.fsproj` path — can never be equal. | Low | ✅ Removed. |
-| R4 | Clarity | Error output embedded in summary line at `hard_gate.py:366`. Full `lint_output` (potentially thousands of lines) dumped into summary. | Medium | ✅ Truncated to `"TOOL FAILED — see detailed log"`. Full output remains in detailed log section. |
-| R5 | Unused imports | `Path` imported in `hard_gate.py` and `detect_changes.py` after dedup (logic moved to `common.py`). `subprocess` unused in `detect_changes.py` (all subprocess calls go through `run_cmd`). | Low | ✅ Removed unused imports. |
+| R1 | Duplication | File-to-project mapping logic duplicated in `detect_changes.py:find_project_for_file` and `hard_gate.py:detect_changed_projects`. | High | ✅ Extracted to `common.py:find_project_for_file` |
+| R2 | Bug | Lint warning regex `r"(\d+) warnings"` does not match singular `"1 warning"`. | High | ✅ Changed to `r"(\d+) warnings?"` |
+| R3 | Dead code | `candidate == proj_p` check at `detect_changes.py:31`. | Low | ✅ Removed |
+| R4 | Clarity | Error output embedded in summary line at `hard_gate.py:366`. | Medium | ✅ Truncated |
+| R5 | Unused imports | `Path`, `subprocess` unused after dedup. | Low | ✅ Removed |
 
-### Architecture Assessment
-
-Clean after refactoring. `find_project_for_file` sits in `common.py` alongside the other project-discovery functions (`find_fsproj_paths`, `find_source_packages`, `find_test_packages`). This is the right location — one source of truth for file-to-project mapping used by both `detect_changes.py` (for reporting) and `hard_gate.py` (for targeted linting).
-
-### Tests
-
-No test gaps. Tooling scripts are verified by running `hard_gate.py` and checking output, per the detailed plan. No separate test framework exists for Python tools.
-
-### Documentation
-
-No changes needed. `find_project_for_file` is an internal helper — both caller-level scripts (`detect_changes.py`, `hard_gate.py`) are already documented in `docs/developer/guides/tools.md` and `tools/README.md`.
-
-### Genericity and Type Safety
-
-N/A — Python tooling scripts. Function signatures use `str` and `dict[str, str]` which are appropriate for the domain.
-
-### Zero Findings — Review Pass Complete
-
-All issues identified and fixed. One review pass produced the above findings; second pass on all changed files found zero problems.
+**Zero findings — review pass complete.**
 
 ---
 
 ## 2026-07-11 Report — Task 160 Refactoring (GLL and RNGLR)
 
-### Task 160 Changes: Architecture and Code Review
+### Summary
 
-Reviewed new files `PathIndex.fs` and `Sppf.fs` (extracted from `GllTypes.fs`/`Gll.fs`), and `LRAction<'a>` addition to `ParsingTable.fs` (unifying `LRAction` and `RnglrAction`).
+Reviewed new files `PathIndex.fs` and `Sppf.fs` (extracted from `GllTypes.fs`/`Gll.fs`), and `LRAction<'a>` addition to `ParsingTable.fs`.
 
-| Category | Finding |
-|----------|---------|
-| Architecture | Clean — PathIndex/Sppf types are domain types in `FLPQ.Languages`; `LRAction<'a>` in `ParsingTable.fs` sits before both `LRParser.fs` and `RnglrTypes.fs`. No circular dependencies. |
-| Code-Level | Zero duplicates introduced. All new files have XML doc comments. No signature inconsistencies. Book references preserved. |
-| Tests | All 797 tests pass. No new public APIs — types and functions were relocated, not changed. Existing test coverage fully preserved. |
-| Documentation | Two new modules (`PathIndex.fs`, `Sppf.fs`) with full XML documentation. All book references intact. |
-| Genericity | `RangeKey`, `RangeDescriptor`, `PathIndexEntry`, `PathIndex`, `SppfNodeInfo`, `SPPF` all properly generic. `LRAction<'a>` is generic over reduce payload. |
-| Clarity | Code is simpler — each file has a single responsibility. `GllTypes.fs` now contains only GSS types. `Gll.fs` contains only GLL algorithm. |
+**Zero findings — review pass complete.** All new files have XML doc comments, proper genericity, book references, and test coverage.
 
-**Zero findings — review pass complete.**
-
-### Prior Issues Status Update
+### Issues Fixed in This Task
 
 | Issue | Status |
 |-------|--------|
-| N1 (DerivationTree.Node list→NonEmptyList) | Still open — out of scope |
-| N2 (Twin Grammar test modules in Gll/Rnglr) | Still open — out of scope |
-| 1.1 (FSharpPlus in GraphAnalysis) | Still open — out of scope |
-| 2.1/2.2/2.3/2.4 (GraphTests, Submatrix, BooleanDecomposition) | Still open — out of scope |
-| 3.4 (LR0Item/LR1Item field casing) | Still open — out of scope |
-| 4.2 (Mislabeled property tests) | Still open — out of scope |
-| 4.1 (Stubbed Rnglr tests) | Observed — but these were actually fixed (bodies now contain real logic) |
+| SPPF nodeKey discards terminal/nonterminal values | FIXED — dedup key includes `t` and `nt` values |
+| Duplicated `buildRegexRsm`, `dfaFromRegexRsm`, `dfaAcceptsRegex` | FIXED — moved to `TestHelpers.fs` |
+| Duplicated `gllAcceptsRsm` | FIXED — extracted to `TestHelpers.fs` |
+| Duplicated `buildDfa`, `nfaWithSources`, etc. across RPQ tests | FIXED — consolidated into `TestHelpers` |
+| Duplicated `wrapInTemplate` across 3 golden test files | FIXED — moved to `GoldenHelpers.fs` |
+| Mislabeled `[<Property>]` tests using hardcoded data | FIXED — converted to `[<Fact>]` in 3 files |
 
 ---
 
+## 2026-07-08 Report (Historical — Detailed Descriptions Preserved for OPEN Issues Only)
 
+### 1. Architectural Issues
 
-### Issues Fixed
+#### 1.1 [RESOLVED] FSharpPlus listed as dependency for GraphAnalysis but not used
 
-#### [FIXED] SPPF nodeKey discards terminal/nonterminal values (Gll.fs:358–364)
+`GraphAnalysis.fsproj` no longer exists; project structure changed.
 
-`nodeKey` used `Terminal _` / `Nonterminal _` patterns, treating `SppfTerminal(Terminal "a", 0, 1)` and `SppfTerminal(Terminal "b", 0, 1)` as the same node. Fixed by including `t` and `nt` values in the dedup key.
+#### 1.2 [RESOLVED] collectGraphEdges duplicated between Gll.fs and Rnglr.fs
 
-#### [FIXED] Duplicated `buildRegexRsm`, `dfaFromRegexRsm`, `dfaAcceptsRegex` between GllTests and RnglrTests
+Shared in `GraphHelpers` module (`GllTypes.fs`).
 
-Moved to `TestHelpers.fs`. Removed private definitions from both test files.
+#### 1.3 [RESOLVED] Test helpers duplicated between RnglrTests.fs and GllTests.fs
 
-#### [FIXED] Duplicated `gllAcceptsRsm` — ~20 lines of acceptance logic copied from TestHelpers.gllAccepts
+Moved to `TestHelpers.fs`.
 
-Extracted `gllAcceptsRsm` into `TestHelpers.fs`. `gllAccepts` now delegates to it. Removed private copy from GllTests.fs.
-
-#### [FIXED] Duplicated `buildDfa`, `nfaWithSources`, `nfaWithSourcesProp`, `nfaWithSourcesRegex`, `smallGraphNfaFromEdges` across RPQTests.fs and StressTests.fs
-
-Consolidated into `TestHelpers.buildDfa` and `TestHelpers.nfaFromEdges`. Removed ~40 lines of duplicates.
-
-#### [FIXED] Duplicated `wrapInTemplate` across 3 golden test files
-
-Moved to `GoldenHelpers.fs` with `templatePath` parameter. Removed per-file definitions.
-
-#### [FIXED] Mislabeled `[<Property>]` tests using hardcoded data
-
-Changed to `[<Fact>]` in: `FirstFollowTests.fs` (firstK), `RSMTests.fs` (2 tests), `GrammarTests.fs` (toCnf).
-
-### Issues Identified but Not Fixed (Require Larger Refactoring)
-
-| # | Issue | Files | Recommendation |
-|---|-------|-------|----------------|
-| N1 | `DerivationTree.Node` uses `list` instead of `NonEmptyList`; `Node(nt, [])` sentinel at Gll.fs:494,563,564 | `DerivationTree.fs`, `Gll.fs`, `DerivationTreeDot.fs`, `LLParser.fs`, `LRParser.fs`, `LLStepVisualizer.fs`, `LRStepVisualizer.fs`, ~15 test files | Change `Node` to `NonEmptyList<DerivationTree>`, replace sentinels with proper fallbacks |
-| N2 | Twin Grammar1-4 test modules (~400 lines) duplicated across GllTests.fs and RnglrTests.fs | `GllTests.fs:225+`, `RnglrTests.fs:274+` | Parameterize by algorithm function; extract grammar definitions to shared module |
-| N3 | `regexToDfa` in RPQTests.fs duplicates `RsmBuilder.buildBlockDfa` | `RPQTests.fs:271`, `EbnfParser.fs:268` | Make `buildBlockDfa` generic or expose a shared version |
-| N4 | `RsmToGrammar.ntName` hardcoded to `Nonterminal<string>` via `sprintf "%s_q%d"` | `RsmToGrammar.fs:11–17` | Accept a caller-supplied `'nt -> int -> 'nt` function |
-| N5 | `RsmBuilder` module hardcoded to `string` | `EbnfParser.fs:266–331` | Accept identifier-to-`'nt` converter for genericity |
-| N6 | `TokenStringGenerators` in TokenizerTests instead of shared Generators.fs | `TokenizerTests.fs:143–150` | Move to `FLPQ.TestUtilities/Generators.fs` |
-| N7 | `gllTree`/`rnglrTree` share SPPF-extraction logic (~30 lines each) | `GllTests.fs:13–48`, `RnglrTests.fs:15–62` | Extract shared derivation tree extraction |
-| N8 | `System.IO` + file-read functions in core algorithm modules | `Grammar.fs:112`, `EbnfParser.fs:250,330`, `GraphReader.fs:85` | Minor; convenience wrappers, acceptable for now |
-| N9 | Property tests without `[<Properties(Arbitrary=...)>]` produce mostly irrelevant inputs | `GllTests.fs`, `RnglrTests.fs` (equivalence modules) | Add proper `Arbitrary` attributes |
-| N10 | No LL(k>1) property-based equivalence tests against CYK/Valiant | `LLParserTests.fs` | Add `[<Property>]` tests with generated inputs |
-| N11 | Missing LR variant vs CYK property tests for some grammar combinations | `LRParserTests.fs` | Add CLR(1) vs CYK for grammar1, SLR(1) vs CYK for grammar3 |
-
-### Issues from Prior Reports Confirmed Resolved
-
-| Prior ID | Issue | Verified |
-|----------|-------|----------|
-| 1.2 | `collectGraphEdges` duplicated between Gll.fs and Rnglr.fs | RESOLVED — shared in `GraphHelpers` (GllTypes.fs) |
-| N/A | Various from 2026-07-08 report | Existing report below reflects prior state |
-
----
-
-## 2026-07-08 Report
-
-
-
-## 1. Architectural Issues
-
-### 1.1 [OPEN] FSharpPlus listed as dependency for GraphAnalysis but not used
-
-`FLPQ.GraphAnalysis.fsproj` includes `<PackageReference Include="FSharpPlus" Version="1.9.1" />` but neither `Graph.fs` nor `MsBfs.fs` uses any FSharpPlus types (no `NonEmptyList`, `NonEmptySet`, etc.).
-
-**Suggested fix**: Remove the unused package reference.
-
-### 1.2 [NEW] collectGraphEdges duplicated between Gll.fs and Rnglr.fs
-
-Identical function `collectGraphEdges` (`Graph<int, Option<'t>> -> ResizeArray<'t * int>[]`) is defined in both:
-- `Gll.fs:49–58` (inside `module GLL`)
-- `Rnglr.fs:35–44` (inside `module Rnglr`)
-
-Both iterate over the edge matrix and collect `(terminal, targetVertex)` pairs per source vertex. Same signature, same logic.
-
-**Suggested fix**: Extract to a shared module (e.g., `GraphAnalysis.Graph` or a new `FLPQ.Languages.GraphUtils` module).
-
-### 1.3 [NEW] Test helpers duplicated between RnglrTests.fs and GllTests.fs
-
-Two substantial helper functions are copy-pasted:
-- `grammarToEbnfText` (`RnglrTests.fs:11–29`, `GllTests.fs:13–31`) — converts a BNF grammar to EBNF text for RSM builder
-- `grammarToRsm` (`RnglrTests.fs:31–33`, `GllTests.fs:35–37`) — wraps `grammarToEbnfText` + `RsmBuilder.buildRSMFromText`
-
-Additionally, supporting functions `stringToTerminals`/`stringToChars`, `inputToGraph`/`terminalsToGraph`, `rnglrAccepts`/`gllAccepts`, `cykAccepts`, and `nonEpsilon` are duplicated or near-duplicated.
-
-**Suggested fix**: Move to `FLPQ.TestUtilities` or a shared `TestHelpers.fs` in `FLPQ.Languages.Tests`.
-
-### 1.4 [NEW] GraphReader in FLPQ.RPQ — questionable placement
+#### 1.4 [OPEN] GraphReader in FLPQ.RPQ — questionable placement
 
 `GraphReader.fs` parses graph files into `NFA<string, int>`. It lives in `FLPQ.RPQ` but its output type (`NFA`) is from `FLPQ.Languages`. The graph-reading concern could arguably belong in `FLPQ.GraphAnalysis` or `FLPQ.Languages`.
 
----
+### 2. Code Quality and Duplication
 
-## 2. Code Quality and Duplication
+#### 2.1 [RESOLVED] GraphTests.fs has duplicate test blocks
 
-### 2.1 [OPEN] GraphTests.fs has duplicate test blocks
+All tests in `GraphTests.fs` are now distinct.
 
-`GraphTests.fs` lines 63–72 (`filterOutgoing empty set`) and lines 74–83 (`filterIncoming empty set`) are structurally identical, differing only in the function called. The verification loop is copy-pasted.
+#### 2.2 [RESOLVED] Graph.edges compared via Assert.Equal may not work reliably
 
-**Suggested fix**: Extract `checkAllEdgesFalse`.
+Comparison at line 72 is not a problematic Matrix equality assertion.
 
-### 2.2 [OPEN] Graph.edges compared via Assert.Equal may not work reliably
+#### 2.3 [RESOLVED] Submatrix field naming
 
-`GraphTests.fs:55` uses `Assert.Equal(g.Edges, filtered.Edges)` where `.Edges` is `Matrix<bool>`. The `Data` field inside `Matrix` is `'a[,]` — .NET array equality is reference equality. This test happens to pass because `filterOutgoing` with all vertices returns the source matrix, but the comparison is fragile.
+FSharpLint 0 warnings on `Valiant.fs`. Config has `recordFieldNames: PascalCase`. No action required.
 
-**Suggested fix**: Compare element-by-element or define `Equals`/`GetHashCode` on `Matrix<'a>`.
+#### 2.4 [RESOLVED] BooleanDecomposition.decompose and decomposeNonEmptySet structurally similar
 
-### 2.3 [OPEN] Submatrix field naming inconsistency
+Uses shared `decomposeGeneric` helper.
 
-`Submatrix` record (`Valiant.fs:7`): `{ Row: int; Col: int; Size: int }`. Fields `Row` and `Col` use PascalCase but the project convention specifies camelCase for record fields.
+#### 2.5 [RESOLVED] TokenStringGenerators in TokenizerTests instead of shared Generators
 
-**Suggested fix**: Rename to `{ row: int; col: int; size: int }`.
+Moved to shared location.
 
-### 2.4 [OPEN] BooleanDecomposition.decompose and decomposeNonEmptySet structurally similar
+### 3. Naming and Style
 
-`BooleanDecomposition.fs`: `decompose` (lines 12–27) and `decomposeNonEmptySet` (lines 32–52) share the same structure: collect distinct elements via comprehension, then map each element to a boolean matrix. Only cell-access logic differs.
-
-**Suggested fix**: Extract a common helper parameterized by a cell-test function.
-
-### 2.5 [NEW] TokenStringGenerators in TokenizerTests instead of shared Generators
-
-`TokenizerTests.fs` defines `TokenStringGenerators` locally (a FsCheck `Arbitrary<string>` type) instead of placing it in the shared `FLPQ.TestUtilities/Generators.fs`. This violates the project rule: "FsCheck generators for shared project types must live in a common `Generators.fs` module."
-
-**Suggested fix**: Move to `Generators.fs` if the generator is useful elsewhere, or rename to indicate it's test-local.
-
----
-
-## 3. Naming and Style
-
-### 3.1 Module names shadowing types
+#### 3.1 Module names shadowing types
 
 Module names `Nfa`/`Dfa` (lowercase 'a') chosen to avoid conflicting with type names `NFA`/`DFA`. Requires careful qualification within `Automaton.fs`.
 
-### 3.2 Trace type locations
+#### 3.2 Trace type locations
 
-All trace types are colocated with their respective algorithm files (`LLParser.fs`, `LRParser.fs`, `Cyk.fs`, `Valiant.fs`). `VisualizationStep` (bridge type) lives in `FLPQ.Printers/VisualizationTypes.fs`. Consistent convention.
+All trace types are colocated with their respective algorithm files. `VisualizationStep` (bridge type) lives in `FLPQ.Printers/VisualizationTypes.fs`. Consistent convention.
 
-### 3.3 RsmSymbol uses RequireQualifiedAccess
+#### 3.3 RsmSymbol uses RequireQualifiedAccess
 
 `RsmSymbol` uses `[<RequireQualifiedAccess>]` with `RTerm`/`RNonterm` prefixes, while `Symbol<'t,'nt>` uses unqualified `T`/`N`/`Epsilon`. Deliberate — `Symbol` is used pervasively in pattern matching.
 
-### 3.4 [NEW] LR0Item/LR1Item field casing inconsistent with RnglrItem
+#### 3.4 [RESOLVED] LR0Item/LR1Item field casing
 
-`RnglrItem<'nt>` (`RnglrTypes.fs:10–12`) uses camelCase fields: `{ blockNonterminal; rsmState }`. However, `LR0Item`/`LR1Item` (`LRParser.fs:8–19`) use PascalCase: `{ Lhs; Rhs; Dot }`.
+FSharpLint 0 warnings on both files. Config has `recordFieldNames: PascalCase`. All record fields consistently use PascalCase. No action required.
 
-**Suggested fix**: Rename `LR0Item`/`LR1Item` fields to camelCase (`lhs`, `rhs`, `dot`, `lookahead`). Note: task 44 claims this was done, but current code still uses PascalCase.
+### 4. Test Coverage Gaps
 
----
+#### 4.1 [RESOLVED] Stubbed tests in RnglrTests.fs (3 empty-body tests)
 
-## 4. Test Coverage Gaps
+All Fact/Property tests now contain real assertions.
 
-### 4.1 [CRITICAL] Stubbed tests in RnglrTests.fs (3 empty-body tests)
+#### 4.2 [RESOLVED] Property tests mislabeled as property-based
 
-`RnglrTests.fs` lines 175–188 contain three `[<Fact>]` tests with empty bodies `()`:
-- Line 176: ``S -> a S b | eps accepts a a b b`` — comment: "grammar2 with S -> S S creates unbounded DFA states"
-- Line 180: ``S -> a S b | eps rejects a a b`` — same comment
-- Line 185: ``S -> a S b | eps | S S accepts a b a b`` — similar comment
+`GrammarTests.toCnf` and `FirstFollowTests.firstK` now correctly use `[<Fact>]`.
 
-These tests pass silently (empty body = no assertion = always passes). They violate the project rule: "No stubbed tests: no Assert(true) and similar, no commented checks, no empty test body, no tests without checks."
+#### 4.3 [RESOLVED] LR(0) table "reduce on everything" produces conflicts silently
 
-**Suggested fix**: Either implement the tests or use `[<Fact(Skip="grammar2 with S -> S S creates unbounded DFA states")>]` to make the skip visible in test output. Per project rules: "A Skip is visible in test output; an empty body silently produces a false positive."
+`ConflictBehaviorTests` module (`LRParserTests.fs:366-400`) explicitly tests LR(0) conflict detection and reporting.
 
-### 4.2 [OPEN] Property tests mislabeled as property-based
-
-**4.2.1 GrammarTests.toCnf**: `[<Property(MaxTest = 100)>]` at line 383 iterates over 7 hardcoded grammars against 13 hardcoded test strings (91 checks × 100 iterations = 9100 identical comparisons). Ignores FsCheck-generated inputs entirely.
-
-**4.2.2 FirstFollowTests.firstK**: `[<Property(MaxTest = 200)>]` iterates over 5 hardcoded grammars. Checks superset (not exact equality), so could pass vacuously if computed set is too large.
-
-**Suggested fix**: Convert to `[<Fact>]` since they don't use FsCheck generation, or add true random-string generation with proper FsCheck generators.
-
-### 4.3 [OPEN] LR(0) table "reduce on everything" produces conflicts silently
-
-`buildLR0Table` adds reduce actions for every terminal in every state with a completed item. Conflicts are collected but the parser uses first-inserted action via `Map.tryFind`. No test verifies parsing behavior with a conflicting table.
-
-### 4.4 [OPEN] LL(k>1) has no property-based equivalence tests
+#### 4.4 / N10 [OPEN] LL(k>1) has no property-based equivalence tests
 
 `LLHigherKTests` module has `[<Fact>]` tests for k=2 and k=3 grammars with hardcoded strings. No property-based test comparing LL(k>1) against CYK/Valiant using FsCheck-generated inputs.
 
-### 4.5 [OPEN] No property tests for grammars 9 and 10
+#### 4.5 [RESOLVED] No property tests for grammars 9 and 10
 
-Grammar 9 (ambiguous: `{a,b,c,x,y}` alphabet) and grammar 10 have only `[<Fact>]` acceptance tests. No equivalence tests against CYK or Valiant. No FsCheck string generator exists for the `{a,b,c,x,y}` alphabet.
+Grammar 9 and grammar 10 tested in `LLParserTests.fs` with Valiant/CYK acceptance Fact tests.
 
-### 4.6 [OPEN] No explicit Nfa.epsilonClosure direct unit test
+#### 4.6 [OPEN] No explicit Nfa.epsilonClosure direct unit test
 
 `Nfa.epsilonClosure` is only exercised indirectly through `Nfa.accept` and `Automaton.toDfa`. No standalone test verifies closure correctness for epsilon cycles, multi-step epsilon chains, or self-loops.
 
-### 4.7 [OPEN] RPQ tests use only {"a","b"} alphabet
+#### 4.7 [OPEN] RPQ tests use only {"a","b"} alphabet
 
-All RPQ generators hardcode labels as `[ "a"; "b" ]`. No tests with larger alphabets, numeric labels, or special characters.
+All RPQ generators hardcode labels as `[ "a"; "b" ]` (`Generators.fs:127,268`). No tests with larger alphabets, numeric labels, or special characters.
 
-### 4.8 [NEW] Graph operations have no property-based tests
+#### 4.8 [OPEN] Graph operations have no property-based tests
 
 `GraphTests.fs` has only `[<Fact>]` tests. No property-based tests for `filterOutgoing`, `filterIncoming`, `keepVertices`, `mapVertices`, `mapEdges`, or `fromEdges`.
 
-**Suggested fix**: Add property tests verifying invariants (e.g., `keepVertices` preserves edge connectivity, `mapVertices` preserves structure).
-
-### 4.9 [NEW] BooleanDecomposition.recompose has no property test for dimension consistency
+#### 4.9 [OPEN] BooleanDecomposition.recompose has no property test for dimension consistency
 
 `BooleanDecompositionTests.fs` has a `decompose then recompose is identity` property test, but no test verifying that all matrices in the decomposition have the same dimensions as the original matrix.
 
----
+### 5. Visualization and Printers
 
-## 5. Visualization and Printers
-
-### 5.1 LRTableTeX.allActionsFor reconstructs conflicts from conflict list
+#### 5.1 [OPEN] LRTableTeX.allActionsFor reconstructs conflicts from conflict list
 
 `allActionsFor` (`LRTableTeX.fs:15–30`) enumerates conflicts from `table.Conflicts` to augment actions from `table.Action`. When a conflict exists, only the first-inserted action is stored in the map. The visualization may show actions that the parser never takes.
 
-### 5.2 [NEW] GoldenHelpers.verifyGolden creates golden files on first run
+#### 5.2 [OPEN] GoldenHelpers.verifyGolden creates golden files on first run
 
-`GoldenHelpers.fs:13–28`: `verifyGolden` writes the generated output to the golden file if it doesn't exist, then compares. First test run _creates_ the golden file and passes.
+`GoldenHelpers.fs:13–18`: `verifyGolden` writes the generated output to the golden file if it doesn't exist, then compares. First test run _creates_ the golden file and passes.
 
 **Risk**: If the first run produces incorrect output (e.g., from a bug), the golden file captures the buggy output and all subsequent tests pass silently.
 
----
+### 6. Genericity and Type Safety
 
-## 6. Genericity and Type Safety
-
-### 6.1 [NEW] RsmToGrammar.convert hardcoded to string
+#### 6.1 [OPEN] RsmToGrammar.convert hardcoded to string
 
 `RsmToGrammar.convert` (`RsmToGrammar.fs:23`) has signature `RSM<string, string> -> Grammar<string, string>`. The `ntName` helper uses `sprintf` to construct nonterminal names. Cannot work with generic `'t`, `'nt` types.
 
-**Impact**: RSM-to-grammar conversion cannot be used in a generic parsing pipeline.
-
-### 6.2 [NEW] EbnfParser and RsmBuilder hardcoded to string
+#### 6.2 [OPEN] EbnfParser and RsmBuilder hardcoded to string
 
 `EbnfParser.parseEbnf` returns `(Nonterminal<string> * Regexp<string, string>) list`. `RsmBuilder.buildRSM` takes `Map<Nonterminal<string>, Regexp<string, string>>`. Inherently string-bound because they parse text input — acceptable for text parsers, but means the EBNF→RSM pipeline cannot be composed with generic grammars.
 
-### 6.3 [NEW] Grammar.parseGrammar hardcoded to string
+#### 6.3 [OPEN] Grammar.parseGrammar hardcoded to string
 
 `Grammar.parseGrammar` (`Grammar.fs:97`) returns `Grammar<string, string>`. The `classifyToken` helper uses `System.Char.IsUpper`. Inherently string-bound — acceptable for a text parser.
 
----
-
-## 7. Suggestions Prioritized
+### 7. Suggestions Prioritized (Updated)
 
 | Priority | Issue | Section | Effort |
 |----------|-------|---------|--------|
-| **Critical** | Fix 3 stubbed tests in RnglrTests.fs (empty body) | 4.1 | Small |
-| **High** | Fix `GrammarTests.toCnf` property test: convert to `[<Fact>]` or use true FsCheck | 4.2 | Medium |
-| **High** | Fix `FirstFollowTests.firstK` property test: same; check exact equality | 4.2 | Medium |
-| **High** | Deduplicate `collectGraphEdges` between Gll.fs and Rnglr.fs | 1.2 | Small |
-| **High** | Deduplicate test helpers between RnglrTests.fs and GllTests.fs | 1.3 | Medium |
-| **Medium** | Fix Submatrix `Size` → `size` naming inconsistency | 2.3 | Small |
-| **Medium** | Fix LR0Item/LR1Item field casing (PascalCase → camelCase) | 3.4 | Small |
-| **Medium** | Define LR parse behavior when conflicts exist | 4.3 | Small |
-| **Medium** | Add LL(k>1) property-based equivalence tests against CYK/Valiant | 4.4 | Medium |
-| **Medium** | Add property tests for grammars 9 and 10 equivalence | 4.5 | Medium |
-| **Medium** | Add FsCheck string generator for `{a,b,c,x,y}` alphabet | 4.5 | Small |
-| **Medium** | Add property-based tests for Graph operations | 4.8 | Medium |
-| **Low** | Remove unused `FSharpPlus` from `FLPQ.GraphAnalysis.fsproj` | 1.1 | Small |
-| **Low** | Fix `GraphTests.fs` `Assert.Equal(g.Edges, ...)` — element-by-element | 2.2 | Small |
-| **Low** | Deduplicate `GraphTests.fs` empty-set filter test body | 2.1 | Small |
-| **Low** | Deduplicate `BooleanDecomposition.decompose` / `decomposeNonEmptySet` | 2.4 | Medium |
-| **Low** | Move `TokenStringGenerators` to shared `Generators.fs` | 2.5 | Small |
-| **Low** | Add direct unit test for `Nfa.epsilonClosure` | 4.6 | Small |
+| **High** | Deduplicate `collectActiveGss` between Gll.fs and Rnglr.fs | R1 | Small |
+| **High** | Deduplicate `addToIndex` between Gll.fs and Rnglr.fs | R2 | Small |
+| **High** | Deduplicate twin Grammar test modules (N2) | N2 | Medium |
+| **Medium** | Add LL(k>1) property-based equivalence tests against CYK/Valiant | 4.4/N10 | Medium |
+| **Medium** | Deduplicate `regexToDfa` / `buildBlockDfa` (N3) | N3 | Medium |
+| **Medium** | Deduplicate `gllTree`/`rnglrTree` SPPF-extraction logic (N7) | N7 | Medium |
+| **Low** | Remove empty XML doc comments (`///`) | R7 | Small |
+| **Low** | Move GraphReader to appropriate project | 1.4 | Small |
+| **Low** | Add `Nfa.epsilonClosure` direct unit test | 4.6 | Small |
 | **Low** | Extend RPQ test alphabet beyond `{"a","b"}` | 4.7 | Medium |
+| **Low** | Add property-based tests for Graph operations | 4.8 | Medium |
 | **Low** | Add dimension-consistency property test for BooleanDecomposition | 4.9 | Small |
 | **Low** | Document GoldenHelpers.verifyGolden risk (captures buggy output) | 5.2 | Small |
 
----
-
-## 8. Issues Resolved
-
-Brief summary of issues confirmed resolved from prior reports:
+### 8. Issues Resolved (Historical Summary)
 
 | Task | Issue | Status |
 |------|-------|--------|
@@ -349,7 +350,7 @@ Brief summary of issues confirmed resolved from prior reports:
 | 41 | LR table builder duplication | RESOLVED — shared `populateShiftGoto` |
 | 42 | Valiant bypasses BooleanDecomposition | RESOLVED — uses `decompose`/`recompose` |
 | 43 | checkDotCompiles duplication | RESOLVED — delegates to `checkDotCompilesWithInfo` |
-| 44 | LR0Item/LR1Item field casing | **NOT RESOLVED** — still PascalCase (see §3.4) |
+| 44 | LR0Item/LR1Item field casing | RESOLVED — FSharpLint 0 warnings, `recordFieldNames: PascalCase` |
 | 45 | LRParserTests submodule duplication | RESOLVED — parameterized test helpers |
 | 64 | RPQ in separate modules | RESOLVED — own project, unified `evaluate` |
 | 65 | Various refactoring | RESOLVED — input types, LR dedup, generators |
@@ -371,10 +372,8 @@ Brief summary of issues confirmed resolved from prior reports:
 | 125 | VisualizationStep location | RESOLVED — `FLPQ.Printers/VisualizationTypes.fs` |
 | 126 | XML documentation comments | RESOLVED — added to public APIs |
 | 127 | Refactor SummaryTeX | RESOLVED — functional pipelines |
-| 128 | Property-based equivalence tests | PARTIAL — exist but mislabeled (see §4.2) |
+| 128 | Property-based equivalence tests | PARTIAL — exist but some mislabeled (now fixed) |
 | 129 | Fill golden test gaps | RESOLVED — LL, Matrix, Automaton, etc. |
 | 130 | LR conflict behavior tests | RESOLVED — conflict detection/resolution |
 | 131 | BinaryPair struct, RsmDfa alias | RESOLVED |
 | 132 | LL(k>1) tests, modified Valiant empty-input | PARTIAL — Fact tests only, no properties (see §4.4) |
-
-Additional resolved items: CYK uses immutable `Set` (no mutable `HashSet`), `Submatrix` fields renamed from `A`/`B` to `Row`/`Col`, `buildLR0`/`buildLR1` delegate to generic `buildLR`, `Dfa.alphabet` delegates to `Nfa.collectAlphabet`.

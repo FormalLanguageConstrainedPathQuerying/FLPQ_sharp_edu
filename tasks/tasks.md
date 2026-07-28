@@ -605,5 +605,52 @@
          - Adaptable (same structure, new function): GLL's `descriptorsTableToTeX` → RNGLR version (2 columns vs 4), GLL's `newDescriptorsToTeX` → RNGLR version (simpler descriptor format), GLL's `descriptorToTeX` → RNGLR version, `GssDot.toDotFromSets` → RNGLR label printers, `SummaryTeX.gllStepSection` → `rnglrStepSection` (different placeholder names).
          - New required: `RnglrParsingStep` type, `Rnglr.buildPathIndexWithSteps`, `RnglrStepVisualizer` module + `RnglrVisualizationStep` type, `Helpers.writeRnglrStepsVisualization`, `Helpers.findRnglrStepTemplate`, `RNGLR_step_template.tex`, LR automaton DOT with state highlighting wrapper, RNGLR GSS label printers.
     8.   All existing RNGLR tests must pass without changes. Step visualization must not alter algorithm behavior — `buildPathIndex` remains unchanged, `buildPathIndexWithSteps` must produce identical `PathIndex` output.
-203. [done] Add solution level `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn all warnings to errors. Compile all projects, fix all problems.
+ 203. [done] Add solution level `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` to turn all warnings to errors. Compile all projects, fix all problems.
+ 204. Deduplicate GLL/RNGLR shared algorithm helpers (code review R1, R2, R3).
+       1. Extract `collectActiveGss` into shared location — identical logic in `Gll.fs:50` and `Rnglr.fs:314`. Both iterate GSS edge matrix to collect `(vertex, edge)` sets. Place in `GraphHelpers` module (`GllTypes.fs`) or a new shared module.
+       2. Extract `addToIndex` into shared location — structurally identical local function in `Gll.fs:110` and `Rnglr.fs:101`. Both compute linear indices, check Set.contains, mutate matrix. Place in `PathIndex` module since it operates on path index.
+       3. Extract `linearIndex` formula `state * vertexCount + vertex` — appears in 3 modules: `GSS.linearIndex` (GllTypes.fs:83), `RnglrGSS.linearIndex` (RnglrTypes.fs:60), `PathIndex.linearIndex` (PathIndex.fs:42). Create single shared implementation.
+       4. All existing tests must pass without changes.
+ 205. Deduplicate test helpers for GSS DOT visualization (code review R4, R5, R6).
+       1. Move `stripQuotes`, `vertexLabelRegex`, `edgeLabelRegex` from `GssDotVisualizationTests.fs` into shared `GoldenHelpers.fs` or a new `DotTestHelpers.fs` in `FLPQ.Printers.Tests`.
+       2. Update both `GssDotVisualizationTests.fs` and `RnglrStepVisualizationTests.fs` to use shared helpers.
+       3. All existing tests must pass without changes.
+ 206. Deduplicate GLL/RNGLR twin grammar test modules (code review N2).
+       1. Extract shared grammar definitions (grammar1-4) and common accept/reject test structures into a shared test module or parameterized test framework.
+       2. Both `GllTests.fs` and `RnglrTests.fs` should reference the same grammar definitions rather than duplicating ~400 lines of identical test structure.
+       3. Consider using `[<Theory>]`/`[<InlineData>]` or a shared test data module to parameterize tests over algorithm (GLL vs RNGLR).
+       4. All existing tests must pass without changes.
+ 207. Deduplicate `regexToDfa` / `buildBlockDfa` (code review N3).
+       1. `regexToDfa` in `RPQTests.fs:237` duplicates `RsmBuilder.buildBlockDfa` (`EbnfParser.fs:268`). Both use Brzozowski derivatives.
+       2. Either move shared implementation to a common location or have the test reuse `buildBlockDfa`.
+       3. All existing tests must pass without changes.
+ 208. Deduplicate SPPF-extraction logic in CLI runners (code review N7).
+       1. `gllTree`/`rnglrTree` share ~30 lines of nearly identical SPPF-extraction logic in `GllRunner.fs:26-52` and `RnglrRunner.fs:30-59`.
+       2. Extract shared rootRanges construction and `Sppf.buildSppfFromIndex` calls into a common helper for SPPF.
+       3. All existing tests must pass without changes.
+ 209. Remove empty XML doc comments (code review R7).
+       1. Remove `///` on a line by itself in 5 locations: `MsBfs.fs:7,34`, `KroneckerRPQ.fs:10`, `ArroyueloRPQ.fs:9`, `BelyaninRPQ.fs:10`.
+ 210. Add test coverage for uncovered areas (code review 4.6, 4.7, 4.8, 4.9).
+       1. Add direct unit test for `Nfa.epsilonClosure` — cover epsilon cycles, multi-step epsilon chains, self-loops.
+       2. Extend RPQ generators beyond `["a"; "b"]` alphabet — add tests with larger alphabets and special characters.
+       3. Add property-based tests (`[<Property>]`) for `Graph` operations: `filterOutgoing`, `filterIncoming`, `keepVertices`, `mapVertices`, `mapEdges`, `fromEdges`.
+       4. Add dimension-consistency property test for `BooleanDecomposition.recompose` — verify all matrices in decomposition have same dimensions as original.
+       5. All existing tests must pass without changes.
+ 211. Add LL(k>1) property-based equivalence tests (code review 4.4/N10).
+       1. `LLParserTests.fs` has only `[<Fact>]` tests for k=2/k=3 with hardcoded strings.
+       2. Add `[<Property>]` test comparing LL(k>1) acceptance against CYK/Valiant using FsCheck-generated grammars and inputs.
+       3. All existing tests must pass without changes.
+ 212. Fix FsCheck property tests without registered Arbitrary (code review N9).
+       1. `GllTests.GllCykEquivalence` (line 88) and `GllPropertyTreeYield` (line 520) produce mostly irrelevant inputs without `[<Properties(Arbitrary=...)>]`.
+       2. Register custom Arbitrary generators so property tests receive meaningful inputs.
+       3. All existing tests must pass without changes.
+ 213. Move `TokenStringGenerators` to shared `Generators.fs` (code review N6).
+       1. `TokenStringGenerators` defined inline in `TokenizerTests.fs:144-151` instead of shared `Generators.fs`.
+       2. Move to `FLPQ.TestUtilities/Generators.fs` for reuse by other test projects.
+       3. All existing tests must pass without changes.
+ 214. Address GoldenHelpers.verifyGolden risk (code review 5.2).
+       1. `GoldenHelpers.verifyGolden` creates golden files on first run when they don't exist — buggy output can be captured as golden.
+       2. Add a safeguard: require explicit opt-in flag to create golden files.
+       3. All existing tests must pass without changes.
+
 
