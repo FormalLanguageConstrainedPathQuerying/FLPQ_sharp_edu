@@ -85,6 +85,7 @@ module GllAcceptance =
         let g = TestGrammars.grammar4
         Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
 
+[<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
 module GllCykEquivalence =
     [<Property>]
     let ``GLL and CYK agree on grammar1 random string inputs`` (s: string) =
@@ -129,6 +130,7 @@ module GllTreeExtraction =
 
         Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a" ])
 
+[<Properties(Arbitrary = [| typeof<AbcxdStringGenerators> |])>]
 module GllRegexEquivalence =
 
     [<Property(MaxTest = 50)>]
