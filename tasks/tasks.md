@@ -628,29 +628,32 @@
        1. `gllTree`/`rnglrTree` share ~30 lines of nearly identical SPPF-extraction logic in `GllRunner.fs:26-52` and `RnglrRunner.fs:30-59`.
        2. Extract shared rootRanges construction and `Sppf.buildSppfFromIndex` calls into a common helper for SPPF.
        3. All existing tests must pass without changes.
-209. Remove empty XML doc comments (code review R7).
+209. [done] Remove empty XML doc comments (code review R7).
        1. Remove `///` on a line by itself in 5 locations: `MsBfs.fs:7,34`, `KroneckerRPQ.fs:10`, `ArroyueloRPQ.fs:9`, `BelyaninRPQ.fs:10`.
-210. Add test coverage for uncovered areas (code review 4.6, 4.7, 4.8, 4.9).
+210. [done] Add test coverage for uncovered areas (code review 4.6, 4.7, 4.8, 4.9).
        1. Add direct unit test for `Nfa.epsilonClosure` — cover epsilon cycles, multi-step epsilon chains, self-loops.
        2. Extend RPQ generators beyond `["a"; "b"]` alphabet — add tests with larger alphabets and special characters.
        3. Add property-based tests (`[<Property>]`) for `Graph` operations: `filterOutgoing`, `filterIncoming`, `keepVertices`, `mapVertices`, `mapEdges`, `fromEdges`.
        4. Add dimension-consistency property test for `BooleanDecomposition.recompose` — verify all matrices in decomposition have same dimensions as original.
        5. All existing tests must pass without changes.
-211. Add LL(k>1) property-based equivalence tests (code review 4.4/N10).
+211. [done] Add LL(k>1) property-based equivalence tests (code review 4.4/N10).
        1. `LLParserTests.fs` has only `[<Fact>]` tests for k=2/k=3 with hardcoded strings.
        2. Add `[<Property>]` test comparing LL(k>1) acceptance against CYK/Valiant using FsCheck-generated grammars and inputs.
        3. All existing tests must pass without changes.
-212. Fix FsCheck property tests without registered Arbitrary (code review N9).
+212. [done] Fix FsCheck property tests without registered Arbitrary (code review N9).
        1. `GllTests.GllCykEquivalence` (line 88) and `GllPropertyTreeYield` (line 520) produce mostly irrelevant inputs without `[<Properties(Arbitrary=...)>]`.
        2. Register custom Arbitrary generators so property tests receive meaningful inputs.
        3. All existing tests must pass without changes.
-213. Move `TokenStringGenerators` to shared `Generators.fs` (code review N6).
+213. [done] Move `TokenStringGenerators` to shared `Generators.fs` (code review N6).
        1. `TokenStringGenerators` defined inline in `TokenizerTests.fs:144-151` instead of shared `Generators.fs`.
        2. Move to `FLPQ.TestUtilities/Generators.fs` for reuse by other test projects.
        3. All existing tests must pass without changes.
-214. Address GoldenHelpers.verifyGolden risk (code review 5.2).
+214. [done] Address GoldenHelpers.verifyGolden risk (code review 5.2).
        1. `GoldenHelpers.verifyGolden` creates golden files on first run when they don't exist — buggy output can be captured as golden.
        2. Add a safeguard: require explicit opt-in flag to create golden files.
        3. All existing tests must pass without changes.
+215. Use [indexed properties](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/members/indexed-properties) to access Matrix elements instead of `get` and `set`.
+     1.   Replace all usages of `get` and `set`
+     2.   All tests must pass.
 
 
