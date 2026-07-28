@@ -239,55 +239,16 @@ let private regexToDfa (regexp: Regexp<string, string>) : DFA<string, int> =
         Regexp.symbols regexp
         |> List.choose (fun s ->
             match s with
-            | RsmSymbol.RTerm t -> Some t
+            | RsmSymbol.RTerm(Terminal t) -> Some t
             | _ -> None)
         |> List.distinct
 
-    let alphabet =
-        if List.isEmpty terminals then
-            [ Terminal "a" ]
-        else
-            terminals
+    let alphabet = if List.isEmpty terminals then [ "a" ] else terminals
 
-    let stateMap = System.Collections.Generic.Dictionary<Regexp<string, string>, int>()
-    let mutable transitions: (int * string * int) list = []
-    let mutable stateList: Regexp<string, string> list = []
+    let deriveFn (r: Regexp<string, string>) (sym: string) =
+        Regexp.derive r (RsmSymbol.RTerm(Terminal sym))
 
-    let getStateId (r: Regexp<string, string>) =
-        match stateMap.TryGetValue r with
-        | true, id -> id
-        | false, _ ->
-            let id = stateList.Length
-            stateList <- r :: stateList
-            stateMap.[r] <- id
-            id
-
-    let startId = getStateId regexp
-    let stack = System.Collections.Generic.Stack<Regexp<string, string>>()
-    stack.Push regexp
-
-    while stack.Count > 0 do
-        let state = stack.Pop()
-
-        for (Terminal sym) in alphabet do
-            let deriv = Regexp.derive state (RsmSymbol.RTerm(Terminal sym))
-
-            match deriv with
-            | REmpty -> ()
-            | _ ->
-                if not (stateMap.ContainsKey deriv) then
-                    stack.Push deriv
-
-                let fromId = stateMap.[state]
-                let toId = getStateId deriv
-                transitions <- (fromId, sym, toId) :: transitions
-
-    let finalStates =
-        stateMap
-        |> Seq.choose (fun kvp -> if Regexp.nullable kvp.Key then Some kvp.Value else None)
-        |> Set.ofSeq
-
-    Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
+    Regexp.buildDfaFromRegex alphabet deriveFn regexp
 
 [<Properties(Arbitrary = [| typeof<RegexAndGraphGenerators> |])>]
 module RegexPropertyTests =

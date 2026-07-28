@@ -99,6 +99,57 @@ module Regexp =
             + toString termPrinter nontermPrinter r
         | RStar rp -> "(" + toString termPrinter nontermPrinter rp + ")*"
 
+    /// Build a DFA from a regular expression using Brzozowski derivatives.
+    /// Parameters:
+    ///   alphabet - list of symbols to derive over
+    ///   deriveFn - function that computes the derivative of a regex with respect to a symbol
+    ///   regexp - the regular expression to convert
+    /// Returns a DFA where states are integer indices and transitions are labeled with symbols from the alphabet.
+    let buildDfaFromRegex
+        (alphabet: 'sym list)
+        (deriveFn: Regexp<'t, 'nt> -> 'sym -> Regexp<'t, 'nt>)
+        (regexp: Regexp<'t, 'nt>)
+        : DFA<'sym, int> =
+        let stateMap = System.Collections.Generic.Dictionary<Regexp<'t, 'nt>, int>()
+        let mutable transitions: (int * 'sym * int) list = []
+        let mutable stateList: Regexp<'t, 'nt> list = []
+
+        let getStateId (r: Regexp<'t, 'nt>) =
+            match stateMap.TryGetValue r with
+            | true, id -> id
+            | false, _ ->
+                let id = stateList.Length
+                stateList <- r :: stateList
+                stateMap.[r] <- id
+                id
+
+        let startId = getStateId regexp
+        let stack = System.Collections.Generic.Stack<Regexp<'t, 'nt>>()
+        stack.Push regexp
+
+        while stack.Count > 0 do
+            let state = stack.Pop()
+
+            for sym in alphabet do
+                let deriv = deriveFn state sym
+
+                match deriv with
+                | REmpty -> ()
+                | _ ->
+                    if not (stateMap.ContainsKey deriv) then
+                        stack.Push deriv
+
+                    let fromId = stateMap.[state]
+                    let toId = getStateId deriv
+                    transitions <- (fromId, sym, toId) :: transitions
+
+        let finalStates =
+            stateMap
+            |> Seq.choose (fun kvp -> if nullable kvp.Key then Some kvp.Value else None)
+            |> Set.ofSeq
+
+        Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
+
 
 /// EBNF token type for tokenizer-based parsing.
 [<RequireQualifiedAccess>]
@@ -266,47 +317,9 @@ module EbnfParser =
 module RsmBuilder =
 
     let private buildBlockDfa (nt: Nonterminal<string>) (regexp: Regexp<string, string>) : RsmBlock<string, string> =
-        let alphabet = Regexp.symbols regexp |> List.distinct |> Set.ofList
-        let stateMap = System.Collections.Generic.Dictionary<Regexp<string, string>, int>()
-        let mutable transitions: (int * RsmSymbol<string, string> * int) list = []
-        let mutable stateList: Regexp<string, string> list = []
+        let alphabet = Regexp.symbols regexp |> List.distinct
 
-        let getStateId (r: Regexp<string, string>) =
-            match stateMap.TryGetValue r with
-            | true, id -> id
-            | false, _ ->
-                let id = stateList.Length
-                stateList <- r :: stateList
-                stateMap.[r] <- id
-                id
-
-        let startId = getStateId regexp
-        let stack = System.Collections.Generic.Stack<Regexp<string, string>>()
-        stack.Push regexp
-
-        while stack.Count > 0 do
-            let state = stack.Pop()
-
-            for sym in alphabet do
-                let deriv = Regexp.derive state sym
-
-                match deriv with
-                | REmpty -> ()
-                | _ ->
-                    if not (stateMap.ContainsKey deriv) then
-                        stack.Push deriv
-
-                    let fromId = stateMap.[state]
-                    let toId = getStateId deriv
-                    transitions <- (fromId, sym, toId) :: transitions
-
-        let finalStates =
-            stateMap
-            |> Seq.choose (fun kvp -> if Regexp.nullable kvp.Key then Some kvp.Value else None)
-            |> Set.ofSeq
-
-        let dfa =
-            Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
+        let dfa = Regexp.buildDfaFromRegex alphabet Regexp.derive regexp
 
         { Nonterminal = nt; Dfa = dfa }
 
