@@ -1,5 +1,6 @@
 module GoldenHelpers
 
+open System
 open System.IO
 open System.Text.RegularExpressions
 open FLPQ.Languages
@@ -25,14 +26,23 @@ let verifyGolden (goldenFileName: string) (actualContent: string) =
         let expected = File.ReadAllText goldenPath
         Assert.Equal(expected, actualContent)
     else
-        Directory.CreateDirectory goldenDataDir |> ignore
-        File.WriteAllText(goldenPath, actualContent)
+        let createAllowed = Environment.GetEnvironmentVariable("CREATE_GOLDEN_FILES") = "1"
 
-        Assert.True(
-            false,
-            $"Golden file '{goldenFileName}' was created in output/GoldenData/.\n"
-            + "Copy it to tests/FLPQ.Printers.Tests/GoldenData/ and re-run tests."
-        )
+        if createAllowed then
+            Directory.CreateDirectory goldenDataDir |> ignore
+            File.WriteAllText(goldenPath, actualContent)
+
+            Assert.True(
+                false,
+                $"Golden file '{goldenFileName}' was created in output/GoldenData/.\n"
+                + "Copy it to tests/FLPQ.Printers.Tests/GoldenData/ and re-run tests."
+            )
+        else
+            Assert.True(
+                false,
+                $"Golden file '{goldenFileName}' not found at '{goldenPath}'.\n"
+                + "Set CREATE_GOLDEN_FILES=1 to generate it, or copy the expected file manually."
+            )
 
 let combineStepsDot (steps: VisualizationStep list) : string =
     steps
