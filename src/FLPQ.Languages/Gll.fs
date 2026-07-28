@@ -48,19 +48,7 @@ module GLL =
     /// Collects the set of currently active GSS vertices and edges.
     /// A vertex is active if it has any outgoing edges.
     let private collectActiveGss (gss: GSS) : Set<int> * Set<int * int> =
-        let n = gss.Graph.VertexMap.Count
-        let mutable vertices = Set.empty<int>
-        let mutable edges = Set.empty<int * int>
-
-        for fromIdx in 0 .. n - 1 do
-            for toIdx in 0 .. n - 1 do
-                match Matrix.get gss.Graph.Edges fromIdx toIdx with
-                | Some _ ->
-                    vertices <- Set.add fromIdx vertices
-                    edges <- Set.add (fromIdx, toIdx) edges
-                | None -> ()
-
-        vertices, edges
+        GraphHelpers.collectActiveGss gss.Graph.Edges
 
     /// Core GLL algorithm shared by buildPathIndex and buildPathIndexWithSteps.
     /// The onStep callback is called at each step collection point with the current state.
@@ -104,7 +92,7 @@ module GLL =
 
         let handledNonEmpty = HashSet<int * int * int>()
 
-        let mutable changedCells = Set.empty<int * int>
+        let changedCells = ref Set.empty<int * int>
         let mutable attemptedInStep = Set.empty<Descriptor>
 
         let addToIndex
@@ -114,13 +102,7 @@ module GLL =
             (toVertex: int)
             (entry: PathIndexEntry<'t, 'nt>)
             =
-            let fromIdx = PathIndex.linearIndex pathIndex fromState fromVertex
-            let toIdx = PathIndex.linearIndex pathIndex toState toVertex
-            let current = Matrix.get pathIndex.Matrix fromIdx toIdx
-
-            if not (Set.contains entry current) then
-                Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
-                changedCells <- Set.add (fromIdx, toIdx) changedCells
+            PathIndex.addWithTracking pathIndex fromState fromVertex toState toVertex entry changedCells
 
         let tryEnqueue (d: Descriptor) =
             attemptedInStep <- Set.add d attemptedInStep
@@ -163,7 +145,7 @@ module GLL =
             activeVerts
             activeEdges
             pathIndex.Matrix
-            changedCells
+            changedCells.Value
             0
             (Some gssIdx)
             None
@@ -385,7 +367,7 @@ module GLL =
                 activeVerts
                 activeEdges
                 pathIndex.Matrix
-                changedCells
+                changedCells.Value
                 v0
                 (Some s0)
                 (Some desc)
@@ -394,7 +376,7 @@ module GLL =
                 stepNewDescriptors
 
             handledSnapshot <- handled |> Set.ofSeq
-            changedCells <- Set.empty<int * int>
+            changedCells.Value <- Set.empty<int * int>
             attemptedInStep <- Set.empty<Descriptor>
 
         pathIndex

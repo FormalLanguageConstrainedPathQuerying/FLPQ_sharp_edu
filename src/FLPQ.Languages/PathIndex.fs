@@ -2,6 +2,13 @@ namespace FLPQ.Languages
 
 open FLPQ.LinearAlgebra
 
+/// Shared grid indexing: maps (state, vertex) pair to a linear index in a |States|×|Vertices| grid.
+/// Used by GSS, RnglrGSS, and PathIndex for consistent state-space layout.
+module GridIndex =
+
+    /// Computes the linear index for a (state, vertex) pair in a grid with the given number of vertices per row.
+    let linearIndex (vertexCount: int) (state: int) (vertex: int) : int = state * vertexCount + vertex
+
 /// A range in the path index: from (fromState, fromVertex) to (toState, toVertex).
 /// Book reference: sec:CFPQ_GLL.
 [<Struct>]
@@ -39,7 +46,8 @@ type PathIndex<'t, 'nt when 't: comparison and 'nt: comparison> =
 module PathIndex =
 
     /// Maps (state, vertex) to a linear index in the PathIndex matrix.
-    let linearIndex (pi: PathIndex<'t, 'nt>) (state: int) (vertex: int) : int = state * pi.VertexCount + vertex
+    let linearIndex (pi: PathIndex<'t, 'nt>) (state: int) (vertex: int) : int =
+        GridIndex.linearIndex pi.VertexCount state vertex
 
     /// Adds an entry to the path index at range (fromState, fromVertex) → (toState, toVertex).
     let add
@@ -54,6 +62,25 @@ module PathIndex =
         let toIdx = linearIndex pi toState toVertex
         let current = Matrix.get pi.Matrix fromIdx toIdx
         Matrix.set pi.Matrix fromIdx toIdx (Set.add entry current)
+
+    /// Adds an entry to the path index and tracks changed cells via a ref cell.
+    /// Only adds if the entry is not already present.
+    let addWithTracking
+        (pi: PathIndex<'t, 'nt>)
+        (fromState: int)
+        (fromVertex: int)
+        (toState: int)
+        (toVertex: int)
+        (entry: PathIndexEntry<'t, 'nt>)
+        (changedCells: Set<int * int> ref)
+        : unit =
+        let fromIdx = linearIndex pi fromState fromVertex
+        let toIdx = linearIndex pi toState toVertex
+        let current = Matrix.get pi.Matrix fromIdx toIdx
+
+        if not (Set.contains entry current) then
+            Matrix.set pi.Matrix fromIdx toIdx (Set.add entry current)
+            changedCells.Value <- Set.add (fromIdx, toIdx) changedCells.Value
 
     /// Gets the set of entries at range (fromState, fromVertex) → (toState, toVertex).
     let get
@@ -321,4 +348,4 @@ module PathIndex =
                           startGlobalState
                           finalGlobalState
                           (vertexCount - 1)
-                           (ntPrinter ntName) ]
+                          (ntPrinter ntName) ]

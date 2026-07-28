@@ -96,7 +96,7 @@ module Rnglr =
 
         let linearIdx (state: int) (vertex: int) = state * vertexCount + vertex
 
-        let mutable changedCells = Set.empty<int * int>
+        let changedCells = ref Set.empty<int * int>
 
         let addToIndex
             (fromState: int)
@@ -105,13 +105,7 @@ module Rnglr =
             (toVertex: int)
             (entry: PathIndexEntry<'t, 'nt>)
             =
-            let fromIdx = linearIdx fromState fromVertex
-            let toIdx = linearIdx toState toVertex
-            let current = Matrix.get pathIndex.Matrix fromIdx toIdx
-
-            if not (Set.contains entry current) then
-                Matrix.set pathIndex.Matrix fromIdx toIdx (Set.add entry current)
-                changedCells <- Set.add (fromIdx, toIdx) changedCells
+            PathIndex.addWithTracking pathIndex fromState fromVertex toState toVertex entry changedCells
 
         let getReduceNtWithStates (lrState: int) : (Nonterminal<'nt> * int) list =
             let items = lrTable.Automaton.States.[lrState]
@@ -312,27 +306,15 @@ module Rnglr =
                     | _ -> ()
 
         let collectActiveGss () : Set<int> * Set<int * int> =
-            let n = gss.GssGraph.VertexMap.Count
-            let mutable vertices = Set.empty<int>
-            let mutable edges = Set.empty<int * int>
-
-            for fromIdx in 0 .. n - 1 do
-                for toIdx in 0 .. n - 1 do
-                    match Matrix.get gss.GssGraph.Edges fromIdx toIdx with
-                    | Some _ ->
-                        vertices <- Set.add fromIdx vertices
-                        edges <- Set.add (fromIdx, toIdx) edges
-                    | None -> ()
-
-            vertices, edges
+            GraphHelpers.collectActiveGss gss.GssGraph.Edges
 
         let pendingSnapshot () =
             Array.init vertexCount (fun v -> pending.[v] |> List.ofSeq)
 
         let mutable handledAccum = Set.empty<RnglrDescriptor>
 
-        let stepChanged = changedCells
-        changedCells <- Set.empty<int * int>
+        let stepChanged = changedCells.Value
+        changedCells.Value <- Set.empty<int * int>
 
         onStep
             (pendingSnapshot ())
@@ -362,8 +344,8 @@ module Rnglr =
 
                     let activeVerts, activeEdges = collectActiveGss ()
 
-                    let stepChanged = changedCells
-                    changedCells <- Set.empty<int * int>
+                    let stepChanged = changedCells.Value
+                    changedCells.Value <- Set.empty<int * int>
 
                     let attemptedThisStep = handledAccum - handledBefore
 

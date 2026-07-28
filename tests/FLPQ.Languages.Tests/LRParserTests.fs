@@ -42,7 +42,11 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar1 strings`` () =
-            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar1 grammar1Accept grammar1Reject
+            testAcceptReject
+                (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol)
+                augGrammar1
+                grammar1Accept
+                grammar1Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar1`` () =
@@ -84,7 +88,11 @@ module FactTests =
 
         [<Fact>]
         let ``SLR(1) parser accepts and rejects grammar3 strings`` () =
-            testAcceptReject (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol) augGrammar3 grammar3Accept grammar3Reject
+            testAcceptReject
+                (fun g -> LRParser.buildSLR1Table g Grammar.eoiSymbol)
+                augGrammar3
+                grammar3Accept
+                grammar3Reject
 
         [<Fact>]
         let ``SLR(1) parser leaves match input for grammar3`` () =

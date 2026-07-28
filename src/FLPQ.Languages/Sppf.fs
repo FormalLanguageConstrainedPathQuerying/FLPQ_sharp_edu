@@ -378,7 +378,10 @@ module Sppf =
                     let (Nonterminal ntName) = nt
 
                     errors <-
-                        sprintf "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1" i (ntPrinter ntName)
+                        sprintf
+                            "Nonterminal node %d (%s) has 0 SingleChild edge(s), expected at least 1"
+                            i
+                            (ntPrinter ntName)
                         :: errors
                 else
                     for childIdx in singleChildTargets do

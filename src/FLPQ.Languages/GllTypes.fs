@@ -80,7 +80,8 @@ type GSS =
 module GSS =
 
     /// Maps (state, vertex) to a linear index in the GSS.
-    let linearIndex (vertexCount: int) (state: int) (vertex: int) : int = state * vertexCount + vertex
+    let linearIndex (vertexCount: int) (state: int) (vertex: int) : int =
+        GridIndex.linearIndex vertexCount state vertex
 
     /// Pre-allocates the GSS with all |Q|*|V| vertices and an empty edge matrix.
     let init (stateCount: int) (vertexCount: int) : GSS =
@@ -129,6 +130,25 @@ module GSS =
 
 /// Shared graph utilities for GLL/RNGLR path-index construction.
 module GraphHelpers =
+
+    /// Collects active vertices and edges from a GSS edge matrix.
+    /// A vertex is active if it has at least one outgoing edge.
+    /// Returns (activeVertices, activeEdges) where activeEdges are (fromIdx, toIdx) pairs.
+    let collectActiveGss (edges: Matrix<'a option>) : Set<int> * Set<int * int> =
+        let numRows = Matrix.rows edges
+        let numCols = Matrix.cols edges
+        let mutable vertices = Set.empty<int>
+        let mutable edgesSet = Set.empty<int * int>
+
+        for fromIdx in 0 .. numRows - 1 do
+            for toIdx in 0 .. numCols - 1 do
+                match Matrix.get edges fromIdx toIdx with
+                | Some _ ->
+                    vertices <- Set.add fromIdx vertices
+                    edgesSet <- Set.add (fromIdx, toIdx) edgesSet
+                | None -> ()
+
+        vertices, edgesSet
 
     /// Collects outgoing edges from each vertex of an input graph into adjacency arrays.
     /// Returns an array of ResizeArray where edges.[i] contains (label, targetVertex) pairs

@@ -297,8 +297,8 @@ module LRParser =
                         | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
 
                         match Map.tryFind (stateIdx, eoiSymbol) action with
-                         | Some _ -> ()
-                         | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
+                        | Some _ -> ()
+                        | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
 
                     else
                         let ruleIdx =
@@ -347,8 +347,8 @@ module LRParser =
                         | None -> action <- Map.add (stateIdx, Symbol.Epsilon) LRAction.Accept action
 
                         match Map.tryFind (stateIdx, eoiSymbol) action with
-                         | Some _ -> ()
-                         | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
+                        | Some _ -> ()
+                        | None -> action <- Map.add (stateIdx, eoiSymbol) LRAction.Accept action
 
                     else
                         let ruleIdx =

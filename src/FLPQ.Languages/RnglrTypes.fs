@@ -57,7 +57,8 @@ type RnglrGSS<'t, 'nt when 't: comparison and 'nt: comparison> =
 module RnglrGSS =
 
     /// Maps (lrState, inputVertex) to a linear index in the GSS.
-    let linearIndex (vertexCount: int) (lrState: int) (inputVertex: int) : int = lrState * vertexCount + inputVertex
+    let linearIndex (vertexCount: int) (lrState: int) (inputVertex: int) : int =
+        GridIndex.linearIndex vertexCount lrState inputVertex
 
     /// Pre-allocates the RNGLR GSS with all |Q_lr| * |V| vertices and an empty edge matrix.
     let init (lrStateCount: int) (vertexCount: int) : RnglrGSS<'t, 'nt> =
