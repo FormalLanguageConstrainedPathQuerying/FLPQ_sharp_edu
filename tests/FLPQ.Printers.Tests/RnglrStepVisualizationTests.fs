@@ -1,7 +1,6 @@
 module RnglrStepVisualizationTests
 
 open System.IO
-open System.Text.RegularExpressions
 open Xunit
 open FLPQ.Languages
 open FLPQ.GraphAnalysis
@@ -62,16 +61,6 @@ let ``RNGLR golden for S->a a input a a — lr_automaton step 0`` () =
     let _, _, _, _, _, lrDots = renderViz "S -> a a" [ "a"; "a" ]
     GoldenHelpers.verifyGolden "rnglr_lr_automaton_step0.dot" lrDots.[0]
 
-let private stripQuotes (s: string) =
-    if s.Length >= 2 && s.[0] = '"' && s.[s.Length - 1] = '"' then
-        s.Substring(1, s.Length - 2)
-    else
-        s
-
-let private vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
-
-let private edgeLabelRegex = Regex(@"^\d+,\d+ . \d+,\d+$")
-
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
@@ -83,10 +72,10 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
         let info = ExternalTools.compileDotStringToInfo dot
 
         for label in info.NodeLabels do
-            Assert.Matches(vertexLabelRegex, stripQuotes label)
+            Assert.Matches(GoldenHelpers.vertexLabelRegex, GoldenHelpers.stripQuotes label)
 
         for label in info.EdgeLabels do
-            Assert.Matches(edgeLabelRegex, stripQuotes label)
+            Assert.Matches(GoldenHelpers.edgeLabelRegex, GoldenHelpers.stripQuotes label)
 
         let blueCount =
             info.NodeFillColors |> List.filter (fun c -> c.Contains "blue") |> List.length

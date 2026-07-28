@@ -1,20 +1,9 @@
 module GssDotVisualizationTests
 
-open System.Text.RegularExpressions
 open Xunit
 open FLPQ.Languages
 open FLPQ.GraphAnalysis
 open FLPQ.Printers
-
-let private stripQuotes (s: string) =
-    if s.Length >= 2 && s.[0] = '"' && s.[s.Length - 1] = '"' then
-        s.Substring(1, s.Length - 2)
-    else
-        s
-
-let private vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
-
-let private edgeLabelRegex = Regex(@"^\d+,\d+ → \d+,\d+$")
 
 let private renderGssDots (ebnfText: string) (input: string list) : string list =
     let rsm = RsmBuilder.buildRSMFromText ebnfText
@@ -44,10 +33,10 @@ let private verifyGssDots (dots: string list) =
         let info = ExternalTools.compileDotStringToInfo dot
 
         for label in info.NodeLabels do
-            Assert.Matches(vertexLabelRegex, stripQuotes label)
+            Assert.Matches(GoldenHelpers.vertexLabelRegex, GoldenHelpers.stripQuotes label)
 
         for label in info.EdgeLabels do
-            Assert.Matches(edgeLabelRegex, stripQuotes label)
+            Assert.Matches(GoldenHelpers.edgeLabelRegex, GoldenHelpers.stripQuotes label)
 
         let blueCount =
             info.NodeFillColors

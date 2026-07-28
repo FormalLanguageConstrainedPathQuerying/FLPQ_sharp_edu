@@ -1,9 +1,20 @@
 module GoldenHelpers
 
 open System.IO
+open System.Text.RegularExpressions
 open FLPQ.Languages
 open FLPQ.Printers
 open Xunit
+
+let stripQuotes (s: string) =
+    if s.Length >= 2 && s.[0] = '"' && s.[s.Length - 1] = '"' then
+        s.Substring(1, s.Length - 2)
+    else
+        s
+
+let vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
+
+let edgeLabelRegex = Regex(@"^\d+,\d+ → \d+,\d+$")
 
 let goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
 
