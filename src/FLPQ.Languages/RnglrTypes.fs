@@ -125,6 +125,7 @@ type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
     { PendingQueues: RnglrDescriptor list[]
       ActiveGssVertices: Set<int>
       ActiveGssEdges: Set<int * int>
+      ActiveGssEdgeSymbols: Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
       NewGssVertices: Set<int>
       NewGssEdges: Set<int * int>
       PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>

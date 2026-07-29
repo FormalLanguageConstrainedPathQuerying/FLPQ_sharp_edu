@@ -41,6 +41,7 @@ module Rnglr =
             RnglrDescriptor list[]
                 -> Set<int>
                 -> Set<int * int>
+                -> Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
                 -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
                 -> Set<int * int>
                 -> int
@@ -308,6 +309,20 @@ module Rnglr =
         let collectActiveGss () : Set<int> * Set<int * int> =
             GraphHelpers.collectActiveGss gss.GssGraph.Edges
 
+        let collectEdgeSymbols (activeVerts: Set<int>) : Map<int * int, NonEmptySet<Symbol<'t, 'nt>>> =
+            let mutable symbols = Map.empty
+
+            for fromIdx in activeVerts do
+                for (toIdx, sym) in RnglrGSS.outgoingEdges gss fromIdx do
+                    let key = (fromIdx, toIdx)
+
+                    symbols <-
+                        match Map.tryFind key symbols with
+                        | Some existing -> Map.add key (NonEmptySet.add sym existing) symbols
+                        | None -> Map.add key (NonEmptySet.singleton sym) symbols
+
+            symbols
+
         let pendingSnapshot () =
             Array.init vertexCount (fun v -> pending.[v] |> List.ofSeq)
 
@@ -320,6 +335,7 @@ module Rnglr =
             (pendingSnapshot ())
             Set.empty
             Set.empty
+            Map.empty
             (Matrix.copy pathIndex.Matrix)
             stepChanged
             -1
@@ -349,10 +365,13 @@ module Rnglr =
 
                     let attemptedThisStep = handledAccum - handledBefore
 
+                    let edgeSymbols = collectEdgeSymbols activeVerts
+
                     onStep
                         (pendingSnapshot ())
                         activeVerts
                         activeEdges
+                        edgeSymbols
                         (Matrix.copy pathIndex.Matrix)
                         stepChanged
                         v
@@ -368,7 +387,7 @@ module Rnglr =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ -> ())
 
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
@@ -384,6 +403,7 @@ module Rnglr =
             pendingQueues
             activeVerts
             activeEdges
+            edgeSymbols
             piMatrix
             changedCells
             inputVertex
@@ -404,6 +424,7 @@ module Rnglr =
                 { PendingQueues = pendingQueues
                   ActiveGssVertices = activeVerts
                   ActiveGssEdges = activeEdges
+                  ActiveGssEdgeSymbols = edgeSymbols
                   NewGssVertices = newVertices
                   NewGssEdges = newEdges
                   PathIndexMatrix = piMatrix

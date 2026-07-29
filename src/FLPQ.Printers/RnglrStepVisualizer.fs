@@ -174,11 +174,13 @@ module RnglrStepVisualizer =
                     let inputVertex = idx % vertexCount
                     sprintf "%d: (%d,%d)" idx lrState inputVertex)
                 (fun (fromIdx, toIdx) ->
-                    let fromLr = fromIdx / vertexCount
-                    let fromV = fromIdx % vertexCount
-                    let toLr = toIdx / vertexCount
-                    let toV = toIdx % vertexCount
-                    sprintf "%d,%d → %d,%d" fromLr fromV toLr toV)
+                    match Map.tryFind (fromIdx, toIdx) step.ActiveGssEdgeSymbols with
+                    | Some symbols ->
+                        symbols
+                        |> NonEmptySet.toSeq
+                        |> Seq.map (symbolToDotLabel terminals nonterminals)
+                        |> String.concat ", "
+                    | None -> "")
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices

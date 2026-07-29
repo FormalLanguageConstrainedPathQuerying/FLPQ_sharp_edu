@@ -75,7 +75,7 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
             Assert.Matches(GoldenHelpers.vertexLabelRegex, GoldenHelpers.stripQuotes label)
 
         for label in info.EdgeLabels do
-            Assert.Matches(GoldenHelpers.edgeLabelRegex, GoldenHelpers.stripQuotes label)
+            Assert.Matches(GoldenHelpers.rnglrEdgeLabelRegex, GoldenHelpers.stripQuotes label)
 
         let blueCount =
             info.NodeFillColors |> List.filter (fun c -> c.Contains "blue") |> List.length

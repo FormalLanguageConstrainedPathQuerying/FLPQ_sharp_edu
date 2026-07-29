@@ -9,13 +9,16 @@ open Xunit
 
 let stripQuotes (s: string) =
     if s.Length >= 2 && s.[0] = '"' && s.[s.Length - 1] = '"' then
-        s.Substring(1, s.Length - 2)
+        s.Substring(1, s.Length - 2).Replace("\\\"", "\"")
     else
-        s
+        s.Replace("\\\"", "\"")
 
 let vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
 
 let edgeLabelRegex = Regex(@"^\d+,\d+ → \d+,\d+$")
+
+let rnglrEdgeLabelRegex =
+    Regex(@"^""?[A-Za-z0-9ε_']+""?(,\s*""?[A-Za-z0-9ε_']+""?)?$")
 
 let goldenDataDir = Path.Combine(Directory.GetCurrentDirectory(), "GoldenData")
 
