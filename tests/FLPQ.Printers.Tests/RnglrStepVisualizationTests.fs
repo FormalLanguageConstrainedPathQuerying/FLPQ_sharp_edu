@@ -17,10 +17,14 @@ let private renderViz
     let ersm = ExtendedRSM.create freshStart rsm
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
     let lrStateCount = Dfa.stateCount lrTable.Automaton
-    let pathIndex, steps = Rnglr.buildPathIndexWithSteps freshStart ersm graph
+
+    let pathIndex, steps, vertexInfoArr =
+        Rnglr.buildPathIndexWithSteps freshStart ersm graph
+
+    let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let viz =
-        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount steps pathIndex vertexCount graph
+        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount vertexInfo steps pathIndex vertexCount graph
 
     let descriptorsTables = viz |> List.map (fun s -> s.DescriptorsTable)
     let newDescriptors = viz |> List.map (fun s -> s.NewDescriptors)

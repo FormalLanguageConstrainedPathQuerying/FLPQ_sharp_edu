@@ -16,24 +16,24 @@ module RnglrStepVisualizer =
           LrTable: string }
 
     let private rnglrDescriptorToTeX (desc: RnglrDescriptor) : string =
-        sprintf @"(%d, %d)" desc.LrState desc.Vertex
+        sprintf @"(%d, %d, %d)" desc.LrState desc.Vertex desc.GssIdx
 
     let private descriptorsTableToTeX
         (currentDescriptor: RnglrDescriptor option)
         (toHandle: RnglrDescriptor list)
         (handled: Set<RnglrDescriptor>)
         : string =
-        let header = @"\text{lrState} & \text{input} \\ \hline\hline"
+        let header = @"\text{lrState} & \text{input} & \text{gssIdx} \\ \hline\hline"
 
         let renderRow (desc: RnglrDescriptor) (isCurrent: bool) : string =
             if isCurrent then
-                sprintf @"\rowcolor{yellow!20} %d & %d \\" desc.LrState desc.Vertex
+                sprintf @"\rowcolor{yellow!20} %d & %d & %d \\" desc.LrState desc.Vertex desc.GssIdx
             else
-                sprintf @"%d & %d \\" desc.LrState desc.Vertex
+                sprintf @"%d & %d & %d \\" desc.LrState desc.Vertex desc.GssIdx
 
         let toHandleRows =
             if List.isEmpty toHandle then
-                [ @"\emptyset & \\" ]
+                [ @"\emptyset & & \\" ]
             else
                 toHandle
                 |> List.map (fun d ->
@@ -46,13 +46,13 @@ module RnglrStepVisualizer =
 
         let handledRows =
             if Set.isEmpty handled then
-                [ @"\emptyset & \\" ]
+                [ @"\emptyset & & \\" ]
             else
                 handled |> Set.toList |> List.map (fun d -> renderRow d false)
 
         let rows = toHandleRows @ [ @"\hline\hline" ] @ handledRows |> String.concat "\n"
 
-        sprintf @"\begin{array}{cc} %s %s \end{array}" header rows
+        sprintf @"\begin{array}{ccc} %s %s \end{array}" header rows
 
     let private newDescriptorsToTeX
         (newDescriptors: Set<RnglrDescriptor>)
@@ -90,21 +90,18 @@ module RnglrStepVisualizer =
         (nonterminals: 'nt -> string)
         (lrTable: RnglrTable<'t, 'nt>)
         (lrStateCount: int)
+        (vertexInfo: int -> int * int)
         (step: RnglrParsingStep<'t, 'nt>)
         (pathIndex: PathIndex<'t, 'nt>)
         (vertexCount: int)
         (inputGraph: Graph<int, Option<'t>>)
         : RnglrVisualizationStep =
-        let currentGssIdx =
-            match step.CurrentLrState with
-            | Some lrState -> Some(lrState * vertexCount + step.InputVertex)
-            | None -> None
+        let currentGssIdx = step.CurrentDescriptor |> Option.map (fun d -> d.GssIdx)
 
         let gssDot =
             GssDot.toDotFromSets
                 (fun idx ->
-                    let lrState = idx / vertexCount
-                    let inputVertex = idx % vertexCount
+                    let lrState, inputVertex = vertexInfo idx
                     sprintf "%d: (%d,%d)" idx lrState inputVertex)
                 (fun (fromIdx, toIdx) ->
                     match Map.tryFind (fromIdx, toIdx) step.ActiveGssEdgeSymbols with
@@ -158,6 +155,7 @@ module RnglrStepVisualizer =
         (nonterminals: 'nt -> string)
         (lrTable: RnglrTable<'t, 'nt>)
         (lrStateCount: int)
+        (vertexInfo: int -> int * int)
         (steps: RnglrParsingStep<'t, 'nt> list)
         (pathIndex: PathIndex<'t, 'nt>)
         (vertexCount: int)
@@ -165,4 +163,4 @@ module RnglrStepVisualizer =
         : RnglrVisualizationStep list =
         steps
         |> List.map (fun step ->
-            renderStep terminals nonterminals lrTable lrStateCount step pathIndex vertexCount inputGraph)
+            renderStep terminals nonterminals lrTable lrStateCount vertexInfo step pathIndex vertexCount inputGraph)

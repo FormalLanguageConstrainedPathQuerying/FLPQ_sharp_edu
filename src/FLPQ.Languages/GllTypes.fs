@@ -1,5 +1,6 @@
 namespace FLPQ.Languages
 
+open System.Collections.Generic
 open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
@@ -147,6 +148,21 @@ module GraphHelpers =
                     vertices <- Set.add fromIdx vertices
                     edgesSet <- Set.add (fromIdx, toIdx) edgesSet
                 | None -> ()
+
+        vertices, edgesSet
+
+    /// Collects active vertices and edges from a Dictionary-based GSS edge store.
+    let collectActiveGssForDict (edges: Dictionary<int, Dictionary<int, 'a>>) : Set<int> * Set<int * int> =
+        let mutable vertices = Set.empty<int>
+        let mutable edgesSet = Set.empty<int * int>
+
+        for kv in edges do
+            let fromIdx = kv.Key
+            vertices <- Set.add fromIdx vertices
+
+            for targetKv in kv.Value do
+                let toIdx = targetKv.Key
+                edgesSet <- Set.add (fromIdx, toIdx) edgesSet
 
         vertices, edgesSet
 

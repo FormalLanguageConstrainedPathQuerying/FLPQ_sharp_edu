@@ -22,8 +22,10 @@ module RnglrRunner =
         let inputGraph = GLL.stringToGraph rawTokens
         let vertexCount = Graph.vertexCount inputGraph
 
-        let pathIndex, steps =
+        let pathIndex, steps, vertexInfoArr =
             Rnglr.buildPathIndexWithSteps (ExtendedRSM.freshStart extRsm) extRsm inputGraph
+
+        let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
         let accepted = PathIndex.isAccepted pathIndex extRsm vertexCount
 
@@ -49,7 +51,16 @@ module RnglrRunner =
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
         let vizSteps =
-            RnglrStepVisualizer.renderSteps string string lrTable lrStateCount steps pathIndex vertexCount inputGraph
+            RnglrStepVisualizer.renderSteps
+                string
+                string
+                lrTable
+                lrStateCount
+                vertexInfo
+                steps
+                pathIndex
+                vertexCount
+                inputGraph
 
         Helpers.writeRnglrStepsVisualization outputDir vizSteps
 

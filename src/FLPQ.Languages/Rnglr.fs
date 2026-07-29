@@ -53,21 +53,20 @@ module Rnglr =
                 -> Set<Nonterminal<'nt>>
                 -> Set<Nonterminal<'nt>>
                 -> unit)
-        : PathIndex<'t, 'nt> =
+        : PathIndex<'t, 'nt> * ResizeArray<int * int> =
         let extRsm = ersm.ExtendedRsm
         let lrTable = RnglrLR.buildLR0Table extRsm
         let rsmStateCount = RSM.stateCount extRsm
         let lrStateCount = Dfa.stateCount lrTable.Automaton
         let vertexCount = Graph.vertexCount inputGraph
         let rsmK = rsmStateCount * vertexCount
-        let lrK = lrStateCount * vertexCount
 
         let pathIndex =
             { Matrix = Matrix.init rsmK rsmK Set.empty
               StateCount = rsmStateCount
               VertexCount = vertexCount }
 
-        let gss = RnglrGSS.init lrStateCount vertexCount
+        let gss = RnglrGSS.create ()
         let graphEdges = GraphHelpers.collectGraphEdges inputGraph
 
         let blocks = RSM.blocks extRsm
@@ -98,7 +97,7 @@ module Rnglr =
                 (b.Nonterminal, invData))
             |> Map.ofList
 
-        let linearIdx (state: int) (vertex: int) = state * vertexCount + vertex
+        let processedGotos = Dictionary<int, Set<Nonterminal<'nt> * int>>()
 
         let changedCells = ref Set.empty<int * int>
 
@@ -149,8 +148,7 @@ module Rnglr =
 
             while queue.Count > 0 do
                 let (currGss, currInv, endState, endVertex) = queue.Dequeue()
-                let currVx = Graph.getVertex currGss gss.GssGraph
-                let vCurr = currVx.InputVertex
+                let (currLrState, vCurr) = RnglrGSS.getVertexInfo gss currGss
                 let globalCurrInv = invData.GlobalOffset + currInv
                 let globalEnd = invData.GlobalOffset + endState
 
@@ -159,8 +157,7 @@ module Rnglr =
                     | Some rSym ->
                         match Map.tryFind (currInv, rSym) invData.InvTrans with
                         | Some nextInvList ->
-                            let nextVx = Graph.getVertex nextGss gss.GssGraph
-                            let vNext = nextVx.InputVertex
+                            let (nextLrState, vNext) = RnglrGSS.getVertexInfo gss nextGss
 
                             for nextInv in nextInvList do
                                 let globalNextInv = invData.GlobalOffset + nextInv
@@ -197,7 +194,7 @@ module Rnglr =
                                         (PathIndexEntry.PIntermediate(globalCurrInv, vCurr))
 
                                 if isStart then
-                                    predecessors <- (nextGss, nextVx.LrState, vNext, currInv) :: predecessors
+                                    predecessors <- (nextGss, nextLrState, vNext, currInv) :: predecessors
 
                                 let np = (nextGss, nextInv)
 
@@ -219,24 +216,22 @@ module Rnglr =
         let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : (int * int * int * int) list =
             match Map.tryFind nt invBlockData with
             | Some invData ->
-                let vx = Graph.getVertex gssIdx gss.GssGraph
+                let (vxLrState, vxInputVertex) = RnglrGSS.getVertexInfo gss gssIdx
 
                 let starts =
                     invData.Finals
                     |> Set.toList
-                    |> List.map (fun finalState -> (gssIdx, finalState, finalState, vx.InputVertex))
+                    |> List.map (fun finalState -> (gssIdx, finalState, finalState, vxInputVertex))
 
                 let preds = productBfs invData starts
 
                 if invData.Finals |> Set.contains invData.Start && preds.IsEmpty then
-                    [ (gssIdx, vx.LrState, vx.InputVertex, invData.GlobalOffset + invData.Start) ]
+                    [ (gssIdx, vxLrState, vxInputVertex, invData.GlobalOffset + invData.Start) ]
                 else
                     preds
             | None -> []
 
         let pending = Array.init vertexCount (fun _ -> Queue<RnglrDescriptor>())
-
-        let processedGotos: Set<Nonterminal<'nt> * int> array = Array.create lrK Set.empty
 
         let mutable stepShiftTerminals = Set.empty<Terminal<'t>>
         let mutable stepReduceNt = Set.empty<Nonterminal<'nt>>
@@ -254,9 +249,13 @@ module Rnglr =
             : unit =
             match Map.tryFind (lrStatePre, reduceNt) lrTable.Goto with
             | Some gotoTarget ->
-                let gotoGssIdx = linearIdx gotoTarget vEnd
+                let gotoGssIdx = RnglrGSS.getOrCreateVertex gss gotoTarget vEnd
                 let dedupKey = (reduceNt, gssIdxPre)
-                let existing = processedGotos.[gotoGssIdx]
+
+                let existing =
+                    match processedGotos.TryGetValue(gotoGssIdx) with
+                    | true, s -> s
+                    | false, _ -> Set.empty
 
                 let isNew = not (Set.contains dedupKey existing)
 
@@ -287,7 +286,7 @@ module Rnglr =
             for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
                 stepReduceNt <- Set.add reduceNt stepReduceNt
                 levelReductions <- Set.add reduceNt levelReductions
-                let gssIdx = linearIdx lrState v
+                let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
                 let predecessors = findPredecessors gssIdx reduceNt
 
                 for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in predecessors do
@@ -300,11 +299,11 @@ module Rnglr =
                     match Map.tryFind shiftKey lrTable.Action with
                     | Some(LRAction.Shift targetLrState) ->
                         stepShiftTerminals <- Set.add (Terminal tVal) stepShiftTerminals
-                        let gssIdx = linearIdx lrState v
-                        let targetGssIdx = linearIdx targetLrState vNext
+                        let shiftGssIdx = RnglrGSS.getOrCreateVertex gss lrState v
+                        let targetGssIdx = RnglrGSS.getOrCreateVertex gss targetLrState vNext
 
                         let consumedStates =
-                            RnglrGSS.addEdge gss targetGssIdx gssIdx (Symbol.T(Terminal tVal))
+                            RnglrGSS.addEdge gss targetGssIdx shiftGssIdx (Symbol.T(Terminal tVal))
 
                         for (storedNt, storedInv, storedEndState, storedEndVertex) in consumedStates do
                             match Map.tryFind storedNt invBlockData with
@@ -318,11 +317,12 @@ module Rnglr =
 
                         pending.[vNext].Enqueue
                             { LrState = targetLrState
-                              Vertex = vNext }
+                              Vertex = vNext
+                              GssIdx = targetGssIdx }
                     | _ -> ()
 
         let collectActiveGss () : Set<int> * Set<int * int> =
-            GraphHelpers.collectActiveGss gss.GssGraph.Edges
+            GraphHelpers.collectActiveGssForDict gss.Edges
 
         let collectEdgeSymbols (activeVerts: Set<int>) : Map<int * int, NonEmptySet<Symbol<'t, 'nt>>> =
             let mutable symbols = Map.empty
@@ -362,7 +362,12 @@ module Rnglr =
             Set.empty
             Set.empty
 
-        pending.[0].Enqueue { LrState = 0; Vertex = 0 }
+        let initialGssIdx = RnglrGSS.getOrCreateVertex gss 0 0
+
+        pending.[0].Enqueue
+            { LrState = 0
+              Vertex = 0
+              GssIdx = initialGssIdx }
 
         for v in 0 .. vertexCount - 1 do
             let processed = HashSet<RnglrDescriptor>()
@@ -408,7 +413,7 @@ module Rnglr =
                         capturedReduces
                         capturedLevel
 
-        pathIndex
+        pathIndex, gss.VertexInfo
 
     let buildPathIndex
         (_freshStart: Nonterminal<'nt>)
@@ -416,12 +421,13 @@ module Rnglr =
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
         buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ -> ())
+        |> fst
 
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
-        : PathIndex<'t, 'nt> * RnglrParsingStep<'t, 'nt> list =
+        : PathIndex<'t, 'nt> * RnglrParsingStep<'t, 'nt> list * ResizeArray<int * int> =
         let steps = ResizeArray<RnglrParsingStep<'t, 'nt>>()
         let mutable prevVertices = Set.empty<int>
         let mutable prevEdges = Set.empty<int * int>
@@ -472,4 +478,4 @@ module Rnglr =
             )
 
         buildPathIndexCore ersm inputGraph onStep
-        |> fun pi -> pi, steps.ToArray() |> List.ofArray
+        |> fun (pi, vertexInfo) -> pi, steps.ToArray() |> List.ofArray, vertexInfo

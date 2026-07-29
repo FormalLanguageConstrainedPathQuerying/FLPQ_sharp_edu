@@ -56,9 +56,9 @@ An LR item over an RSM: a position in a specific RSM block's DFA. Unlike grammar
 ### RnglrDescriptor (struct)
 ```fsharp
 [<Struct>]
-type RnglrDescriptor = { LrState: int; Vertex: int }
+type RnglrDescriptor = { LrState: int; Vertex: int; GssIdx: int }
 ```
-A descriptor in the RNGLR worklist: a parsing position (LR automaton state, input graph vertex). Unlike GLL descriptors, the GSS vertex is derivable as `lrState * vertexCount + vertex`, and range tracking is handled by the product BFS (storedStates mechanism). Serves as the worklist item in per-vertex pending queues and deduplication sets.
+A descriptor in the RNGLR worklist: a parsing position (LR automaton state, input graph vertex, GSS vertex index). Carries explicit GssIdx reference matching GLL's descriptor structure. Range tracking is handled by the product BFS (storedStates mechanism). Serves as the worklist item in per-vertex pending queues and deduplication sets.
 
 ### RnglrTable
 ```fsharp
@@ -68,13 +68,6 @@ type RnglrTable<'t, 'nt> =
       Automaton: DFA<Symbol<'t, 'nt>, Set<RnglrItem<'nt>>> }
 ```
 LR(0) parsing table built from the extended RSM's automaton.
-
-### RnglrGssVertex (struct)
-```fsharp
-[<Struct>]
-type RnglrGssVertex = { LrState: int; InputVertex: int }
-```
-A vertex in the RNGLR Graph-Structured Stack: (LR automaton state, input graph vertex). Pre-allocated: |Q_lr| × |V| vertices.
 
 ### RnglrGssEdge (struct)
 ```fsharp
@@ -86,17 +79,20 @@ GSS edge labeled with the grammar symbol recognized at this step. Multiple edges
 ### RnglrGSS
 ```fsharp
 type RnglrGSS<'t, 'nt> =
-    { GssGraph: Graph<RnglrGssVertex, Option<NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      StoredStates: Set<Nonterminal<'nt> * int * int * int> array }
+    { VertexLookup: Dictionary<int * int, int>
+      VertexInfo: ResizeArray<int * int>
+      Edges: Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
+      StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int>> }
 ```
-The RNGLR Graph-Structured Stack. `StoredStates[i]` caches intermediate automaton intersection states: `Set<Nonterminal * invState * rangeEndState * rangeEndVertex>`. Each tuple records an in-progress backwards traversal through a block's inverted DFA.
+The RNGLR Graph-Structured Stack. Vertices are created lazily on-demand with sequential IDs (0, 1, 2, ...). `VertexLookup` maps (lrState, inputVertex) to GSS index; `VertexInfo` provides reverse lookup. Edges use sparse Dictionary-based adjacency. `StoredStates` caches intermediate automaton intersection states.
 
 ## GSS Module Functions
 
 | Function | Description |
 |----------|-------------|
-| `linearIndex vertexCount lrState inputVertex` | Maps `(lrState, inputVertex)` to a linear GSS index: `lrState * vertexCount + inputVertex` |
-| `init lrStateCount vertexCount` | Pre-allocates the GSS with all |Q_lr| * |V| vertices |
+| `create()` | Returns an empty GSS with no pre-allocated vertices |
+| `getOrCreateVertex gss lrState inputVertex` | Returns existing GSS vertex ID or allocates next sequential ID |
+| `getVertexInfo gss gssIdx` | Returns (lrState, inputVertex) for a GSS vertex |
 | `addEdge gss fromIdx toIdx label` | Adds edge, returns and clears StoredStates[fromIdx] |
 | `getStoredStates gss gssIdx` | Reads StoredStates[gssIdx] without clearing |
 | `setStoredStates gss gssIdx states` | Writes storedStates for a GSS vertex |
@@ -126,12 +122,12 @@ Checks whether the input graph is accepted. Inspects the path index cell `(start
 | `productBfs` adds PNonterminal for RNonterm transitions | Every inverse RNonterm step corresponds to a recognized nonterminal |
 | PEpsilonNonterminal only when vPre=vEnd && finalRsmState=globalStart | True epsilon derivations only: start=final state in block and no input consumed |
 | PNonterminal only from productBfs, not processReduction | Separates structural traversal from path index recording |
-| StoredStates in mutable array outside Graph type | Same reason as GLL: value-copy structs prevent in-place mutation via vertexMap |
-| Vertices pre-allocated as |Q_lr| * |V| | All possible GSS vertices exist from initialization |
-| Deduplication of cascades via processedGotos | Prevents reprocessing same (reduceNt, predecessor) pair at same GSS vertex |
+| StoredStates as Dictionary<int, Set<...>> not fixed array | Matches dynamic GSS vertex creation; no need to pre-allocate for non-existent vertices |
+| GSS vertices created on-demand with sequential IDs | Decouples GSS indexing from PathIndex grid formula; only allocates for actually used vertices |
+| Deduplication of cascades via processedGotos (Dictionary) | Prevents reprocessing same (reduceNt, predecessor) pair at same GSS vertex |
 | Per-vertex fixpoint (not a single global queue) | storedStates are consumed during shifts and set during product BFS. If a descriptor at vertex v+1 is processed before all descriptors at vertex v complete, storedStates at v+1 may be incomplete — later-set states are lost because the vertex is already handled. Per-vertex queues guarantee all v-work completes before v+1 begins |
 | Recursive cascade via processNode ↔ processReduction | storedStates deposited by earlier reductions at the same vertex are consumed by shifts within the same cascade. A flat descriptor queue (non-recursive) interleaves shift targets at vNext with cascaded reduction descriptors at v, violating the per-vertex ordering invariant. The cascade ensures reduction-then-shift ordering at each level of recursion |
-| RnglrDescriptor struct type (not raw tuples) | Replaces `int*int` tuples in pending queues and dedup sets. Unlike GLL's Descriptor, omits `GssIdx` (derivable as `lrState * vertexCount + vertex`) and `MatchedRange` (range tracking is done by product BFS storedStates propagation, not accumulated in the descriptor) |
+| RnglrDescriptor struct with explicit GssIdx | 3-field descriptor (LrState, Vertex, GssIdx) matching GLL's structure. GssIdx is explicit via getOrCreateVertex, not derived from formula. Range tracking remains with product BFS storedStates |
 | Depth guard (1000) on processNode | Prevents infinite recursion in pathological grammars with unbounded epsilon-reduction chains |
 
 ## Book Reference
