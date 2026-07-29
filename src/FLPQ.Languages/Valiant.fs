@@ -99,7 +99,7 @@ module Valiant =
         p
 
     let private extractSlice (fullMatrix: Matrix<'a>) (m: Submatrix) : Matrix<'a> =
-        Matrix.create m.Size m.Size (fun i j -> Matrix.get fullMatrix (m.Row - m.Size + 1 + i) (m.Col + j))
+        Matrix.create m.Size m.Size (fun i j -> fullMatrix.[m.Row - m.Size + 1 + i, m.Col + j])
 
     let private writeSliceUnion
         (target: Matrix<Set<Nonterminal<'nt>>>)
@@ -108,19 +108,19 @@ module Valiant =
         : unit =
         for i in 0 .. m.Size - 1 do
             for j in 0 .. m.Size - 1 do
-                let toAdd = Matrix.get slice i j
+                let toAdd = slice.[i, j]
 
                 if not (Set.isEmpty toAdd) then
                     let ti = m.Row - m.Size + 1 + i
                     let tj = m.Col + j
-                    let existing = Matrix.get target ti tj
-                    Matrix.set target ti tj (Set.union existing toAdd)
+                    let existing = target.[ti, tj]
+                    target.[ti, tj] <- Set.union existing toAdd
 
     let private snapshot (table: Matrix<Set<Nonterminal<'nt>>>) (n: int) : ParsingTable<'nt> =
-        Matrix.create n n (fun ri rj -> Matrix.get table ri (rj + 1))
+        Matrix.create n n (fun ri rj -> table.[ri, rj + 1])
 
     let private copyFullTable (table: Matrix<Set<Nonterminal<'nt>>>) (tableSize: int) : ParsingTable<'nt> =
-        Matrix.create tableSize tableSize (fun i j -> Matrix.get table i j)
+        Matrix.create tableSize tableSize (fun i j -> table.[i, j])
 
     let private setMult
         (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt>) list)
@@ -151,8 +151,8 @@ module Valiant =
             [ 0 .. inner - 1 ]
             |> List.fold
                 (fun acc k ->
-                    let leftCell = Matrix.get a i k
-                    let rightCell = Matrix.get b k j
+                    let leftCell = a.[i, k]
+                    let rightCell = b.[k, j]
 
                     if Set.isEmpty leftCell || Set.isEmpty rightCell then
                         acc
@@ -169,8 +169,8 @@ module Valiant =
 
         [ for i in 0 .. size - 1 do
               for j in 0 .. size - 1 do
-                  let oldSet = Matrix.get before i j
-                  let newSet = Matrix.get after i j
+                  let oldSet = before.[i, j]
+                  let newSet = after.[i, j]
 
                   if Set.difference newSet oldSet |> (not << Set.isEmpty) then
                       yield (m.Row - m.Size + 1 + i, m.Col + j) ]
@@ -189,7 +189,7 @@ module Valiant =
                     Matrix.create mTarget.Size mTarget.Size (fun i j ->
                         let ti = mTarget.Row - mTarget.Size + 1 + i
                         let tj = mTarget.Col + j
-                        Matrix.get table ti tj)
+                        table.[ti, tj])
 
                 let leftSlice = extractSlice table m1
                 let rightSlice = extractSlice table m2
@@ -201,7 +201,7 @@ module Valiant =
                     Matrix.create mTarget.Size mTarget.Size (fun i j ->
                         let ti = mTarget.Row - mTarget.Size + 1 + i
                         let tj = mTarget.Col + j
-                        Matrix.get table ti tj)
+                        table.[ti, tj])
 
                 let changed = diffCells before after mTarget
 
@@ -228,10 +228,10 @@ module Valiant =
             if i + 1 = j && i < init.TokensArr.Length then
                 let ch = init.TokensArr.[i]
 
-                let existing = Matrix.get table i j
+                let existing = table.[i, j]
 
                 match Map.tryFind ch init.TerminalRules with
-                | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
+                | Some nts -> table.[i, j] <- Set.union existing (Set.ofList nts)
                 | None -> ()
 
             ()
@@ -286,10 +286,10 @@ module Valiant =
                     if i + 1 = j && i < init.TokensArr.Length then
                         let ch = init.TokensArr.[i]
 
-                        let existing = Matrix.get table i j
+                        let existing = table.[i, j]
 
                         match Map.tryFind ch init.TerminalRules with
-                        | Some nts -> Matrix.set table i j (Set.union existing (Set.ofList nts))
+                        | Some nts -> table.[i, j] <- Set.union existing (Set.ofList nts)
                         | None -> ()
             else
                 let bottomLayer = mList |> List.map bottomSubmatrix
@@ -370,7 +370,7 @@ module Valiant =
 
         for i in 0 .. tokensArr.Length - 1 do
             match Map.tryFind tokensArr.[i] terminalRules with
-            | Some nts -> Matrix.set table i (i + 1) (Set.ofList nts)
+            | Some nts -> table.[i, i + 1] <- Set.ofList nts
             | None -> ()
 
         { Table = table
@@ -394,7 +394,7 @@ module Valiant =
             let init = initValiant cnf tokensArr
 
             let table =
-                Matrix.create init.TableSize init.TableSize (fun i j -> Matrix.get init.Table i j)
+                Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
 
             let steps = ResizeArray<ValiantTraceStep<'nt>>()
             compute init table 0 init.TableSize (Some steps)
@@ -416,13 +416,12 @@ module Valiant =
             let init = initValiant cnf tokensArr
 
             let table =
-                Matrix.create init.TableSize init.TableSize (fun i j -> Matrix.get init.Table i j)
+                Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
 
             compute init table 0 init.TableSize None
             let finalTable = snapshot table init.N
 
-            let accepted =
-                Set.contains cnf.Start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+            let accepted = Set.contains cnf.Start finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
 
@@ -442,7 +441,7 @@ module Valiant =
         else
             let init = initValiant cnf tokensArr
             let tableSize = init.TableSize
-            let table = Matrix.create tableSize tableSize (fun i j -> Matrix.get init.Table i j)
+            let table = Matrix.create tableSize tableSize (fun i j -> init.Table.[i, j])
             let n = init.N
 
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
@@ -484,8 +483,7 @@ module Valiant =
                 | LayerForward(table, _, _) -> table
                 | LayerBackward(table, _, _, _) -> table
 
-            let accepted =
-                Set.contains cnf.Start (Matrix.get finalTable 0 (Matrix.cols finalTable - 1))
+            let accepted = Set.contains cnf.Start finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
 

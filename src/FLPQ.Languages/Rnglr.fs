@@ -13,7 +13,7 @@ module Rnglr =
 
         for fromIdx in 0 .. n - 1 do
             for toIdx in 0 .. n - 1 do
-                match Matrix.get block.Dfa.Transitions fromIdx toIdx with
+                match block.Dfa.Transitions.[fromIdx, toIdx] with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with

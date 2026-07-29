@@ -149,7 +149,7 @@ module PropertyGraphTests =
 
             for i in 0 .. Matrix.rows a - 1 do
                 for j in 0 .. Matrix.cols a - 1 do
-                    if Matrix.get a i j <> Matrix.get b i j then
+                    if a.[i, j] <> b.[i, j] then
                         ok <- false
 
             ok
@@ -192,7 +192,7 @@ module PropertyGraphTests =
 
             for i in 0 .. n - 1 do
                 for j in 0 .. n - 1 do
-                    if Matrix.get filtered.Edges i j then
+                    if filtered.Edges.[i, j] then
                         ok <- false
 
             ok
@@ -211,7 +211,7 @@ module PropertyGraphTests =
 
             for i in 0 .. n - 1 do
                 for j in 0 .. n - 1 do
-                    if Matrix.get filtered.Edges i j then
+                    if filtered.Edges.[i, j] then
                         ok <- false
 
             ok

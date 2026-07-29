@@ -26,7 +26,7 @@ module BelyaninRPQ =
             let mutable m = Matrix.init qCount vCount false
             let mutable p = Matrix.init qCount vCount false
 
-            Matrix.set m dfa.StartState source true
+            m.[dfa.StartState, source] <- true
 
             let isZero (matrix: Matrix<bool>) : bool = not (Matrix.fold (||) false matrix)
 
@@ -45,8 +45,8 @@ module BelyaninRPQ =
 
                         for i in 0 .. qCount - 1 do
                             for j in 0 .. qCount - 1 do
-                                match Matrix.get dfa.Transitions i j with
-                                | Some nes when NonEmptySet.contains (ATerm t) nes -> Matrix.set nMat i j true
+                                match dfa.Transitions.[i, j] with
+                                | Some nes when NonEmptySet.contains (ATerm t) nes -> nMat.[i, j] <- true
                                 | _ -> ()
 
                         let nTranspose = Matrix.transpose nMat
@@ -59,10 +59,10 @@ module BelyaninRPQ =
             let f = Matrix.init 1 qCount false
 
             for qf in dfa.FinalStates do
-                Matrix.set f 0 qf true
+                f.[0, qf] <- true
 
             let result = MsBfs.boolMul f p
-            [| for j in 0 .. vCount - 1 -> Matrix.get result 0 j |]
+            [| for j in 0 .. vCount - 1 -> result.[0, j] |]
 
     /// Run Belyanin's RPQ algorithm.
     /// Input: a DFA (query automaton) and a graph NFA.
@@ -78,6 +78,6 @@ module BelyaninRPQ =
             let row = runSingleSource dfa perLabel sources.[i] vCount
 
             for j in 0 .. vCount - 1 do
-                Matrix.set result i j row.[j]
+                result.[i, j] <- row.[j]
 
         result

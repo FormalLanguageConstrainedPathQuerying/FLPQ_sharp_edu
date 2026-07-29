@@ -32,10 +32,10 @@ let ``decomposeNonEmptySet handles None cells`` () =
     let decomp = BooleanDecomposition.decomposeNonEmptySet m
     Assert.Equal(1, Map.count decomp)
     let matX = Map.find "x" decomp
-    Assert.True(Matrix.get matX 0 0)
-    Assert.False(Matrix.get matX 0 1)
-    Assert.False(Matrix.get matX 1 0)
-    Assert.False(Matrix.get matX 1 1)
+    Assert.True(matX.[0, 0])
+    Assert.False(matX.[0, 1])
+    Assert.False(matX.[1, 0])
+    Assert.False(matX.[1, 1])
 
 [<Fact>]
 let ``decompose produces correct number of matrices`` () =
@@ -58,12 +58,12 @@ let ``decompose cells match original sets`` () =
     Assert.True(Map.containsKey 1 decomp)
 
     let mat0 = Map.find 0 decomp
-    Assert.True(Matrix.get mat0 0 0)
-    Assert.False(Matrix.get mat0 1 1)
+    Assert.True(mat0.[0, 0])
+    Assert.False(mat0.[1, 1])
 
     let mat1 = Map.find 1 decomp
-    Assert.False(Matrix.get mat1 0 0)
-    Assert.True(Matrix.get mat1 1 1)
+    Assert.False(mat1.[0, 0])
+    Assert.True(mat1.[1, 1])
 
 [<Fact>]
 let ``recompose restores original after decompose`` () =
@@ -74,7 +74,7 @@ let ``recompose restores original after decompose`` () =
 
     for i in 0..2 do
         for j in 0..2 do
-            Assert.Equal<Set<int>>(Matrix.get m i j, Matrix.get restored i j)
+            Assert.Equal<Set<int>>(m.[i, j], restored.[i, j])
 
 [<Fact>]
 let ``decompose handles empty matrix`` () =
@@ -119,7 +119,7 @@ module PropertyTests =
         let hasNonEmpty =
             [ for i in 0 .. Matrix.rows m - 1 do
                   for j in 0 .. Matrix.cols m - 1 do
-                      if not (Set.isEmpty (Matrix.get m i j)) then
+                      if not (Set.isEmpty m.[i, j]) then
                           yield true ]
             |> List.contains true
 
@@ -135,7 +135,7 @@ module PropertyTests =
         let hasNonEmpty =
             [ for i in 0 .. Matrix.rows m - 1 do
                   for j in 0 .. Matrix.cols m - 1 do
-                      if not (Set.isEmpty (Matrix.get m i j)) then
+                      if not (Set.isEmpty m.[i, j]) then
                           yield true ]
             |> List.contains true
 
@@ -149,7 +149,7 @@ module PropertyTests =
                 && Matrix.cols m = Matrix.cols restored
                 && [ for i in 0 .. Matrix.rows m - 1 do
                          for j in 0 .. Matrix.cols m - 1 do
-                             if Matrix.get m i j <> Matrix.get restored i j then
+                             if m.[i, j] <> restored.[i, j] then
                                  yield false ]
                    |> List.forall id)
         else

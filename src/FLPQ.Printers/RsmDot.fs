@@ -58,7 +58,7 @@ module RsmDot =
 
         for i in 0 .. localSize - 1 do
             for j in 0 .. localSize - 1 do
-                match Matrix.get dfa.Transitions i j with
+                match dfa.Transitions.[i, j] with
                 | Some symbols ->
                     for label in NonEmptySet.toSeq symbols do
                         let edgeLabel =
@@ -167,7 +167,7 @@ module RsmDot =
         // Edge declarations from transition matrix
         for i in 0 .. stateCount - 1 do
             for j in 0 .. stateCount - 1 do
-                match Matrix.get rsm.Transitions i j with
+                match rsm.Transitions.[i, j] with
                 | Some symbols ->
                     for symbol in NonEmptySet.toSeq symbols do
                         let edgeLabel =

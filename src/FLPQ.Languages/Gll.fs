@@ -17,7 +17,7 @@ module GLL =
             Matrix.init (n + 1) (n + 1) None
             |> fun m ->
                 for i in 0 .. n - 1 do
-                    Matrix.set m i (i + 1) (Some chars.[i])
+                    m.[i, i + 1] <- Some chars.[i]
 
                 m
 

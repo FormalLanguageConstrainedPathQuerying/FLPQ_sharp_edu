@@ -26,8 +26,8 @@ let ``RPQ Belyanin and Kronecker agree on 100-vertex line graph`` () =
     let arroResult = ArroyueloRPQ.evaluate nfa regexp
 
     for i in 0 .. n - 1 do
-        Assert.True(Matrix.get belyResult 0 i = Matrix.get kronResult 0 i, sprintf "Mismatch at vertex %d" i)
-        Assert.True(Matrix.get belyResult 0 i = Matrix.get arroResult 0 i, sprintf "Arroyuelo mismatch at vertex %d" i)
+        Assert.True(belyResult.[0, i] = kronResult.[0, i], sprintf "Mismatch at vertex %d" i)
+        Assert.True(belyResult.[0, i] = arroResult.[0, i], sprintf "Arroyuelo mismatch at vertex %d" i)
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
@@ -49,7 +49,7 @@ let ``RPQ Belyanin and Kronecker agree on 80-vertex random-like graph`` () =
     let kronResult = KroneckerRPQ.evaluate dfa nfa
 
     for i in 0 .. n - 1 do
-        Assert.True(Matrix.get belyResult 0 i = Matrix.get kronResult 0 i)
+        Assert.True(belyResult.[0, i] = kronResult.[0, i])
 
 [<Properties(Arbitrary = [| typeof<StressRpqGenerators> |], MaxTest = 5)>]
 module StressRpqProperties =
@@ -70,7 +70,7 @@ module StressRpqProperties =
             let mutable ok = true
 
             for j in 0 .. d.VertexCount - 1 do
-                if Matrix.get belyResult 0 j <> Matrix.get kronResult 0 j then
+                if belyResult.[0, j] <> kronResult.[0, j] then
                     ok <- false
 
             ok

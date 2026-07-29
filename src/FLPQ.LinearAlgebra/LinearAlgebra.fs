@@ -16,7 +16,7 @@ module LinearAlgebra =
             let mutable acc = zero
 
             for k in 0 .. Matrix.cols a - 1 do
-                acc <- opAdd acc (opMult (Matrix.get a i k) (Matrix.get b k j))
+                acc <- opAdd acc (opMult a.[i, k] b.[k, j])
 
             acc)
 
@@ -32,4 +32,4 @@ module LinearAlgebra =
             let bi = i % Matrix.rows b
             let aj = j / Matrix.cols b
             let bj = j % Matrix.cols b
-            opMult (Matrix.get a ai aj) (Matrix.get b bi bj))
+            opMult a.[ai, aj] b.[bi, bj])

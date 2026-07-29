@@ -73,7 +73,7 @@ module FactTests =
 
         for i in 0..1 do
             for j in 0..2 do
-                Assert.Equal(7 * (i * 3 + j), Matrix.get result i j)
+                Assert.Equal(7 * (i * 3 + j), result.[i, j])
 
     [<Fact>]
     let ``mxm with identity matrix preserves values`` () =
@@ -83,7 +83,7 @@ module FactTests =
 
         for i in 0..2 do
             for j in 0..2 do
-                Assert.Equal(Matrix.get a i j, Matrix.get result i j)
+                Assert.Equal(a.[i, j], result.[i, j])
 
     [<Fact>]
     let ``mxm computes known product correctly`` () =
@@ -92,10 +92,10 @@ module FactTests =
         let result = LinearAlgebra.mxm a b (*) (+) 0
         Assert.Equal(2, Matrix.rows result)
         Assert.Equal(2, Matrix.cols result)
-        Assert.Equal(1 * 7 + 2 * 9 + 3 * 11, Matrix.get result 0 0)
-        Assert.Equal(1 * 8 + 2 * 10 + 3 * 12, Matrix.get result 0 1)
-        Assert.Equal(4 * 7 + 5 * 9 + 6 * 11, Matrix.get result 1 0)
-        Assert.Equal(4 * 8 + 5 * 10 + 6 * 12, Matrix.get result 1 1)
+        Assert.Equal(1 * 7 + 2 * 9 + 3 * 11, result.[0, 0])
+        Assert.Equal(1 * 8 + 2 * 10 + 3 * 12, result.[0, 1])
+        Assert.Equal(4 * 7 + 5 * 9 + 6 * 11, result.[1, 0])
+        Assert.Equal(4 * 8 + 5 * 10 + 6 * 12, result.[1, 1])
 
     [<Fact>]
     let ``kron result cell equals product of corresponding elements`` () =
@@ -106,6 +106,6 @@ module FactTests =
         Assert.Equal(6, Matrix.rows result)
         Assert.Equal(4, Matrix.cols result)
 
-        Assert.Equal(Matrix.get a 0 0 * Matrix.get b 0 0, Matrix.get result 0 0)
-        Assert.Equal(Matrix.get a 0 1 * Matrix.get b 2 1, Matrix.get result 2 3)
-        Assert.Equal(Matrix.get a 1 1 * Matrix.get b 1 0, Matrix.get result 4 2)
+        Assert.Equal(a.[0, 0] * b.[0, 0], result.[0, 0])
+        Assert.Equal(a.[0, 1] * b.[2, 1], result.[2, 3])
+        Assert.Equal(a.[1, 1] * b.[1, 0], result.[4, 2])

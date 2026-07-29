@@ -206,7 +206,7 @@ module Sppf =
         let sortedEdges = List.rev edgeList
 
         for (fromIdx, label, toIdx) in sortedEdges do
-            Matrix.set edgeMatrix fromIdx toIdx label
+            edgeMatrix.[fromIdx, toIdx] <- label
 
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndices = rootIndices }
@@ -347,7 +347,7 @@ module Sppf =
             | SppfNodeInfo.SppfRange(fromState, fromPos, toState, toPos) ->
                 let hasChild =
                     [ for j in 0 .. vc - 1 do
-                          match Matrix.get sppf.Graph.Edges i j with
+                          match sppf.Graph.Edges.[i, j] with
                           | Some SppfEdgeLabel.PackedAlternative -> true
                           | _ -> false ]
                     |> List.contains true
@@ -376,7 +376,7 @@ module Sppf =
             | SppfNodeInfo.SppfIntermediate _ ->
                 let outgoing =
                     [ for j in 0 .. vc - 1 do
-                          let lbl = Matrix.get sppf.Graph.Edges i j
+                          let lbl = sppf.Graph.Edges.[i, j]
 
                           if lbl.IsSome then
                               lbl.Value ]
@@ -402,7 +402,7 @@ module Sppf =
             | SppfNodeInfo.SppfNonterminal(nt, _, _, _, _) ->
                 let singleChildTargets =
                     [ for j in 0 .. vc - 1 do
-                          let lbl = Matrix.get sppf.Graph.Edges i j
+                          let lbl = sppf.Graph.Edges.[i, j]
 
                           if lbl = Some SppfEdgeLabel.SingleChild then
                               j ]
@@ -462,7 +462,7 @@ module Sppf =
                 match result with
                 | Some _ -> ()
                 | None ->
-                    if Matrix.get sppf.Graph.Edges nodeIdx j = Some label then
+                    if sppf.Graph.Edges.[nodeIdx, j] = Some label then
                         result <- Some j
 
             result
@@ -605,14 +605,14 @@ module Sppf =
                 match result with
                 | Some _ -> ()
                 | None ->
-                    if Matrix.get sppf.Graph.Edges nodeIdx j = Some label then
+                    if sppf.Graph.Edges.[nodeIdx, j] = Some label then
                         result <- Some j
 
             result
 
         let allEdgesTo (nodeIdx: int) (label: SppfEdgeLabel) : int list =
             [ for j in 0 .. vc - 1 do
-                  if Matrix.get sppf.Graph.Edges nodeIdx j = Some label then
+                  if sppf.Graph.Edges.[nodeIdx, j] = Some label then
                       j ]
 
         let cache = Dictionary<(int * int), seq<DerivationTree<'t, 'nt> list>>()

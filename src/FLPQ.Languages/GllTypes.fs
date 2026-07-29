@@ -106,11 +106,11 @@ module GSS =
     /// multiple callers may need the same pops.
     let addEdge (gss: GSS) (fromIdx: int) (toIdx: int) (edgeInfo: GssEdgeInfo) : Set<RangeDescriptor> =
         let current =
-            match Matrix.get gss.Graph.Edges fromIdx toIdx with
+            match gss.Graph.Edges.[fromIdx, toIdx] with
             | Some nes -> NonEmptySet.add edgeInfo nes
             | None -> NonEmptySet.singleton edgeInfo
 
-        Matrix.set gss.Graph.Edges fromIdx toIdx (Some current)
+        gss.Graph.Edges.[fromIdx, toIdx] <- Some current
 
         gss.StoredPops.[fromIdx]
 
@@ -122,7 +122,7 @@ module GSS =
         let n = gss.Graph.VertexMap.Count
 
         [ for toIdx in 0 .. n - 1 do
-              match Matrix.get gss.Graph.Edges gssIdx toIdx with
+              match gss.Graph.Edges.[gssIdx, toIdx] with
               | Some nes ->
                   for ei in NonEmptySet.toSeq nes do
                       (toIdx, ei)
@@ -142,7 +142,7 @@ module GraphHelpers =
 
         for fromIdx in 0 .. numRows - 1 do
             for toIdx in 0 .. numCols - 1 do
-                match Matrix.get edges fromIdx toIdx with
+                match edges.[fromIdx, toIdx] with
                 | Some _ ->
                     vertices <- Set.add fromIdx vertices
                     edgesSet <- Set.add (fromIdx, toIdx) edgesSet
@@ -159,7 +159,7 @@ module GraphHelpers =
 
         for i in 0 .. vc - 1 do
             for j in 0 .. vc - 1 do
-                match Matrix.get g.Edges i j with
+                match g.Edges.[i, j] with
                 | Some t -> edges.[i].Add(t, j)
                 | None -> ()
 

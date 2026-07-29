@@ -131,7 +131,7 @@ module RnglrStepVisualizer =
 
         for fromIdx in 0 .. lrStateCount - 1 do
             for toIdx in 0 .. lrStateCount - 1 do
-                match Matrix.get lrTable.Automaton.Transitions fromIdx toIdx with
+                match lrTable.Automaton.Transitions.[fromIdx, toIdx] with
                 | Some labels ->
                     let termLabels =
                         labels

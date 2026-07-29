@@ -62,7 +62,7 @@ module ValiantParseTests =
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get cykTable i j, Matrix.get valTable i j)
+                Assert.Equal<Set<Nonterminal<string>>>(cykTable.[i, j], valTable.[i, j])
 
     [<Fact>]
     let ``Valiant table matches CYK table for grammar 1 small example`` () =
@@ -80,7 +80,7 @@ module ValiantParseTests =
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get cykTable i j, Matrix.get valTable i j)
+                Assert.Equal<Set<Nonterminal<string>>>(cykTable.[i, j], valTable.[i, j])
 
 
 module ModifiedValiantTests =
@@ -121,7 +121,7 @@ module ModifiedValiantTests =
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
+                Assert.Equal<Set<Nonterminal<string>>>(valTable.[i, j], modTable.[i, j])
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for grammar 3`` () =
@@ -139,7 +139,7 @@ module ModifiedValiantTests =
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
+                Assert.Equal<Set<Nonterminal<string>>>(valTable.[i, j], modTable.[i, j])
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for expression grammar`` () =
@@ -157,7 +157,7 @@ module ModifiedValiantTests =
 
         for i in 0 .. n - 1 do
             for j in i .. n - 1 do
-                Assert.Equal<Set<Nonterminal<string>>>(Matrix.get valTable i j, Matrix.get modTable i j)
+                Assert.Equal<Set<Nonterminal<string>>>(valTable.[i, j], modTable.[i, j])
 
     [<Fact>]
     let ``Modified Valiant trace produces steps for grammar 1`` () =
@@ -266,7 +266,7 @@ module PropertyTests =
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                             if cykTable.[i, j] <> valTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -296,7 +296,7 @@ module PropertyTests =
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get valTable i j <> Matrix.get modTable i j then
+                             if valTable.[i, j] <> modTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -326,7 +326,7 @@ module PropertyTests =
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                             if cykTable.[i, j] <> valTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -356,7 +356,7 @@ module PropertyTests =
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                             if cykTable.[i, j] <> valTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -378,7 +378,7 @@ module PropertyTests =
 
                 [ for i in 0 .. n - 1 do
                       for j in i .. n - 1 do
-                          if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                          if cykTable.[i, j] <> valTable.[i, j] then
                               yield false ]
                 |> List.forall id
 
@@ -400,7 +400,7 @@ module PropertyTests =
 
                 [ for i in 0 .. n - 1 do
                       for j in i .. n - 1 do
-                          if Matrix.get valTable i j <> Matrix.get modTable i j then
+                          if valTable.[i, j] <> modTable.[i, j] then
                               yield false ]
                 |> List.forall id
 
@@ -433,7 +433,7 @@ module PropertyTests =
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get valTable i j <> Matrix.get modTable i j then
+                             if valTable.[i, j] <> modTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -463,7 +463,7 @@ module PropertyTests =
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                             if cykTable.[i, j] <> valTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -493,7 +493,7 @@ module PropertyTests =
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get valTable i j <> Matrix.get modTable i j then
+                             if valTable.[i, j] <> modTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -523,7 +523,7 @@ module PropertyTests =
                 cykAcc = valAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get cykTable i j <> Matrix.get valTable i j then
+                             if cykTable.[i, j] <> valTable.[i, j] then
                                  yield false ]
                    |> List.forall id
 
@@ -553,6 +553,6 @@ module PropertyTests =
                 valAcc = modAcc
                 && [ for i in 0 .. n - 1 do
                          for j in i .. n - 1 do
-                             if Matrix.get valTable i j <> Matrix.get modTable i j then
+                             if valTable.[i, j] <> modTable.[i, j] then
                                  yield false ]
                    |> List.forall id

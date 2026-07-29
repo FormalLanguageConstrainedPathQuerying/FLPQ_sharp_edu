@@ -37,7 +37,7 @@ module GssDot =
 
         for fromIdx in 0 .. n - 1 do
             for toIdx in 0 .. n - 1 do
-                match Matrix.get gss.Graph.Edges fromIdx toIdx with
+                match gss.Graph.Edges.[fromIdx, toIdx] with
                 | Some _ ->
                     activeVertices.Add(fromIdx) |> ignore
                     allEdges.Add((fromIdx, toIdx))

@@ -42,7 +42,7 @@ module AutomatonDot =
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some symbols ->
                     let termLabels =
                         symbols
@@ -67,7 +67,7 @@ module AutomatonDot =
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
                     sb.AppendLine(sprintf "  s%d -> s%d [label=\"ε\", style=dotted];" i j) |> ignore
                 | _ -> ()

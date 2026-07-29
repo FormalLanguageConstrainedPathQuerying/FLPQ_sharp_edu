@@ -61,7 +61,7 @@ module AutomatonTikz =
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some symbols ->
                     let termLabels =
                         symbols
@@ -88,7 +88,7 @@ module AutomatonTikz =
     let private epsEdges (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) (sb: StringBuilder) : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
                     let loopAttr = if i = j then ",loop above" else ""
 

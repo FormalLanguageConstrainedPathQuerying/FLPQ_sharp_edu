@@ -44,7 +44,7 @@ let ``map2 of 200x200 matrices succeeds`` () =
     let c = Matrix.map2 (+) a b
     Assert.Equal(n, Matrix.rows c)
     Assert.Equal(n, Matrix.cols c)
-    Assert.Equal(0 + 0 + 0 * 0, Matrix.get c 0 0)
+    Assert.Equal(0 + 0 + 0 * 0, c.[0, 0])
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
@@ -64,7 +64,7 @@ let ``mxm associativity holds for 100x100 random matrices`` () =
 
     for i in 0 .. n - 1 do
         for j in 0 .. n - 1 do
-            Assert.Equal(Matrix.get ab_c i j, Matrix.get a_bc i j)
+            Assert.Equal(ab_c.[i, j], a_bc.[i, j])
 
 [<Properties(Arbitrary = [| typeof<StressMatrixGenerators> |], MaxTest = 5)>]
 module StressMatrixProperties =

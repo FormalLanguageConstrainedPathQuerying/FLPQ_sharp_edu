@@ -8,6 +8,10 @@ type Matrix<'a> =
           Cols: int
           Data: 'a[,] }
 
+    member this.Item
+        with get (i, j) = this.Data.[i, j]
+        and set (i, j) value = this.Data.[i, j] <- value
+
 module Matrix =
 
     /// Returns the number of rows in the matrix.
@@ -15,12 +19,6 @@ module Matrix =
 
     /// Returns the number of columns in the matrix.
     let cols (m: Matrix<'a>) = m.Cols
-
-    /// Returns the element at position (i, j). No bounds checking is performed.
-    let get (m: Matrix<'a>) (i: int) (j: int) : 'a = m.Data.[i, j]
-
-    /// Sets the element at position (i, j) to the given value. No bounds checking is performed.
-    let set (m: Matrix<'a>) (i: int) (j: int) (value: 'a) : unit = m.Data.[i, j] <- value
 
     /// Creates a matrix with the given number of rows and columns,
     /// using the supplied function to initialize each element.
@@ -54,7 +52,7 @@ module Matrix =
 
         for i in 0 .. m.Rows - 1 do
             for j in 0 .. m.Cols - 1 do
-                acc <- folder acc (get m i j)
+                acc <- folder acc m.[i, j]
 
         acc
 
@@ -72,7 +70,7 @@ module Matrix =
         if a.Rows <> b.Rows || a.Cols <> b.Cols then
             invalidArg (nameof b) $"Matrix dimensions must match: ({a.Rows}x{a.Cols}) vs ({b.Rows}x{b.Cols})"
 
-        let data = Array2D.init a.Rows a.Cols (fun i j -> f (get a i j) (get b i j))
+        let data = Array2D.init a.Rows a.Cols (fun i j -> f a.[i, j] b.[i, j])
 
         { Rows = a.Rows
           Cols = a.Cols
@@ -80,7 +78,7 @@ module Matrix =
 
     /// Returns the transpose of the matrix: rows become columns and columns become rows.
     let transpose (m: Matrix<'a>) : Matrix<'a> =
-        let data = Array2D.init m.Cols m.Rows (fun i j -> get m j i)
+        let data = Array2D.init m.Cols m.Rows (fun i j -> m.[j, i])
 
         { Rows = m.Cols
           Cols = m.Rows
@@ -99,7 +97,7 @@ module Matrix =
             let mutable acc = init
 
             for i in 0 .. m.Rows - 1 do
-                acc <- op acc (get m i j)
+                acc <- op acc m.[i, j]
 
             acc)
 

@@ -16,7 +16,7 @@ module RnglrLR =
 
         for localState in 0 .. localSize - 1 do
             for localTarget in 0 .. localSize - 1 do
-                match Matrix.get block.Dfa.Transitions localState localTarget with
+                match block.Dfa.Transitions.[localState, localTarget] with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with

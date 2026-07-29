@@ -68,7 +68,7 @@ module RSM =
 
         for i in 0 .. rsm.StateCount - 1 do
             for j in 0 .. rsm.StateCount - 1 do
-                match Matrix.get rsm.Transitions i j with
+                match rsm.Transitions.[i, j] with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with
@@ -142,19 +142,15 @@ module RSM =
 
                 for (globalFrom, _) in globalIndices do
                     for (globalTo, _) in globalIndices do
-                        match Matrix.get rsm.Transitions globalFrom globalTo with
+                        match rsm.Transitions.[globalFrom, globalTo] with
                         | Some labels ->
-                            Matrix.set
-                                subTransitions
-                                (globalToLocal.[globalFrom])
-                                (globalToLocal.[globalTo])
-                                (Some labels)
+                            subTransitions.[globalToLocal.[globalFrom], globalToLocal.[globalTo]] <- Some labels
                         | None -> ()
 
                 let localTransitions =
                     [ for fromLocal in 0 .. localSize - 1 do
                           for toLocal in 0 .. localSize - 1 do
-                              match Matrix.get subTransitions fromLocal toLocal with
+                              match subTransitions.[fromLocal, toLocal] with
                               | Some labels ->
                                   for label in NonEmptySet.toSeq labels do
                                       match label with
@@ -187,7 +183,7 @@ module RSM =
             let arr = ResizeArray<Terminal<'t> * int>()
 
             for j in 0 .. rsm.StateCount - 1 do
-                match Matrix.get rsm.Transitions i j with
+                match rsm.Transitions.[i, j] with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with
@@ -203,7 +199,7 @@ module RSM =
             let arr = ResizeArray<Nonterminal<'nt> * int>()
 
             for j in 0 .. rsm.StateCount - 1 do
-                match Matrix.get rsm.Transitions i j with
+                match rsm.Transitions.[i, j] with
                 | Some labels ->
                     for label in NonEmptySet.toSeq labels do
                         match label with
@@ -226,8 +222,8 @@ module RSM =
 
         for i in 0 .. oldCount - 1 do
             for j in 0 .. oldCount - 1 do
-                match Matrix.get rsm.Transitions i j with
-                | Some labels -> Matrix.set newTransitions i j (Some labels)
+                match rsm.Transitions.[i, j] with
+                | Some labels -> newTransitions.[i, j] <- Some labels
                 | None -> ()
 
         let sLabel =
@@ -235,7 +231,7 @@ module RSM =
             |> NonEmptySet.singleton
             |> Some
 
-        Matrix.set newTransitions oldCount (oldCount + 1) sLabel
+        newTransitions.[oldCount, oldCount + 1] <- sLabel
 
         let newStateInfo = Array.zeroCreate newCount
 

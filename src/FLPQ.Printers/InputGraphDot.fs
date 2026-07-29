@@ -32,7 +32,7 @@ module InputGraphDot =
 
         for i in 0 .. n - 1 do
             for j in 0 .. n - 1 do
-                match Matrix.get inputGraph.Edges i j with
+                match inputGraph.Edges.[i, j] with
                 | Some tok ->
                     let edgeLabel = terminalPrinter tok |> DerivationTreeDot.escapeLabel
                     sb.AppendLine(sprintf "  v%d -> v%d [label=\"%s\"];" i j edgeLabel) |> ignore

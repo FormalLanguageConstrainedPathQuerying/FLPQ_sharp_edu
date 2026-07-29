@@ -246,7 +246,7 @@ module LRParser =
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some symbols ->
                     for sym in NonEmptySet.toSeq symbols do
                         match sym with

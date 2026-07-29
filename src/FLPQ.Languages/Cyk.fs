@@ -45,8 +45,8 @@ module Cyk =
         : Set<Nonterminal<'nt>> =
         seq { i .. j - 1 }
         |> Seq.collect (fun k ->
-            let leftSet = Matrix.get table i k
-            let rightSet = Matrix.get table (k + 1) j
+            let leftSet = table.[i, k]
+            let rightSet = table.[k + 1, j]
 
             if Set.isEmpty leftSet || Set.isEmpty rightSet then
                 Seq.empty
@@ -72,7 +72,7 @@ module Cyk =
 
             if not (List.isEmpty producing) then
                 let ntSet = Set.ofList producing
-                Matrix.set table i i ntSet
+                table.[i, i] <- ntSet
                 onDiagonalCell i ntSet
 
         onLengthDone table 1
@@ -83,7 +83,7 @@ module Cyk =
                 let accumulated = computeCell cnf.Rules table i j
 
                 if not (Set.isEmpty accumulated) then
-                    Matrix.set table i j accumulated
+                    table.[i, j] <- accumulated
 
                 onCellFound i j accumulated
 
@@ -117,7 +117,7 @@ module Cyk =
 
         let onLengthDone table _len =
             steps.Add(
-                { Table = Matrix.create (Matrix.rows table) (Matrix.cols table) (fun i j -> Matrix.get table i j)
+                { Table = Matrix.create (Matrix.rows table) (Matrix.cols table) (fun i j -> table.[i, j])
                   Highlights = List.rev stepHighlights }
             )
 
@@ -132,7 +132,7 @@ module Cyk =
         if n = 0 then
             false
         else
-            Set.contains cnf.Start (Matrix.get table 0 (n - 1))
+            Set.contains cnf.Start table.[0, n - 1]
 
     /// Parse pre-tokenized input using CYK algorithm.
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =

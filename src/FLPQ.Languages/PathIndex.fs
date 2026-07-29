@@ -60,8 +60,8 @@ module PathIndex =
         : unit =
         let fromIdx = linearIndex pi fromState fromVertex
         let toIdx = linearIndex pi toState toVertex
-        let current = Matrix.get pi.Matrix fromIdx toIdx
-        Matrix.set pi.Matrix fromIdx toIdx (Set.add entry current)
+        let current = pi.Matrix.[fromIdx, toIdx]
+        pi.Matrix.[fromIdx, toIdx] <- Set.add entry current
 
     /// Adds an entry to the path index and tracks changed cells via a ref cell.
     /// Only adds if the entry is not already present.
@@ -76,10 +76,10 @@ module PathIndex =
         : unit =
         let fromIdx = linearIndex pi fromState fromVertex
         let toIdx = linearIndex pi toState toVertex
-        let current = Matrix.get pi.Matrix fromIdx toIdx
+        let current = pi.Matrix.[fromIdx, toIdx]
 
         if not (Set.contains entry current) then
-            Matrix.set pi.Matrix fromIdx toIdx (Set.add entry current)
+            pi.Matrix.[fromIdx, toIdx] <- Set.add entry current
             changedCells.Value <- Set.add (fromIdx, toIdx) changedCells.Value
 
     /// Gets the set of entries at range (fromState, fromVertex) → (toState, toVertex).
@@ -92,7 +92,7 @@ module PathIndex =
         : Set<PathIndexEntry<'t, 'nt>> =
         let fromIdx = linearIndex pi fromState fromVertex
         let toIdx = linearIndex pi toState toVertex
-        Matrix.get pi.Matrix fromIdx toIdx
+        pi.Matrix.[fromIdx, toIdx]
 
     /// Filters a set of path index entries to only nonterminal-like entries
     /// (PNonterminal and PEpsilonNonterminal).
@@ -111,7 +111,7 @@ module PathIndex =
 
         for fromIdx in 0 .. k - 1 do
             for toIdx in 0 .. k - 1 do
-                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                for entry in pi.Matrix.[fromIdx, toIdx] do
                     match entry with
                     | PathIndexEntry.PNonterminal _ -> count <- count + 1
                     | _ -> ()
@@ -125,7 +125,7 @@ module PathIndex =
 
         for fromIdx in 0 .. k - 1 do
             for toIdx in 0 .. k - 1 do
-                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                for entry in pi.Matrix.[fromIdx, toIdx] do
                     match entry with
                     | PathIndexEntry.PTerminal _ -> count <- count + 1
                     | _ -> ()
@@ -139,7 +139,7 @@ module PathIndex =
 
         for fromIdx in 0 .. k - 1 do
             for toIdx in 0 .. k - 1 do
-                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                for entry in pi.Matrix.[fromIdx, toIdx] do
                     match entry with
                     | PathIndexEntry.PEpsilonNonterminal _ -> count <- count + 1
                     | _ -> ()
@@ -153,7 +153,7 @@ module PathIndex =
 
         for fromIdx in 0 .. k - 1 do
             for toIdx in 0 .. k - 1 do
-                for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                for entry in pi.Matrix.[fromIdx, toIdx] do
                     match entry with
                     | PathIndexEntry.PIntermediate _ -> count <- count + 1
                     | _ -> ()
@@ -173,7 +173,7 @@ module PathIndex =
 
         for fromIdx in 0 .. k - 1 do
             for toIdx in 0 .. k - 1 do
-                let nts = filterNonterminals (Matrix.get pi.Matrix fromIdx toIdx)
+                let nts = filterNonterminals pi.Matrix.[fromIdx, toIdx]
 
                 if not (Set.isEmpty nts) then
                     let fromState = fromIdx / pi.VertexCount
@@ -265,7 +265,7 @@ module PathIndex =
 
             for fromIdx in 0 .. k - 1 do
                 for toIdx in 0 .. k - 1 do
-                    for entry in Matrix.get pi.Matrix fromIdx toIdx do
+                    for entry in pi.Matrix.[fromIdx, toIdx] do
                         match entry with
                         | PathIndexEntry.PEpsilonNonterminal(Nonterminal nt) ->
                             let fromState = fromIdx / pi.VertexCount

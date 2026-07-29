@@ -25,7 +25,7 @@ module Graph =
     let getVertex idx (graph: Graph<'v, 'e>) = Map.find idx graph.VertexMap
 
     /// Returns the edge label between two vertices.
-    let edge (graph: Graph<'v, 'e>) (fromIdx: int) (toIdx: int) = Matrix.get graph.Edges fromIdx toIdx
+    let edge (graph: Graph<'v, 'e>) (fromIdx: int) (toIdx: int) = graph.Edges.[fromIdx, toIdx]
 
     /// Transforms vertex values using the given function, preserving edges.
     let mapVertices (f: 'v -> 'w) (graph: Graph<'v, 'e>) : Graph<'w, 'e> =
@@ -55,7 +55,7 @@ module Graph =
             |> Map.ofArray
 
         let newEdges =
-            Matrix.create newSize newSize (fun i j -> Matrix.get graph.Edges keepArr.[i] keepArr.[j])
+            Matrix.create newSize newSize (fun i j -> graph.Edges.[keepArr.[i], keepArr.[j]])
 
         { VertexMap = newVertexMap
           Edges = newEdges }

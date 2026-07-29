@@ -47,7 +47,7 @@ module MsBfs =
         let mutable visited = Matrix.init k n false
 
         for i in 0 .. k - 1 do
-            Matrix.set currentFront i sources.[i] true
+            currentFront.[i, sources.[i]] <- true
 
         while anyTrue currentFront do
             visited <- boolAdd visited currentFront

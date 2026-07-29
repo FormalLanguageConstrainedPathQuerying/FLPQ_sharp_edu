@@ -14,15 +14,14 @@ module BooleanDecomposition =
         let allElements =
             [ for i in 0 .. Matrix.rows matrix - 1 do
                   for j in 0 .. Matrix.cols matrix - 1 do
-                      yield! extractElements (Matrix.get matrix i j) ]
+                      yield! extractElements matrix.[i, j] ]
             |> Set.ofList
 
         allElements
         |> Set.toList
         |> List.map (fun elem ->
             let boolMatrix =
-                Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j ->
-                    containsElement elem (Matrix.get matrix i j))
+                Matrix.create (Matrix.rows matrix) (Matrix.cols matrix) (fun i j -> containsElement elem matrix.[i, j])
 
             (elem, boolMatrix))
         |> Map.ofList
@@ -59,5 +58,4 @@ module BooleanDecomposition =
         let rows = Matrix.rows first
         let cols = Matrix.cols first
 
-        Matrix.create rows cols (fun i j ->
-            decomp |> Map.filter (fun _ mat -> Matrix.get mat i j) |> Map.keys |> Set.ofSeq)
+        Matrix.create rows cols (fun i j -> decomp |> Map.filter (fun _ mat -> mat.[i, j]) |> Map.keys |> Set.ofSeq)

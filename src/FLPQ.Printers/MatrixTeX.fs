@@ -128,7 +128,7 @@ module MatrixTeX =
                           else
                               let dataRow = row - dataRowOffset
                               let dataCol = col - dataColOffset
-                              cellPrinter (Matrix.get matrix dataRow dataCol)
+                              cellPrinter matrix.[dataRow, dataCol]
 
                       let hc =
                           highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)

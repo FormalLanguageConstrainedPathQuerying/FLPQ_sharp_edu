@@ -41,7 +41,7 @@ module Nfa =
 
         for i in 0 .. Matrix.rows transitions - 1 do
             for j in 0 .. Matrix.cols transitions - 1 do
-                match Matrix.get transitions i j with
+                match transitions.[i, j] with
                 | Some nes ->
                     for label in NonEmptySet.toSeq nes do
                         match label with
@@ -61,11 +61,11 @@ module Nfa =
 
         for (fromIdx, sym, toIdx) in transitionsList do
             let current =
-                match Matrix.get matrix fromIdx toIdx with
+                match matrix.[fromIdx, toIdx] with
                 | Some nes -> NonEmptySet.add sym nes
                 | None -> NonEmptySet.singleton sym
 
-            Matrix.set matrix fromIdx toIdx (Some current)
+            matrix.[fromIdx, toIdx] <- Some current
 
         matrix
 
@@ -100,7 +100,7 @@ module Nfa =
         let mutable result = Set.empty
 
         for j in 0 .. Matrix.cols a.Transitions - 1 do
-            match Matrix.get a.Transitions stateIdx j with
+            match a.Transitions.[stateIdx, j] with
             | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Set.add j result
             | _ -> ()
 
@@ -119,7 +119,7 @@ module Nfa =
 
             for fromIdx in closure |> Set.toList do
                 for toIdx in 0 .. n - 1 do
-                    match Matrix.get a.Transitions fromIdx toIdx with
+                    match a.Transitions.[fromIdx, toIdx] with
                     | Some nes when NonEmptySet.contains AEpsilon nes ->
                         if not (Set.contains toIdx closure) then
                             closure <- Set.add toIdx closure
@@ -298,7 +298,7 @@ module Dfa =
         let mutable result = None
 
         for j in 0 .. Matrix.cols a.Transitions - 1 do
-            match Matrix.get a.Transitions stateIdx j with
+            match a.Transitions.[stateIdx, j] with
             | Some nes when NonEmptySet.contains (ATerm symbol) nes -> result <- Some j
             | _ -> ()
 
@@ -317,7 +317,7 @@ module Dfa =
                 let mutable count = 0
 
                 for j in 0 .. n - 1 do
-                    match Matrix.get a.Transitions i j with
+                    match a.Transitions.[i, j] with
                     | Some nes when NonEmptySet.contains (ATerm sym) nes -> count <- count + 1
                     | _ -> ()
 

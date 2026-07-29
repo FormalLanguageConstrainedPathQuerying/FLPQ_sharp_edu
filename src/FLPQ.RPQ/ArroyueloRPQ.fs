@@ -18,7 +18,7 @@ module ArroyueloRPQ =
         let mutable a = Matrix.init n n false
 
         for i in 0 .. n - 1 do
-            Matrix.set a i i true
+            a.[i, i] <- true
 
         a <- MsBfs.boolAdd a m
 
@@ -42,7 +42,7 @@ module ArroyueloRPQ =
         let identity = Matrix.init vCount vCount false
 
         for i in 0 .. vCount - 1 do
-            Matrix.set identity i i true
+            identity.[i, i] <- true
 
         match regexp with
         | Regexp.REps -> identity
@@ -79,6 +79,6 @@ module ArroyueloRPQ =
 
         for i in 0 .. k - 1 do
             for j in 0 .. vCount - 1 do
-                Matrix.set result i j (Matrix.get fullMatrix sources.[i] j)
+                result.[i, j] <- fullMatrix.[sources.[i], j]
 
         result

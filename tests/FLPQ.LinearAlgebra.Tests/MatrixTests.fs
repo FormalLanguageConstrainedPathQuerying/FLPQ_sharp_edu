@@ -48,12 +48,12 @@ module FactTests =
         let cols = 2
         let m = Matrix.create rows cols (fun i j -> i * 1000 + j)
 
-        Assert.Equal(0 * 1000 + 0, Matrix.get m 0 0)
-        Assert.Equal(0 * 1000 + 1, Matrix.get m 0 1)
-        Assert.Equal(1 * 1000 + 0, Matrix.get m 1 0)
-        Assert.Equal(1 * 1000 + 1, Matrix.get m 1 1)
-        Assert.Equal(2 * 1000 + 0, Matrix.get m 2 0)
-        Assert.Equal(2 * 1000 + 1, Matrix.get m 2 1)
+        Assert.Equal(0 * 1000 + 0, m.[0, 0])
+        Assert.Equal(0 * 1000 + 1, m.[0, 1])
+        Assert.Equal(1 * 1000 + 0, m.[1, 0])
+        Assert.Equal(1 * 1000 + 1, m.[1, 1])
+        Assert.Equal(2 * 1000 + 0, m.[2, 0])
+        Assert.Equal(2 * 1000 + 1, m.[2, 1])
 
     [<Fact>]
     let ``init fills all cells with the same value`` () =
@@ -61,7 +61,7 @@ module FactTests =
 
         for i in 0..2 do
             for j in 0..1 do
-                Assert.Equal(42, Matrix.get m i j)
+                Assert.Equal(42, m.[i, j])
 
     [<Fact>]
     let ``transpose of 2x3 produces 3x2`` () =
@@ -69,12 +69,12 @@ module FactTests =
         let t = Matrix.transpose m
         Assert.Equal(3, Matrix.rows t)
         Assert.Equal(2, Matrix.cols t)
-        Assert.Equal(Matrix.get m 0 0, Matrix.get t 0 0)
-        Assert.Equal(Matrix.get m 0 1, Matrix.get t 1 0)
-        Assert.Equal(Matrix.get m 0 2, Matrix.get t 2 0)
-        Assert.Equal(Matrix.get m 1 0, Matrix.get t 0 1)
-        Assert.Equal(Matrix.get m 1 1, Matrix.get t 1 1)
-        Assert.Equal(Matrix.get m 1 2, Matrix.get t 2 1)
+        Assert.Equal(m.[0, 0], t.[0, 0])
+        Assert.Equal(m.[0, 1], t.[1, 0])
+        Assert.Equal(m.[0, 2], t.[2, 0])
+        Assert.Equal(m.[1, 0], t.[0, 1])
+        Assert.Equal(m.[1, 1], t.[1, 1])
+        Assert.Equal(m.[1, 2], t.[2, 1])
 
     [<Fact>]
     let ``copy produces independent matrix`` () =
@@ -82,10 +82,10 @@ module FactTests =
         let c = Matrix.copy m
         Assert.Equal(2, Matrix.rows c)
         Assert.Equal(2, Matrix.cols c)
-        Assert.Equal(0, Matrix.get c 0 0)
-        Assert.Equal(11, Matrix.get c 1 1)
-        Matrix.set c 0 0 999
-        Assert.Equal(0, Matrix.get m 0 0)
+        Assert.Equal(0, c.[0, 0])
+        Assert.Equal(11, c.[1, 1])
+        c.[0, 0] <- 999
+        Assert.Equal(0, m.[0, 0])
 
     [<Fact>]
     let ``ofArray2D creates matrix from 2D array`` () =
@@ -93,8 +93,8 @@ module FactTests =
         let m = Matrix.ofArray2D arr
         Assert.Equal(3, Matrix.rows m)
         Assert.Equal(2, Matrix.cols m)
-        Assert.Equal(0, Matrix.get m 0 0)
-        Assert.Equal(101, Matrix.get m 1 1)
+        Assert.Equal(0, m.[0, 0])
+        Assert.Equal(101, m.[1, 1])
 
     [<Fact>]
     let ``reduceByColumn reduces each column`` () =
@@ -115,24 +115,24 @@ module FactTests =
 [<Fact>]
 let ``diagonal matrix has ones on diagonal for selected indices`` () =
     let d = Matrix.diagonal 5 (set [ 0; 2; 4 ]) 1 0
-    Assert.Equal(1, Matrix.get d 0 0)
-    Assert.Equal(0, Matrix.get d 1 1)
-    Assert.Equal(1, Matrix.get d 2 2)
-    Assert.Equal(0, Matrix.get d 3 3)
-    Assert.Equal(1, Matrix.get d 4 4)
-    Assert.Equal(0, Matrix.get d 0 1)
+    Assert.Equal(1, d.[0, 0])
+    Assert.Equal(0, d.[1, 1])
+    Assert.Equal(1, d.[2, 2])
+    Assert.Equal(0, d.[3, 3])
+    Assert.Equal(1, d.[4, 4])
+    Assert.Equal(0, d.[0, 1])
 
 [<Fact>]
 let ``diagonal matrix with empty set is zero matrix`` () =
     let d = Matrix.diagonal 3 Set.empty 1 0
-    Assert.Equal(0, Matrix.get d 0 0)
-    Assert.Equal(0, Matrix.get d 1 1)
-    Assert.Equal(0, Matrix.get d 2 2)
+    Assert.Equal(0, d.[0, 0])
+    Assert.Equal(0, d.[1, 1])
+    Assert.Equal(0, d.[2, 2])
 
 [<Fact>]
 let ``diagonal matrix with all indices is identity`` () =
     let d = Matrix.diagonal 3 (set [ 0; 1; 2 ]) 1 0
-    Assert.Equal(1, Matrix.get d 0 0)
-    Assert.Equal(1, Matrix.get d 1 1)
-    Assert.Equal(1, Matrix.get d 2 2)
-    Assert.Equal(0, Matrix.get d 0 1)
+    Assert.Equal(1, d.[0, 0])
+    Assert.Equal(1, d.[1, 1])
+    Assert.Equal(1, d.[2, 2])
+    Assert.Equal(0, d.[0, 1])

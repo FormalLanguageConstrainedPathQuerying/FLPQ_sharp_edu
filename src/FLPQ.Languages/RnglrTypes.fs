@@ -84,11 +84,11 @@ module RnglrGSS =
         let edge = { EdgeSymbol = label }
 
         let current =
-            match Matrix.get gss.GssGraph.Edges fromIdx toIdx with
+            match gss.GssGraph.Edges.[fromIdx, toIdx] with
             | Some nes -> NonEmptySet.add edge nes
             | None -> NonEmptySet.singleton edge
 
-        Matrix.set gss.GssGraph.Edges fromIdx toIdx (Some current)
+        gss.GssGraph.Edges.[fromIdx, toIdx] <- Some current
 
         let states = gss.StoredStates.[fromIdx]
         gss.StoredStates.[fromIdx] <- Set.empty
@@ -112,7 +112,7 @@ module RnglrGSS =
         let n = gss.GssGraph.VertexMap.Count
 
         [ for toIdx in 0 .. n - 1 do
-              match Matrix.get gss.GssGraph.Edges gssIdx toIdx with
+              match gss.GssGraph.Edges.[gssIdx, toIdx] with
               | Some nes ->
                   for edge in NonEmptySet.toSeq nes do
                       (toIdx, edge.EdgeSymbol)

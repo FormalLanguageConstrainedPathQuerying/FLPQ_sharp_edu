@@ -53,7 +53,7 @@ module SppfDot =
 
         for i in 0 .. vertexCount - 1 do
             for j in 0 .. vertexCount - 1 do
-                match FLPQ.LinearAlgebra.Matrix.get sppf.Graph.Edges i j with
+                match sppf.Graph.Edges.[i, j] with
                 | Some lbl ->
                     sb.AppendLine(sprintf "  n%d -> n%d [label=\"%s\"];" i j (edgeLabelStr lbl))
                     |> ignore

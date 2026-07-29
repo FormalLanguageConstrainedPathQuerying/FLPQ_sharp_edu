@@ -610,7 +610,7 @@ module BackwardCompatibilityTests =
         let nfa =
             Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
 
-        Assert.True((Matrix.get nfa.Transitions 0 1).IsSome)
+        Assert.True(nfa.Transitions.[0, 1].IsSome)
 
     [<Fact>]
     let ``DFA member states provides backward compatibility`` () =
@@ -621,4 +621,4 @@ module BackwardCompatibilityTests =
     [<Fact>]
     let ``DFA member transitions provides backward compatibility`` () =
         let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
-        Assert.True((Matrix.get dfa.Transitions 0 1).IsSome)
+        Assert.True(dfa.Transitions.[0, 1].IsSome)

@@ -111,7 +111,7 @@ type RandomGraphGenerators =
                                 (fromList, toList)
                                 ||> List.iter2 (fun f t ->
                                     if f <> t then
-                                        Matrix.set m f t true)
+                                        m.[f, t] <- true)
 
                                 (m, Array.ofList sources)))))))
         |> MyArb.fromGen
