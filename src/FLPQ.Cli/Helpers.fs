@@ -58,7 +58,7 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
             writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
-            writeOutputFile (Path.Combine(stepDir, "lr_automaton.dot")) steps.[idx].LrAutomatonDot
+            writeOutputFile (Path.Combine(stepDir, "lr_table.tex")) steps.[idx].LrTable
 
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")

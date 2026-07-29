@@ -13,7 +13,7 @@ module RnglrStepVisualizer =
           GssDot: string
           PathIndex: string
           Input: string
-          LrAutomatonDot: string }
+          LrTable: string }
 
     let private rnglrDescriptorToTeX (desc: RnglrDescriptor) : string =
         sprintf @"(%d, %d)" desc.LrState desc.Vertex
@@ -85,73 +85,6 @@ module RnglrStepVisualizer =
         | Symbol.N(Nonterminal nt) -> nonterminalPrinter nt
         | Symbol.Epsilon -> "ε"
 
-    let private lrAutomatonToDot
-        (terminalPrinter: 't -> string)
-        (nonterminalPrinter: 'nt -> string)
-        (lrTable: RnglrTable<'t, 'nt>)
-        (lrStateCount: int)
-        (currentLrState: int option)
-        : string =
-        let sb = System.Text.StringBuilder()
-        sb.AppendLine("digraph LRAutomaton {") |> ignore
-        sb.AppendLine("  rankdir=LR;") |> ignore
-
-        for idx in 0 .. lrStateCount - 1 do
-            let items = lrTable.Automaton.States.[idx]
-
-            let itemLines =
-                items
-                |> Set.toList
-                |> List.map (fun item ->
-                    let (Nonterminal ntName) = item.BlockNonterminal
-                    sprintf "%s / %d" (nonterminalPrinter ntName) item.RsmState)
-                |> String.concat "\\n"
-
-            let label = sprintf "State %d\\n%s" idx itemLines |> DerivationTreeDot.escapeLabel
-
-            let fillColor =
-                match currentLrState with
-                | Some s when s = idx -> "style=filled, fillcolor=lightblue, "
-                | _ -> ""
-
-            let startAttr =
-                if idx = lrTable.Automaton.StartState then
-                    sprintf "%sstyle=filled, fillcolor=green, " fillColor
-                else
-                    fillColor
-
-            let finalAttr =
-                if Set.contains idx lrTable.Automaton.FinalStates then
-                    "peripheries=2, "
-                else
-                    ""
-
-            sb.AppendLine(sprintf "  s%d [%s%slabel=\"%s\"];" idx startAttr finalAttr label)
-            |> ignore
-
-        for fromIdx in 0 .. lrStateCount - 1 do
-            for toIdx in 0 .. lrStateCount - 1 do
-                match lrTable.Automaton.Transitions.[fromIdx, toIdx] with
-                | Some labels ->
-                    let termLabels =
-                        labels
-                        |> NonEmptySet.toSeq
-                        |> Seq.choose (fun l ->
-                            match l with
-                            | AutomatonLabel.ATerm sym -> Some(symbolToDotLabel terminalPrinter nonterminalPrinter sym)
-                            | AutomatonLabel.AEpsilon -> None)
-                        |> List.ofSeq
-
-                    if not (List.isEmpty termLabels) then
-                        let label = termLabels |> String.concat ", " |> DerivationTreeDot.escapeLabel
-
-                        sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" fromIdx toIdx label)
-                        |> ignore
-                | None -> ()
-
-        sb.AppendLine("}") |> ignore
-        sb.ToString()
-
     let renderStep
         (terminals: 't -> string)
         (nonterminals: 'nt -> string)
@@ -187,8 +120,22 @@ module RnglrStepVisualizer =
                 step.NewGssEdges
                 currentGssIdx
 
-        let lrAutomatonDot =
-            lrAutomatonToDot terminals nonterminals lrTable lrStateCount step.CurrentLrState
+        let activeActions =
+            let shifts =
+                step.ActiveShiftTerminals |> Set.map (fun (Terminal t) -> Symbol.T(Terminal t))
+
+            let reduces = step.ActiveReduceNonterminals |> Set.map (fun nt -> Symbol.N nt)
+
+            Set.union shifts reduces
+
+        let lrTable =
+            RnglrTableTeX.tableToTeXWithHighlights
+                terminals
+                nonterminals
+                lrTable
+                step.CurrentLrState
+                activeActions
+                step.LevelReductions
 
         let stepPi =
             { Matrix = step.PathIndexMatrix
@@ -204,7 +151,7 @@ module RnglrStepVisualizer =
           GssDot = gssDot
           PathIndex = PathIndexTeX.toTeXWithHighlights terminals nonterminals stepPi step.ChangedCells
           Input = InputGraphDot.toDot terminals inputGraph (Some step.InputVertex)
-          LrAutomatonDot = lrAutomatonDot }
+          LrTable = lrTable }
 
     let renderSteps
         (terminals: 't -> string)

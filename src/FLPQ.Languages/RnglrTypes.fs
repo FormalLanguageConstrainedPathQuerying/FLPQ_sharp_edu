@@ -135,4 +135,7 @@ type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
       CurrentDescriptor: RnglrDescriptor option
       HandledDescriptors: Set<RnglrDescriptor>
       NewDescriptors: Set<RnglrDescriptor>
-      AttemptedDescriptors: Set<RnglrDescriptor> }
+      AttemptedDescriptors: Set<RnglrDescriptor>
+      ActiveShiftTerminals: Set<Terminal<'t>>
+      ActiveReduceNonterminals: Set<Nonterminal<'nt>>
+      LevelReductions: Set<Nonterminal<'nt>> }

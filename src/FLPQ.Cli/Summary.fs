@@ -104,9 +104,7 @@ module Summary =
                         [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
                               ("RSM", "dot_pdfs/rsm_blocks.pdf")
                           if File.Exists(Path.Combine(vizDir, "sppf.dot")) then
-                              ("SPPF", "dot_pdfs/sppf.pdf")
-                          if File.Exists(Path.Combine(vizDir, "lr_automaton.dot")) then
-                              ("LR Automaton", "dot_pdfs/lr_automaton.pdf") ]
+                              ("SPPF", "dot_pdfs/sppf.pdf") ]
 
                     (None, None, pdfs)
                 | _ -> (None, None, [])

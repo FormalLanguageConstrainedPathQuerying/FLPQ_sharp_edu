@@ -49,6 +49,9 @@ module Rnglr =
                 -> RnglrDescriptor option
                 -> Set<RnglrDescriptor>
                 -> Set<RnglrDescriptor>
+                -> Set<Terminal<'t>>
+                -> Set<Nonterminal<'nt>>
+                -> Set<Nonterminal<'nt>>
                 -> unit)
         : PathIndex<'t, 'nt> =
         let extRsm = ersm.ExtendedRsm
@@ -235,6 +238,11 @@ module Rnglr =
 
         let processedGotos: Set<Nonterminal<'nt> * int> array = Array.create lrK Set.empty
 
+        let mutable stepShiftTerminals = Set.empty<Terminal<'t>>
+        let mutable stepReduceNt = Set.empty<Nonterminal<'nt>>
+        let mutable levelReductions = Set.empty<Nonterminal<'nt>>
+        let mutable prevInputVertex = -1
+
         let rec processReduction
             (reduceNt: Nonterminal<'nt>)
             (finalRsmState: int)
@@ -272,7 +280,13 @@ module Rnglr =
             if depth > 1000 then
                 failwith "Reduction cascade depth exceeded"
 
+            if v <> prevInputVertex then
+                levelReductions <- Set.empty
+                prevInputVertex <- v
+
             for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
+                stepReduceNt <- Set.add reduceNt stepReduceNt
+                levelReductions <- Set.add reduceNt levelReductions
                 let gssIdx = linearIdx lrState v
                 let predecessors = findPredecessors gssIdx reduceNt
 
@@ -285,6 +299,7 @@ module Rnglr =
 
                     match Map.tryFind shiftKey lrTable.Action with
                     | Some(LRAction.Shift targetLrState) ->
+                        stepShiftTerminals <- Set.add (Terminal tVal) stepShiftTerminals
                         let gssIdx = linearIdx lrState v
                         let targetGssIdx = linearIdx targetLrState vNext
 
@@ -343,6 +358,9 @@ module Rnglr =
             None
             handledAccum
             Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
 
         pending.[0].Enqueue { LrState = 0; Vertex = 0 }
 
@@ -367,6 +385,13 @@ module Rnglr =
 
                     let edgeSymbols = collectEdgeSymbols activeVerts
 
+                    let capturedShifts = stepShiftTerminals
+                    let capturedReduces = stepReduceNt
+                    let capturedLevel = levelReductions
+
+                    stepShiftTerminals <- Set.empty
+                    stepReduceNt <- Set.empty
+
                     onStep
                         (pendingSnapshot ())
                         activeVerts
@@ -379,6 +404,9 @@ module Rnglr =
                         (Some desc)
                         handledAccum
                         attemptedThisStep
+                        capturedShifts
+                        capturedReduces
+                        capturedLevel
 
         pathIndex
 
@@ -387,7 +415,7 @@ module Rnglr =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ -> ())
 
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
@@ -411,6 +439,9 @@ module Rnglr =
             currentDescriptor
             handledAccum
             attemptedThisStep
+            shiftTerminals
+            reduceNonterminals
+            levelReds
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
@@ -434,7 +465,10 @@ module Rnglr =
                   CurrentDescriptor = currentDescriptor
                   HandledDescriptors = handledAccum
                   NewDescriptors = newDescriptors
-                  AttemptedDescriptors = attemptedThisStep }
+                  AttemptedDescriptors = attemptedThisStep
+                  ActiveShiftTerminals = shiftTerminals
+                  ActiveReduceNonterminals = reduceNonterminals
+                  LevelReductions = levelReds }
             )
 
         buildPathIndexCore ersm inputGraph onStep

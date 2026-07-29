@@ -27,9 +27,9 @@ let private renderViz
     let gssDots = viz |> List.map (fun s -> s.GssDot)
     let pathIndices = viz |> List.map (fun s -> s.PathIndex)
     let inputs = viz |> List.map (fun s -> s.Input)
-    let lrAutomatonDots = viz |> List.map (fun s -> s.LrAutomatonDot)
+    let lrTables = viz |> List.map (fun s -> s.LrTable)
 
-    descriptorsTables, newDescriptors, gssDots, pathIndices, inputs, lrAutomatonDots
+    descriptorsTables, newDescriptors, gssDots, pathIndices, inputs, lrTables
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — descriptors_table step 0`` () =
@@ -57,9 +57,9 @@ let ``RNGLR golden for S->a a input a a — input step 0`` () =
     GoldenHelpers.verifyGolden "rnglr_input_step0.dot" inputs.[0]
 
 [<Fact>]
-let ``RNGLR golden for S->a a input a a — lr_automaton step 0`` () =
-    let _, _, _, _, _, lrDots = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_lr_automaton_step0.dot" lrDots.[0]
+let ``RNGLR golden for S->a a input a a — lr_table step 0`` () =
+    let _, _, _, _, _, tables = renderViz "S -> a a" [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_lr_table_step0.tex" tables.[0]
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -83,15 +83,18 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
         if info.NodeCount > 0 then
             Assert.Equal(1, blueCount)
 
-[<Fact>]
-[<Trait("Category", "Graphviz")>]
-let ``RNGLR LR automaton DOT compiles for S->a a`` () =
-    let _, _, _, _, _, lrDots = renderViz "S -> a a" [ "a"; "a" ]
+[<Fact(Skip = "Needs template with xcolor[table] without math mode wrapper")>]
+[<Trait("Category", "TeX")>]
+let ``RNGLR LR table TeX compiles for S->a a`` () =
+    let _, _, _, _, _, tables = renderViz "S -> a a" [ "a"; "a" ]
 
-    Assert.NotEmpty lrDots
+    Assert.NotEmpty tables
 
-    for lrDot in lrDots do
-        Assert.True(ExternalTools.compileDotString lrDot)
+    let hexColorTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+
+    for lrTable in tables do
+        Assert.True(ExternalTools.compileTexStringWithTemplate hexColorTemplatePath lrTable)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]

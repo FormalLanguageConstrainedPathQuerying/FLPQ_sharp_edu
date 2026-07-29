@@ -82,7 +82,7 @@ let ``runRnglr produces step visualization files`` () =
           "gss.dot"
           "path_index.tex"
           "input.dot"
-          "lr_automaton.dot" ]
+          "lr_table.tex" ]
 
     for f in expected do
         let path = Path.Combine(step0Dir, f)

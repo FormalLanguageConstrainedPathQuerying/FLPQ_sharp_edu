@@ -18,6 +18,7 @@
     <Compile Include="GssDot.fs" />
     <Compile Include="InputGraphDot.fs" />
     <Compile Include="GllStepVisualizer.fs" />
+    <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="RnglrStepVisualizer.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />
@@ -27,7 +28,6 @@
     <Compile Include="ValiantTeX.fs" />
     <Compile Include="LLTableTeX.fs" />
     <Compile Include="LRTableTeX.fs" />
-    <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="VisualizationTypes.fs" />
     <Compile Include="LLStepVisualizer.fs" />
     <Compile Include="LRStepVisualizer.fs" />

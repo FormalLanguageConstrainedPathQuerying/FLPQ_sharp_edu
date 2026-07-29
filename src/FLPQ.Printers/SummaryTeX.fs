@@ -256,15 +256,19 @@ module SummaryTeX =
             | Some tex -> tex
             | None -> ""
 
+        let lrTable =
+            match readIfExists (Path.Combine(stepDir, "lr_table.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
         let gssPdf = sprintf "dot_pdfs/%s_gss.pdf" stepName
-        let lrAutomatonPdf = sprintf "dot_pdfs/%s_lr_automaton.pdf" stepName
         let inputPdf = sprintf "dot_pdfs/%s_input.pdf" stepName
 
         let filledTemplate =
             template
                 .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
                 .Replace("__STEP_GSS_PDF__", gssPdf)
-                .Replace("__STEP_LR_AUTOMATON_PDF__", lrAutomatonPdf)
+                .Replace("__LR_TABLE__", lrTable)
                 .Replace("__STEP_INPUT_PDF__", inputPdf)
                 .Replace("__PATH_INDEX__", pathIndex)
                 .Replace("__NEW_DESCRIPTORS__", newDescriptors)
