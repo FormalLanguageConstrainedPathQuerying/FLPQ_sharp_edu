@@ -49,13 +49,18 @@ docs(XXX-SN): description
 
 ### Pre-merge checks
 
-The hard gate MUST pass before merging. Run asynchronously with periodic polling:
+The hard gate MUST pass before merging. **This is absolute — no exceptions, no self-assessment.**
 
 ```bash
 python3 tools/hard_gate.py > tmp/hard-gate-stderr.txt 2>&1 &
+echo $! > tmp/hard-gate.pid
 ```
 
-See the `quality-gates` skill for the full async polling procedure. Poll `grep "STATUS:" tmp/hard-gate.txt` every 5 minutes. Only non-zero exit code — for ANY reason — is a blocker. Do not merge. Only merge when exit code 0.
+See the `quality-gates` skill for the full async polling procedure. Poll `grep "STATUS:" tmp/hard-gate.txt` every 5 minutes.
+
+- **`STATUS: PASS`** — proceed to merge.
+- **`STATUS: BLOCKED`** — **STOP. Do not merge.** Do not assess whether failures are pre-existing or unrelated to your changes. Do not rationalize. The gate is the gate. Fix every failure and re-run from the start.
+- **`STATUS: IN_PROGRESS`** — keep polling. Do not proceed until terminal state.
 
 ### Merge strategy
 

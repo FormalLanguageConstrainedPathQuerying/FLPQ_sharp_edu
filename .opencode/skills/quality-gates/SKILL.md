@@ -120,7 +120,7 @@ grep "STATUS:" tmp/hard-gate.txt
 ```
 
 - **`STATUS: PASS`** — gate finished successfully (exit code 0). Proceed to merge.
-- **`STATUS: BLOCKED`** — gate finished with exit code non-zero. Read the step summary at the top of `tmp/hard-gate.txt` to identify which step(s) failed, then read the detailed log to identify the failure, fix all problems, and **re-run the gate from the start**.
+- **`STATUS: BLOCKED`** — gate finished with exit code non-zero. **This is absolute.** Do not assess whether a failure is pre-existing, unrelated to your changes, or insignificant. Do not rationalize. The gate is the gate — if it says `BLOCKED`, the task is not complete. Read the step summary at the top of `tmp/hard-gate.txt` to identify which step(s) failed, then read the detailed log to identify the failure, fix all problems, and **re-run the gate from the start**.
 - **`STATUS: IN_PROGRESS`** — gate is still running. Read `head -15` for the step summary: if step numbers advanced since the last poll, the gate is making progress — continue waiting. If the step counter has not advanced after 3+ polling cycles (>15 minutes with no progress), check `tail -20` for the currently executing command and verify it hasn't hung. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
