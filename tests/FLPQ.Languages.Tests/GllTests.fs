@@ -40,21 +40,25 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a S | b accepts a a b`` () =
         let g = anb.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b" ])
+        let s = anb.AcceptStrings[2]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``S -> a S | b rejects a a a`` () =
-        Assert.True(checkReject anb.Grammars[0].Grammar [ "a"; "a"; "a" ])
+        let s = anb.RejectStrings[3]
+        Assert.True(checkReject anb.Grammars[0].Grammar s)
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a b a b`` () =
         let g = dyck1.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ])
+        let s = dyck1.AcceptStrings[0]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a a b b`` () =
         let g = dyck1.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ])
+        let s = dyck1.AcceptStrings[3]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``S -> a S b | eps accepts a a b b`` () =
@@ -71,7 +75,8 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a S b | S S | eps accepts a b (no infinite loop)`` () =
         let g = dyck1.Grammars[1].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ])
+        let s = dyck1.AcceptStrings[1]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``S -> a S b | S S | eps accepts empty`` () =
@@ -81,7 +86,8 @@ module GllAcceptance =
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts a a a`` () =
         let g = aplus.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
+        let s = aplus.AcceptStrings[2]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``Left-recursive S -> a S | a rejects empty`` () =
@@ -90,7 +96,8 @@ module GllAcceptance =
     [<Fact>]
     let ``Right-recursive S -> S a | a accepts a a a`` () =
         let g = aplus.Grammars[1].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ])
+        let s = aplus.AcceptStrings[2]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
 [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
 module GllCykEquivalence =
@@ -122,12 +129,14 @@ module GllTreeExtraction =
     [<Fact>]
     let ``Tree extraction for S->aSbS|eps on abab produces tree with correct yield`` () =
         let g = dyck1.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ])
+        let s = dyck1.AcceptStrings[0]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``Tree extraction for S->aSb|eps on aabb produces tree with correct yield`` () =
         let g = anbn.Grammars[0].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ])
+        let s = anbn.AcceptStrings[2]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
 
     [<Fact>]
     let ``Tree extraction for S->a|b on a produces tree with leaf`` () =
@@ -238,11 +247,11 @@ module GllGrammar159C =
             Assert.True(accepts (TestHelpers.grammarToRsm grammar) input, $"tree yield: {desc}")
 
 module GllGrammar159D =
-    let private rsm = TestHelpers.buildRegexRsm "(a S b)*"
+    let private rsm = TestHelpers.buildRegexRsm dyck1.Grammars[3].EbnfText
 
     [<Fact>]
     let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
-        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+        let input = dyck1.AcceptStrings[6]
         Assert.True(accepts rsm input)
 
 module GllPropertyTreeYield =
@@ -345,10 +354,10 @@ module GllEpsilonGrammars =
 module GllGrammar159B_SaSb =
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches input: a a a b a b b a b b`` () =
-        let input = [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
+        let input = dyck1.AcceptStrings[6]
         Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarSaSb_eps) input)
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches input: a a b a b b a b`` () =
-        let input = [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
+        let input = dyck1.AcceptStrings[5]
         Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarSaSb_eps) input)

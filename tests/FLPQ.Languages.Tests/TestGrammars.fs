@@ -115,3 +115,11 @@ let ll2Grammar = (grammarByName LanguageRegistry.LL2Test "ll2Grammar").Grammar
 let ll3Grammar = (grammarByName LanguageRegistry.LL3Test "ll3Grammar").Grammar
 
 let grammar_alt_ab = (grammarByName LanguageRegistry.AltAB "grammar_alt_ab").Grammar
+
+// ---- EBNF grammar entries (EbnfText is the canonical form; Grammar is a placeholder) ----
+
+let grammar_dyck_ebnf = LanguageRegistry.Dyck1.Grammars[3]
+let grammar_aplus_ebnf1 = LanguageRegistry.APlus.Grammars[6]
+let grammar_aplus_ebnf2 = LanguageRegistry.APlus.Grammars[7]
+let grammar_astar_ebnf = LanguageRegistry.AStar.Grammars[2]
+let grammar_dual_dyck = LanguageRegistry.DualDyck.Grammars[0]

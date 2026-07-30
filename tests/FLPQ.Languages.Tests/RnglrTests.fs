@@ -80,7 +80,8 @@ module RnglrAcceptance =
     [<Fact>]
     let ``S -> a S b | eps | S S accepts a b (no infinite loop)`` () =
         let g = dyck1.Grammars[1].Grammar
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ], "Should accept and produce tree")
+        let s = dyck1.AcceptStrings[1]
+        Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
     [<Fact>]
     let ``Left-recursive S -> a S | a accepts APlus accept strings`` () =
@@ -260,48 +261,31 @@ module RnglrGrammar159C =
             Assert.True(accepts (TestHelpers.grammarToRsm grammar) input, $"Should produce a tree: {desc}")
 
 module RnglrGrammar159D =
-    let private rsm = TestHelpers.buildRegexRsm "(a S b)*"
+    let private rsm = TestHelpers.buildRegexRsm dyck1.Grammars[3].EbnfText
 
     [<Fact>]
     let ``S -> (a S b)* accepts and yields tree: a a a b a b b a b b`` () =
-        Assert.True(accepts rsm [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ], "Should produce a tree")
+        let input = dyck1.AcceptStrings[6]
+        Assert.True(accepts rsm input, "Should produce a tree")
 
     let private rsm2 =
-        let r = RsmBuilder.buildRSMFromText "S -> S1 S2\nS1 -> (a S1 b)*\nS2 -> (c S2 d)*"
+        let r = RsmBuilder.buildRSMFromText LanguageRegistry.DualDyck.Grammars[0].EbnfText
         { r with StartBlock = Nonterminal "S" }
 
     [<Fact>]
-    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b`` () =
-        Assert.True(accepts rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ], "Should produce a tree")
-
-    [<Fact>]
-    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b c c d c d d`` () =
-        let input =
-            [ "a"
-              "a"
-              "a"
-              "b"
-              "a"
-              "b"
-              "b"
-              "a"
-              "b"
-              "b"
-              "c"
-              "c"
-              "d"
-              "c"
-              "d"
-              "d" ]
-
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts dual dyck 10`` () =
+        let input = LanguageRegistry.DualDyck.AcceptStrings[0]
         Assert.True(accepts rsm2 input, "Should produce a tree")
 
     [<Fact>]
-    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts and yields tree: a a a b a b b a b b c d`` () =
-        Assert.True(
-            accepts rsm2 [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b"; "c"; "d" ],
-            "Should produce a tree"
-        )
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts dual dyck 16`` () =
+        let input = LanguageRegistry.DualDyck.AcceptStrings[1]
+        Assert.True(accepts rsm2 input, "Should produce a tree")
+
+    [<Fact>]
+    let ``S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)* accepts dual dyck 12`` () =
+        let input = LanguageRegistry.DualDyck.AcceptStrings[2]
+        Assert.True(accepts rsm2 input, "Should produce a tree")
 
 module RnglrPropertyTreeYield =
     let private propertyRunner =
@@ -383,8 +367,8 @@ module SppfDotTests =
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
-        let grammarText = "S -> a S b\nS -> S S\nS -> eps\n"
-        let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
+        let grammarText = dyck1.Grammars[1].EbnfText
+        let input = dyck1.AcceptStrings[4]
 
         let sppf = buildSppf grammarText input
 
@@ -405,8 +389,8 @@ module SppfDotTests =
 
     [<Fact>]
     let ``RNGLR SPPF has root nodes for S->aSb|SS|eps with aababb`` () =
-        let grammarText = "S -> a S b\nS -> S S\nS -> eps\n"
-        let input = [ "a"; "a"; "b"; "a"; "b"; "b" ]
+        let grammarText = dyck1.Grammars[1].EbnfText
+        let input = dyck1.AcceptStrings[4]
 
         let sppf = buildSppf grammarText input
 
@@ -444,7 +428,7 @@ module RnglrGrammarTests =
         Assert.False(PathIndex.isAccepted pathIndex ersm vc, $"Should reject {input}: {ebnfText}")
 
     module Grammar1 =
-        let private g = "S -> N a*\nN -> (a a) | a"
+        let private g = (LanguageRegistry.APlus.Grammars[6]).EbnfText
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]
@@ -458,7 +442,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar2 =
-        let private g = "S -> a* N\nN -> a | (a a)"
+        let private g = (LanguageRegistry.APlus.Grammars[7]).EbnfText
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]
@@ -472,7 +456,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar3 =
-        let private g = "S -> N*\nN -> a | (a a)"
+        let private g = (LanguageRegistry.AStar.Grammars[2]).EbnfText
         let private lang = LanguageRegistry.AStar
 
         [<Fact>]
@@ -486,7 +470,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar4 =
-        let private g = "S -> a\nS -> S S\nS -> S S S"
+        let private g = (LanguageRegistry.APlus.Grammars[5]).EbnfText
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]

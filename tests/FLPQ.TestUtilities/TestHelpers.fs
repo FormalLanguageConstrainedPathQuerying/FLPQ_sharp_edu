@@ -279,6 +279,7 @@ module TestHelpers =
         (lang: Language)
         : (string * string list) list =
         lang.Grammars
+        |> List.filter (fun g -> not g.Properties.IsEbnf)
         |> List.collect (fun g ->
             lang.AcceptStrings
             |> List.choose (fun input ->
@@ -289,11 +290,13 @@ module TestHelpers =
 
     /// Iterates all grammars of a language against all reject strings.
     /// Returns the list of (grammarName, input) pairs that were incorrectly accepted.
+    /// Skips EBNF-only grammar entries (which have placeholder CFG grammars).
     let collectRejectFailures
         (parseFn: Grammar<string, string> -> string list -> bool)
         (lang: Language)
         : (string * string list) list =
         lang.Grammars
+        |> List.filter (fun g -> not g.Properties.IsEbnf)
         |> List.collect (fun g ->
             lang.RejectStrings
             |> List.choose (fun input ->
