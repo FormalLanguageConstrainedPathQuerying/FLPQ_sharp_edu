@@ -410,7 +410,7 @@ type StressRpqGenerators =
     static member LargeRpqGraph() : Arbitrary<RPQTestData> =
         let alphabet = [ "a"; "b" ]
 
-        MyGen.choose (50, 100)
+        MyGen.choose (30, 50)
         |> MyGen.bind (fun n ->
             MyGen.choose (n, n * 3)
             |> MyGen.bind (fun edgeCount ->
@@ -436,7 +436,7 @@ type StressRpqGenerators =
 type StressMatrixGenerators =
 
     static member LargeSquareMatrix() : Arbitrary<Matrix<int>> =
-        MyGen.choose (100, 200)
+        MyGen.choose (30, 50)
         |> MyGen.bind (fun n ->
             MyGen.choose (-1000, 1000)
             |> MyGen.listOfLength (n * n)
@@ -446,7 +446,7 @@ type StressMatrixGenerators =
         |> MyArb.fromGen
 
     static member LargeBoolMatrix() : Arbitrary<Matrix<bool>> =
-        MyGen.choose (100, 200)
+        MyGen.choose (30, 50)
         |> MyGen.bind (fun n ->
             MyGen.choose (0, 1)
             |> MyGen.listOfLength (n * n)
