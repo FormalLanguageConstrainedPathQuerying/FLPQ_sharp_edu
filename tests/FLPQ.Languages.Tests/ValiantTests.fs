@@ -5,37 +5,45 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
-
-open TestGrammars
 open FLPQ.TestUtilities
 
+open TestGrammars
+
+let private tokenized (ss: string list) = String.concat " " ss
+
+let private dyckAB = LanguageRegistry.Dyck1.AcceptStrings[1] |> tokenized
+let private aplusAA = LanguageRegistry.APlus.AcceptStrings[1] |> tokenized
+let private dyckABAB = LanguageRegistry.Dyck1.AcceptStrings[0] |> tokenized
+let private aplusAAAA = LanguageRegistry.APlus.AcceptStrings[3] |> tokenized
+
+let private exprXplusXmulX =
+    LanguageRegistry.ArithExpr.AcceptStrings[4] |> tokenized
 
 module ValiantParseTests =
 
     [<Fact>]
     let ``Valiant and CYK agree on all test strings`` () =
-        let cases =
-            [ (grammar1, grammar1Accept, grammar1Reject)
-              (grammar3, grammar3Accept, grammar3Reject)
-              (grammar4, grammar3Accept, grammar3Reject)
-              (grammar5, grammar3Accept, grammar3Reject) ]
+        let testLang (lang: Language) =
+            let failures =
+                lang.Grammars
+                |> List.collect (fun g ->
+                    lang.AcceptStrings @ lang.RejectStrings
+                    |> List.choose (fun input ->
+                        let terminals = input |> List.map Terminal
+                        let cyk = Cyk.parse Grammar.freshStringNonterminal g.Grammar terminals
+                        let valiant = Valiant.parse Grammar.freshStringNonterminal g.Grammar terminals
 
-        for (g, accept, reject) in cases do
-            for s in accept do
-                Assert.Equal(
-                    Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s),
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s)
-                )
+                        if cyk = valiant then None else Some(g.Name, input)))
 
-            for s in reject do
-                Assert.Equal(
-                    Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s),
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s)
-                )
+            Assert.Empty(failures)
+
+        testLang LanguageRegistry.Dyck1
+        testLang LanguageRegistry.APlus
+        testLang LanguageRegistry.ArithExpr
 
     [<Fact>]
     let ``Valiant parseWithTable returns n by n matrix`` () =
-        let input = "a b"
+        let input = dyckAB
 
         let table, accepted =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)
@@ -46,7 +54,7 @@ module ValiantParseTests =
 
     [<Fact>]
     let ``Valiant table matches CYK table for small example`` () =
-        let input = "a a"
+        let input = aplusAA
 
         let cykTable, cykAcc =
             Cyk.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals input)
@@ -66,7 +74,7 @@ module ValiantParseTests =
 
     [<Fact>]
     let ``Valiant table matches CYK table for grammar 1 small example`` () =
-        let input = "a b a b"
+        let input = dyckABAB
 
         let cykTable, cykAcc =
             Cyk.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)
@@ -85,29 +93,31 @@ module ValiantParseTests =
 
 module ModifiedValiantTests =
 
+    let private testEquivalence (lang: Language) =
+        let failures =
+            lang.Grammars
+            |> List.collect (fun g ->
+                lang.AcceptStrings @ lang.RejectStrings
+                |> List.choose (fun input ->
+                    let terminals = input |> List.map Terminal
+                    let standard = Valiant.parse Grammar.freshStringNonterminal g.Grammar terminals
+
+                    let modified =
+                        Valiant.parseModified Grammar.freshStringNonterminal g.Grammar terminals
+
+                    if standard = modified then None else Some(g.Name, input)))
+
+        Assert.Empty(failures)
+
     [<Fact>]
     let ``Modified Valiant and standard Valiant agree on all test strings`` () =
-        let cases =
-            [ (grammar1, grammar1Accept, grammar1Reject)
-              (grammar3, grammar3Accept, grammar3Reject)
-              (grammar6, exprAccept, exprReject) ]
-
-        for (g, accept, reject) in cases do
-            for s in accept do
-                Assert.Equal(
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s),
-                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s)
-                )
-
-            for s in reject do
-                Assert.Equal(
-                    Valiant.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s),
-                    Valiant.parseModified Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s)
-                )
+        testEquivalence LanguageRegistry.Dyck1
+        testEquivalence LanguageRegistry.APlus
+        testEquivalence LanguageRegistry.ArithExpr
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for grammar 1`` () =
-        let input = "a b a b"
+        let input = dyckABAB
 
         let valTable, valAcc =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)
@@ -125,7 +135,7 @@ module ModifiedValiantTests =
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for grammar 3`` () =
-        let input = "a a a a"
+        let input = aplusAAAA
 
         let valTable, valAcc =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals input)
@@ -143,7 +153,7 @@ module ModifiedValiantTests =
 
     [<Fact>]
     let ``Modified Valiant table matches standard Valiant table for expression grammar`` () =
-        let input = "x + x * x"
+        let input = exprXplusXmulX
 
         let valTable, valAcc =
             Valiant.parseWithTable Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeTerminals input)
@@ -161,7 +171,7 @@ module ModifiedValiantTests =
 
     [<Fact>]
     let ``Modified Valiant trace produces steps for grammar 1`` () =
-        let input = "a b"
+        let input = dyckAB
 
         let trace =
             Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)
@@ -176,7 +186,7 @@ module ModifiedValiantTests =
 
     [<Fact>]
     let ``Modified Valiant trace submatrices are disjoint within each layer`` () =
-        let input = "a b a b"
+        let input = dyckABAB
 
         let trace =
             Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals input)

@@ -1,6 +1,7 @@
 namespace FLPQ.TestUtilities
 
 open FSharpPlus.Data
+open FsCheck
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
@@ -270,3 +271,33 @@ module TestHelpers =
             (Some ersm.ExtendedRsm.FinalStates)
 
         not (isAcc pathIndex ersm vc)
+
+    /// Iterates all grammars of a language against all accept strings.
+    /// Returns the list of (grammarName, input) pairs that were incorrectly rejected.
+    let collectAcceptFailures
+        (parseFn: Grammar<string, string> -> string list -> bool)
+        (lang: Language)
+        : (string * string list) list =
+        lang.Grammars
+        |> List.collect (fun g ->
+            lang.AcceptStrings
+            |> List.choose (fun input ->
+                if parseFn g.Grammar input then
+                    None
+                else
+                    Some(g.Name, input)))
+
+    /// Iterates all grammars of a language against all reject strings.
+    /// Returns the list of (grammarName, input) pairs that were incorrectly accepted.
+    let collectRejectFailures
+        (parseFn: Grammar<string, string> -> string list -> bool)
+        (lang: Language)
+        : (string * string list) list =
+        lang.Grammars
+        |> List.collect (fun g ->
+            lang.RejectStrings
+            |> List.choose (fun input ->
+                if parseFn g.Grammar input then
+                    Some(g.Name, input)
+                else
+                    None))

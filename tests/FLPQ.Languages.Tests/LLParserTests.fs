@@ -211,18 +211,12 @@ module CrossParserPropertyTests =
 
 module LLHigherKTests =
 
-    let private ll2Grammar =
-        Grammar.parseGrammar
-            "
-        S -> a b A
-        S -> a a B
-        A -> c
-        B -> d
-        "
+    let private ll2Grammar = TestGrammars.ll2Grammar
+    let private ll2Lang = LanguageRegistry.LL2Test
 
-    let private ll2Accept = [ "a b c"; "a a d" ]
+    let private ll2Accept = ll2Lang.AcceptStrings |> List.map (String.concat " ")
 
-    let private ll2Reject = [ ""; "a"; "a b"; "a a"; "a b d"; "a a c"; "a a" ]
+    let private ll2Reject = ll2Lang.RejectStrings |> List.map (String.concat " ")
 
     [<Fact>]
     let ``LL(k=1) detects conflict for grammar requiring k=2`` () =
@@ -260,14 +254,8 @@ module LLHigherKTests =
                 Assert.Equal(s, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
-    let private ll3Grammar =
-        Grammar.parseGrammar
-            "
-        S -> a b c A
-        S -> a b d B
-        A -> x
-        B -> y
-        "
+    let private ll3Grammar = TestGrammars.ll3Grammar
+    let private ll3Lang = LanguageRegistry.LL3Test
 
     [<Fact>]
     let ``LL(k=2) detects conflict for grammar requiring k=3`` () =
@@ -282,21 +270,17 @@ module LLHigherKTests =
     let ``LL(3) parser accepts correct strings`` () =
         let table = LLParser.buildTable ll3Grammar 3
 
-        let accept = [ "a b c x"; "a b d y" ]
-
-        for s in accept do
-            let result = LLParser.parse ll3Grammar table 3 (Tokenizer.tokenizeTerminals s)
-            Assert.True(result.IsSome, s)
+        for s in ll3Lang.AcceptStrings do
+            let result = LLParser.parse ll3Grammar table 3 (s |> List.map Terminal)
+            Assert.True(result.IsSome, $"{s}")
 
     [<Fact>]
     let ``LL(3) parser rejects incorrect strings`` () =
         let table = LLParser.buildTable ll3Grammar 3
 
-        let reject = [ ""; "a"; "a b"; "a b c"; "a b d"; "a b c y"; "a b d x" ]
-
-        for s in reject do
-            let result = LLParser.parse ll3Grammar table 3 (Tokenizer.tokenizeTerminals s)
-            Assert.True(result.IsNone, s)
+        for s in ll3Lang.RejectStrings do
+            let result = LLParser.parse ll3Grammar table 3 (s |> List.map Terminal)
+            Assert.True(result.IsNone, $"{s}")
 
     [<Properties(Arbitrary = [| typeof<AbcxdStringGenerators> |])>]
     module LL2PropertyTests =

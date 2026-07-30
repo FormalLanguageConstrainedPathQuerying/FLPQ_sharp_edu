@@ -49,6 +49,57 @@ Shared generators:
 - FsCheck generators for shared project types (matrices, graphs, grammars, regexes) must live in a common `Generators.fs` module
 - Do not duplicate random generation logic across test projects
 
+## Using the Language Registry
+
+When writing tests for a new parsing algorithm, use the Language Registry instead of hardcoding grammars or test strings. The registry is the single source of truth for all test languages, grammars, accept/reject strings, and generators.
+
+See the specification: [`docs/developer/guides/language-registry.md`](/docs/developer/guides/language-registry.md).
+
+### Workflow
+
+1. **Consult the language registry** at `docs/developer/guides/language-registry.md` to find languages with compatible grammars.
+2. **Check grammar properties** against the algorithm's restrictions:
+   - `HasDirectLeftRecursion = true` → incompatible with LL parsers
+   - `IsAmbiguous = true` → incompatible with deterministic LL/LR parsers
+   - `HasEpsilon = true` / `IsInCnf = true` → relevant for CYK/Valiant
+3. **Use the F# registry in test code**:
+   ```fsharp
+   open FLPQ.TestUtilities
+
+   let lang = LanguageRegistry.Dyck1
+   ```
+4. **Iterate accept/reject strings** using helpers from `TestHelpers`:
+   ```fsharp
+   [<Fact>]
+   let ``MyParser accepts Dyck1 strings`` () =
+       let failures =
+           TestHelpers.collectAcceptFailures
+               (fun g input -> MyParser.parse g input)
+               LanguageRegistry.Dyck1
+       Assert.Empty(failures)
+   ```
+5. **For property-based tests**, refer to the language's generator type in `Generators.fs`:
+   ```fsharp
+   [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+   module Dyck1Properties =
+       [<Property>]
+       let ``MyParser and CYK agree`` (s: string) = ...
+   ```
+6. **For cross-algorithm equivalence**, select a language with multiple grammars:
+   ```fsharp
+   [<Property>]
+   let ``ParserA and ParserB agree on Dyck1`` (s: string) =
+       let g1 = LanguageRegistry.Dyck1.Grammars[0].Grammar
+       let g2 = LanguageRegistry.Dyck1.Grammars[1].Grammar
+       ParserA.parse g1 input = ParserB.parse g2 input
+   ```
+
+### Do NOT
+
+- Hardcode grammar definitions inline in test files — use `LanguageRegistry.<Language>.Grammars[n].Grammar`
+- Hardcode accept/reject strings — use `LanguageRegistry.<Language>.AcceptStrings` / `RejectStrings`
+- Define duplicate string generators — use the `Arbitrary` types registered in `Generators.fs`, which correspond to the `Gen<string>` values in the language registry
+
 ## Golden (Snapshot) Tests in .NET xUnit
 
 Golden tests compare generated output against committed reference files. If the output changes intentionally, update the reference files. If it changes unintentionally, the test catches the regression.

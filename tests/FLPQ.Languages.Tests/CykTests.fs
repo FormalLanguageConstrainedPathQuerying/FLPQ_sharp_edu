@@ -5,22 +5,35 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
-
-open TestGrammars
 open FLPQ.TestUtilities
 
+open TestGrammars
+
+open TestGrammars
 
 module Grammar1Tests =
 
     [<Fact>]
     let ``CYK accepts expected strings`` () =
-        for s in grammar1Accept do
-            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s), s)
+        let lang = LanguageRegistry.Dyck1
+
+        let failures =
+            TestHelpers.collectAcceptFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                lang
+
+        Assert.Empty(failures)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
-        for s in grammar1Reject do
-            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar1 (Tokenizer.tokenizeTerminals s), s)
+        let lang = LanguageRegistry.Dyck1
+
+        let failures =
+            TestHelpers.collectRejectFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                lang
+
+        Assert.Empty(failures)
 
 
 module Grammar2Tests =
@@ -40,13 +53,25 @@ module Grammar3Tests =
 
     [<Fact>]
     let ``CYK accepts expected strings`` () =
-        for s in grammar3Accept do
-            Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s), s)
+        let lang = LanguageRegistry.APlus
+
+        let failures =
+            TestHelpers.collectAcceptFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                lang
+
+        Assert.Empty(failures)
 
     [<Fact>]
     let ``CYK rejects expected strings`` () =
-        for s in grammar3Reject do
-            Assert.False(Cyk.parse Grammar.freshStringNonterminal grammar3 (Tokenizer.tokenizeTerminals s), s)
+        let lang = LanguageRegistry.APlus
+
+        let failures =
+            TestHelpers.collectRejectFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                lang
+
+        Assert.Empty(failures)
 
 
 module Grammar4Tests =
@@ -86,30 +111,20 @@ module FactTests =
 
     [<Fact>]
     let ``parse handles single character`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a
-        "
+        let g = (LanguageRegistry.SingleA.Grammars[0]).Grammar
 
         Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
         Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "b"))
 
     [<Fact>]
     let ``parse handles longer accepted string`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S a
-        S -> a
-        S -> eps
-        "
+        let g = (LanguageRegistry.AStar.Grammars[1]).Grammar
 
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a"))
-        Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a"))
+        for s in LanguageRegistry.AStar.AcceptStrings do
+            Assert.True(
+                Cyk.parse Grammar.freshStringNonterminal g (s |> List.map Terminal),
+                $"""{String.concat " " s}"""
+            )
 
 
 module Grammar6Tests =
@@ -118,15 +133,21 @@ module Grammar6Tests =
 
     [<Fact>]
     let ``CYK accepts expected expression strings`` () =
-        for g in grammars do
-            for s in exprAccept do
-                Assert.True(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s), s)
+        let failures =
+            TestHelpers.collectAcceptFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                LanguageRegistry.ArithExpr
+
+        Assert.Empty(failures)
 
     [<Fact>]
     let ``CYK rejects expected expression strings`` () =
-        for g in grammars do
-            for s in exprReject do
-                Assert.False(Cyk.parse Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals s), s)
+        let failures =
+            TestHelpers.collectRejectFailures
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                LanguageRegistry.ArithExpr
+
+        Assert.Empty(failures)
 
 
 module Grammar6PropertyTests =

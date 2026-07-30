@@ -14,153 +14,135 @@ let private accepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccep
 let private checkReject =
     TestHelpers.checkReject Rnglr.buildPathIndex PathIndex.isAccepted
 
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private anbn = LanguageRegistry.ANBN
+
 module RnglrAcceptance =
-    [<Fact>]
-    let ``S -> a accepts a`` () =
-        Assert.True(
-            accepts (TestHelpers.grammarToRsm TestGrammars.grammarS2a) [ "a" ],
-            "Should accept and produce tree"
-        )
+    let private singleA = LanguageRegistry.SingleA
+    let private singleAB = LanguageRegistry.SingleAB
+    let private anb = LanguageRegistry.ANB
 
     [<Fact>]
-    let ``S -> a rejects eps`` () =
-        Assert.True(checkReject TestGrammars.grammarS2a [])
+    let ``S -> a accepts all accept strings`` () =
+        for s in singleA.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarS2a) s, "Should accept and produce tree")
 
     [<Fact>]
-    let ``S -> a b accepts a b`` () =
-        let g = TestGrammars.grammarAB
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ], "Should accept and produce tree")
-
-    [<Fact>]
-    let ``S -> a S | b accepts a a b`` () =
-        let g = TestGrammars.grammar_aS_b
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b" ], "Should accept and produce tree")
+    let ``S -> a rejects all reject strings`` () =
+        for s in singleA.RejectStrings do
+            Assert.True(checkReject TestGrammars.grammarS2a s)
 
     [<Fact>]
-    let ``S -> a S | b rejects a a a`` () =
-        let g = TestGrammars.grammar_aS_b
-
-        Assert.True(checkReject g [ "a"; "a"; "a" ])
-
-    [<Fact>]
-    let ``S -> a S b S | eps accepts a b a b`` () =
-        let g = TestGrammars.grammar1
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ], "Should accept and produce tree")
+    let ``S -> a b accepts all accept strings`` () =
+        for s in singleAB.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarAB) s, "Should accept and produce tree")
 
     [<Fact>]
-    let ``S -> a S b S | eps accepts a a b b`` () =
-        let g = TestGrammars.grammar1
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ], "Should accept and produce tree")
-
-    [<Fact>]
-    let ``S -> a S b S | eps accepts empty`` () =
-        let g = TestGrammars.grammar1
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
+    let ``S -> a S | b accepts all accept strings`` () =
+        for s in anb.AcceptStrings do
+            Assert.True(
+                accepts (TestHelpers.grammarToRsm TestGrammars.grammar_aS_b) s,
+                "Should accept and produce tree"
+            )
 
     [<Fact>]
-    let ``S -> a S b | eps accepts a a b b`` () =
-        let g = TestGrammars.grammar_aSb_eps
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "b"; "b" ], "Should accept and produce tree")
-
-    [<Fact>]
-    let ``S -> a S b | eps rejects a a b`` () =
-        let g = TestGrammars.grammar_aSb_eps
-        Assert.True(checkReject g [ "a"; "a"; "b" ])
+    let ``S -> a S | b rejects all reject strings`` () =
+        for s in anb.RejectStrings do
+            Assert.True(checkReject TestGrammars.grammar_aS_b s)
 
     [<Fact>]
-    let ``S -> a S b | eps | S S accepts a b a b`` () =
-        let g = TestGrammars.grammar2
+    let ``S -> a S b S | eps accepts Dyck1 accept strings`` () =
+        let g = dyck1.Grammars[0].Grammar
 
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b"; "a"; "b" ], "Should accept and produce tree")
+        for s in dyck1.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
     [<Fact>]
-    let ``S -> a S b | eps | S S accepts empty`` () =
-        let g = TestGrammars.grammar2
+    let ``S -> a S b | eps accepts ANBN accept strings`` () =
+        let g = anbn.Grammars[0].Grammar
 
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
+        for s in anbn.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
+
+    [<Fact>]
+    let ``S -> a S b | eps rejects ANBN reject strings`` () =
+        for s in anbn.RejectStrings do
+            Assert.True(checkReject anbn.Grammars[0].Grammar s)
+
+    [<Fact>]
+    let ``S -> a S b | eps | S S accepts Dyck1 accept strings`` () =
+        let g = dyck1.Grammars[1].Grammar
+
+        for s in dyck1.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
     [<Fact>]
     let ``S -> a S b | eps | S S accepts a b (no infinite loop)`` () =
-        let g = TestGrammars.grammar2
-
+        let g = dyck1.Grammars[1].Grammar
         Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "b" ], "Should accept and produce tree")
 
     [<Fact>]
-    let ``Left-recursive S -> a S | a accepts a a a`` () =
-        let g = TestGrammars.grammar3
+    let ``Left-recursive S -> a S | a accepts APlus accept strings`` () =
+        let g = aplus.Grammars[0].Grammar
 
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ], "Should accept and produce tree")
+        for s in aplus.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
     [<Fact>]
-    let ``Right-recursive S -> S a | a accepts a a a`` () =
-        let g = TestGrammars.grammar4
+    let ``Right-recursive S -> S a | a accepts APlus accept strings`` () =
+        let g = aplus.Grammars[1].Grammar
 
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [ "a"; "a"; "a" ], "Should accept and produce tree")
+        for s in aplus.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
 module RnglrEquivalence =
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Ab =
         [<Property>]
-        let ``RNGLR and CYK agree on grammar1`` (s: string) =
-            let g = TestGrammars.grammar1
+        let ``RNGLR and CYK agree on Dyck1 grammar1`` (s: string) =
+            let g = dyck1.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
             accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
         [<Property>]
-        let ``RNGLR and GLL agree on grammar1`` (s: string) =
-            let g = TestGrammars.grammar1
+        let ``RNGLR and GLL agree on Dyck1 grammar1`` (s: string) =
+            let g = dyck1.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-
             accepts (TestHelpers.grammarToRsm g) input = accepts (TestHelpers.grammarToRsm g) input
 
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module A =
         [<Property>]
-        let ``RNGLR and CYK agree on grammar3 (left-recursive)`` (s: string) =
-            let g = TestGrammars.grammar3
+        let ``RNGLR and CYK agree on APlus grammar3`` (s: string) =
+            let g = aplus.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
             accepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
 
         [<Property>]
-        let ``RNGLR and GLL agree on grammar3`` (s: string) =
-            let g = TestGrammars.grammar3
+        let ``RNGLR and GLL agree on APlus grammar3`` (s: string) =
+            let g = aplus.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-
             accepts (TestHelpers.grammarToRsm g) input = accepts (TestHelpers.grammarToRsm g) input
 
 module RnglrRightNullable =
-    let private rightNullableGrammar = TestGrammars.grammarRightNullable
+    let private g = TestGrammars.grammarRightNullable
+    let private lang = LanguageRegistry.AStarBStar
 
     [<Fact>]
-    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts empty`` () =
-        Assert.True(accepts (TestHelpers.grammarToRsm rightNullableGrammar) [], "Should accept and produce tree")
+    let ``S -> A B accepts all accept strings`` () =
+        for s in lang.AcceptStrings do
+            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
 
     [<Fact>]
-    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a b`` () =
-        Assert.True(
-            accepts (TestHelpers.grammarToRsm rightNullableGrammar) [ "a"; "b" ],
-            "Should accept and produce tree"
-        )
-
-    [<Fact>]
-    let ``S -> A B, A -> a A | eps, B -> b B | eps accepts a a b`` () =
-        Assert.True(
-            accepts (TestHelpers.grammarToRsm rightNullableGrammar) [ "a"; "a"; "b" ],
-            "Should accept and produce tree"
-        )
+    let ``S -> A B rejects all reject strings`` () =
+        for s in lang.RejectStrings do
+            Assert.True(checkReject g s)
 
 module RnglrReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
-        let g = TestGrammars.grammarCascade
-
-        Assert.True(accepts (TestHelpers.grammarToRsm g) [], "Should accept and produce tree")
+        Assert.True(accepts (TestHelpers.grammarToRsm TestGrammars.grammarCascade) [], "Should accept and produce tree")
 
 module RnglrRegexEquivalence =
 
@@ -189,20 +171,11 @@ module RnglrRegexEquivalence =
                 s
 
 module RnglrGrammarAcceptanceAndTree =
+    let private grammar1 = TestGrammars.grammar11
+    let private grammar2 = TestGrammars.grammar12
+    let private grammar3 = TestGrammars.grammar13
+    let private grammar4 = TestGrammars.grammar14
 
-    /// Grammar 1: S -> N a* ; N -> (a a) | a
-    let private grammar1 = SharedParsingTests.GrammarAcceptanceCases.grammar1
-
-    /// Grammar 2: S -> a* N ; N -> a | (a a)
-    let private grammar2 = SharedParsingTests.GrammarAcceptanceCases.grammar2
-
-    /// Grammar 3: S -> N* ; N -> a | (a a)
-    let private grammar3 = SharedParsingTests.GrammarAcceptanceCases.grammar3
-
-    /// Grammar 4: S -> a | S S | S S S
-    let private grammar4 = SharedParsingTests.GrammarAcceptanceCases.grammar4
-
-    // ---- Grammar 1 ----
     module Grammar1 =
         [<Fact>]
         let ``accepts valid strings`` () =
@@ -217,7 +190,6 @@ module RnglrGrammarAcceptanceAndTree =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG1 do
                 Assert.True(checkReject grammar1 input, $"Should reject: {desc}")
 
-    // ---- Grammar 2 ----
     module Grammar2 =
         [<Fact>]
         let ``accepts valid strings`` () =
@@ -232,7 +204,6 @@ module RnglrGrammarAcceptanceAndTree =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG2 do
                 Assert.True(checkReject grammar2 input, $"Should reject: {desc}")
 
-    // ---- Grammar 3 ----
     module Grammar3 =
         [<Fact>]
         let ``accepts valid strings`` () =
@@ -247,7 +218,6 @@ module RnglrGrammarAcceptanceAndTree =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG3 do
                 Assert.True(checkReject grammar3 input, $"Should reject: {desc}")
 
-    // ---- Grammar 4: S -> a | S S | S S S ----
     module Grammar4 =
         [<Fact>]
         let ``accepts valid strings`` () =
@@ -263,7 +233,7 @@ module RnglrGrammarAcceptanceAndTree =
                 Assert.True(checkReject grammar4 input, $"Should reject: {desc}")
 
 module RnglrGrammar159A =
-    let private grammar = TestGrammars.grammar1
+    let private grammar = dyck1.Grammars[0].Grammar
 
     [<Fact>]
     let ``S -> a S b S | eps accepts and yields trees`` () =
@@ -281,7 +251,7 @@ module RnglrGrammar159B =
             Assert.True(accepts (TestHelpers.grammarToRsm grammar) input, $"Should produce a tree: {desc}")
 
 module RnglrGrammar159C =
-    let private grammar = TestGrammars.grammar2
+    let private grammar = dyck1.Grammars[1].Grammar
 
     [<Fact>]
     let ``S -> S S | a S b | eps accepts and yields trees`` () =
@@ -340,38 +310,38 @@ module RnglrPropertyTreeYield =
     [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
     module Ab =
         [<Property>]
-        let ``S -> a S b S | eps tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar1 "S -> a S b S | eps" s
+        let ``S -> a S b S | eps tree yield (Dyck1 grammar1)`` (s: string) =
+            propertyRunner dyck1.Grammars[0].Grammar "S -> a S b S | eps" s
 
         [<Property>]
-        let ``S -> S S | a S b | eps tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar2 "S -> S S | a S b | eps" s
+        let ``S -> S S | a S b | eps tree yield (Dyck1 grammar2)`` (s: string) =
+            propertyRunner dyck1.Grammars[1].Grammar "S -> S S | a S b | eps" s
 
     [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
     module A =
         [<Property>]
-        let ``S -> a S | a tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar3 "S -> a S | a" s
+        let ``S -> a S | a tree yield (APlus grammar3)`` (s: string) =
+            propertyRunner aplus.Grammars[0].Grammar "S -> a S | a" s
 
         [<Property>]
-        let ``S -> S a | a tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar4 "S -> S a | a" s
+        let ``S -> S a | a tree yield (APlus grammar4)`` (s: string) =
+            propertyRunner aplus.Grammars[1].Grammar "S -> S a | a" s
 
         [<Property>]
-        let ``S -> N a* tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar11 "S -> N a*" s
+        let ``S -> N a* tree yield (APlus grammar11)`` (s: string) =
+            propertyRunner aplus.Grammars[3].Grammar "S -> N a*" s
 
         [<Property>]
-        let ``S -> a* N tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar12 "S -> a* N" s
+        let ``S -> a* N tree yield (APlus grammar12)`` (s: string) =
+            propertyRunner aplus.Grammars[4].Grammar "S -> a* N" s
 
         [<Property>]
-        let ``S -> N* tree yield`` (s: string) =
+        let ``S -> N* tree yield (AStar grammar13)`` (s: string) =
             propertyRunner TestGrammars.grammar13 "S -> N*" s
 
         [<Property>]
-        let ``S -> a | S S | S S S tree yield`` (s: string) =
-            propertyRunner TestGrammars.grammar14 "S -> a | S S | S S S" s
+        let ``S -> a | S S | S S S tree yield (APlus grammar14)`` (s: string) =
+            propertyRunner aplus.Grammars[5].Grammar "S -> a | S S | S S S" s
 
 module SppfDotTests =
 
@@ -445,7 +415,6 @@ module SppfDotTests =
         Assert.NotEmpty(sppf.RootIndices)
 
 module RnglrEpsilonGrammars =
-
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =
         SharedParsingTests.Runners.runEpsilonTests accepts checkReject
@@ -474,101 +443,58 @@ module RnglrGrammarTests =
         let vc = Graph.vertexCount graph
         Assert.False(PathIndex.isAccepted pathIndex ersm vc, $"Should reject {input}: {ebnfText}")
 
-    // Grammar 1: S -> N a* ; N -> (a a) | a
     module Grammar1 =
         let private g = "S -> N a*\nN -> (a a) | a"
-
-        let private acceptInputs =
-            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
-
-        let private rejectInputs =
-            [ []
-              [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+        let private lang = LanguageRegistry.APlus
 
         [<Fact>]
-        let ``S -> N a* accepts valid strings`` () =
-            for input in acceptInputs do
+        let ``S -> N a* accepts APlus strings`` () =
+            for input in lang.AcceptStrings do
                 checkRsmAccepts g input
 
         [<Fact>]
-        let ``S -> N a* rejects invalid strings`` () =
-            for input in rejectInputs do
+        let ``S -> N a* rejects APlus reject strings`` () =
+            for input in lang.RejectStrings do
                 checkRsmRejects g input
 
-    // Grammar 2: S -> a* N ; N -> a | (a a)
     module Grammar2 =
         let private g = "S -> a* N\nN -> a | (a a)"
-
-        let private acceptInputs =
-            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
-
-        let private rejectInputs =
-            [ []
-              [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+        let private lang = LanguageRegistry.APlus
 
         [<Fact>]
-        let ``S -> a* N accepts valid strings`` () =
-            for input in acceptInputs do
+        let ``S -> a* N accepts APlus strings`` () =
+            for input in lang.AcceptStrings do
                 checkRsmAccepts g input
 
         [<Fact>]
-        let ``S -> a* N rejects invalid strings`` () =
-            for input in rejectInputs do
+        let ``S -> a* N rejects APlus reject strings`` () =
+            for input in lang.RejectStrings do
                 checkRsmRejects g input
 
-    // Grammar 3: S -> N* ; N -> a | (a a)
     module Grammar3 =
         let private g = "S -> N*\nN -> a | (a a)"
-
-        let private acceptInputs =
-            [ []; [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
-
-        let private rejectInputs =
-            [ [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+        let private lang = LanguageRegistry.AStar
 
         [<Fact>]
-        let ``S -> N* accepts valid strings`` () =
-            for input in acceptInputs do
+        let ``S -> N* accepts AStar strings`` () =
+            for input in lang.AcceptStrings do
                 checkRsmAccepts g input
 
         [<Fact>]
-        let ``S -> N* rejects invalid strings`` () =
-            for input in rejectInputs do
+        let ``S -> N* rejects AStar reject strings`` () =
+            for input in lang.RejectStrings do
                 checkRsmRejects g input
 
-    // Grammar 4: S -> a | S S | S S S
     module Grammar4 =
         let private g = "S -> a\nS -> S S\nS -> S S S"
-
-        let private acceptInputs =
-            [ [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "a"; "a"; "a"; "a" ] ]
-
-        let private rejectInputs =
-            [ []
-              [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+        let private lang = LanguageRegistry.APlus
 
         [<Fact>]
-        let ``S -> a | S S | S S S accepts valid strings`` () =
-            for input in acceptInputs do
+        let ``S -> a | S S | S S S accepts APlus strings`` () =
+            for input in lang.AcceptStrings do
                 checkRsmAccepts g input
 
         [<Fact>]
-        let ``S -> a | S S | S S S rejects invalid strings`` () =
-            for input in rejectInputs do
+        let ``S -> a | S S | S S S rejects APlus reject strings`` () =
+            for input in lang.RejectStrings do
                 checkRsmRejects g input

@@ -6,392 +6,112 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-/// S -> a S b S
-/// S -> eps
-let grammar1 =
-    Grammar.parseGrammar
-        """
-S -> a S b S
-S -> eps
-"""
+/// Helper: space-separated string list from tokenized string lists.
+let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
 
-/// S -> a S b
-/// S -> eps
-/// S -> S S
-let grammar2 =
-    Grammar.parseGrammar
-        """
-S -> a S b
-S -> eps
-S -> S S
-"""
+/// Helper: look up a grammar by name in a language.
+let private grammarByName (lang: Language) (name: string) =
+    lang.Grammars |> List.find (fun g -> g.Name = name)
 
-/// S -> a S
-/// S -> a
-let grammar3 =
-    Grammar.parseGrammar
-        """
-S -> a S
-S -> a
-"""
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private astar = LanguageRegistry.AStar
+let private expr = LanguageRegistry.ArithExpr
+let private twoTrack = LanguageRegistry.TwoTrackDyck
+let private anb = LanguageRegistry.ANB
+let private anbn = LanguageRegistry.ANBN
+let private aStarBStar = LanguageRegistry.AStarBStar
+let private singleA = LanguageRegistry.SingleA
+let private singleAB = LanguageRegistry.SingleAB
+let private epsilonOnly = LanguageRegistry.EpsilonOnly
 
-/// S -> S a
-/// S -> a
-let grammar4 =
-    Grammar.parseGrammar
-        """
-S -> S a
-S -> a
-"""
+// ---- Dyck1 ----
 
-/// S -> S S
-/// S -> S S S
-/// S -> a
-let grammar5 =
-    Grammar.parseGrammar
-        """
-S -> S S
-S -> S S S
-S -> a
-"""
+let grammar1 = (grammarByName dyck1 "grammar1").Grammar
+let augGrammar1 = (grammarByName dyck1 "grammar1").Augmented
 
-let grammar1Accept = [ "a b a b"; "a b"; ""; "a a b b"; "a a b a b b" ]
+let grammar2 = (grammarByName dyck1 "grammar2").Grammar
+let augGrammar2 = (grammarByName dyck1 "grammar2").Augmented
 
-let grammar1Reject = [ "a a"; "b b"; "a b b"; "a b b a"; "b"; "a"; "a b a b a" ]
+let grammarSaSb_eps = (grammarByName dyck1 "grammarSaSb_eps").Grammar
 
-let grammar3Accept = [ "a"; "a a"; "a a a a"; "a a a a a" ]
+let grammar1Accept = dyck1.AcceptStrings |> acceptStrToSpace
+let grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
 
-let grammar3Reject = [ ""; "b" ]
+// ---- APlus ----
 
-/// S -> x
-/// S -> S + S
-/// S -> S * S
-/// S -> ( S )
-let grammar6 =
-    Grammar.parseGrammar
-        """
-S -> x
-S -> S + S
-S -> S * S
-S -> ( S )
-"""
+let grammar3 = (grammarByName aplus "grammar3").Grammar
+let augGrammar3 = (grammarByName aplus "grammar3").Augmented
 
-/// E -> E + T
-/// E -> T
-/// T -> T * F
-/// T -> F
-/// F -> ( E )
-/// F -> x
-let grammar7 =
-    Grammar.parseGrammar
-        """
-E -> E + T
-E -> T
-T -> T * F
-T -> F
-F -> ( E )
-F -> x
-"""
+let grammar4 = (grammarByName aplus "grammar4").Grammar
+let augGrammar4 = (grammarByName aplus "grammar4").Augmented
 
-/// E -> T + E
-/// E -> T
-/// T -> F * T
-/// T -> F
-/// F -> ( E )
-/// F -> x
-let grammar8 =
-    Grammar.parseGrammar
-        """
-E -> T + E
-E -> T
-T -> F * T
-T -> F
-F -> ( E )
-F -> x
-"""
+let grammar5 = (grammarByName aplus "grammar5").Grammar
+let augGrammar5 = (grammarByName aplus "grammar5").Augmented
 
-let exprAccept =
-    [ "x"
-      "( x )"
-      "( x ) * x"
-      "x + x"
-      "x + x * x"
-      "x * ( x + x )"
-      "( x * ( x + x ) )" ]
+let grammar11 = (grammarByName aplus "grammar11").Grammar
+let grammar12 = (grammarByName aplus "grammar12").Grammar
+let grammar14 = (grammarByName aplus "grammar14").Grammar
 
-let exprReject = [ ""; "( )"; "+ x"; "x +"; "x + ( )" ]
+let grammar3Accept = aplus.AcceptStrings |> acceptStrToSpace
+let grammar3Reject = aplus.RejectStrings |> acceptStrToSpace
 
-let private augmentStringGrammar (g: Grammar<string, string>) =
-    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
-    LRAutomaton.augmentGrammar freshStart g
+// ---- AStar ----
 
-let augGrammar1 = augmentStringGrammar grammar1
+let grammar13 = (grammarByName astar "grammar13").Grammar
 
-let augGrammar2 = augmentStringGrammar grammar2
+// ---- ArithExpr ----
 
-let augGrammar3 = augmentStringGrammar grammar3
+let grammar6 = (grammarByName expr "grammar6").Grammar
+let augGrammar6 = (grammarByName expr "grammar6").Augmented
 
-let augGrammar4 = augmentStringGrammar grammar4
+let grammar7 = (grammarByName expr "grammar7").Grammar
+let augGrammar7 = (grammarByName expr "grammar7").Augmented
 
-let augGrammar5 = augmentStringGrammar grammar5
+let grammar8 = (grammarByName expr "grammar8").Grammar
+let augGrammar8 = (grammarByName expr "grammar8").Augmented
 
-let augGrammar6 = augmentStringGrammar grammar6
+let exprAccept = expr.AcceptStrings |> acceptStrToSpace
+let exprReject = expr.RejectStrings |> acceptStrToSpace
 
-let augGrammar7 = augmentStringGrammar grammar7
+// ---- TwoTrackDyck ----
 
-let augGrammar8 = augmentStringGrammar grammar8
+let grammar9 = (grammarByName twoTrack "grammar9").Grammar
+let augGrammar9 = (grammarByName twoTrack "grammar9").Augmented
 
-/// S -> S1
-/// S -> S2
-/// S1 -> a b S c
-/// S1 -> eps
-/// S2 -> a x S y
-/// S2 -> eps
-let grammar9 =
-    Grammar.parseGrammar
-        """
-    S -> S1
-    S -> S2
-    S1 -> a b S c
-    S1 -> eps
-    S2 -> a x S y
-    S2 -> eps
-    """
+let grammar10 = (grammarByName twoTrack "grammar10").Grammar
+let augGrammar10 = (grammarByName twoTrack "grammar10").Augmented
 
-let grammar9Accept =
-    [ ""
-      "a b c"
-      "a x y"
-      "a b a b c c"
-      "a x a x y y"
-      "a x a b c y"
-      "a b a x y c" ]
-
-let grammar9Reject =
-    [ "a"
-      "x"
-      "y"
-      "c"
-      "a x c"
-      "a b y"
-      "a x a b"
-      "a b a x y"
-      "a x a b c"
-      "a x a b y" ]
-
-let augGrammar9 = augmentStringGrammar grammar9
-
-/// S -> S1
-/// S -> S2
-/// S1 -> a b S c
-/// S -> eps
-/// S2 -> a x S y
-let grammar10 =
-    Grammar.parseGrammar
-        """
-    S -> S1
-    S -> S2
-    S1 -> a b S c
-    S -> eps
-    S2 -> a x S y
-    """
-
+let grammar9Accept = twoTrack.AcceptStrings |> acceptStrToSpace
+let grammar9Reject = twoTrack.RejectStrings |> acceptStrToSpace
 let grammar10Accept = grammar9Accept
-
 let grammar10Reject = grammar9Reject
 
-let augGrammar10 = augmentStringGrammar grammar10
+// ---- Individual grammars ----
 
-/// S -> a a A
-/// S -> a A
-/// A -> a A
-/// A -> eps
-let grammar11 =
-    Grammar.parseGrammar
-        """
-S -> a a A
-S -> a A
-A -> a A
-A -> eps
-"""
+let grammar_aS_b = (grammarByName anb "grammar_aS_b").Grammar
 
-/// S -> a
-/// S -> a a
-/// S -> a a A
-/// S -> a a a A
-/// A -> a A
-/// A -> eps
-let grammar12 =
-    Grammar.parseGrammar
-        """
-S -> a
-S -> a a
-S -> a a A
-S -> a a a A
-A -> a A
-A -> eps
-"""
+let grammar_aSb_eps = (grammarByName anbn "grammar_aSb_eps").Grammar
 
-/// S -> eps
-/// S -> a a S
-/// S -> a S
-let grammar13 =
-    Grammar.parseGrammar
-        """
-S -> eps
-S -> a a S
-S -> a S
-"""
+let grammarRightNullable = (grammarByName aStarBStar "grammarRightNullable").Grammar
 
-/// S -> a
-/// S -> S S
-/// S -> S S S
-let grammar14 =
-    Grammar.parseGrammar
-        """
-S -> a
-S -> S S
-S -> S S S
-"""
+let grammarS2a = (grammarByName singleA "grammarS2a").Grammar
+let grammarAB = (grammarByName singleAB "grammarAB").Grammar
 
-/// S -> a
-let grammarS2a =
-    Grammar.parseGrammar
-        """
-S -> a
-"""
+let grammarEps = (grammarByName epsilonOnly "grammarEps").Grammar
+let grammarNtoEps = (grammarByName epsilonOnly "grammarNtoEps").Grammar
+let grammarNNtoEps = (grammarByName epsilonOnly "grammarNNtoEps").Grammar
+let grammarNStarEps = (grammarByName epsilonOnly "grammarNStarEps").Grammar
+let grammarSSeps = (grammarByName epsilonOnly "grammarSSeps").Grammar
+let grammarChainEps = (grammarByName epsilonOnly "grammarChainEps").Grammar
+let grammarAltEps = (grammarByName epsilonOnly "grammarAltEps").Grammar
+let grammarCascade = (grammarByName epsilonOnly "grammarCascade").Grammar
 
-/// S -> a b
-let grammarAB =
-    Grammar.parseGrammar
-        """
-S -> a b
-"""
+let grammar_aSa_eps = (grammarByName astar "grammar_aSa_eps").Grammar
 
-/// S -> a S
-/// S -> b
-let grammar_aS_b =
-    Grammar.parseGrammar
-        """
-S -> a S
-S -> b
-"""
+// ---- LL(k) test grammars ----
 
-/// S -> a S b
-/// S -> eps
-let grammar_aSb_eps =
-    Grammar.parseGrammar
-        """
-S -> a S b
-S -> eps
-"""
+let ll2Grammar = (grammarByName LanguageRegistry.LL2Test "ll2Grammar").Grammar
+let ll3Grammar = (grammarByName LanguageRegistry.LL3Test "ll3Grammar").Grammar
 
-/// S -> A B
-/// A -> a A
-/// A -> eps
-/// B -> b B
-/// B -> eps
-let grammarRightNullable =
-    Grammar.parseGrammar
-        """
-S -> A B
-A -> a A
-A -> eps
-B -> b B
-B -> eps
-"""
-
-/// S -> A
-/// A -> B
-/// B -> eps
-let grammarCascade =
-    Grammar.parseGrammar
-        """
-S -> A
-A -> B
-B -> eps
-"""
-
-/// S -> S a S b
-/// S -> eps
-let grammarSaSb_eps =
-    Grammar.parseGrammar
-        """
-S -> S a S b
-S -> eps
-"""
-
-/// S -> eps
-let grammarEps =
-    Grammar.parseGrammar
-        """
-S -> eps
-"""
-
-/// S -> N
-/// N -> eps
-let grammarNtoEps =
-    Grammar.parseGrammar
-        """
-S -> N
-N -> eps
-"""
-
-/// S -> N N
-/// N -> eps
-let grammarNNtoEps =
-    Grammar.parseGrammar
-        """
-S -> N N
-N -> eps
-"""
-
-/// S -> N*
-/// N -> eps
-let grammarNStarEps =
-    Grammar.parseGrammar
-        """
-S -> N*
-N -> eps
-"""
-
-/// S -> S S
-/// S -> eps
-let grammarSSeps =
-    Grammar.parseGrammar
-        """
-S -> S S
-S -> eps
-"""
-
-/// S -> A B
-/// A -> C D
-/// B -> D C
-/// D -> eps
-/// C -> eps
-let grammarChainEps =
-    Grammar.parseGrammar
-        """
-S -> A B
-A -> C D
-B -> D C
-D -> eps
-C -> eps
-"""
-
-/// S -> A
-/// S -> B
-/// A -> C D
-/// B -> D C
-/// D -> eps
-/// C -> eps
-let grammarAltEps =
-    Grammar.parseGrammar
-        """
-S -> A
-S -> B
-A -> C D
-B -> D C
-D -> eps
-C -> eps
-"""
+let grammar_alt_ab = (grammarByName LanguageRegistry.AltAB "grammar_alt_ab").Grammar

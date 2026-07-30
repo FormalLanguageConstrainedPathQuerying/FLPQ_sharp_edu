@@ -30,6 +30,8 @@ What our standards and principles are, and why we chose them.
 - [Documentation conventions](developer/guides/documentation-conventions.md) — module doc structure, decision docs, mapping table, review criteria
 - [Reusing principles](developer/guides/reusing.md) — no duplicates, one source of truth, reuse checklist, patterns
 - [Tools](developer/guides/tools.md) — auxiliary Python scripts for quality control
+- [Test categories](developer/guides/test-categories.md) — xUnit traits for external tool dependencies
+- [Language registry](developer/guides/language-registry.md) — catalog of test languages, grammars, strings, and generators
 
 ### Project Hubs
 
