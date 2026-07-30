@@ -1,38 +1,50 @@
-# Global Plan: Tasks 185–186
+# Global Plan: RNGLR Refactoring (Tasks 216, 217, 218)
 
-## Task Summary
+## Tasks
 
-| ID | Description | Type | Dependencies |
-|----|-------------|------|--------------|
-| 185 | Add path index invariant for accepted strings | Invariant + Fixes | None |
-| 186 | Cross-test grammars/inputs between GLL and RNGLR tests | Tests + Fixes | 185 (correct algorithms needed before cross-testing) |
+| ID | Title | Summary |
+|----|-------|---------|
+| 216 | RNGLR GSS visualization — edge symbols | Show grammar symbols on GSS edges in DOT instead of coordinate pairs |
+| 217 | RNGLR Descriptor refactoring — explicit GssIdx + continuous GSS numbering | Add GssIdx to descriptor; lazy on-demand GSS vertices with sequential IDs |
+| 218 | RNGLR steps — LR table with highlighted actions | Replace LR automaton DOT with highlighted LR table TeX in steps |
 
-## Dependencies Graph
+## Dependencies
 
-```
-Task 185 → (add invariant, fix any violations)
-Task 186 → (depends on 185 — cross-testing requires correct algorithms)
-```
+- **217 depends on 216** — 216 establishes edge-symbol-aware visualization that 217 inherits and adapts for new vertex numbering.
+- **218 is independent** of 216/217 — touches different fields of `RnglrParsingStep` and different parts of `RnglrStepVisualizer.fs`.
 
 ## Execution Order
 
-1. **Task 185** — Add path index invariant for accepted strings, fix any algorithm violations
-2. **Task 186** — Collect all grammar+input pairs, extend both GLL and RNGLR tests to union
+1. **Task 216** — smallest, establishes GSS edge symbol infrastructure
+2. **Task 218** — adds action highlighting to steps; minimal overlap with 216
+3. **Task 217** — largest restructuring; builds on 216's visualization + 218's step fields
 
-## Rationale
+Reasoning: 216 is straightforward (add one field, update label printer). 218 is medium (3 fields, new table rendering). 217 is heavy (redesign GSS type, rewrite algorithm access patterns). Doing the lighter tasks first reduces conflict surface when 217 restructures.
 
-- Task 185 adds a new invariant that may expose bugs in GLL or RNGLR. These bugs must be fixed before cross-testing in Task 186, which would otherwise add failing tests without distinguishing broken algorithms from missing test coverage.
-- Task 186 extends both test suites to cover the union of grammars/inputs. Any failures discovered during this extension likely reflect pre-existing algorithm bugs — fixing them after Task 185's invariant additions ensures both invariants and acceptance/tree correctness are maintained.
+## Overlapping Files
 
-## Conflict Analysis
+| File | 216 | 217 | 218 |
+|------|-----|-----|-----|
+| `RnglrTypes.fs` (RnglrParsingStep) | +ActiveGssEdgeSymbols | +GssIdx in descriptor | +ActiveShiftTerminals, +ActiveReduceNt, +LevelReductions |
+| `Rnglr.fs` | populate edge symbols | use getOrCreateVertex/desc.GssIdx | capture shift/reduce actions |
+| `RnglrStepVisualizer.fs` | edge label printer | descriptor 3 fields, vertex labels | LR table instead of automaton |
+| `RnglrRunner.fs` | — | pass vertex info | — |
+| `Helpers.fs` | — | — | lr_automaton.dot → lr_table.tex |
+| `RnglrTableTeX.fs` | — | — | +tableToTeXWithHighlights |
+| `GoldenHelpers.fs` | +rnglrEdgeLabelRegex | update regex | — |
+| `RnglrStepVisualizationTests.fs` | edge label test | update for new formats | golden + table compile test |
+| `data/RNGLR_step_template.tex` | — | — | replace STEP_LR_AUTOMATON_PDF |
+| `SummaryTeX.fs` / `Summary.fs` | — | — | remove LR automaton PDF code |
+| `GllTypes.fs` (GraphHelpers) | — | +collectActiveGssForDict | — |
+| `docs/developer/rnglr.md` | — | update types/GSS docs | — |
+| Golden data (6 files) | regenerate (edge symbols) | regenerate (numbering+descriptor) | regenerate (lr_table) |
 
-- Both tasks modify `PathIndex.fs` (adding invariant checker), `GllTests.fs`, `RnglrTests.fs`, and `TestGrammars.fs`.
-- Task 185 (invariant addition) changes `PathIndex.fs` only for the invariant function — narrow change.
-- Task 186 (test expansion) changes `GllTests.fs`, `RnglrTests.fs`, and possibly `TestGrammars.fs` — new test cases using existing infrastructure.
-- The primary overlap is `PathIndex.fs`: Task 185 adds a function; Task 186 only reads it via TestHelpers. No conflict if executed sequentially.
+## Reuse Analysis
 
-## Shared Infrastructure
-
-- `PathIndex.fs` — invariant function added in Task 185, consumed by both GLL and RNGLR test infrastructure
-- `TestGrammars.fs` — shared grammar definitions used by both GLL and RNGLR tests
-- `TestHelpers.fs` — shared test pipeline (`accepts`, `checkReject`) that calls invariant validators
+- `RnglrGSS.outgoingEdges` — used in 216 to collect edge symbols from GSS
+- `RnglrTableTeX.tableToTeX` — existing function; 218 adds variant with highlights
+- `GraphHelpers.collectActiveGss` — existing for Matrix-based edges; 217 needs Dictionary variant
+- `GssDot.toDotFromSets` — existing shared function; used by both GLL and RNGLR visualizers
+- `PathIndexTeX.toTeXWithHighlights` — existing; unchanged in all three tasks
+- `GridIndex.linearIndex` — 217 removes RNGLR dependency on this; PathIndex still uses it
+- Golden test infrastructure (`GoldenHelpers.verifyGolden`, `ExternalTools.compileDotStringToInfo`) — reused in all three tasks

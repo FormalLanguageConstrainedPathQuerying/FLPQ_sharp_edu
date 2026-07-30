@@ -656,4 +656,90 @@
      1.   Replace all usages of `get` and `set`
      2.   All tests must pass.
 
+216. [done] RNGLR GSS visualization — show edge symbols to distinguish from GLL GSS.
+     RNGLR GSS is a labeled automaton: edges carry grammar symbols (`RnglrGssEdge { EdgeSymbol: Symbol<'t,'nt> }`), and these symbols drive the BFS-based product intersection with inverted RSM blocks. Current GSS DOT visualization renders edges as bare `"lrState,v → lrState,v"` coordinate pairs — identical to GLL's GSS DOT output — hiding the fundamental structural difference. The visualization must show edge symbols so the RNGLR GSS reads as a labeled directed automaton.
+     1.   `RnglrTypes.fs` — `RnglrParsingStep`: add field `ActiveGssEdgeSymbols: Map<int*int, NonEmptySet<Symbol<'t,'nt>>>` — maps each `(fromIdx, toIdx)` GSS edge pair to its grammar symbol(s). Multiple symbols on the same vertex pair are possible (different reduce/shift paths produce edges with distinct symbols between the same vertices).
+     2.   `Rnglr.fs` — in step collection callback (`onStep` in `buildPathIndexWithSteps`), populate `ActiveGssEdgeSymbols` from the GSS: iterate active vertices, call `RnglrGSS.outgoingEdges`, build the `Map<int*int, NonEmptySet<Symbol<'t,'nt>>>` grouping symbols by edge pair.
+     3.   `RnglrStepVisualizer.fs` — GSS DOT edge label printer: use `ActiveGssEdgeSymbols` to render comma-separated grammar symbols (e.g., `"a"` for terminal, `"S"` for nonterminal, `"a, S"` if multiple symbols share the same edge pair). Replace the current coordinate-pair label (not needed — vertex labels already show coordinates). Vertex labels unchanged for this task.
+     4.   `GoldenHelpers.fs` — add RNGLR-specific `rnglrEdgeLabelRegex` matching symbol-only labels (e.g., `^"?[A-Za-z0-9ε, ]+"?$`), distinct from the current GLL `edgeLabelRegex` (`^\d+,\d+ → \d+,\d+$`).
+     5.   `RnglrStepVisualizationTests.fs` — update GSS DOT vertex/edge label format test to use `rnglrEdgeLabelRegex` for RNGLR. Regenerate all 6 RNGLR golden files (`rnglr_gss_step0.dot`, `rnglr_descriptors_table_step0.tex`, `rnglr_new_descriptors_step0.tex`, `rnglr_path_index_step0.tex`, `rnglr_input_step0.dot`, `rnglr_lr_automaton_step0.dot`). All existing RNGLR tests must pass.
+     6.   `GssDotVisualizationTests.fs` — unchanged (tests GLL GSS only). RNGLR GSS DOT tests remain in `RnglrStepVisualizationTests.fs`.
+
+217. [done] RNGLR Descriptor refactoring — explicit GssIdx + continuous GSS vertex numbering from 0.
+     Current `RnglrDescriptor = { LrState; Vertex }` derives the GSS vertex at every use site via formula `lrState * vertexCount + v`. GLL's `Descriptor` carries explicit `GssIdx` — RNGLR must too. Additionally, GSS pre-allocates all `|Q_lr| × |V|` vertices as a dense matrix; refactoring creates vertices lazily on-demand with sequential IDs (0, 1, 2, ...), decoupling GSS indexing from the PathIndex grid formula. PathIndex stays unchanged.
+     **Prerequisite**: Task 216 (RNGLR GSS visualization) must be done first — this task inherits the edge-symbol-aware visualization and adapts vertex labeling for the new numbering scheme.
+     1.   `RnglrTypes.fs` — `RnglrDescriptor`: add `GssIdx: int` field → `{ LrState: int; Vertex: int; GssIdx: int }`. Update XML doc comment to reflect 3-field structure.
+     2.   `RnglrTypes.fs` — `RnglrGSS` type redesign from pre-allocated matrix to lazy on-demand structure:
+          - Replace `GssGraph: Graph<RnglrGssVertex, Option<NonEmptySet<RnglrGssEdge<'t,'nt>>>>` with:
+            - `VertexLookup: Dictionary<int*int, int>` — `(lrState, v) → gssIdx`, O(1) lookup
+            - `VertexInfo: ResizeArray<int*int>` — reverse mapping `gssIdx → (lrState, v)`, O(1) random access
+            - `Edges: Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t,'nt>>>>` — adjacency map, sparse (only allocated for existing vertices)
+          - Replace `StoredStates: Set<...>[]` with `StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int>>` — resizeable, matches dynamic vertex creation
+          - Remove `RnglrGSS.linearIndex` (formula no longer needed)
+          - Remove `RnglrGSS.init` (no pre-allocation)
+          - Add `RnglrGSS.create() : RnglrGSS<'t,'nt>` — returns empty GSS (all dictionaries empty, no vertices)
+          - Add `RnglrGSS.getOrCreateVertex(gss, lrState, v) → int` — if `(lrState, v)` already has a GSS vertex, return its ID; otherwise allocate next sequential ID, add to `VertexLookup` and `VertexInfo`, return new ID
+          - Add `RnglrGSS.getVertexInfo(gss, gssIdx) → int*int` — returns `(lrState, v)` for a GSS vertex; replaces `Graph.getVertex gssIdx gss.GssGraph`
+          - Update signatures (no changes needed): `addEdge`, `outgoingEdges`, `getStoredStates`, `setStoredStates` — they already take `gssIdx: int` and work with indices; adapt internals to Dictionary-based storage
+     3.   `GllTypes.fs` — `GraphHelpers` module: add `collectActiveGssForDict(edges: Dictionary<int, Dictionary<int, 'a>>) → Set<int> * Set<int*int>` for Dictionary-based edge storage. Same return type as the Matrix-based `collectActiveGss`. Iterates dictionary keys (source vertices) and nested dictionary keys (target vertices) to collect active vertices and edge pairs.
+     4.   `Rnglr.fs` — core algorithm adaptation:
+          - Replace `let gss = RnglrGSS.init lrStateCount vertexCount` → `let gss = RnglrGSS.create()`
+          - Remove local `linearIdx` function
+          - At each descriptor creation site:
+            - Initial descriptor: `let gssIdx = RnglrGSS.getOrCreateVertex gss 0 0` → `{ LrState = 0; Vertex = 0; GssIdx = gssIdx }`
+            - Shift target: `let targetGssIdx = RnglrGSS.getOrCreateVertex gss targetLrState vNext` → `{ LrState = targetLrState; Vertex = vNext; GssIdx = targetGssIdx }`
+          - Replace all `Graph.getVertex idx gss.GssGraph` → `RnglrGSS.getVertexInfo gss idx` (in `productBfs`, `findPredecessors`)
+          - Replace `GraphHelpers.collectActiveGss gss.GssGraph.Edges` → `GraphHelpers.collectActiveGssForDict gss.Edges`
+          - `processedGotos`: replace `Set<Nonterminal<'nt> * int> array` of fixed size `lrK` with `Dictionary<int, Set<Nonterminal<'nt> * int>>` — keyed by `gotoGssIdx`, lazy allocation
+          - In `productBfs`: use `RnglrGSS.getVertexInfo gss currGss` and `RnglrGSS.getVertexInfo gss nextGss` instead of `Graph.getVertex`
+          - In `processReduction`: `gotoGssIdx` via `RnglrGSS.getOrCreateVertex gss gotoTarget vEnd`
+          - Edge symbol collection (Task 216 code in step callback): adapt to use `RnglrGSS.outgoingEdges` (unchanged signature, just internal Dictionary-based iteration)
+          - All existing algorithm logic preserves behavior — the refactoring changes only how GSS vertices are created and accessed, not what the algorithm computes
+     5.   `RnglrStepVisualizer.fs` — visualization adaptation:
+          - `rnglrDescriptorToTeX`: render 3-field descriptor `(lrState, vertex, gssIdx)` instead of `(lrState, vertex)`
+          - `descriptorsTableToTeX`: header becomes `lrState & input & gssIdx` (3 columns instead of 2), `renderRow` renders 3 values
+          - `newDescriptorsToTeX`: uses `rnglrDescriptorToTeX` — automatically picks up 3-field format
+          - `renderStep` — `currentGssIdx` directly from `step.CurrentDescriptor.Value.GssIdx` instead of computing via formula
+          - GSS DOT vertex label printer: use `RnglrGSS.getVertexInfo gss gssIdx` to get `(lrState, v)` for label `"idx: (lrState, v)"`. The visualizer needs access to vertex info — pass a lookup function `(int → int*int)` or carry `VertexInfo` in step data. Vertex indices are now sequential (0, 1, 2, ...) instead of formula-derived (0, vc, 2*vc, ...).
+          - GSS DOT edge label printer: symbols from `ActiveGssEdgeSymbols` (from Task 216) — unchanged
+     6.   `RnglrRunner.fs` — pass vertex info to visualizer if needed (e.g., `RnglrGSS.getVertexInfo` as a lookup lambda, or carry reverse mapping in step data).
+     7.   Golden data — all 6 RNGLR golden files regenerated (descriptor now 3 fields, GSS vertex numbering is sequential, edge symbols already present from Task 216). Update `GoldenHelpers.fs` regex patterns if vertex label format changes.
+     8.   Tests — `RnglrTests.fs` (all algorithm tests), `RnglrRunnerTests.fs` (CLI output), `RnglrStepVisualizationTests.fs` (golden + invariants) — all must pass. No skipped tests.
+     9.   `docs/developer/rnglr.md` — update type definitions: `RnglrDescriptor` (now 3 fields), `RnglrGSS` (lazy vertex creation, Dictionary-based storage). Update GSS module functions table: remove `linearIndex`, `init`; add `create`, `getOrCreateVertex`, `getVertexInfo`. Update design decisions table: new entry "GSS vertices created on-demand with sequential IDs" replacing "Vertices pre-allocated as |Q_lr| * |V|"; update "RnglrDescriptor struct type" entry to reflect 3-field structure.
+
+218. [done] RNGLR steps visualization — LR table with highlighted actions instead of LR automaton DOT.
+     In each RNGLR step, replace the LR automaton DOT figure with the LR parsing table (ACTION/GOTO) and highlight the active state row and the specific cells consumed during this step. Highlighting scheme: current LR state row gets `\rowcolor{yellow!20}`; cells for actions taken this step (shift terminals + reduce nonterminals) get `\cellcolor{green!20}`; accumulated reductions across all descriptors at the current input vertex ("level reductions") get `\cellcolor{red!20}`. The table replaces the automaton completely — no more LR automaton DOT in steps.
+     1.   `RnglrTypes.fs` — `RnglrParsingStep`: add three fields:
+          - `ActiveShiftTerminals: Set<Terminal<'t>>` — terminals shifted this step (those with matching input edges from current vertex and SHIFT action in table)
+          - `ActiveReduceNonterminals: Set<Nonterminal<'nt>>` — nonterminals reduced at this LR state (from `getReduceNtWithStates`)
+          - `LevelReductions: Set<Nonterminal<'nt>>` — accumulated set of all nonterminals reduced across all descriptors processed at the current input vertex (resets when vertex changes)
+     2.   `Rnglr.fs` — capture action data during step collection in `buildPathIndexWithSteps`:
+          - Add mutable ref cells: `stepShiftTerminals: Set<Terminal<'t>> ref`, `stepReduceNt: Set<Nonterminal<'nt>> ref`, `levelReductions: Set<Nonterminal<'nt>> ref`, `prevInputVertex: int ref`
+          - In `processNode`: before the reduce loop, add each `reduceNt` from `getReduceNtWithStates lrState` to both `stepReduceNt` and `levelReductions`. Before the shift loop, at the point where `lrTable.Action` confirms a SHIFT, add `Terminal tVal` to `stepShiftTerminals`. At start of `processNode`, if `v ≠ prevInputVertex.Value`, reset `levelReductions.Value` to empty and set `prevInputVertex.Value ← v`.
+          - In step callback (`onStep`): populate the three `RnglrParsingStep` fields from the ref cells, then clear `stepShiftTerminals` and `stepReduceNt` (reset to empty). Do NOT clear `levelReductions` — it persists across steps at same vertex and resets only on vertex change in `processNode`.
+     3.   `RnglrTableTeX.fs` — add `tableToTeXWithHighlights` function:
+          - Signature: `tableToTeXWithHighlights (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (table: RnglrTable<'t,'nt>) (currentLrState: int option) (activeActions: Set<Symbol<'t,'nt>>) (levelReductions: Set<Nonterminal<'nt>>) : string`
+          - Same tabular structure as `tableToTeX`. Per-row: if state equals `currentLrState`, wrap row with `\rowcolor{yellow!20}`. Per-cell: if the cell's symbol is in `activeActions`, wrap cell content with `\cellcolor{green!20}`. If the cell corresponds to a nonterminal in `levelReductions`, wrap with `\cellcolor{red!20}`. Color priority: red (level reductions) overrides green (active actions) which overrides yellow (row). Requires `\usepackage[table]{xcolor}` or `\usepackage{colortbl}` in preamble — note this in rendering (callers must include the package).
+          - If `currentLrState = None` (initial step before any descriptor), render plain table with no highlights.
+          - Keep existing `tableToTeX` unchanged (used for output-independent rendering of the full table, e.g., `rnglr_table.tex` in runner).
+     4.   `RnglrStepVisualizer.fs` — visualizer changes:
+          - `RnglrVisualizationStep`: replace `LrAutomatonDot: string` field with `LrTable: string` (TeX content, not DOT).
+          - Remove `lrAutomatonToDot` private function entirely.
+          - Remove `symbolToDotLabel` helper (only used by `lrAutomatonToDot`).
+          - In `renderStep`: compute `activeActions = (Set.map (fun (Terminal t) -> Symbol.T(Terminal t)) step.ActiveShiftTerminals) + (Set.map (fun nt -> Symbol.N nt) step.ActiveReduceNonterminals)`. Call `RnglrTableTeX.tableToTeXWithHighlights` with `activeActions`, `step.CurrentLrState`, `step.LevelReductions`. Store in `LrTable`.
+     5.   `Helpers.fs` — `writeRnglrStepsVisualization`:
+          - Replace `writeOutputFile (Path.Combine(stepDir, "lr_automaton.dot")) steps.[idx].LrAutomatonDot` → `writeOutputFile (Path.Combine(stepDir, "lr_table.tex")) steps.[idx].LrTable`.
+          - Remove any LR automaton DOT → PDF compilation from this function (LR table is inline TeX, no PDF needed).
+     6.   `data/RNGLR_step_template.tex` — replace LR automaton PDF placeholder:
+          - Remove: `\begin{center}\includegraphics[width=\textwidth,keepaspectratio]{__STEP_LR_AUTOMATON_PDF__}\end{center}`
+          - Add: `\begin{center}\resizebox{\textwidth}{!}{$__LR_TABLE__$}\end{center}`
+     7.   `SummaryTeX.fs` / `Summary.fs` — summary generation:
+          - `SummaryTeX.rnglrStepSection`: replace `__STEP_LR_AUTOMATON_PDF__` placeholder substitution with `__LR_TABLE__` inline TeX substitution (read `lr_table.tex` file content directly, like `__DESCRIPTORS_TABLE__`).
+          - `Summary.fs`: remove LR automaton DOT → PDF compilation for RNGLR (`compileDotArtifacts` for `lr_automaton.dot`). Remove `dot_pdfs/..._lr_automaton.pdf` entries from dot artifact lists.
+     8.   Tests:
+          - `RnglrStepVisualizationTests.fs`: replace golden test "lr_automaton step 0" → "lr_table step 0" (`rnglr_lr_table_step0.tex`). Remove `RNGLR LR automaton DOT compiles` test (no more DOT). Add `RNGLR LR table TeX compiles` test.
+          - `RnglrRunnerTests.fs`: check `lr_table.tex` exists instead of `lr_automaton.dot` in per-step output.
+          - Golden data: delete `rnglr_lr_automaton_step0.dot`, create `rnglr_lr_table_step0.tex`.
+          - All existing RNGLR tests must pass. No skipped tests.
+
 

@@ -87,18 +87,18 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
         if info.NodeCount > 0 then
             Assert.Equal(1, blueCount)
 
-[<Fact(Skip = "Needs template with xcolor[table] without math mode wrapper")>]
+[<Fact>]
 [<Trait("Category", "TeX")>]
 let ``RNGLR LR table TeX compiles for S->a a`` () =
     let _, _, _, _, _, tables = renderViz "S -> a a" [ "a"; "a" ]
 
     Assert.NotEmpty tables
 
-    let hexColorTemplatePath =
-        Path.Combine(System.AppContext.BaseDirectory, "tex_color_template.tex")
+    let templatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_table_color_template.tex")
 
     for lrTable in tables do
-        Assert.True(ExternalTools.compileTexStringWithTemplate hexColorTemplatePath lrTable)
+        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath lrTable)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
