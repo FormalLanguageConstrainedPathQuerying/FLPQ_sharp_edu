@@ -748,7 +748,7 @@
 
 
 
-221. Comprehensive test refactoring: unify GLL/RNGLR tests, consolidate cross-parser equivalence, eliminate TestGrammars indirection, fix broken equivalence tests, merge duplicated generators.
+221. [done] Comprehensive test refactoring: unify GLL/RNGLR tests, consolidate cross-parser equivalence, eliminate TestGrammars indirection, fix broken equivalence tests, merge duplicated generators.
     **Context**: After tasks 219-220 the LanguageRegistry is established as the single source of grammars, accept/reject strings, and generators. However, the test suite still has significant structural problems.
 
     **Problem 1: Copy-paste duplication between GllTests.fs and RnglrTests.fs**.
@@ -840,3 +840,28 @@
        - Add a `findGrammar` helper to LanguageRegistry: `findGrammar (language: Language) (name: string) : AnnotatedGrammar` for cases where named lookup is clearer than index-based access.
 
     8. Run all tests. Zero regressions. All existing test assertions must pass. The refactoring changes how tests are organized and how grammars are accessed, but not what is tested or the expected outcomes.
+ 222. Improve LR table inclusion to RNGLR smmary. 
+      1.   In summary do not use additional inner centering.
+      2.   In summary do not use wrapping to math $ ... $
+      3.   In summary scale to 0.3\textwidth.
+      So, final correct example:
+      ```
+      \begin{center}
+      \resizebox{0.3\textwidth}{!}{%%
+      \begin{tabular}{ c || c | c || c }
+      & a & \$ & S \\ \hline
+      \hline 0 & $s_1$ &  & 2 \\
+      \hline 1 & $r_{S}$ & $r_{S}$ &  \\
+      \hline 2 & $s_1$ & acc & 3 \\
+      \hline 3 & $s_1$ & $r_{S}$ & 4 \\
+      \hline 4 & $s_1$ & $r_{S}$ & 4 \\ [1ex]
+      \end{tabular}
+      }
+      \end{center}
+      ```
+     Use function for table content generation, and reuse additional wrappers cretaion that reqiored for summary or for step generation.
+223. Fix RNGLR summary compilation. 
+     1.   run `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -a rnglr -i data/example_input_a_a_a.txt -g data/example_grammar_a_a_a.bnf -s -o viz_output/glr`
+     2.   compile result: `lualatex rnglr_merged.tex`
+     3.   now i got error. Fix it
+     4.   Add summary compilation test.
