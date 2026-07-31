@@ -31,7 +31,7 @@ module RnglrAcceptance =
     [<Fact>]
     let ``S -> a rejects all reject strings`` () =
         for s in singleA.RejectStrings do
-            Assert.True(checkReject TestGrammars.grammarS2a s)
+            Assert.True(checkReject singleA.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a b accepts all accept strings`` () =
@@ -49,7 +49,7 @@ module RnglrAcceptance =
     [<Fact>]
     let ``S -> a S | b rejects all reject strings`` () =
         for s in anb.RejectStrings do
-            Assert.True(checkReject TestGrammars.grammar_aS_b s)
+            Assert.True(checkReject anb.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a S b S | eps accepts Dyck1 accept strings`` () =
@@ -68,7 +68,7 @@ module RnglrAcceptance =
     [<Fact>]
     let ``S -> a S b | eps rejects ANBN reject strings`` () =
         for s in anbn.RejectStrings do
-            Assert.True(checkReject anbn.Grammars[0].Grammar s)
+            Assert.True(checkReject anbn.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a S b | eps | S S accepts Dyck1 accept strings`` () =
@@ -138,7 +138,7 @@ module RnglrRightNullable =
     [<Fact>]
     let ``S -> A B rejects all reject strings`` () =
         for s in lang.RejectStrings do
-            Assert.True(checkReject g s)
+            Assert.True(checkReject (TestHelpers.grammarToRsm g) s)
 
 module RnglrReductionCascade =
     [<Fact>]
@@ -189,7 +189,7 @@ module RnglrGrammarAcceptanceAndTree =
         [<Fact>]
         let ``rejects invalid strings`` () =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG1 do
-                Assert.True(checkReject grammar1 input, $"Should reject: {desc}")
+                Assert.True(checkReject (TestHelpers.grammarToRsm grammar1) input, $"Should reject: {desc}")
 
     module Grammar2 =
         [<Fact>]
@@ -203,7 +203,7 @@ module RnglrGrammarAcceptanceAndTree =
         [<Fact>]
         let ``rejects invalid strings`` () =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG2 do
-                Assert.True(checkReject grammar2 input, $"Should reject: {desc}")
+                Assert.True(checkReject (TestHelpers.grammarToRsm grammar2) input, $"Should reject: {desc}")
 
     module Grammar3 =
         [<Fact>]
@@ -217,7 +217,7 @@ module RnglrGrammarAcceptanceAndTree =
         [<Fact>]
         let ``rejects invalid strings`` () =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG3 do
-                Assert.True(checkReject grammar3 input, $"Should reject: {desc}")
+                Assert.True(checkReject (TestHelpers.grammarToRsm grammar3) input, $"Should reject: {desc}")
 
     module Grammar4 =
         [<Fact>]
@@ -231,7 +231,7 @@ module RnglrGrammarAcceptanceAndTree =
         [<Fact>]
         let ``rejects invalid strings`` () =
             for input, desc in SharedParsingTests.GrammarAcceptanceCases.rejectInputsG4 do
-                Assert.True(checkReject grammar4 input, $"Should reject: {desc}")
+                Assert.True(checkReject (TestHelpers.grammarToRsm grammar4) input, $"Should reject: {desc}")
 
 module RnglrGrammar159A =
     let private grammar = dyck1.Grammars[0].Grammar
@@ -261,7 +261,7 @@ module RnglrGrammar159C =
             Assert.True(accepts (TestHelpers.grammarToRsm grammar) input, $"Should produce a tree: {desc}")
 
 module RnglrGrammar159D =
-    let private rsm = TestHelpers.buildRegexRsm dyck1.Grammars[3].EbnfText
+    let private rsm = dyck1.Grammars[3].Rsm
 
     [<Fact>]
     let ``S -> (a S b)* accepts and yields tree: a a a b a b b a b b`` () =
@@ -269,7 +269,7 @@ module RnglrGrammar159D =
         Assert.True(accepts rsm input, "Should produce a tree")
 
     let private rsm2 =
-        let r = RsmBuilder.buildRSMFromText LanguageRegistry.DualDyck.Grammars[0].EbnfText
+        let r = RsmBuilder.buildRSMFromText LanguageRegistry.DualDyck.Grammars[0].Text
         { r with StartBlock = Nonterminal "S" }
 
     [<Fact>]
@@ -367,7 +367,7 @@ module SppfDotTests =
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
-        let grammarText = dyck1.Grammars[1].EbnfText
+        let grammarText = dyck1.Grammars[1].Text
         let input = dyck1.AcceptStrings[4]
 
         let sppf = buildSppf grammarText input
@@ -389,7 +389,7 @@ module SppfDotTests =
 
     [<Fact>]
     let ``RNGLR SPPF has root nodes for S->aSb|SS|eps with aababb`` () =
-        let grammarText = dyck1.Grammars[1].EbnfText
+        let grammarText = dyck1.Grammars[1].Text
         let input = dyck1.AcceptStrings[4]
 
         let sppf = buildSppf grammarText input
@@ -428,7 +428,7 @@ module RnglrGrammarTests =
         Assert.False(PathIndex.isAccepted pathIndex ersm vc, $"Should reject {input}: {ebnfText}")
 
     module Grammar1 =
-        let private g = (LanguageRegistry.APlus.Grammars[6]).EbnfText
+        let private g = (LanguageRegistry.APlus.Grammars[6]).Text
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]
@@ -442,7 +442,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar2 =
-        let private g = (LanguageRegistry.APlus.Grammars[7]).EbnfText
+        let private g = (LanguageRegistry.APlus.Grammars[7]).Text
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]
@@ -456,7 +456,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar3 =
-        let private g = (LanguageRegistry.AStar.Grammars[2]).EbnfText
+        let private g = (LanguageRegistry.AStar.Grammars[2]).Text
         let private lang = LanguageRegistry.AStar
 
         [<Fact>]
@@ -470,7 +470,7 @@ module RnglrGrammarTests =
                 checkRsmRejects g input
 
     module Grammar4 =
-        let private g = (LanguageRegistry.APlus.Grammars[5]).EbnfText
+        let private g = (LanguageRegistry.APlus.Grammars[5]).Text
         let private lang = LanguageRegistry.APlus
 
         [<Fact>]

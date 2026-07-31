@@ -30,7 +30,7 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a rejects eps`` () =
         for s in singleA.RejectStrings do
-            Assert.True(checkReject singleA.Grammars[0].Grammar s)
+            Assert.True(checkReject singleA.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a b accepts a b`` () =
@@ -46,7 +46,7 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a S | b rejects a a a`` () =
         let s = anb.RejectStrings[3]
-        Assert.True(checkReject anb.Grammars[0].Grammar s)
+        Assert.True(checkReject anb.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a S b S | eps accepts a b a b`` () =
@@ -70,7 +70,7 @@ module GllAcceptance =
     [<Fact>]
     let ``S -> a S b | eps rejects a a b`` () =
         for s in anbn.RejectStrings do
-            Assert.True(checkReject anbn.Grammars[0].Grammar s)
+            Assert.True(checkReject anbn.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> a S b | S S | eps accepts a b (no infinite loop)`` () =
@@ -91,7 +91,7 @@ module GllAcceptance =
 
     [<Fact>]
     let ``Left-recursive S -> a S | a rejects empty`` () =
-        Assert.True(checkReject aplus.Grammars[0].Grammar [])
+        Assert.True(checkReject aplus.Grammars[0].Rsm [])
 
     [<Fact>]
     let ``Right-recursive S -> S a | a accepts a a a`` () =
@@ -247,7 +247,7 @@ module GllGrammar159C =
             Assert.True(accepts (TestHelpers.grammarToRsm grammar) input, $"tree yield: {desc}")
 
 module GllGrammar159D =
-    let private rsm = TestHelpers.buildRegexRsm dyck1.Grammars[3].EbnfText
+    let private rsm = dyck1.Grammars[3].Rsm
 
     [<Fact>]
     let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
@@ -348,8 +348,7 @@ module GllReductionCascade =
 module GllEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =
-        SharedParsingTests.Runners.runEpsilonTests accepts (fun g input ->
-            not (accepts (TestHelpers.grammarToRsm g) input))
+        SharedParsingTests.Runners.runEpsilonTests accepts (fun g input -> not (accepts g input))
 
 module GllGrammar159B_SaSb =
     [<Fact>]

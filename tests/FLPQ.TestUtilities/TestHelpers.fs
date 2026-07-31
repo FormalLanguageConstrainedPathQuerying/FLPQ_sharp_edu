@@ -251,10 +251,9 @@ module TestHelpers =
                 -> Graph<int, Option<string>>
                 -> PathIndex<string, string>)
         (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
-        (g: Grammar<string, string>)
+        (rsm: RSM<string, string>)
         (input: string list)
         : bool =
-        let rsm = grammarToRsm g
         let freshStart = Nonterminal("S'")
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
@@ -279,7 +278,7 @@ module TestHelpers =
         (lang: Language)
         : (string * string list) list =
         lang.Grammars
-        |> List.filter (fun g -> not g.Properties.IsEbnf)
+        |> List.filter (fun g -> not g.Properties.IsRsmDerived)
         |> List.collect (fun g ->
             lang.AcceptStrings
             |> List.choose (fun input ->
@@ -290,13 +289,12 @@ module TestHelpers =
 
     /// Iterates all grammars of a language against all reject strings.
     /// Returns the list of (grammarName, input) pairs that were incorrectly accepted.
-    /// Skips EBNF-only grammar entries (which have placeholder CFG grammars).
     let collectRejectFailures
         (parseFn: Grammar<string, string> -> string list -> bool)
         (lang: Language)
         : (string * string list) list =
         lang.Grammars
-        |> List.filter (fun g -> not g.Properties.IsEbnf)
+        |> List.filter (fun g -> not g.Properties.IsRsmDerived)
         |> List.collect (fun g ->
             lang.RejectStrings
             |> List.choose (fun input ->

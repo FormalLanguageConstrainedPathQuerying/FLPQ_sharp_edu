@@ -28,10 +28,10 @@ let private epsilonOnly = LanguageRegistry.EpsilonOnly
 // ---- Dyck1 ----
 
 let grammar1 = (grammarByName dyck1 "grammar1").Grammar
-let augGrammar1 = (grammarByName dyck1 "grammar1").Augmented
+let augGrammar1 = (grammarByName dyck1 "grammar1").AugmentedGrammar
 
 let grammar2 = (grammarByName dyck1 "grammar2").Grammar
-let augGrammar2 = (grammarByName dyck1 "grammar2").Augmented
+let augGrammar2 = (grammarByName dyck1 "grammar2").AugmentedGrammar
 
 let grammarSaSb_eps = (grammarByName dyck1 "grammarSaSb_eps").Grammar
 
@@ -41,13 +41,13 @@ let grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
 // ---- APlus ----
 
 let grammar3 = (grammarByName aplus "grammar3").Grammar
-let augGrammar3 = (grammarByName aplus "grammar3").Augmented
+let augGrammar3 = (grammarByName aplus "grammar3").AugmentedGrammar
 
 let grammar4 = (grammarByName aplus "grammar4").Grammar
-let augGrammar4 = (grammarByName aplus "grammar4").Augmented
+let augGrammar4 = (grammarByName aplus "grammar4").AugmentedGrammar
 
 let grammar5 = (grammarByName aplus "grammar5").Grammar
-let augGrammar5 = (grammarByName aplus "grammar5").Augmented
+let augGrammar5 = (grammarByName aplus "grammar5").AugmentedGrammar
 
 let grammar11 = (grammarByName aplus "grammar11").Grammar
 let grammar12 = (grammarByName aplus "grammar12").Grammar
@@ -63,13 +63,13 @@ let grammar13 = (grammarByName astar "grammar13").Grammar
 // ---- ArithExpr ----
 
 let grammar6 = (grammarByName expr "grammar6").Grammar
-let augGrammar6 = (grammarByName expr "grammar6").Augmented
+let augGrammar6 = (grammarByName expr "grammar6").AugmentedGrammar
 
 let grammar7 = (grammarByName expr "grammar7").Grammar
-let augGrammar7 = (grammarByName expr "grammar7").Augmented
+let augGrammar7 = (grammarByName expr "grammar7").AugmentedGrammar
 
 let grammar8 = (grammarByName expr "grammar8").Grammar
-let augGrammar8 = (grammarByName expr "grammar8").Augmented
+let augGrammar8 = (grammarByName expr "grammar8").AugmentedGrammar
 
 let exprAccept = expr.AcceptStrings |> acceptStrToSpace
 let exprReject = expr.RejectStrings |> acceptStrToSpace
@@ -77,10 +77,10 @@ let exprReject = expr.RejectStrings |> acceptStrToSpace
 // ---- TwoTrackDyck ----
 
 let grammar9 = (grammarByName twoTrack "grammar9").Grammar
-let augGrammar9 = (grammarByName twoTrack "grammar9").Augmented
+let augGrammar9 = (grammarByName twoTrack "grammar9").AugmentedGrammar
 
 let grammar10 = (grammarByName twoTrack "grammar10").Grammar
-let augGrammar10 = (grammarByName twoTrack "grammar10").Augmented
+let augGrammar10 = (grammarByName twoTrack "grammar10").AugmentedGrammar
 
 let grammar9Accept = twoTrack.AcceptStrings |> acceptStrToSpace
 let grammar9Reject = twoTrack.RejectStrings |> acceptStrToSpace
@@ -116,7 +116,7 @@ let ll3Grammar = (grammarByName LanguageRegistry.LL3Test "ll3Grammar").Grammar
 
 let grammar_alt_ab = (grammarByName LanguageRegistry.AltAB "grammar_alt_ab").Grammar
 
-// ---- EBNF grammar entries (EbnfText is the canonical form; Grammar is a placeholder) ----
+// ---- EBNF grammar entries (Text is the canonical source; Grammar, AugmentedGrammar, and Rsm are derived from it) ----
 
 let grammar_dyck_ebnf = LanguageRegistry.Dyck1.Grammars[3]
 let grammar_aplus_ebnf1 = LanguageRegistry.APlus.Grammars[6]

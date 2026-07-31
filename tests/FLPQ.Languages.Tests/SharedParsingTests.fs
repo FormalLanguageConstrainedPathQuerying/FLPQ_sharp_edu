@@ -6,7 +6,7 @@ open FLPQ.TestUtilities
 
 type AcceptFn = RSM<string, string> -> string list -> bool
 
-type RejectFn = Grammar<string, string> -> string list -> bool
+type RejectFn = RSM<string, string> -> string list -> bool
 
 /// Shared accept/reject test cases for grammars 11-14.
 /// Source: LanguageRegistry.APlus and LanguageRegistry.AStar.
@@ -61,8 +61,7 @@ module EpsilonCases =
     let rejectInputs = LanguageRegistry.EpsilonOnly.RejectStrings
 
     let grammars =
-        LanguageRegistry.EpsilonOnly.Grammars
-        |> List.map (fun g -> (g.Grammar, g.EbnfText))
+        LanguageRegistry.EpsilonOnly.Grammars |> List.map (fun g -> (g.Rsm, g.Text))
 
 /// Runner functions for shared test cases.
 module Runners =
@@ -70,7 +69,7 @@ module Runners =
     let runEpsilonTests (accepts: AcceptFn) (rejects: RejectFn) : unit =
 
         for grammar, desc in EpsilonCases.grammars do
-            Assert.True(accepts (TestHelpers.grammarToRsm grammar) [], $"Epsilon accepts empty: {desc}")
+            Assert.True(accepts grammar [], $"Epsilon accepts empty: {desc}")
 
             for input in EpsilonCases.rejectInputs do
                 Assert.True(rejects grammar input, $"Epsilon rejects {input}: {desc}")

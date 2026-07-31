@@ -228,7 +228,7 @@ type ExprStringGenerators =
 
     static member ExprString() : Arbitrary<string> =
         let terminals = [| "x" |]
-        let operators = [| "+"; "*" |]
+        let operators = [| "add"; "mult" |]
 
         let rec genExpr depth =
             if depth <= 0 then
@@ -238,7 +238,7 @@ type ExprStringGenerators =
                 |> MyGen.bind (fun choice ->
                     match choice with
                     | 0 -> MyGen.elements terminals
-                    | 1 -> genExpr (depth - 1) |> MyGen.map (fun inner -> "( " + inner + " )")
+                    | 1 -> genExpr (depth - 1) |> MyGen.map (fun inner -> "lbr " + inner + " rbr")
                     | _ ->
                         genExpr (depth - 1)
                         |> MyGen.bind (fun left ->

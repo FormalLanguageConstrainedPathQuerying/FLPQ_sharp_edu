@@ -1,6 +1,7 @@
 namespace FLPQ.TestUtilities
 
 open FsCheck
+open FSharpPlus.Data
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
@@ -15,15 +16,17 @@ type GrammarProperties =
       IsAmbiguous: bool
       HasEpsilon: bool
       IsInCnf: bool
-      IsEbnf: bool }
+      IsRsmDerived: bool }
 
 /// A grammar annotated with its known properties.
+/// Text is the canonical source; Grammar, AugmentedGrammar, and Rsm are derived from it.
 type AnnotatedGrammar =
     { Name: string
+      Text: string
       Grammar: Grammar<string, string>
-      Augmented: Grammar<string, string>
+      AugmentedGrammar: Grammar<string, string>
+      Rsm: RSM<string, string>
       Properties: GrammarProperties
-      EbnfText: string
       Notes: string }
 
 /// A formal language with its grammars, known accept/reject strings, and a generator.
@@ -37,39 +40,77 @@ type Language =
 
 module LanguageRegistry =
 
-    let private parseG s = Grammar.parseGrammar s
-
     let private augmentStringGrammar (g: Grammar<string, string>) =
         let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
         LRAutomaton.augmentGrammar freshStart g
 
-    let private annotate (name: string) (ebnf: string) (props: GrammarProperties) (notes: string) : AnnotatedGrammar =
-        let g = parseG ebnf
-        let aug = augmentStringGrammar g
-        let props = { props with IsEbnf = false }
+    let private ebnfOperators = set [ "+"; "*"; "("; ")"; "|"; "?"; "eps" ]
+
+    let private grammarToEbnfText (g: Grammar<string, string>) : string =
+        g.Rules
+        |> List.map (fun r ->
+            let (Nonterminal nt) = r.Lhs
+
+            let rhsStr =
+                match r.Rhs with
+                | Rhs.EpsilonRhs -> "eps"
+                | Rhs.Symbols symbols ->
+                    NonEmptyList.toList symbols
+                    |> List.map (fun s ->
+                        match s with
+                        | Symbol.T(Terminal t) when Set.contains t ebnfOperators -> $"( {t} )"
+                        | Symbol.T(Terminal t) -> t
+                        | Symbol.N(Nonterminal nt') -> nt'
+                        | Symbol.Epsilon -> "eps")
+                    |> String.concat " "
+
+            $"{nt} -> {rhsStr}")
+        |> String.concat "\n"
+
+    let private isEbnfText (text: string) =
+        text.Contains('*')
+        || text.Contains('+')
+        || text.Contains('?')
+        || text.Contains("| ")
+        || text.Contains(" |")
+        || (text.Contains('(') && not (text.Contains(" -> ")))
+
+    let private parseGrammarSafe (text: string) =
+        if isEbnfText text then
+            None
+        else
+            try
+                let g = Grammar.parseGrammar text
+
+                let rsm =
+                    RsmBuilder.buildRSMFromText (grammarToEbnfText g)
+                    |> fun r -> { r with StartBlock = g.Start }
+
+                Some(g, rsm)
+            with _ ->
+                None
+
+    let private mkEntry (name: string) (text: string) (props: GrammarProperties) (notes: string) : AnnotatedGrammar =
+        let grammar, rsm, isRsmDerived =
+            match parseGrammarSafe text with
+            | Some(g, r) -> (g, r, false)
+            | None ->
+                let rsm = RsmBuilder.buildRSMFromText text
+                let grammar = RsmToGrammar.convert rsm
+                (grammar, rsm, true)
+
+        let augmented = augmentStringGrammar grammar
+
+        let props =
+            { props with
+                IsRsmDerived = isRsmDerived }
 
         { Name = name
-          Grammar = g
-          Augmented = aug
+          Text = text
+          Grammar = grammar
+          AugmentedGrammar = augmented
+          Rsm = rsm
           Properties = props
-          EbnfText = ebnf
-          Notes = notes }
-
-    let private annotateEbnf
-        (name: string)
-        (ebnf: string)
-        (props: GrammarProperties)
-        (notes: string)
-        : AnnotatedGrammar =
-        let g = parseG "S -> a"
-        let aug = augmentStringGrammar g
-        let props = { props with IsEbnf = true }
-
-        { Name = name
-          Grammar = g
-          Augmented = aug
-          Properties = props
-          EbnfText = ebnf
           Notes = notes }
 
     let private abStringGen: Gen<string> =
@@ -89,7 +130,7 @@ module LanguageRegistry =
 
     let private exprStringGen: Gen<string> =
         let terminals = [| "x" |]
-        let operators = [| "+"; "*" |]
+        let operators = [| "add"; "mult" |]
 
         let rec genExpr depth =
             if depth <= 0 then
@@ -99,7 +140,7 @@ module LanguageRegistry =
                 |> MyGen.bind (fun choice ->
                     match choice with
                     | 0 -> MyGen.elements terminals
-                    | 1 -> genExpr (depth - 1) |> MyGen.map (fun inner -> "( " + inner + " )")
+                    | 1 -> genExpr (depth - 1) |> MyGen.map (fun inner -> "lbr " + inner + " rbr")
                     | _ ->
                         genExpr (depth - 1)
                         |> MyGen.bind (fun left ->
@@ -123,7 +164,7 @@ module LanguageRegistry =
 
     let Dyck1: Language =
         let grammar1 =
-            annotate
+            mkEntry
                 "grammar1"
                 "S -> a S b S\nS -> eps"
                 { HasLeftRecursion = false
@@ -131,11 +172,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous Dyck-1; LL(1)-compatible"
 
         let grammar2 =
-            annotate
+            mkEntry
                 "grammar2"
                 "S -> a S b\nS -> eps\nS -> S S"
                 { HasLeftRecursion = true
@@ -143,11 +184,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous Dyck-1; S->SS creates direct left-recursion; not LL(1), not LR(k)"
 
         let grammarSaSbEps =
-            annotate
+            mkEntry
                 "grammarSaSb_eps"
                 "S -> S a S b\nS -> eps"
                 { HasLeftRecursion = true
@@ -155,19 +196,19 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "left-recursive Dyck-1; S->S a S b has direct left-recursion"
 
         let grammarDyckEbnf =
-            annotateEbnf
+            mkEntry
                 "grammar_dyck_ebnf"
-                "(a S b)*"
+                "S -> (a S b)*"
                 { HasLeftRecursion = false
                   HasDirectLeftRecursion = false
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "EBNF regex (a S b)* generating Dyck-1; for RSM-based tests"
 
         { Name = "Dyck1 (balanced a/b)"
@@ -198,7 +239,7 @@ module LanguageRegistry =
 
     let APlus: Language =
         let grammar3 =
-            annotate
+            mkEntry
                 "grammar3"
                 "S -> a S\nS -> a"
                 { HasLeftRecursion = false
@@ -206,11 +247,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "right-recursive a^+; LL(1)-compatible, SLR(1)-compatible"
 
         let grammar4 =
-            annotate
+            mkEntry
                 "grammar4"
                 "S -> S a\nS -> a"
                 { HasLeftRecursion = true
@@ -218,11 +259,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "left-recursive a^+; S->S a has direct left-recursion"
 
         let grammar5 =
-            annotate
+            mkEntry
                 "grammar5"
                 "S -> S S\nS -> S S S\nS -> a"
                 { HasLeftRecursion = true
@@ -230,11 +271,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous left-recursive a^+"
 
         let grammar11 =
-            annotate
+            mkEntry
                 "grammar11"
                 "S -> a a A\nS -> a A\nA -> a A\nA -> eps"
                 { HasLeftRecursion = false
@@ -242,11 +283,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous a^+ via nullable A"
 
         let grammar12 =
-            annotate
+            mkEntry
                 "grammar12"
                 "S -> a\nS -> a a\nS -> a a A\nS -> a a a A\nA -> a A\nA -> eps"
                 { HasLeftRecursion = false
@@ -254,11 +295,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous a^+ with explicit short-string productions"
 
         let grammar14 =
-            annotate
+            mkEntry
                 "grammar14"
                 "S -> a\nS -> S S\nS -> S S S"
                 { HasLeftRecursion = true
@@ -266,11 +307,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous left-recursive a^+"
 
         let grammarAplusEbnf1 =
-            annotateEbnf
+            mkEntry
                 "grammar_aplus_ebnf1"
                 "S -> N a*\nN -> (a a) | a"
                 { HasLeftRecursion = false
@@ -278,11 +319,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "EBNF S -> N a*; N -> (a a) | a; generates a^+; for RSM-based tests"
 
         let grammarAplusEbnf2 =
-            annotateEbnf
+            mkEntry
                 "grammar_aplus_ebnf2"
                 "S -> a* N\nN -> a | (a a)"
                 { HasLeftRecursion = false
@@ -290,7 +331,7 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "EBNF S -> a* N; N -> a | (a a); generates a^+; for RSM-based tests"
 
         { Name = "a^+ (one or more a's)"
@@ -325,7 +366,7 @@ module LanguageRegistry =
 
     let AStar: Language =
         let grammar13 =
-            annotate
+            mkEntry
                 "grammar13"
                 "S -> eps\nS -> a a S\nS -> a S"
                 { HasLeftRecursion = false
@@ -333,11 +374,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous a*; multiple derivations for a^n"
 
         let grammarASaA_eps =
-            annotate
+            mkEntry
                 "grammar_aSa_eps"
                 "S -> a S a\nS -> a\nS -> eps"
                 { HasLeftRecursion = false
@@ -345,11 +386,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "a* via palindrome-like construction; ambiguous"
 
         let grammarAstarEbnf =
-            annotateEbnf
+            mkEntry
                 "grammar_astar_ebnf"
                 "S -> N*\nN -> a | (a a)"
                 { HasLeftRecursion = false
@@ -357,7 +398,7 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "EBNF S -> N*; N -> a | (a a); generates a*; for RSM-based tests"
 
         { Name = "a* (zero or more a's)"
@@ -384,53 +425,58 @@ module LanguageRegistry =
 
     let ArithExpr: Language =
         let grammar6 =
-            annotate
+            mkEntry
                 "grammar6"
-                "S -> x\nS -> S + S\nS -> S * S\nS -> ( S )"
+                "S -> x\nS -> S add S\nS -> S mult S\nS -> lbr S rbr"
                 { HasLeftRecursion = true
                   HasDirectLeftRecursion = true
                   IsAmbiguous = true
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous expression grammar; no precedence/associativity; not LL, not LR"
 
         let grammar7 =
-            annotate
+            mkEntry
                 "grammar7"
-                "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x"
+                "E -> E add T\nE -> T\nT -> T mult F\nT -> F\nF -> lbr E rbr\nF -> x"
                 { HasLeftRecursion = true
                   HasDirectLeftRecursion = true
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
-                "unambiguous; left-associative +, * with proper precedence; SLR(1)-compatible"
+                  IsRsmDerived = false }
+                "unambiguous; left-associative add, mult with proper precedence; SLR(1)-compatible"
 
         let grammar8 =
-            annotate
+            mkEntry
                 "grammar8"
-                "E -> T + E\nE -> T\nT -> F * T\nT -> F\nF -> ( E )\nF -> x"
+                "E -> T add E\nE -> T\nT -> F mult T\nT -> F\nF -> lbr E rbr\nF -> x"
                 { HasLeftRecursion = false
                   HasDirectLeftRecursion = false
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
-                "unambiguous; right-associative +, * with proper precedence"
+                  IsRsmDerived = false }
+                "unambiguous; right-associative add, mult with proper precedence"
 
         { Name = "ArithExpr (arithmetic expressions)"
-          Description = "Arithmetic expressions over {x, +, *, (, )}."
+          Description = "Arithmetic expressions over {x, add, mult, lbr, rbr}."
           Grammars = [ grammar6; grammar7; grammar8 ]
           AcceptStrings =
             [ [ "x" ]
-              [ "("; "x"; ")" ]
-              [ "("; "x"; ")"; "*"; "x" ]
-              [ "x"; "+"; "x" ]
-              [ "x"; "+"; "x"; "*"; "x" ]
-              [ "x"; "*"; "("; "x"; "+"; "x"; ")" ]
-              [ "("; "x"; "*"; "("; "x"; "+"; "x"; ")"; ")" ] ]
-          RejectStrings = [ []; [ "("; ")" ]; [ "+"; "x" ]; [ "x"; "+" ]; [ "x"; "+"; "("; ")" ] ]
+              [ "lbr"; "x"; "rbr" ]
+              [ "lbr"; "x"; "rbr"; "mult"; "x" ]
+              [ "x"; "add"; "x" ]
+              [ "x"; "add"; "x"; "mult"; "x" ]
+              [ "x"; "mult"; "lbr"; "x"; "add"; "x"; "rbr" ]
+              [ "lbr"; "x"; "mult"; "lbr"; "x"; "add"; "x"; "rbr"; "rbr" ] ]
+          RejectStrings =
+            [ []
+              [ "lbr"; "rbr" ]
+              [ "add"; "x" ]
+              [ "x"; "add" ]
+              [ "x"; "add"; "lbr"; "rbr" ] ]
           GenString = exprStringGen }
 
     // ============================================================
@@ -439,7 +485,7 @@ module LanguageRegistry =
 
     let TwoTrackDyck: Language =
         let grammar9 =
-            annotate
+            mkEntry
                 "grammar9"
                 "S -> S1\nS -> S2\nS1 -> a b S c\nS1 -> eps\nS2 -> a x S y\nS2 -> eps"
                 { HasLeftRecursion = false
@@ -447,11 +493,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous (empty via S1 or S2); two independent tracks"
 
         let grammar10 =
-            annotate
+            mkEntry
                 "grammar10"
                 "S -> S1\nS -> S2\nS1 -> a b S c\nS -> eps\nS2 -> a x S y"
                 { HasLeftRecursion = false
@@ -459,7 +505,7 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguous; same language as grammar9, different epsilon handling"
 
         { Name = "TwoTrackDyck (ab/c, ax/y)"
@@ -492,7 +538,7 @@ module LanguageRegistry =
 
     let ANB: Language =
         let grammarASB =
-            annotate
+            mkEntry
                 "grammar_aS_b"
                 "S -> a S\nS -> b"
                 { HasLeftRecursion = false
@@ -500,7 +546,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "right-recursive a^n b; unambiguous"
 
         { Name = "a^n b"
@@ -516,7 +562,7 @@ module LanguageRegistry =
 
     let ANBN: Language =
         let grammarASbEps =
-            annotate
+            mkEntry
                 "grammar_aSb_eps"
                 "S -> a S b\nS -> eps"
                 { HasLeftRecursion = false
@@ -524,7 +570,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "classic a^n b^n; unambiguous; LL(1)-compatible"
 
         { Name = "a^n b^n"
@@ -545,7 +591,7 @@ module LanguageRegistry =
 
     let AStarBStar: Language =
         let grammarRightNullable =
-            annotate
+            mkEntry
                 "grammarRightNullable"
                 "S -> A B\nA -> a A\nA -> eps\nB -> b B\nB -> eps"
                 { HasLeftRecursion = false
@@ -553,7 +599,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "a^m b^n; right-nullable A and B; unambiguous"
 
         { Name = "a^m b^n"
@@ -569,7 +615,7 @@ module LanguageRegistry =
 
     let SingleA: Language =
         let grammarS2a =
-            annotate
+            mkEntry
                 "grammarS2a"
                 "S -> a"
                 { HasLeftRecursion = false
@@ -577,7 +623,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "trivial single-terminal grammar"
 
         { Name = "SingleA ({a})"
@@ -593,7 +639,7 @@ module LanguageRegistry =
 
     let SingleAB: Language =
         let grammarAB =
-            annotate
+            mkEntry
                 "grammarAB"
                 "S -> a b"
                 { HasLeftRecursion = false
@@ -601,7 +647,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "trivial two-terminal grammar"
 
         { Name = "SingleAB ({ab})"
@@ -617,7 +663,7 @@ module LanguageRegistry =
 
     let EpsilonOnly: Language =
         let grammarEps =
-            annotate
+            mkEntry
                 "grammarEps"
                 "S -> eps"
                 { HasLeftRecursion = false
@@ -625,11 +671,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = true
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "simplest epsilon grammar"
 
         let grammarNtoEps =
-            annotate
+            mkEntry
                 "grammarNtoEps"
                 "S -> N\nN -> eps"
                 { HasLeftRecursion = false
@@ -637,11 +683,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via intermediate nonterminal"
 
         let grammarNNtoEps =
-            annotate
+            mkEntry
                 "grammarNNtoEps"
                 "S -> N N\nN -> eps"
                 { HasLeftRecursion = false
@@ -649,11 +695,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = true
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via nullable binary production; CNF-compatible"
 
         let grammarNStarEps =
-            annotate
+            mkEntry
                 "grammarNStarEps"
                 "S -> N*\nN -> eps"
                 { HasLeftRecursion = false
@@ -661,11 +707,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via Kleene star of nullable; uses EBNF"
 
         let grammarSSeps =
-            annotate
+            mkEntry
                 "grammarSSeps"
                 "S -> S S\nS -> eps"
                 { HasLeftRecursion = true
@@ -673,11 +719,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = true
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via self-recursive binary production; ambiguous; CNF-compatible"
 
         let grammarChainEps =
-            annotate
+            mkEntry
                 "grammarChainEps"
                 "S -> A B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
                 { HasLeftRecursion = false
@@ -685,11 +731,11 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via chain of nullable nonterminals"
 
         let grammarAltEps =
-            annotate
+            mkEntry
                 "grammarAltEps"
                 "S -> A\nS -> B\nA -> C D\nB -> D C\nD -> eps\nC -> eps"
                 { HasLeftRecursion = false
@@ -697,11 +743,11 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "ambiguously epsilon via alternative paths to nullable nonterminals"
 
         let grammarCascade =
-            annotate
+            mkEntry
                 "grammarCascade"
                 "S -> A\nA -> B\nB -> eps"
                 { HasLeftRecursion = false
@@ -709,7 +755,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "epsilon via cascade of unit productions"
 
         { Name = "EpsilonOnly ({epsilon})"
@@ -733,7 +779,7 @@ module LanguageRegistry =
 
     let LL2Test: Language =
         let ll2Grammar =
-            annotate
+            mkEntry
                 "ll2Grammar"
                 "S -> a b A\nS -> a a B\nA -> c\nB -> d"
                 { HasLeftRecursion = false
@@ -741,7 +787,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "LL(2) grammar: a b A vs a a B requires k=2 lookahead; LL(1) has conflict"
 
         { Name = "LL2Test ({abc, aad})"
@@ -763,7 +809,7 @@ module LanguageRegistry =
 
     let LL3Test: Language =
         let ll3Grammar =
-            annotate
+            mkEntry
                 "ll3Grammar"
                 "S -> a b c A\nS -> a b d B\nA -> x\nB -> y"
                 { HasLeftRecursion = false
@@ -771,7 +817,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "LL(3) grammar: a b c A vs a b d B requires k=3 lookahead; LL(2) has conflict"
 
         { Name = "LL3Test ({abcx, abdy})"
@@ -794,7 +840,7 @@ module LanguageRegistry =
 
     let AltAB: Language =
         let grammarAltAB =
-            annotate
+            mkEntry
                 "grammar_alt_ab"
                 "S -> a\nS -> b"
                 { HasLeftRecursion = false
@@ -802,7 +848,7 @@ module LanguageRegistry =
                   IsAmbiguous = false
                   HasEpsilon = false
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "alternation: S -> a | b"
 
         { Name = "AltAB ({a, b})"
@@ -818,7 +864,7 @@ module LanguageRegistry =
 
     let DualDyck: Language =
         let dualDyckEbnf =
-            annotateEbnf
+            mkEntry
                 "grammar_dual_dyck"
                 "S -> S1 S2\nS1 -> (a S1 b)*\nS2 -> (c S2 d)*"
                 { HasLeftRecursion = false
@@ -826,7 +872,7 @@ module LanguageRegistry =
                   IsAmbiguous = true
                   HasEpsilon = true
                   IsInCnf = false
-                  IsEbnf = false }
+                  IsRsmDerived = false }
                 "EBNF S -> S1 S2; S1 -> (a S1 b)*; S2 -> (c S2 d)*; for multi-block RSM tests"
 
         { Name = "DualDyck ((a^n b^n)(c^m d^m))"
