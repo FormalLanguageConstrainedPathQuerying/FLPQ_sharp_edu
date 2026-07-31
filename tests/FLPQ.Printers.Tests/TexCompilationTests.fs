@@ -550,3 +550,116 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
             Directory.Delete(tempDir, true)
         with _ ->
             ()
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``RNGLR merged summary TeX compiles with lualatex`` () =
+    let ebnfText = "S -> a a"
+
+    let rsm = RsmBuilder.buildRSMFromText ebnfText
+    let freshStart = Nonterminal "S'"
+    let input = [ "a"; "a" ]
+    let graph = GLL.stringToGraph input
+    let vertexCount = Graph.vertexCount graph
+    let ersm = ExtendedRSM.create freshStart rsm
+    let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
+    let lrStateCount = Dfa.stateCount lrTable.Automaton
+
+    let pathIndex, steps, vertexInfoArr =
+        Rnglr.buildPathIndexWithSteps freshStart ersm graph
+
+    let vertexInfo (idx: int) = vertexInfoArr.[idx]
+
+    let vizSteps =
+        RnglrStepVisualizer.renderSteps
+            string
+            string
+            lrTable
+            lrStateCount
+            vertexInfo
+            steps
+            pathIndex
+            vertexCount
+            graph
+
+    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
+
+    if Directory.Exists tempDir then
+        Directory.Delete(tempDir, true)
+
+    Directory.CreateDirectory(tempDir) |> ignore
+    Directory.CreateDirectory(dotPdfDir) |> ignore
+
+    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
+    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
+
+    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
+    |> ignore
+
+    File.Delete(Path.Combine(tempDir, "_stub.dot"))
+
+    for idx in 0 .. vizSteps.Length - 1 do
+        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+        Directory.CreateDirectory(stepDir) |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
+        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
+        File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
+        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+        File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
+        File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
+
+    File.WriteAllText(Path.Combine(tempDir, "rnglr_table.tex"), RnglrTableTeX.tableToTeXTabularOnly string string lrTable)
+    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+
+    let rsmSppfPdfs =
+        [ ("RSM", "dot_pdfs/rsm_blocks.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+
+    let rnglrStepTemplatePath =
+        [ Path.Combine("data", "RNGLR_step_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "RNGLR_step_template.tex") ]
+        |> List.tryFind File.Exists
+        |> Option.defaultWith (fun () ->
+            failwithf
+                "Could not locate RNGLR_step_template.tex. Tried: %A"
+                [ Path.Combine("data", "RNGLR_step_template.tex")
+                  Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex") ])
+
+    let rnglrStepTemplate = File.ReadAllText rnglrStepTemplatePath
+
+    let content =
+        SummaryTeX.buildContent
+            "RNGLR"
+            SummaryTeX.SummaryKind.RNGLR
+            tempDir
+            vizSteps.Length
+            None
+            None
+            rsmSppfPdfs
+            ""
+            rnglrStepTemplate
+        |> String.concat "\n"
+
+    let summaryTemplatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
+
+    let template = File.ReadAllText summaryTemplatePath
+
+    let fullTex =
+        template.Replace("__ALGORITHM__", "RNGLR").Replace("__CONTENT__", content)
+
+    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+    File.WriteAllText(mergedTexPath, fullTex)
+
+    try
+        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir)
+    finally
+        try
+            Directory.Delete(tempDir, true)
+        with _ ->
+            ()
