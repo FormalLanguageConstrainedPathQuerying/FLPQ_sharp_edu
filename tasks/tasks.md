@@ -840,7 +840,7 @@
        - Add a `findGrammar` helper to LanguageRegistry: `findGrammar (language: Language) (name: string) : AnnotatedGrammar` for cases where named lookup is clearer than index-based access.
 
     8. Run all tests. Zero regressions. All existing test assertions must pass. The refactoring changes how tests are organized and how grammars are accessed, but not what is tested or the expected outcomes.
- 222. Improve LR table inclusion to RNGLR smmary. 
+ 222. [done] Improve LR table inclusion to RNGLR smmary. 
       1.   In summary do not use additional inner centering.
       2.   In summary do not use wrapping to math $ ... $
       3.   In summary scale to 0.3\textwidth.
@@ -860,8 +860,19 @@
       \end{center}
       ```
      Use function for table content generation, and reuse additional wrappers cretaion that reqiored for summary or for step generation.
-223. Fix RNGLR summary compilation. 
+223. [done] Fix RNGLR summary compilation. 
      1.   run `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -a rnglr -i data/example_input_a_a_a.txt -g data/example_grammar_a_a_a.bnf -s -o viz_output/glr`
      2.   compile result: `lualatex rnglr_merged.tex`
-     3.   now i got error. Fix it
+     3.   now i got error. Fix it. Error: 
+     ```
+     ! Package xcolor Error: Undefined color `lightblue'.
+
+     See the xcolor package documentation for explanation.
+     Type  H <return>  for immediate help.
+     ...                                              
+                                                       
+     l.29 ...htblue!20}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}
+                                                       & Current GSS node \\
+     ? 
+     ```
      4.   Add summary compilation test.
