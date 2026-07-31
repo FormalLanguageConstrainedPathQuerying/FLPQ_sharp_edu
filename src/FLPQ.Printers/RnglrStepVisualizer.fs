@@ -126,7 +126,7 @@ module RnglrStepVisualizer =
             Set.union shifts reduces
 
         let lrTable =
-            RnglrTableTeX.tableToTeXWithHighlights
+            RnglrTableTeX.tableToTeXWithHighlightsTabularOnly
                 terminals
                 nonterminals
                 lrTable

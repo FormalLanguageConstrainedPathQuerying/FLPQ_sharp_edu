@@ -42,7 +42,7 @@ module RnglrRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "rnglr_table.tex"))
-            (RnglrTableTeX.tableToTeX string string lrTable)
+            (RnglrTableTeX.tableToTeXTabularOnly string string lrTable)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
 

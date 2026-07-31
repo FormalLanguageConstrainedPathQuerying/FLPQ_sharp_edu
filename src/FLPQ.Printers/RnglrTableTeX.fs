@@ -23,8 +23,8 @@ module RnglrTableTeX =
 
         maxState + 1
 
-    /// Render an RNGLR parsing table as a TeX tabular.
-    let tableToTeX
+    /// Build only the TeX tabular environment (no center wrapper).
+    let private buildTabular
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (table: RnglrTable<'t, 'nt>)
@@ -56,7 +56,6 @@ module RnglrTableTeX =
 
         let colSpec = @"\begin{tabular}{ c || " + actionCols + @" || " + gotoCols + @" }"
 
-        sb.AppendLine(@"\begin{center}") |> ignore
         sb.AppendLine(colSpec) |> ignore
 
         sb.Append(@" & ") |> ignore
@@ -105,16 +104,28 @@ module RnglrTableTeX =
             sb.AppendLine(rowEnd) |> ignore
 
         sb.AppendLine(@"\end{tabular}") |> ignore
-        sb.AppendLine(@"\end{center}") |> ignore
 
         sb.ToString()
 
-    /// Render an RNGLR parsing table with highlighted cells.
-    /// currentLrState: row to highlight with \rowcolor{yellow!20}.
-    /// activeActions: cells with these symbols get \cellcolor{green!20}.
-    /// levelReductions: GOTO cells for these nonterminals get \cellcolor{red!20}
-    ///   (overrides green). Requires \usepackage[table]{xcolor} in the preamble.
-    let tableToTeXWithHighlights
+    /// Render an RNGLR parsing table as a self-contained TeX block (center + tabular).
+    let tableToTeX
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (table: RnglrTable<'t, 'nt>)
+        : string =
+        let tabular = buildTabular terminalPrinter nonterminalPrinter table
+        [ @"\begin{center}"; tabular; @"\end{center}" ] |> String.concat "\n"
+
+    /// Render an RNGLR parsing table as a TeX tabular without any wrapper.
+    let tableToTeXTabularOnly
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (table: RnglrTable<'t, 'nt>)
+        : string =
+        buildTabular terminalPrinter nonterminalPrinter table
+
+    /// Build highlighted TeX tabular environment (no center wrapper).
+    let private buildTabularWithHighlights
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (table: RnglrTable<'t, 'nt>)
@@ -149,7 +160,6 @@ module RnglrTableTeX =
 
         let colSpec = @"\begin{tabular}{ c || " + actionCols + @" || " + gotoCols + @" }"
 
-        sb.AppendLine(@"\begin{center}") |> ignore
         sb.AppendLine(colSpec) |> ignore
 
         sb.Append(@" & ") |> ignore
@@ -227,6 +237,37 @@ module RnglrTableTeX =
             sb.AppendLine(rowEnd) |> ignore
 
         sb.AppendLine(@"\end{tabular}") |> ignore
-        sb.AppendLine(@"\end{center}") |> ignore
 
         sb.ToString()
+
+    /// Render an RNGLR parsing table with highlighted cells (center + tabular).
+    /// currentLrState: row to highlight with \rowcolor{yellow!20}.
+    /// activeActions: cells with these symbols get \cellcolor{green!20}.
+    /// levelReductions: GOTO cells for these nonterminals get \cellcolor{red!20}
+    ///   (overrides green). Requires \usepackage[table]{xcolor} in the preamble.
+    let tableToTeXWithHighlights
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (table: RnglrTable<'t, 'nt>)
+        (currentLrState: int option)
+        (activeActions: Set<Symbol<'t, 'nt>>)
+        (levelReductions: Set<Nonterminal<'nt>>)
+        : string =
+        let tabular =
+            buildTabularWithHighlights
+                terminalPrinter nonterminalPrinter table
+                currentLrState activeActions levelReductions
+        [ @"\begin{center}"; tabular; @"\end{center}" ] |> String.concat "\n"
+
+    /// Render an RNGLR parsing table with highlighted cells as a TeX tabular without any wrapper.
+    let tableToTeXWithHighlightsTabularOnly
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (table: RnglrTable<'t, 'nt>)
+        (currentLrState: int option)
+        (activeActions: Set<Symbol<'t, 'nt>>)
+        (levelReductions: Set<Nonterminal<'nt>>)
+        : string =
+        buildTabularWithHighlights
+            terminalPrinter nonterminalPrinter table
+            currentLrState activeActions levelReductions

@@ -1,92 +1,64 @@
-# Detailed Plan: Task 217 — RNGLR Descriptor Refactoring (S1-S8)
+# Detailed Plan: Task 222 — Improve LR table inclusion to RNGLR summary
 
-### S1: Add GssIdx to RnglrDescriptor + redesign RnglrGSS type
+### S1: Refactor RnglrTableTeX — extract tabular-only content function
 
-**Code:** `src/FLPQ.Languages/RnglrTypes.fs`
+**Code:** `src/FLPQ.Printers/RnglrTableTeX.fs`
+**Tests:** Build check; existing golden tests (will need regeneration)
+**Docs:** None
+
+**Spec:**
+- Create private `buildTabular` function that produces ONLY the `\begin{tabular}{...}...\end{tabular}` block (no center, no wrapper)
+- Refactor `tableToTeX` to call `buildTabular` and wrap in `\begin{center}...\end{center}` for backward compatibility
+- Create public `tableToTeXTabularOnly` that returns raw tabular without any wrapping
+- Similarly refactor `tableToTeXWithHighlights`: extract shared tabular building, keep wrapper
+
+### S2: Add summary wrapper function and update SummaryTeX header
+
+**Code:** `src/FLPQ.Printers/SummaryTeX.fs`
 **Tests:** Build check
-**Docs:** None (docs in S8)
-
-**Spec:**
-- RnglrDescriptor: add `GssIdx: int` field
-- RnglrGSS type: replace GssGraph with VertexLookup, VertexInfo, Edges (Dictionary-based)
-- Replace StoredStates array with Dictionary<int, Set<...>>
-- RnglrGSS module: remove linearIndex, init; add create, getOrCreateVertex, getVertexInfo
-- Adapt addEdge, outgoingEdges, getStoredStates, setStoredStates to new internals
-
-### S2: Add collectActiveGssForDict to GraphHelpers
-
-**Code:** `src/FLPQ.Languages/GllTypes.fs`
-**Tests:** Build check
 **Docs:** None
 
 **Spec:**
-- New function: collectActiveGssForDict with same return type (Set<int> * Set<int*int>)
-- Iterates Dictionary keys for vertices, nested keys for edges
+- Add `wrapTabularResized` function: wraps raw tabular in `\begin{center}\resizebox{0.3\textwidth}{!}{%% TABULAR }\end{center}` — NO math mode, NO inner center
+- In `headerSection` for RNGLR: read `rnglr_table.tex`, strip its outer center (or use new tabular-only output), apply `wrapTabularResized`
+- Since `tableToTeX` currently outputs center+tabular, the summary wrapper must handle this. Best approach: use `tableToTeXTabularOnly` from runner for summary, or strip center from existing file
 
-### S3: Adapt Rnglr.fs algorithm to new GSS + descriptor
+### S3: Update RnglrRunner to write tabular-only for summary
 
-**Code:** `src/FLPQ.Languages/Rnglr.fs`
-**Tests:** `RnglrTests.fs` — all pass
-**Docs:** None
-
-**Spec:**
-- RnglrGSS.init → RnglrGSS.create()
-- Remove linearIdx local function
-- Descriptor creation: use getOrCreateVertex, store GssIdx
-- Graph.getVertex → getVertexInfo
-- GraphHelpers.collectActiveGss → collectActiveGssForDict
-- processedGotos: array→Dictionary
-- productBfs/findPredecessors/processReduction: vertex access adaptations
-
-### S4: Adapt step collection (edge symbols + actions) to new GSS
-
-**Code:** `src/FLPQ.Languages/Rnglr.fs`
-**Tests:** All algorithm tests pass
-**Docs:** None
-
-**Spec:**
-- collectEdgeSymbols: use getVertexInfo instead of Graph.getVertex (outgoingEdges signature unchanged)
-- Action tracking (stepShiftTerminals etc.) — unchanged, still works with LR state/input vertex
-
-### S5: Update RnglrStepVisualizer for 3-field descriptor + new vertex numbering
-
-**Code:** `src/FLPQ.Printers/RnglrStepVisualizer.fs`
-**Tests:** Visualization tests
-**Docs:** None
-
-**Spec:**
-- rnglrDescriptorToTeX: 3 fields (lrState, vertex, gssIdx)
-- descriptorsTableToTeX: header 3 columns
-- newDescriptorsToTeX: picks up 3-field format from rnglrDescriptorToTeX
-- renderStep: currentGssIdx from step.CurrentDescriptor.Value.GssIdx directly
-- GSS DOT vertex label: need vertex info lookup; pass via step data or separate parameter
-
-### S6: Pass vertex info + update runner
-
-**Code:** `src/FLPQ.Printers/RnglrStepVisualizer.fs`, `src/FLPQ.Cli/RnglrRunner.fs`
+**Code:** `src/FLPQ.Cli/RnglrRunner.fs`
 **Tests:** Runner tests
 **Docs:** None
 
 **Spec:**
-- Carry vertexInfo in RnglrParsingStep or pass to visualizer
-- GSS DOT vertex labels show sequential IDs with (lrState, v) lookup
+- Write `rnglr_table.tex` using the tabular-only function (no center wrapper)
+- SummaryTeX will wrap it with `wrapTabularResized`
 
-### S7: Golden data regeneration
+### S4: Update RNGLR step template — remove math mode from LR table
 
-**Code:** `tests/FLPQ.Printers.Tests/GoldenHelpers.fs`, `tests/FLPQ.Printers.Tests/GoldenData/`
-**Tests:** All passing
+**Code:** `data/RNGLR_step_template.tex`
+**Tests:** Build check
 **Docs:** None
 
 **Spec:**
-- Regenerate all 6 RNGLR golden files
-- Update regex patterns for new vertex numbering
+- Replace `$ __LR_TABLE__ $` with raw `__LR_TABLE__` (no math mode)
+- Keep resizebox and center: `\begin{center}\resizebox{\textwidth}{!}{%% __LR_TABLE__ }\end{center}`
 
-### S8: Update developer docs
+### S5: Update per-step lr_table.tex generation
 
-**Code:** `docs/developer/rnglr.md`
-**Tests:** None
-**Docs:** Updated
+**Code:** `src/FLPQ.Printers/RnglrStepVisualizer.fs`
+**Tests:** Golden tests (regenerate)
+**Docs:** None
 
 **Spec:**
-- Update RnglrDescriptor (3 fields), RnglrGSS (lazy creation)
-- Update GSS module table, design decisions
+- Per-step `lr_table.tex` should use tabular-only output (no center, no math mode) since the template provides its own wrapping
+- Update `renderStep` to use `tableToTeXTabularOnly` or `tableToTeXWithHighlights` without center wrapper
+
+### S6: Regenerate golden data and verify tests
+
+**Code:** Golden files in `tests/FLPQ.Printers.Tests/GoldenData/`
+**Tests:** All RNGLR-related tests pass
+**Docs:** None
+
+**Spec:**
+- Regenerate `rnglr_lr_table_step0.tex` golden file
+- Verify all existing tests pass

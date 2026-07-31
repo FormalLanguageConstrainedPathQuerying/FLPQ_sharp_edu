@@ -50,6 +50,15 @@ module SummaryTeX =
           @"\end{center}" ]
         |> String.concat "\n"
 
+    /// Wraps a raw TeX tabular in a centered, resizable box (no math mode, no inner center).
+    let wrapTabularResized (tabular: string) : string =
+        [ @"\begin{center}"
+          @"\resizebox{0.3\textwidth}{!}{%%"
+          tabular
+          "}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
     /// Generates LaTeX code to include a PDF file as a centered figure.
     let includePdf (relPath: string) : string =
         sprintf @"\begin{center}\includegraphics[width=0.9\textwidth,keepaspectratio]{{%s}}\end{center}" relPath
@@ -169,7 +178,7 @@ module SummaryTeX =
 
             | SummaryKind.RNGLR ->
                 [ section "Color Legend"; rnglrColorLegend (); "" ]
-                @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapCenter
+                @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
                 @ (rsmSppfPdfs
                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
                 @ maybe "path_index.tex" "Path Index" wrapMathResized
