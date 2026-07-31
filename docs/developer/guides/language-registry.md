@@ -39,7 +39,9 @@
 
    let lang = LanguageRegistry.Dyck1
    for g in lang.Grammars do
-       // test g.Grammar with lang.AcceptStrings, lang.RejectStrings
+       // CFG-based parsers (CYK, Valiant, LL, LR): use g.Grammar, g.AugmentedGrammar
+       // RSM-based parsers (GLL, RNGLR): use g.Rsm
+       // test with lang.AcceptStrings, lang.RejectStrings
    ```
 4. **For property-based tests**, use `lang.GenString` to generate random strings.
 5. **For cross-algorithm equivalence**, pick a language with multiple grammars (e.g., Dyck1 has 3, APlus has 6).
@@ -306,6 +308,7 @@
 | **Amb** (IsAmbiguous) | ∃w with ≥2 distinct parse trees in this grammar. Incompatible with deterministic LL/LR parsers. |
 | **ε** (HasEpsilon) | ε ∈ L(G) — the empty string is in the language. |
 | **CNF** (IsInCnf) | Every production is A → B C or A → a (plus S → ε allowed if start). Required by CYK; internally converted for Valiant. |
+| **RSM** (IsRsmDerived) | Grammar was derived from an RSM (via EBNF → RSM → RsmToGrammar.convert round-trip). The CFG may not be suitable for CYK testing — skip these entries when iterating over `Grammars` in CFG-based parser tests. |
 
 **Important**: These properties are manually verified by the developer. They are not automatically detected. Undecidable properties (like ambiguity in the general case) are stated based on analysis of the specific grammar.
 

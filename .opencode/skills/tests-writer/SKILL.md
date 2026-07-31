@@ -85,18 +85,20 @@ See the specification: [`docs/developer/guides/language-registry.md`](/docs/deve
        [<Property>]
        let ``MyParser and CYK agree`` (s: string) = ...
    ```
-6. **For cross-algorithm equivalence**, select a language with multiple grammars:
-   ```fsharp
-   [<Property>]
-   let ``ParserA and ParserB agree on Dyck1`` (s: string) =
-       let g1 = LanguageRegistry.Dyck1.Grammars[0].Grammar
-       let g2 = LanguageRegistry.Dyck1.Grammars[1].Grammar
-       ParserA.parse g1 input = ParserB.parse g2 input
-   ```
+ 6. **For cross-algorithm equivalence**, select a language with multiple grammars:
+    ```fsharp
+    [<Property>]
+    let ``ParserA and ParserB agree on Dyck1`` (s: string) =
+        let g1 = LanguageRegistry.Dyck1.Grammars[0]
+        let g2 = LanguageRegistry.Dyck1.Grammars[1]
+        ParserA.parse g1.Grammar input = ParserB.parse g2.Grammar input
+        // For GLL/RNGLR parsers, use g1.Rsm instead of g1.Grammar
+    ```
 
 ### Do NOT
 
-- Hardcode grammar definitions inline in test files — use `LanguageRegistry.<Language>.Grammars[n].Grammar`
+- Hardcode grammar definitions inline — use `LanguageRegistry.<Language>.Grammars[n]`
+- Call `TestHelpers.grammarToRsm` or `RsmBuilder.buildRSMFromText` in tests — use `g.Rsm`
 - Hardcode accept/reject strings — use `LanguageRegistry.<Language>.AcceptStrings` / `RejectStrings`
 - Define duplicate string generators — use the `Arbitrary` types registered in `Generators.fs`, which correspond to the `Gen<string>` values in the language registry
 
