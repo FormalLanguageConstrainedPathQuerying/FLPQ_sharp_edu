@@ -740,6 +740,103 @@
           - `RnglrStepVisualizationTests.fs`: replace golden test "lr_automaton step 0" → "lr_table step 0" (`rnglr_lr_table_step0.tex`). Remove `RNGLR LR automaton DOT compiles` test (no more DOT). Add `RNGLR LR table TeX compiles` test.
           - `RnglrRunnerTests.fs`: check `lr_table.tex` exists instead of `lr_automaton.dot` in per-step output.
           - Golden data: delete `rnglr_lr_automaton_step0.dot`, create `rnglr_lr_table_step0.tex`.
-          - All existing RNGLR tests must pass. No skipped tests.
+           - All existing RNGLR tests must pass. No skipped tests.
+
+219. [done] Language Registry and test infrastructure refactoring. Create a specification document and typed F# registry module that catalogs all test languages, their grammars (with manually-verified properties: left-recursive, ambiguous, has-epsilon, in-CNF, etc.), accept/reject strings, and string generators. Group grammars strictly by formal language equivalence (same language = same group). Restructure TestGrammars.fs to re-export from the registry. Refactor all algorithm test files (CYK, Valiant, GLL, RNGLR, LL, LR, SharedParsingTests) to use registry types and helpers. Update tests-writer skill with a workflow section describing how to use the registry. No algorithm compatibility bindings in the registry — the developer uses grammar properties + algorithm knowledge to decide compatibility. No undecidable property detection — all properties are manual annotations verified by the developer.
+
+220. [done] Refactor AnnotatedGrammar type. Current design has an IsEbnf boolean flag and uses a dummy parseG "S -> a" placeholder for EBNF-only grammars — ugly and error-prone. Replace with a clean design where the canonical text is the single source of truth, and both CFG (Grammar<string,string>) and RSM (RSM<string,string>) representations are derived from it. The AnnotatedGrammar record stores: Text (canonical CFG/EBNF text), Grammar, AugmentedGrammar, Rsm. No IsEbnf flag, no dummy grammars, no EbnfText field. For EBNF-only texts, Grammar is obtained via RsmToGrammar.rsmToGrammar as a fallback when Grammar.parseGrammar fails. In tests, stop calling TestHelpers.grammarToRsm and RsmBuilder.buildRSMFromText — use g.Rsm directly from the registry entry. The TestHelpers.checkReject function should accept RSM instead of Grammar to eliminate the internal grammarToRsm conversion. Drop the IsEbnf filter from collectAcceptFailures/collectRejectFailures — all entries have valid Grammar. No new types — only existing types. All 500 tests must pass with zero regressions.
 
 
+
+221. Comprehensive test refactoring: unify GLL/RNGLR tests, consolidate cross-parser equivalence, eliminate TestGrammars indirection, fix broken equivalence tests, merge duplicated generators.
+    **Context**: After tasks 219-220 the LanguageRegistry is established as the single source of grammars, accept/reject strings, and generators. However, the test suite still has significant structural problems.
+
+    **Problem 1: Copy-paste duplication between GllTests.fs and RnglrTests.fs**.
+    The two files are near-identical mirrors (~360 and ~484 lines). Same submodules, same test structure, same grammars, same inputs — only the `accepts` binding differs. SharedParsingTests.fs parameterizes only 3 categories (epsilon, regex, tree-yield), leaving ~70% of tests duplicated:
+    - `GllAcceptance` / `RnglrAcceptance` (~75 / ~80 lines) — basic accept/reject. Inconsistent grammar sources: some use `TestGrammars.grammarS2a`, others use `singleA.Grammars[0].Rsm`.
+    - `GllGrammarAcceptanceAndTree` / `RnglrGrammarAcceptanceAndTree` (~50 / ~60 lines) — grammars 11-14. Structurally identical.
+    - `GllGrammar159A-D` / `RnglrGrammar159A-D` (~30 / ~50 lines) — four single-test submodules each.
+    - `GllRightNullable` / `RnglrRightNullable`, `GllReductionCascade` / `RnglrReductionCascade`, `GllPropertyTreeYield` / `RnglrPropertyTreeYield` — all duplicated.
+
+    **Problem 2: Broken RNGLR vs GLL equivalence tests (always true)**.
+    `RnglrTests.fs:110-113` and `:124-127` compare `accepts = accepts` (same binding on both sides). Always returns `true`. Provides zero coverage. Same bug in APlus variant.
+
+    **Problem 3: Cross-parser equivalence scattered across 6 files**.
+    12+ pairwise comparisons defined wherever convenient: GLL vs CYK in `GllTests.fs`, RNGLR vs CYK in `RnglrTests.fs`, Valiant vs CYK in both `ValiantTests.fs` and `LLParserTests.fs`, LL vs SLR/CLR/CYK in `LLParserTests.fs`, SLR vs CLR/CYK in `LRParserTests.fs`. No single place to see "do all parsers agree?"
+
+    **Problem 4: TestGrammars.fs is an unnecessary indirection layer**.
+    125 lines of aliases that look up from LanguageRegistry by name. After tasks 219-220, the registry has `AnnotatedGrammar` with `Grammar`, `AugmentedGrammar`, `Rsm`, `Text`. Tests should reference the registry directly.
+
+    **Problem 5: Duplicated string generators**.
+    `Generators.fs` and `LanguageRegistry.fs` both define `abStringGen`/`AbStringGenerators`, `aStringGen`/`AStringGenerators`, etc. with identical distributions and bounds.
+
+    **Problem 6: Submodule proliferation**.
+    10+ submodules per parser, many with a single test (`GllGrammar159A` = 1 test, `GllReductionCascade` = 1 test). Navigation noise.
+
+    **Proposed structure**:
+    ```
+    tests/FLPQ.Languages.Tests/
+      GllTests.fs                    — GLL-specific + shared acceptance via RSM adapter
+      RnglrTests.fs                  — RNGLR-specific + shared acceptance via RSM adapter
+      CykTests.fs                    — CYK-specific + shared acceptance via Grammar adapter
+      LLParserTests.fs               — LL-specific + shared acceptance via Grammar adapter
+      LRParserTests.fs               — LR-specific + shared acceptance via Grammar adapter
+      ValiantTests.fs                — Valiant-specific + shared acceptance via Grammar adapter
+      CrossParserEquivalenceTests.fs — NEW: all pairwise equivalence, consolidated from 6 files
+      SharedParsingTests.fs          — DELETE (moved to TestUtilities)
+      TestGrammars.fs                — DELETE
+
+    tests/FLPQ.TestUtilities/
+      ParsingTestCases.fs            — NEW: moved from SharedParsingTests.fs, extended with AcceptanceCase type, cases for ALL languages
+      LanguageRegistry.fs            — Add Gen→Arbitrary bridge, consolidate string generators
+      Generators.fs                  — Remove duplicated string generators (keep non-string)
+      TestHelpers.fs                 — Unchanged (already parameterized from task 183)
+    ```
+
+    **Subtasks**:
+
+    1. Move `SharedParsingTests.fs` to `FLPQ.TestUtilities/ParsingTestCases.fs`. Extend with shared acceptance cases for ALL languages.
+       - Define `AcceptanceCase { CaseName: string; LanguageName: string; GrammarName: string; Rsm: RSM<string,string>; Grammar: Grammar<string,string>; Input: string list; ExpectedAccepted: bool }`.
+       - Module `AcceptanceCases`: iterate all languages in `LanguageRegistry.allLanguages`, for each language iterate `Grammars`, for each grammar iterate `AcceptStrings` (expected=true) and `RejectStrings` (expected=false). Use prebuilt `AnnotatedGrammar.Rsm` and `AnnotatedGrammar.Grammar` from the registry — no conversion needed.
+       - Module `TreeYieldCases`: shared tree-yield test cases (grammar + inputs that should produce trees with matching leaves). Source from `LanguageRegistry.Dyck1.AcceptStrings`, `APlus.AcceptStrings`, etc.
+       - Module `RegexEquivalenceCases`: regex patterns + filter functions for DFA comparison.
+       - Module `EpsilonCases`: all epsilon grammars from `LanguageRegistry.EpsilonOnly`.
+       - Pure data, no `[<Fact>]` attributes, no parser-specific logic.
+
+    2. Refactor `GllTests.fs` to use shared cases.
+       - Replace `GllAcceptance` submodule with one `[<Fact>]` per grammar: iterate `ParsingTestCases.AcceptanceCases.forLanguage "Dyck1"` etc., for each case assert `accepts case.Rsm case.Input = case.ExpectedAccepted`. The fact name includes language and grammar names so failures are pinpointed.
+       - Replace `GllGrammarAcceptanceAndTree` Grammar1-4 submodules with shared cases loop.
+       - Merge `GllGrammar159A-D` into a single `GllTreeYield` submodule using `ParsingTestCases.TreeYieldCases`.
+       - Keep GLL-specific tests: descriptor/GSS visualization, step traces.
+       - Replace all `TestGrammars.xxx` references with direct `LanguageRegistry.xxx.Grammars[n]` access.
+
+    3. Refactor `RnglrTests.fs` symmetrically.
+       - Same pattern as GLL: shared cases for acceptance, tree yield, epsilon, right-nullable, reduction cascade.
+       - Fold `RnglrGrammarTests` (lines 406-484) into shared cases — the `accepts` helper already validates SPPF which is stricter than raw RSM→path-index without SPPF validation.
+       - Keep RNGLR-specific tests: SPPF construction (`SppfDotTests`), dual Dyck language tests.
+       - Replace all `TestGrammars.xxx` references with direct registry access.
+
+    4. Create `CrossParserEquivalenceTests.fs`.
+       - Module `VsCyk`: GLL vs CYK, RNGLR vs CYK, Valiant vs CYK, LL vs CYK, SLR vs CYK, CLR vs CYK. Use prebuilt `AnnotatedGrammar.Grammar` for CYK/LL/LR/Valiant and `AnnotatedGrammar.Rsm` for GLL/RNGLR. Property-based with FsCheck generators from the registry.
+       - Module `VsDfa`: GLL vs DFA, RNGLR vs DFA for regex-derived grammars. Move from `GllTests.fs` and `RnglrTests.fs`.
+       - Module `GllVsRnglr`: direct comparison. Fix the broken test: define separate `gllAccepts = TestHelpers.accepts Gll.buildPathIndex PathIndex.isAccepted` and `rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted`, compare across them using shared cases from registry.
+       - Module `LlVsLr`: LL vs SLR, LL vs CLR, SLR vs CLR. Move from `LLParserTests.fs` and `LRParserTests.fs`.
+       - Module `ValiantVsCyk`: move from `ValiantTests.fs` and `LLParserTests.fs`.
+
+    5. Refactor `CykTests.fs`, `LLParserTests.fs`, `LRParserTests.fs`, `ValiantTests.fs`.
+       - Each uses shared acceptance cases via a Grammar adapter: `Grammar → Terminal list → bool`. One `[<Fact>]` per grammar, iterating `ParsingTestCases.AcceptanceCases.forLanguage "..."`.
+       - Remove cross-parser equivalence tests (moved to step 4).
+       - Keep algorithm-specific tests: CYK trace/table, LL conflict detection and k>1 resolution, LR automaton structure and conflict types, Valiant matrix comparison and modified Valiant.
+       - Replace all `TestGrammars.xxx` references with direct registry access.
+
+    6. Consolidate string generators.
+       - In `LanguageRegistry.fs`: add a `GenToArbitrary` helper that wraps `Gen<string>` into `Arbitrary<string>`.
+       - In `Generators.fs`: remove `AbStringGenerators`, `AStringGenerators`, `ExprStringGenerators`, `AbcdxyStringGenerators`. Replace with references to the corresponding LanguageRegistry generators via the wrapper.
+       - Keep non-string generators in `Generators.fs`: `MatrixGenerators`, `LinearAlgebraGenerators`, `SetMatrixGenerators`, `RandomGraphGenerators`, `RPQGenerators`, `RPQExtendedAlphabetGenerators`, `IntersectionGenerators`, `RegexGenerators`, `RegexAndGraphGenerators`, `StressStringGenerators`, `StressNfaGenerators`, `StressRpqGenerators`, `StressMatrixGenerators`.
+       - Update all `[<Properties(Arbitrary = [...])>]` attributes across test files to use the consolidated generators.
+
+    7. Delete `TestGrammars.fs`.
+       - Replace all references across test files with direct registry access.
+       - Add a `findGrammar` helper to LanguageRegistry: `findGrammar (language: Language) (name: string) : AnnotatedGrammar` for cases where named lookup is clearer than index-based access.
+
+    8. Run all tests. Zero regressions. All existing test assertions must pass. The refactoring changes how tests are organized and how grammars are accessed, but not what is tested or the expected outcomes.
