@@ -6,6 +6,7 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
 module MyGen = FsCheck.FSharp.Gen
+module MyArb = FsCheck.FSharp.Arb
 
 /// Manually-verified grammar properties.
 /// These are assertions about the grammar, not automatically detected.
@@ -917,3 +918,31 @@ module LanguageRegistry =
           LL2Test
           LL3Test
           DualDyck ]
+
+    /// Look up a grammar by name within a language.
+    let findGrammar (lang: Language) (name: string) : AnnotatedGrammar =
+        lang.Grammars |> List.find (fun g -> g.Name = name)
+
+/// Bridges from LanguageRegistry Gen<string> to FsCheck Arbitrary<string>.
+module GenToArbitrary =
+
+    type AbString() =
+        static member AbString() : Arbitrary<string> = LanguageRegistry.Dyck1.GenString |> MyArb.fromGen
+
+    type AString() =
+        static member AString() : Arbitrary<string> = LanguageRegistry.APlus.GenString |> MyArb.fromGen
+
+    type ExprString() =
+        static member ExprString() : Arbitrary<string> = LanguageRegistry.ArithExpr.GenString |> MyArb.fromGen
+
+    type AbcdxyString() =
+        static member AbcdxyString() : Arbitrary<string> = LanguageRegistry.TwoTrackDyck.GenString |> MyArb.fromGen
+
+    type AbcxdString() =
+        static member AbcxdString() : Arbitrary<string> =
+            let chars = [ "a"; "b"; "c"; "x"; "d" ]
+
+            MyGen.choose (0, 8)
+            |> MyGen.bind (fun len ->
+                MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
+            |> MyArb.fromGen

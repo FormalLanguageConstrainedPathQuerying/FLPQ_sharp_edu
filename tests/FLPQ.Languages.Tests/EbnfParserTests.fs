@@ -5,7 +5,6 @@ open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-open TestGrammars
 open FLPQ.TestUtilities
 
 module EbnfParseTests =
@@ -257,7 +256,7 @@ F -> x
 
 module EbnfPropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module ParsingEquivalenceTests =
 
         [<Property>]

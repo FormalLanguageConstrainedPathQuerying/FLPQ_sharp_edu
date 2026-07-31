@@ -5,8 +5,15 @@ open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-open TestGrammars
 open FLPQ.TestUtilities
+
+let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
+
+let private dyck1 = LanguageRegistry.Dyck1
+let private grammar1 = (g dyck1 "grammar1").Grammar
+let private grammar1Accept = dyck1.AcceptStrings |> acceptStrToSpace
+let private grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
 
 module ConversionTests =
 
@@ -135,7 +142,7 @@ F -> x
 
 module PropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module RoundTripPropertyTests =
 
         [<Property>]
@@ -160,7 +167,7 @@ module PropertyTests =
                 roundtrip
                 (Tokenizer.tokenizeTerminals s)
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module ExprPropertyTests =
 
         [<Property>]

@@ -7,7 +7,18 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-open TestGrammars
+let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private expr = LanguageRegistry.ArithExpr
+
+let private grammar1 = (g dyck1 "grammar1").Grammar
+let private grammar2 = (g dyck1 "grammar2").Grammar
+let private grammar3 = (g aplus "grammar3").Grammar
+let private grammar6 = (g expr "grammar6").Grammar
+let private grammar7 = (g expr "grammar7").Grammar
+let private grammar8 = (g expr "grammar8").Grammar
 
 let private tokenized (ss: string list) = String.concat " " ss
 
@@ -250,7 +261,7 @@ module ModifiedValiantTests =
 
 module PropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar1PropertyTests =
 
         [<Property>]
@@ -310,7 +321,7 @@ module PropertyTests =
                                  yield false ]
                    |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar2PropertyTests =
 
         [<Property>]
@@ -340,7 +351,7 @@ module PropertyTests =
                                  yield false ]
                    |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module Grammar3PropertyTests =
 
         [<Property>]
@@ -370,7 +381,7 @@ module PropertyTests =
                                  yield false ]
                    |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module RejectTableTests =
 
         [<Property>]
@@ -392,7 +403,7 @@ module PropertyTests =
                               yield false ]
                 |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module ModifiedValiantPropertyTests =
 
         [<Property>]
@@ -414,7 +425,7 @@ module PropertyTests =
                               yield false ]
                 |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module ModifiedValiantExprPropertyTests =
 
         [<Property>]
@@ -447,7 +458,7 @@ module PropertyTests =
                                  yield false ]
                    |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module Grammar7PropertyTests =
 
         [<Property>]
@@ -507,7 +518,7 @@ module PropertyTests =
                                  yield false ]
                    |> List.forall id
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module Grammar8PropertyTests =
 
         [<Property>]

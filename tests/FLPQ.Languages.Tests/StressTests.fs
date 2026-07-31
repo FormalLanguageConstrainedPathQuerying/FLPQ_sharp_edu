@@ -7,8 +7,6 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-open TestGrammars
-
 let private balancedGrammar = Grammar.parseGrammar "S -> a S b S\nS -> eps"
 
 let private makeAnBn (n: int) : string =

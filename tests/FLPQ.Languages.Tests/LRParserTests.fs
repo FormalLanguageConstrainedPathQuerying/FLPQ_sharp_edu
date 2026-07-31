@@ -6,8 +6,34 @@ open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-open TestGrammars
 open FLPQ.TestUtilities
+
+let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
+
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private expr = LanguageRegistry.ArithExpr
+let private twoTrack = LanguageRegistry.TwoTrackDyck
+
+let private grammar1 = (g dyck1 "grammar1").Grammar
+let private augGrammar1 = (g dyck1 "grammar1").AugmentedGrammar
+let private grammar1Accept = dyck1.AcceptStrings |> acceptStrToSpace
+let private grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
+
+let private augGrammar2 = (g dyck1 "grammar2").AugmentedGrammar
+
+let private grammar3 = (g aplus "grammar3").Grammar
+let private augGrammar3 = (g aplus "grammar3").AugmentedGrammar
+let private grammar3Accept = aplus.AcceptStrings |> acceptStrToSpace
+let private grammar3Reject = aplus.RejectStrings |> acceptStrToSpace
+
+let private augGrammar6 = (g expr "grammar6").AugmentedGrammar
+let private augGrammar7 = (g expr "grammar7").AugmentedGrammar
+let private augGrammar8 = (g expr "grammar8").AugmentedGrammar
+
+let private exprAccept = expr.AcceptStrings |> acceptStrToSpace
+let private exprReject = expr.RejectStrings |> acceptStrToSpace
 
 module FactTests =
 
@@ -276,7 +302,7 @@ module PropertyTests =
 
             slrResult = clrResult
 
-        [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+        [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
         module Grammar3Props =
 
             [<Property>]
@@ -289,7 +315,7 @@ module PropertyTests =
             let ``SLR(1) and CLR(1) agree on grammar3`` (s: string) =
                 parsersAgree augGrammar3 slrTable clrTable s
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar1PropertyTests =
 
         let private slrTable = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
@@ -326,7 +352,7 @@ module CrossParserPropertyTests =
     let private slrGrammar1 = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
     let private clrGrammar3 = LRParser.buildCLR1Table augGrammar3
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar1CrossTests =
 
         [<Property>]
@@ -340,7 +366,7 @@ module CrossParserPropertyTests =
 
             slrResult = cykResult
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module Grammar3CrossTests =
 
         [<Property>]
@@ -354,7 +380,7 @@ module CrossParserPropertyTests =
 
             clrResult = cykResult
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module Grammar78CrossTests =
 
         let private clr7 = LRParser.buildCLR1Table augGrammar7

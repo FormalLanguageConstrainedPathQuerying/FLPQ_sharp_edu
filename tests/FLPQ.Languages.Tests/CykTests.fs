@@ -7,9 +7,23 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-open TestGrammars
+let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
 
-open TestGrammars
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private expr = LanguageRegistry.ArithExpr
+let private twoTrack = LanguageRegistry.TwoTrackDyck
+
+let private grammar1 = (g dyck1 "grammar1").Grammar
+let private grammar2 = (g dyck1 "grammar2").Grammar
+let private grammar3 = (g aplus "grammar3").Grammar
+let private grammar4 = (g aplus "grammar4").Grammar
+let private grammar5 = (g aplus "grammar5").Grammar
+let private grammar6 = (g expr "grammar6").Grammar
+let private grammar7 = (g expr "grammar7").Grammar
+let private grammar8 = (g expr "grammar8").Grammar
+let private grammar9 = (g twoTrack "grammar9").Grammar
+let private grammar10 = (g twoTrack "grammar10").Grammar
 
 module Grammar1Tests =
 
@@ -38,7 +52,7 @@ module Grammar1Tests =
 
 module Grammar2Tests =
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Properties =
 
         [<Property>]
@@ -76,7 +90,7 @@ module Grammar3Tests =
 
 module Grammar4Tests =
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module Properties =
 
         [<Property>]
@@ -89,7 +103,7 @@ module Grammar4Tests =
 
 module Grammar5Tests =
 
-    [<Properties(Arbitrary = [| typeof<AStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module Properties =
 
         [<Property>]
@@ -152,7 +166,7 @@ module Grammar6Tests =
 
 module Grammar6PropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<ExprStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.ExprString> |])>]
     module AgreementTests =
 
         [<Property>]

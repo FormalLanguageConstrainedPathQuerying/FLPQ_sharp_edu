@@ -6,8 +6,36 @@ open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-open TestGrammars
 open FLPQ.TestUtilities
+
+let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
+
+let private dyck1 = LanguageRegistry.Dyck1
+let private aplus = LanguageRegistry.APlus
+let private expr = LanguageRegistry.ArithExpr
+let private twoTrack = LanguageRegistry.TwoTrackDyck
+let private ll2Test = LanguageRegistry.LL2Test
+let private ll3Test = LanguageRegistry.LL3Test
+
+let private grammar1 = (g dyck1 "grammar1").Grammar
+let private augGrammar1 = (g dyck1 "grammar1").AugmentedGrammar
+let private grammar1Accept = dyck1.AcceptStrings |> acceptStrToSpace
+let private grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
+
+let private grammar3 = (g aplus "grammar3").Grammar
+let private grammar8 = (g expr "grammar8").Grammar
+
+let private grammar9 = (g twoTrack "grammar9").Grammar
+let private grammar9Accept = twoTrack.AcceptStrings |> acceptStrToSpace
+let private grammar9Reject = twoTrack.RejectStrings |> acceptStrToSpace
+
+let private grammar10 = (g twoTrack "grammar10").Grammar
+let private grammar10Accept = grammar9Accept
+let private grammar10Reject = grammar9Reject
+
+let private ll2Grammar = (g ll2Test "ll2Grammar").Grammar
+let private ll3Grammar = (g ll3Test "ll3Grammar").Grammar
 
 
 module FactTests =
@@ -163,7 +191,7 @@ module FactTests =
 
 module PropertyTests =
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar1PropertyTests =
 
         let private table = LLParser.buildTable grammar1 1
@@ -182,7 +210,7 @@ module CrossParserPropertyTests =
     let private llTable = LLParser.buildTable grammar1 1
     let private slrTable = LRParser.buildSLR1Table augGrammar1 Grammar.eoiSymbol
 
-    [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module Grammar1Agreement =
 
         [<Property>]
@@ -211,7 +239,7 @@ module CrossParserPropertyTests =
 
 module LLHigherKTests =
 
-    let private ll2Grammar = TestGrammars.ll2Grammar
+    let private ll2Grammar = ll2Grammar
     let private ll2Lang = LanguageRegistry.LL2Test
 
     let private ll2Accept = ll2Lang.AcceptStrings |> List.map (String.concat " ")
@@ -254,7 +282,7 @@ module LLHigherKTests =
                 Assert.Equal(s, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
-    let private ll3Grammar = TestGrammars.ll3Grammar
+    let private ll3Grammar = ll3Grammar
     let private ll3Lang = LanguageRegistry.LL3Test
 
     [<Fact>]
@@ -282,7 +310,7 @@ module LLHigherKTests =
             let result = LLParser.parse ll3Grammar table 3 (s |> List.map Terminal)
             Assert.True(result.IsNone, $"{s}")
 
-    [<Properties(Arbitrary = [| typeof<AbcxdStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbcxdString> |])>]
     module LL2PropertyTests =
 
         let private ll2Table = LLParser.buildTable ll2Grammar 2
@@ -317,7 +345,7 @@ module LLHigherKTests =
                 leafTokens = s
             | None -> true
 
-    [<Properties(Arbitrary = [| typeof<AbcdxyStringGenerators> |])>]
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbcdxyString> |])>]
     module LL3PropertyTests =
 
         let private ll3Table = LLParser.buildTable ll3Grammar 3

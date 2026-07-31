@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TestGrammars.fs" />
     <Compile Include="TokenizerTests.fs" />
     <Compile Include="GrammarTests.fs" />
     <Compile Include="CykTests.fs" />
@@ -19,7 +18,7 @@
     <Compile Include="LLParserTests.fs" />
     <Compile Include="LRParserTests.fs" />
     <Compile Include="StressTests.fs" />
-    <Compile Include="SharedParsingTests.fs" />
+    <Compile Include="CrossParserEquivalenceTests.fs" />
     <Compile Include="GllTests.fs" />
     <Compile Include="RnglrTests.fs" />
   </ItemGroup>

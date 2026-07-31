@@ -9,11 +9,13 @@
     <Compile Include="Generators.fs" />
     <Compile Include="LanguageRegistry.fs" />
     <Compile Include="TestHelpers.fs" />
+    <Compile Include="ParsingTestCases.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FsCheck.Xunit" Version="3.3.3" />
     <PackageReference Include="FSharpPlus" Version="1.9.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
   </ItemGroup>
 
   <ItemGroup>
