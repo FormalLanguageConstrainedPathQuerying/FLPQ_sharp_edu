@@ -3,6 +3,7 @@ module CykTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
+open FSharpPlus.Data
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
@@ -190,3 +191,100 @@ module Grammar6PropertyTests =
                 Grammar.freshStringNonterminal
                 grammar8
                 (Tokenizer.tokenizeTerminals s)
+
+
+module CykSppfTests =
+
+    [<Fact>]
+    let ``enriched table for aplus grammar with input 'a' has correct entry`` () =
+        let table =
+            Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar3 [ Terminal "a" ]
+
+        let entries = table.[0, 0]
+        Assert.False(Set.isEmpty entries, "Cell (0,0) should have entries")
+
+        let startEntry = entries |> Set.filter (fun (nt, _, _) -> nt = grammar3.Start)
+
+        Assert.NotEmpty startEntry
+        Assert.True(Set.exists (fun (nt, _, _) -> nt = grammar3.Start) startEntry)
+
+        for (_, k, prodIdx) in startEntry do
+            Assert.Equal(0, k)
+
+            let rule = (Grammar.toCnf Grammar.freshStringNonterminal grammar3).Rules.[prodIdx]
+
+            let isTerminalRule =
+                match rule.Rhs with
+                | Symbols nel when NonEmptyList.length nel = 1 ->
+                    match NonEmptyList.head nel with
+                    | Symbol.T(Terminal t) -> t = "a"
+                    | _ -> false
+                | _ -> false
+
+            Assert.True(isTerminalRule, sprintf "Rule at index %d should be a terminal rule for 'a'" prodIdx)
+
+    [<Fact>]
+    let ``enriched table for dyck grammar with input 'ab' has correct structure`` () =
+        let table =
+            Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]
+
+        Assert.False(Set.isEmpty table.[0, 0], "Cell (0,0) should have entries")
+        Assert.False(Set.isEmpty table.[1, 1], "Cell (1,1) should have entries")
+        Assert.False(Set.isEmpty table.[0, 1], "Cell (0,1) should have entries")
+
+        Assert.True(table.[0, 0] |> Set.exists (fun (_, k, _) -> k = 0), "Terminal entries at (0,0) should have k=0")
+
+        Assert.True(table.[1, 1] |> Set.exists (fun (_, k, _) -> k = 1), "Terminal entries at (1,1) should have k=1")
+
+        Assert.True(
+            table.[0, 1] |> Set.exists (fun (_, k, _) -> k = 0),
+            "Binary entries at (0,1) should have split point k=0"
+        )
+
+    [<Fact>]
+    let ``parseWithSppfTable returns true for accepted input 'ab'`` () =
+        let _, accepted =
+            Cyk.parseWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]
+
+        Assert.True(accepted)
+
+    [<Fact>]
+    let ``parseWithSppfTable returns false for rejected input 'a'`` () =
+        let _, accepted =
+            Cyk.parseWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a" ]
+
+        Assert.False(accepted)
+
+    [<Fact>]
+    let ``enriched table equals parsing table nonterminals for same input`` () =
+        let terminals = [ Terminal "a"; Terminal "b" ]
+        let table = Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
+
+        let parseTable, _ =
+            Cyk.parseWithTable Grammar.freshStringNonterminal grammar1 terminals
+
+        let n = Matrix.rows table
+
+        for i in 0 .. n - 1 do
+            for j in 0 .. n - 1 do
+                let sppfNonterminals = table.[i, j] |> Set.map (fun (nt, _, _) -> nt)
+
+                let parseNonterminals = parseTable.[i, j]
+                let bothEmpty = Set.isEmpty sppfNonterminals && Set.isEmpty parseNonterminals
+                let sameNonterminals = sppfNonterminals = parseNonterminals
+
+                Assert.True(
+                    bothEmpty || sameNonterminals,
+                    sprintf "Cell (%d,%d): SPPF has %A, parse has %A" i j sppfNonterminals parseNonterminals
+                )
+
+    [<Fact>]
+    let ``parseWithSppfTable handles empty input`` () =
+        let _, accepted = Cyk.parseWithSppfTable Grammar.freshStringNonterminal grammar3 []
+
+        Assert.False(accepted)
+
+        let _, acceptedEps =
+            Cyk.parseWithSppfTable Grammar.freshStringNonterminal (LanguageRegistry.EpsilonOnly.Grammars[0].Grammar) []
+
+        Assert.True(acceptedEps)

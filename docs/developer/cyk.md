@@ -73,6 +73,18 @@ val parseWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> termi
 ```
 Runs CYK and returns the sequence of working table states, one per diagonal. The first element is the table after filling the diagonal, subsequent elements show the state after each span length. Useful for step-by-step visualization.
 
+### `parseWithSppfInfo`
+```fsharp
+val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
+```
+Runs CYK and returns an enriched parsing table where each cell stores `(nonterminal, splitPoint, productionIndex)` tuples. The `splitPoint` encodes the decomposition point (`k`) for binary rules or the terminal position for terminal rules; `productionIndex` is the 0-based index of the CNF grammar rule. This table provides all data needed for BasicSPPF construction (see `BasicSppf.fromParsingTable`).
+
+### `parseWithSppfTable`
+```fsharp
+val parseWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
+```
+Runs CYK and returns both the enriched parsing table and the acceptance status. Equivalent to calling `parseWithSppfInfo` and checking for the start nonterminal in cell `(0, n-1)`.
+
 ## Design Decisions
 
 | Decision | Rationale |
@@ -82,6 +94,8 @@ Runs CYK and returns the sequence of working table states, one per diagonal. The
 | Empty cells use empty Set | Simpler than `Option`; empty set naturally represents "no nonterminals" |
 | Terminals passed as `Terminal<'t> list` | Consistent with Valiant; no Symbol conversion needed |
 | `parseWithTrace` returns one matrix per diagonal | Enables step-by-step visualization of the algorithm's progress |
+| `parseWithSppfInfo` stores `(nt, k, prodIdx)` tuples | Enables SPPF reconstruction without re-running the algorithm; `k` is the split point for binary rules, terminal position for terminal rules |
+| Rule indices based on CNF grammar ordering | Natural ordering from `List.indexed`; deterministic and reproducible |
 
 ## Book Reference
 
@@ -92,5 +106,6 @@ Chapter 7, Section sec:CYK.
 ## See Also
 
 - [Valiant algorithm](valiant.md) — reduces parsing to matrix multiplication, shares `ParsingTable<'nt>` type
+- [SPPF Parsing Table types](sppf-parsing-table.md) — enriched table format for BasicSPPF construction
 - [Grammar module](grammar.md) — CNF transformation
 - [Matrix module](matrix.md) — underlying matrix type and TeX rendering

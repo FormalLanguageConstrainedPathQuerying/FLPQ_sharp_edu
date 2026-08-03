@@ -53,6 +53,7 @@ What our standards and principles are, and why we chose them.
 - [Tokenizer module](developer/tokenizer.md)
 - [CYK algorithm](developer/cyk.md)
 - [Valiant algorithm](developer/valiant.md)
+- [SPPF Parsing Table types](developer/sppf-parsing-table.md)
 - [FirstFollow module](developer/first-follow.md)
 - [Automaton module](developer/automaton.md)
 - [RSM module](developer/rsm.md)

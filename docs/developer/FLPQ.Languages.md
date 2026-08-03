@@ -80,6 +80,7 @@
 
 | Module | Source | Documentation |
 |--------|--------|---------------|
+| `ParsingTable` | `ParsingTable.fs` | [Parsing table types design](sppf-parsing-table.md) |
 | `VisualizationTypes` | `VisualizationTypes.fs` | [LL and LR steps visualization](visualization-types.md) |
 
 ## Role
@@ -87,6 +88,7 @@
 Central library for formal language processing:
 - **Grammar types** — BNF grammar, CNF transformation, generic over terminal/nonterminal types
 - **Parsing** — CYK, Valiant (standard and modified), LL(k), LR(0)/SLR(1)/CLR(1) with derivation tree construction, GLL for CFPQ on RSMs
+- **Parsing table types** — `ParsingTable<'nt>` (set-based), `LRAction<'a>`, `SppfParsingEntry<'nt>`, `SppfParsingTable<'nt>` for BasicSPPF construction
 - **Lexing** — first_k, follow_k computations, tokenizer
 - **Automata** — NFA/DFA (deterministic/non-deterministic separated at type level, wrapping `Graph` from `FLPQ.GraphAnalysis`), RSM (Recursive State Machine)
 - **EBNF** — EBNF grammar parsing via FParsec, DFA construction via Brzozowski derivatives, RSM to BNF conversion
