@@ -22,6 +22,7 @@
     <Compile Include="GllTests.fs" />
     <Compile Include="RnglrTests.fs" />
     <Compile Include="BasicSppfTests.fs" />
+    <Compile Include="SppfPropertyTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

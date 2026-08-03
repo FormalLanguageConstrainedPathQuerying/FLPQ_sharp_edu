@@ -238,3 +238,45 @@ module BasicSppf =
                     | [] -> Leaf Symbol.Epsilon
                     | _ -> List.head children
             }
+
+    /// Count strongly connected components in the SPPF graph using Tarjan's algorithm.
+    /// Treats the SPPF as a directed graph ignoring edge labels.
+    let countScc (sppf: BasicSPPF<'t, 'nt>) : int =
+        let n = Graph.vertexCount sppf.Graph
+        let mutable sccIndex = 0
+        let indices = Array.create n -1
+        let lowlink = Array.create n -1
+        let onStack = Array.create n false
+        let stack = ResizeArray<int>()
+        let mutable sccCount = 0
+
+        let rec strongconnect (v: int) : unit =
+            indices.[v] <- sccIndex
+            lowlink.[v] <- sccIndex
+            sccIndex <- sccIndex + 1
+            stack.Add(v)
+            onStack.[v] <- true
+
+            for w in 0 .. n - 1 do
+                if sppf.Graph.Edges.[v, w].IsSome then
+                    if indices.[w] = -1 then
+                        strongconnect w
+                        lowlink.[v] <- min lowlink.[v] lowlink.[w]
+                    elif onStack.[w] then
+                        lowlink.[v] <- min lowlink.[v] indices.[w]
+
+            if lowlink.[v] = indices.[v] then
+                sccCount <- sccCount + 1
+
+                let mutable w = -1
+
+                while w <> v do
+                    w <- stack.[stack.Count - 1]
+                    stack.RemoveAt(stack.Count - 1)
+                    onStack.[w] <- false
+
+        for v in 0 .. n - 1 do
+            if indices.[v] = -1 then
+                strongconnect v
+
+        sccCount
