@@ -255,8 +255,13 @@ module RnglrTableTeX =
         : string =
         let tabular =
             buildTabularWithHighlights
-                terminalPrinter nonterminalPrinter table
-                currentLrState activeActions levelReductions
+                terminalPrinter
+                nonterminalPrinter
+                table
+                currentLrState
+                activeActions
+                levelReductions
+
         [ @"\begin{center}"; tabular; @"\end{center}" ] |> String.concat "\n"
 
     /// Render an RNGLR parsing table with highlighted cells as a TeX tabular without any wrapper.
@@ -268,6 +273,4 @@ module RnglrTableTeX =
         (activeActions: Set<Symbol<'t, 'nt>>)
         (levelReductions: Set<Nonterminal<'nt>>)
         : string =
-        buildTabularWithHighlights
-            terminalPrinter nonterminalPrinter table
-            currentLrState activeActions levelReductions
+        buildTabularWithHighlights terminalPrinter nonterminalPrinter table currentLrState activeActions levelReductions

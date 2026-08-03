@@ -121,7 +121,7 @@ module RnglrStepVisualizer =
             let shifts =
                 step.ActiveShiftTerminals |> Set.map (fun (Terminal t) -> Symbol.T(Terminal t))
 
-            let reduces = step.ActiveReduceNonterminals |> Set.map (fun nt -> Symbol.N nt)
+            let reduces = step.ActiveReduceNonterminals |> Set.map Symbol.N
 
             Set.union shifts reduces
 

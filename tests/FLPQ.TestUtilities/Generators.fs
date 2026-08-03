@@ -175,7 +175,7 @@ type RPQExtendedAlphabetGenerators =
                                     { VertexCount = n
                                       Edges = edges
                                       Sources = Array.ofList sources })))))))
-        |>         MyArb.fromGen
+        |> MyArb.fromGen
 
 type TokenStringGenerators =
 

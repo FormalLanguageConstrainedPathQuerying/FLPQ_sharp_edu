@@ -571,16 +571,7 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let vizSteps =
-        RnglrStepVisualizer.renderSteps
-            string
-            string
-            lrTable
-            lrStateCount
-            vertexInfo
-            steps
-            pathIndex
-            vertexCount
-            graph
+        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount vertexInfo steps pathIndex vertexCount graph
 
     let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
@@ -611,7 +602,11 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
 
-    File.WriteAllText(Path.Combine(tempDir, "rnglr_table.tex"), RnglrTableTeX.tableToTeXTabularOnly string string lrTable)
+    File.WriteAllText(
+        Path.Combine(tempDir, "rnglr_table.tex"),
+        RnglrTableTeX.tableToTeXTabularOnly string string lrTable
+    )
+
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)

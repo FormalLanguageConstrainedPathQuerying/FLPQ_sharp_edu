@@ -283,15 +283,6 @@ module Rnglr =
                 levelReductions <- Set.empty
                 prevInputVertex <- v
 
-            for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
-                stepReduceNt <- Set.add reduceNt stepReduceNt
-                levelReductions <- Set.add reduceNt levelReductions
-                let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
-                let predecessors = findPredecessors gssIdx reduceNt
-
-                for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in predecessors do
-                    processReduction reduceNt finalRsmState lrStatePre gssIdxPre vPre v depth
-
             if v < vertexCount - 1 then
                 for (tVal, vNext) in graphEdges.[v] do
                     let shiftKey = (lrState, Symbol.T(Terminal tVal))
@@ -320,6 +311,15 @@ module Rnglr =
                               Vertex = vNext
                               GssIdx = targetGssIdx }
                     | _ -> ()
+
+            for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
+                stepReduceNt <- Set.add reduceNt stepReduceNt
+                levelReductions <- Set.add reduceNt levelReductions
+                let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
+                let predecessors = findPredecessors gssIdx reduceNt
+
+                for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in predecessors do
+                    processReduction reduceNt finalRsmState lrStatePre gssIdxPre vPre v depth
 
         let collectActiveGss () : Set<int> * Set<int * int> =
             GraphHelpers.collectActiveGssForDict gss.Edges
@@ -371,47 +371,47 @@ module Rnglr =
 
         for v in 0 .. vertexCount - 1 do
             let processed = HashSet<RnglrDescriptor>()
+            let handledBefore = handledAccum
 
             while pending.[v].Count > 0 do
                 let desc = pending.[v].Dequeue()
 
                 if processed.Add(desc) then
-                    let handledBefore = handledAccum
                     handledAccum <- Set.add desc handledAccum
 
                     processNode desc.LrState v 0
 
-                    let activeVerts, activeEdges = collectActiveGss ()
+            let activeVerts, activeEdges = collectActiveGss ()
 
-                    let stepChanged = changedCells.Value
-                    changedCells.Value <- Set.empty<int * int>
+            let stepChanged = changedCells.Value
+            changedCells.Value <- Set.empty<int * int>
 
-                    let attemptedThisStep = handledAccum - handledBefore
+            let attemptedThisStep = handledAccum - handledBefore
 
-                    let edgeSymbols = collectEdgeSymbols activeVerts
+            let edgeSymbols = collectEdgeSymbols activeVerts
 
-                    let capturedShifts = stepShiftTerminals
-                    let capturedReduces = stepReduceNt
-                    let capturedLevel = levelReductions
+            let capturedShifts = stepShiftTerminals
+            let capturedReduces = stepReduceNt
+            let capturedLevel = levelReductions
 
-                    stepShiftTerminals <- Set.empty
-                    stepReduceNt <- Set.empty
+            stepShiftTerminals <- Set.empty
+            stepReduceNt <- Set.empty
 
-                    onStep
-                        (pendingSnapshot ())
-                        activeVerts
-                        activeEdges
-                        edgeSymbols
-                        (Matrix.copy pathIndex.Matrix)
-                        stepChanged
-                        v
-                        (Some desc.LrState)
-                        (Some desc)
-                        handledAccum
-                        attemptedThisStep
-                        capturedShifts
-                        capturedReduces
-                        capturedLevel
+            onStep
+                (pendingSnapshot ())
+                activeVerts
+                activeEdges
+                edgeSymbols
+                (Matrix.copy pathIndex.Matrix)
+                stepChanged
+                v
+                None
+                None
+                handledAccum
+                attemptedThisStep
+                capturedShifts
+                capturedReduces
+                capturedLevel
 
         pathIndex, gss.VertexInfo
 

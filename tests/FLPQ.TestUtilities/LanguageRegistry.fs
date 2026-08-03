@@ -927,22 +927,25 @@ module LanguageRegistry =
 module GenToArbitrary =
 
     type AbString() =
-        static member AbString() : Arbitrary<string> = LanguageRegistry.Dyck1.GenString |> MyArb.fromGen
+        static member AbString() : Arbitrary<string> =
+            LanguageRegistry.Dyck1.GenString |> MyArb.fromGen
 
     type AString() =
-        static member AString() : Arbitrary<string> = LanguageRegistry.APlus.GenString |> MyArb.fromGen
+        static member AString() : Arbitrary<string> =
+            LanguageRegistry.APlus.GenString |> MyArb.fromGen
 
     type ExprString() =
-        static member ExprString() : Arbitrary<string> = LanguageRegistry.ArithExpr.GenString |> MyArb.fromGen
+        static member ExprString() : Arbitrary<string> =
+            LanguageRegistry.ArithExpr.GenString |> MyArb.fromGen
 
     type AbcdxyString() =
-        static member AbcdxyString() : Arbitrary<string> = LanguageRegistry.TwoTrackDyck.GenString |> MyArb.fromGen
+        static member AbcdxyString() : Arbitrary<string> =
+            LanguageRegistry.TwoTrackDyck.GenString |> MyArb.fromGen
 
     type AbcxdString() =
         static member AbcxdString() : Arbitrary<string> =
             let chars = [ "a"; "b"; "c"; "x"; "d" ]
 
             MyGen.choose (0, 8)
-            |> MyGen.bind (fun len ->
-                MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
+            |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
             |> MyArb.fromGen

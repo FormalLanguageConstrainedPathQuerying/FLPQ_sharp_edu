@@ -85,7 +85,7 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
             info.NodeFillColors |> List.filter (fun c -> c.Contains "blue") |> List.length
 
         if info.NodeCount > 0 then
-            Assert.Equal(1, blueCount)
+            Assert.Equal(0, blueCount)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]

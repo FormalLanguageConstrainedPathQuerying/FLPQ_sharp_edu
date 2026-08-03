@@ -359,7 +359,12 @@ def main() -> None:
                 if "ERROR running fsharplint" in lint_output:
                     per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log")
                 else:
-                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})")
+                    summary_match = re.search(r"Summary:\s*(\d+)\s+warnings?", lint_output)
+                    warn_count = int(summary_match.group(1)) if summary_match else 0
+                    if warn_count > 0:
+                        per_project_lint.append(f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED")
+                    else:
+                        per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})")
             else:
                 warning_match = re.search(r"(\d+) warnings?", lint_output)
                 warn_count = int(warning_match.group(1)) if warning_match else 0

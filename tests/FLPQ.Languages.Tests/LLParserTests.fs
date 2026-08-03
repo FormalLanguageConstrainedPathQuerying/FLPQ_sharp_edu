@@ -8,7 +8,9 @@ open FLPQ.LinearAlgebra
 
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+let private g (lang: Language) (name: string) =
+    lang.Grammars |> List.find (fun g -> g.Name = name)
+
 let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
 
 let private dyck1 = LanguageRegistry.Dyck1
@@ -239,7 +241,6 @@ module CrossParserPropertyTests =
 
 module LLHigherKTests =
 
-    let private ll2Grammar = ll2Grammar
     let private ll2Lang = LanguageRegistry.LL2Test
 
     let private ll2Accept = ll2Lang.AcceptStrings |> List.map (String.concat " ")
@@ -282,7 +283,6 @@ module LLHigherKTests =
                 Assert.Equal(s, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
-    let private ll3Grammar = ll3Grammar
     let private ll3Lang = LanguageRegistry.LL3Test
 
     [<Fact>]

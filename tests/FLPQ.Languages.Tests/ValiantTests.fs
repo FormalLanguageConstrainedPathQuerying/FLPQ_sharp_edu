@@ -7,7 +7,8 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) = lang.Grammars |> List.find (fun g -> g.Name = name)
+let private g (lang: Language) (name: string) =
+    lang.Grammars |> List.find (fun g -> g.Name = name)
 
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
