@@ -877,7 +877,7 @@
      ```
       4.   Add summary compilation test.
 
- 224. Implement basic SPPF (Rekers-style) type. Current Sppf.fs implements the RSM-based SPPF with 5 node types. The basic SPPF is simpler — built directly from BNF productions with numbered rules, only 2 structural node types (symbol + production), matching the classical derivation tree structure.
+ 224. [done] Implement basic SPPF (Rekers-style) type. Current Sppf.fs implements the RSM-based SPPF with 5 node types. The basic SPPF is simpler — built directly from BNF productions with numbered rules, only 2 structural node types (symbol + production), matching the classical derivation tree structure.
        1.   Types in new file `src/FLPQ.Languages/BasicSppf.fs`:
             - `BasicSppfNodeInfo<'t,'nt>`: DU = `Terminal of Terminal<'t> * leftPos: int * rightPos: int` | `Nonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int` | `Epsilon of pos: int` | `Production of ruleIndex: int * leftPos: int * rightPos: int`.
             - `BasicSppfEdgeLabel`: DU = `Derives` (nonterminal → production) | `ChildOf of positionInRhs: int` (production → child node).
@@ -901,3 +901,29 @@
        6.   Update golden data for step 0 (unchanged) and regenerate any other golden files. Update tests that check step-specific content.
        7.   Update `docs/developer/rnglr.md`: fix algorithm description (currently says "shift then reduce" but implementation did opposite), update design decisions.
        8.   All existing RNGLR tests must pass.
+226.  [done] Extend CYK with data to construct BasicSPPF: each cell for each nonterminal stores all k that allows to easely reconstruct two childrenb cells, and respective production number.
+227.  [done] Add indexed operations for Matrix: elementwize operations has access to element indices.
+      1.    map2i --- as F# map2i or mapi.
+      2.    mxmi --- op_mult and op_add has access to element indices
+      3.    Add tests on indexed operations. Both facts and property.
+228.  [done] extend Valiant and its modifiacton to compute information fo BasicSPPF. 
+      1.    each cell for each nonterminal stores all k that allows to easely reconstruct two childrenb cells, and respective production number.
+      2.    Use indexed operations for it.
+      3.    Grammar may be captured using closure.
+229.  [done] Add table to BasicSPPF function.
+      1.    CYK and Valiand (+modified) build similar tables
+      2.    Input is a table, output is a BasicSPPF
+230.  [done] Add Tests on new Valiant and CYK. Extend existing tests to check complex invariants. Create common check fucntion. Be sure that all respective tests are property tetst.
+      1.    For same grammar and input CYK, Valiant, Modified Valiant built exactly the same tabales
+      2.    SPPF extracted from Tables for same grammar and input CYK, Valiant, Modified Valiant, exactly the same
+      3.    Leaves of tree extracted from SPPF is a input string.
+      4.    Implement function that treats BasicSPPF as a directed graph and computes number strongly conneted components (SCC). 
+      5.    For same grammar and input CYK, Valiant, Modified Valiant built SPPF with identical numer of SCC.
+231.  [done] Improve CYK and Valiant visualization. 
+      1.    Improve cell content rendering: sell is a set of tuples of form <nonterminal>,<k>,<prod_id>
+      2.    Add final SPPF visualization. Include SPPF to summary.
+232.  Add one more property check for SPPF checking fotr GLL and RNGLR
+      1.    Treat SPPF as directed graph, implement algorithm to computew strongly connected components (SCC). Can algo for BasicSPPF be reused or generalized?
+      2.    Add invariant: for same grammar and input SPPF from GLL and from RNGLR has same number of SCC.
+      3.    Add invariant: for same grammar and input SPPF from GLL and from CYK has same number of SCC.
+      4.    Add invariant: for same grammar and input SPPF from GYK and from RNGLR has same number of SCC.
