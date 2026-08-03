@@ -669,3 +669,15 @@ module ValiantSppfTests =
             Valiant.parseModifiedWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a" ]
 
         Assert.False(accepted)
+
+    [<Fact>]
+    let ``fromParsingTable SPPF tree leaves match input`` () =
+        let input = [ Terminal "a"; Terminal "b" ]
+        let table = Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 input
+
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar1
+        let sppf = BasicSppf.fromParsingTable cnf table
+
+        let tree = BasicSppf.extractDerivationTree sppf
+        let leaves = DerivationTree.leaves tree
+        Assert.Equal<string>([ "a"; "b" ], leaves)

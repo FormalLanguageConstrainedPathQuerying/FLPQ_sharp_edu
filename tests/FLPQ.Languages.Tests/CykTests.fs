@@ -4,6 +4,7 @@ open Xunit
 open FsCheck
 open FsCheck.Xunit
 open FSharpPlus.Data
+open FLPQ.GraphAnalysis
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
@@ -288,3 +289,29 @@ module CykSppfTests =
             Cyk.parseWithSppfTable Grammar.freshStringNonterminal (LanguageRegistry.EpsilonOnly.Grammars[0].Grammar) []
 
         Assert.True(acceptedEps)
+
+    [<Fact>]
+    let ``fromParsingTable builds SPPF with correct root`` () =
+        let table =
+            Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]
+
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar1
+        let sppf = BasicSppf.fromParsingTable cnf table
+
+        let rootInfo = Graph.getVertex sppf.RootIndex sppf.Graph
+
+        match rootInfo with
+        | BasicSppf.BasicSppfNodeInfo.Nonterminal(nt, 0, 2) -> Assert.Equal(cnf.Start, nt)
+        | _ -> Assert.True(false, "Root should be Nonterminal(start, 0, 2)")
+
+    [<Fact>]
+    let ``fromParsingTable SPPF tree leaves match input`` () =
+        let input = [ Terminal "a"; Terminal "b" ]
+        let table = Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 input
+
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar1
+        let sppf = BasicSppf.fromParsingTable cnf table
+
+        let tree = BasicSppf.extractDerivationTree sppf
+        let leaves = DerivationTree.leaves tree
+        Assert.Equal<string>([ "a"; "b" ], leaves)

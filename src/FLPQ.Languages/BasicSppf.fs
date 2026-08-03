@@ -6,6 +6,7 @@ namespace FLPQ.Languages
 /// matching the classical derivation tree structure.
 module BasicSppf =
 
+    open System.Collections.Generic
     open FLPQ.GraphAnalysis
     open FLPQ.LinearAlgebra
 
@@ -52,6 +53,70 @@ module BasicSppf =
 
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndex = rootIdx }
+
+    /// Build a BasicSPPF from an enriched parsing table and CNF grammar.
+    /// Each cell entry (nt, k, prodIdx) creates Nonterminal and Production nodes.
+    /// Terminal rules produce Terminal children; binary rules link to child Nonterminals.
+    /// Returns root Nonterminal(start, 0, n) for input of length n.
+    let fromParsingTable (cnf: Grammar<'t, 'nt>) (table: SppfParsingTable<'nt>) : BasicSPPF<'t, 'nt> =
+        let n = Matrix.rows table
+        let nodeMap = Dictionary<BasicSppfNodeInfo<'t, 'nt>, int>()
+        let vertices = ResizeArray<BasicSppfNodeInfo<'t, 'nt>>()
+        let edges = ResizeArray<int * BasicSppfEdgeLabel * int>()
+
+        let getOrCreate (info: BasicSppfNodeInfo<'t, 'nt>) : int =
+            match nodeMap.TryGetValue(info) with
+            | true, idx -> idx
+            | false, _ ->
+                let idx = vertices.Count
+                nodeMap.[info] <- idx
+                vertices.Add(info)
+                idx
+
+        let childNtInCell (row: int) (col: int) (targetNt: Nonterminal<'nt>) : Nonterminal<'nt> option =
+            if row <= col && row >= 0 && col < n then
+                table.[row, col]
+                |> Set.filter (fun (nt, _, _) -> nt = targetNt)
+                |> Set.toList
+                |> List.tryHead
+                |> Option.map (fun (nt, _, _) -> nt)
+            else
+                None
+
+        for i in 0 .. n - 1 do
+            for j in i .. n - 1 do
+                let entries = table.[i, j]
+
+                for (nt, k, prodIdx) in entries do
+                    let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, i, j + 1))
+                    let prodNode = getOrCreate (BasicSppfNodeInfo.Production(prodIdx, i, j + 1))
+                    edges.Add(ntNode, BasicSppfEdgeLabel.Derives, prodNode)
+
+                    let rule = cnf.Rules.[prodIdx]
+
+                    match Rhs.toNonEpsilonList rule.Rhs with
+                    | [ Symbol.T(Terminal t) ] ->
+                        let termNode = getOrCreate (BasicSppfNodeInfo.Terminal(Terminal t, k, k + 1))
+                        edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 0, termNode)
+                    | [ Symbol.N leftNt; Symbol.N rightNt ] ->
+                        match childNtInCell i k leftNt with
+                        | Some _ ->
+                            let leftNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, k + 1))
+
+                            edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 0, leftNode)
+                        | None -> ()
+
+                        match childNtInCell (k + 1) j rightNt with
+                        | Some _ ->
+                            let rightNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(rightNt, k + 1, j + 1))
+
+                            edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 1, rightNode)
+                        | None -> ()
+                    | _ -> ()
+
+        let rootIdx = getOrCreate (BasicSppfNodeInfo.Nonterminal(cnf.Start, 0, n))
+
+        fromEdges (List.ofSeq vertices) (List.ofSeq edges) rootIdx
 
     /// Get child indices of a production node (via ChildOf edges).
     let private getChildIndices
