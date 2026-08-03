@@ -136,3 +136,105 @@ let ``diagonal matrix with all indices is identity`` () =
     Assert.Equal(1, d.[1, 1])
     Assert.Equal(1, d.[2, 2])
     Assert.Equal(0, d.[0, 1])
+
+[<Fact>]
+let ``map2i passes correct row and col indices`` () =
+    let a = Matrix.create 2 3 (fun i j -> i * 10 + j)
+    let b = Matrix.create 2 3 (fun i j -> i * 100 + j * 10)
+
+    let m = Matrix.map2i (fun i j aVal bVal -> (i, j, aVal, bVal)) a b
+
+    Assert.Equal(2, Matrix.rows m)
+    Assert.Equal(3, Matrix.cols m)
+    Assert.Equal((0, 0, 0, 0), m.[0, 0])
+    Assert.Equal((0, 1, 1, 10), m.[0, 1])
+    Assert.Equal((0, 2, 2, 20), m.[0, 2])
+    Assert.Equal((1, 0, 10, 100), m.[1, 0])
+    Assert.Equal((1, 1, 11, 110), m.[1, 1])
+    Assert.Equal((1, 2, 12, 120), m.[1, 2])
+
+[<Fact>]
+let ``map2i throws when dimensions differ`` () =
+    let a = Matrix.init 2 3 1
+    let b = Matrix.init 3 2 2
+    Assert.Throws<System.ArgumentException>(fun () -> Matrix.map2i (fun _ _ x y -> x + y) a b |> ignore)
+
+[<Fact>]
+let ``map2i with addition produces same result as map2`` () =
+    let a = Matrix.create 3 2 (fun i j -> i * 10 + j)
+    let b = Matrix.create 3 2 (fun i j -> i * 100 + j)
+
+    let resultI = Matrix.map2i (fun _ _ x y -> x + y) a b
+    let result = Matrix.map2 (+) a b
+
+    for i in 0..2 do
+        for j in 0..1 do
+            Assert.Equal(result.[i, j], resultI.[i, j])
+
+[<Fact>]
+let ``mxmi computes standard integer matrix multiplication`` () =
+    let a = Matrix.create 2 3 (fun i j -> i + j)
+    let b = Matrix.create 3 2 (fun i j -> i * 10 + j)
+
+    let result =
+        Matrix.mxmi (fun _ _ acc x -> acc + x) (fun _ _ _ left right -> left * right) 0 a b
+
+    Assert.Equal(2, Matrix.rows result)
+    Assert.Equal(2, Matrix.cols result)
+    Assert.Equal(0 * 0 + 1 * 10 + 2 * 20, result.[0, 0])
+    Assert.Equal(0 * 1 + 1 * 11 + 2 * 21, result.[0, 1])
+    Assert.Equal(1 * 0 + 2 * 10 + 3 * 20, result.[1, 0])
+    Assert.Equal(1 * 1 + 2 * 11 + 3 * 21, result.[1, 1])
+
+[<Fact>]
+let ``mxmi passes correct indices to op_mult and op_add`` () =
+    let a = Matrix.create 2 3 (fun i j -> i + j)
+    let b = Matrix.create 3 2 (fun i j -> i * 10 + j)
+
+    let multCalls = ResizeArray<int * int * int * int * int>()
+    let addCalls = ResizeArray<int * int * int * int>()
+
+    let result =
+        Matrix.mxmi
+            (fun i j acc x ->
+                addCalls.Add(i, j, acc, x)
+                acc + x)
+            (fun i k j left right ->
+                multCalls.Add(i, k, j, left, right)
+                left * right)
+            0
+            a
+            b
+
+    Assert.Equal(12, multCalls.Count)
+    Assert.Equal(12, addCalls.Count)
+
+    let firstMult = multCalls.[0]
+    Assert.Equal(0, let i, _, _, _, _ = firstMult in i)
+    Assert.Equal(0, let _, k, _, _, _ = firstMult in k)
+    Assert.Equal(0, let _, _, j, _, _ = firstMult in j)
+
+    let lastMult = multCalls.[11]
+    Assert.Equal(1, let i, _, _, _, _ = lastMult in i)
+    Assert.Equal(2, let _, k, _, _, _ = lastMult in k)
+    Assert.Equal(1, let _, _, j, _, _ = lastMult in j)
+
+[<Fact>]
+let ``mxmi throws when inner dimensions do not match`` () =
+    let a = Matrix.init 2 3 0
+    let b = Matrix.init 4 2 0
+
+    Assert.Throws<System.ArgumentException>(fun () ->
+        Matrix.mxmi (fun _ _ acc x -> acc + x) (fun _ _ _ x y -> x * y) 0 a b |> ignore)
+
+[<Fact>]
+let ``mxmi with zero matrices produces zero result`` () =
+    let a = Matrix.init 3 3 0
+    let b = Matrix.init 3 3 0
+
+    let result =
+        Matrix.mxmi (fun _ _ acc x -> acc + x) (fun _ _ _ left right -> left * right) 0 a b
+
+    for i in 0..2 do
+        for j in 0..2 do
+            Assert.Equal(0, result.[i, j])

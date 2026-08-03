@@ -101,6 +101,48 @@ module Matrix =
 
             acc)
 
+    /// Applies a function element-wise to two matrices, providing row and column indices.
+    /// Throws ArgumentException if dimensions differ.
+    let map2i (f: int -> int -> 'a -> 'b -> 'c) (a: Matrix<'a>) (b: Matrix<'b>) : Matrix<'c> =
+        if a.Rows <> b.Rows || a.Cols <> b.Cols then
+            invalidArg (nameof b) $"Matrix dimensions must match: ({a.Rows}x{a.Cols}) vs ({b.Rows}x{b.Cols})"
+
+        let data = Array2D.init a.Rows a.Cols (fun i j -> f i j a.[i, j] b.[i, j])
+
+        { Rows = a.Rows
+          Cols = a.Cols
+          Data = data }
+
+    /// Indexed matrix multiplication: C = A × B.
+    /// op_mult i k j leftVal rightVal: combines A[i,k] and B[k,j] with indices.
+    /// op_add i j acc newVal: folds results into C[i,j].
+    /// zero: initial value for each cell's fold.
+    let mxmi
+        (op_add: int -> int -> 's -> 's -> 's)
+        (op_mult: int -> int -> int -> 'a -> 'b -> 's)
+        (zero: 's)
+        (a: Matrix<'a>)
+        (b: Matrix<'b>)
+        : Matrix<'s> =
+        let inner = cols a
+
+        if inner <> rows b then
+            invalidArg (nameof b) $"Matrix inner dimensions must match: ({rows a}x{cols a}) × ({rows b}x{cols b})"
+
+        let rA = rows a
+        let cB = cols b
+
+        create rA cB (fun i j ->
+            let mutable acc = zero
+
+            for k in 0 .. inner - 1 do
+                let leftVal = a.[i, k]
+                let rightVal = b.[k, j]
+                let product = op_mult i k j leftVal rightVal
+                acc <- op_add i j acc product
+
+            acc)
+
     /// Labels for cell highlighting in algorithm visualization.
     type HighlightLabel = | CurrentCell
 

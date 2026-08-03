@@ -60,6 +60,27 @@ val fold: folder:('acc -> 'a -> 'acc) -> state:'acc -> m:Matrix<'a> -> 'acc
 val transpose: Matrix<'a> -> Matrix<'a>
 ```
 
+### Indexed Operations
+```fsharp
+val map2i: f:(int -> int -> 'a -> 'b -> 'c) -> a:Matrix<'a> -> b:Matrix<'b> -> Matrix<'c>
+val mxmi:
+    op_add:(int -> int -> 's -> 's -> 's) ->
+    op_mult:(int -> int -> int -> 'a -> 'b -> 's) ->
+    zero:'s ->
+    a:Matrix<'a> ->
+    b:Matrix<'b> ->
+    Matrix<'s>
+```
+
+`map2i` is like `map2` but passes row and column indices to `f`: `f i j a[i,j] b[i,j]`.
+
+`mxmi` computes indexed matrix multiplication `C = A × B`. For each cell `C[i,j]`:
+- Iterates over inner dimension `k`
+- Calls `op_mult i k j a[i,k] b[k,j]` to produce a term
+- Folds terms with `op_add i j acc term` starting from `zero`
+
+Precondition: `a.cols = b.rows`. Throws `ArgumentException` on dimension mismatch.
+
 ## TeX Printing
 
 ### `toTeX`
