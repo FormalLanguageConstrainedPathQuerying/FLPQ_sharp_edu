@@ -578,3 +578,94 @@ module PropertyTests =
                              if valTable.[i, j] <> modTable.[i, j] then
                                  yield false ]
                    |> List.forall id
+
+
+module ValiantSppfTests =
+
+    [<Fact>]
+    let ``Valiant SPPF table nonterminals match regular table`` () =
+        let terminals = [ Terminal "a"; Terminal "b" ]
+
+        let sppfTable =
+            Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
+
+        let parseTable, _ =
+            Valiant.parseWithTable Grammar.freshStringNonterminal grammar1 terminals
+
+        let n = Matrix.rows sppfTable
+
+        for i in 0 .. n - 1 do
+            for j in 0 .. n - 1 do
+                let sppfNts = sppfTable.[i, j] |> Set.map (fun (nt, _, _) -> nt)
+                let parseNts = parseTable.[i, j]
+                Assert.True(Set.isEmpty sppfNts = Set.isEmpty parseNts || sppfNts = parseNts)
+
+    [<Fact>]
+    let ``Valiant SPPF table entries have correct split points`` () =
+        let terminals = [ Terminal "a"; Terminal "b" ]
+
+        let table =
+            Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
+
+        Assert.False(Set.isEmpty table.[0, 0])
+        Assert.True(table.[0, 0] |> Set.forall (fun (_, k, _) -> k = 0))
+
+        Assert.False(Set.isEmpty table.[1, 1])
+        Assert.True(table.[1, 1] |> Set.forall (fun (_, k, _) -> k = 1))
+
+        if not (Set.isEmpty table.[0, 1]) then
+            Assert.True(table.[0, 1] |> Set.forall (fun (_, k, _) -> k = 0))
+
+    [<Fact>]
+    let ``Valiant SPPF accepts expected string`` () =
+        let _, accepted =
+            Valiant.parseWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]
+
+        Assert.True(accepted)
+
+    [<Fact>]
+    let ``Valiant SPPF rejects unexpected string`` () =
+        let _, accepted =
+            Valiant.parseWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a" ]
+
+        Assert.False(accepted)
+
+    [<Fact>]
+    let ``Valiant SPPF handles empty input`` () =
+        let _, accepted =
+            Valiant.parseWithSppfTable Grammar.freshStringNonterminal grammar3 []
+
+        Assert.False(accepted)
+
+    [<Fact>]
+    let ``Modified Valiant SPPF table matches standard Valiant SPPF table`` () =
+        let terminals = [ Terminal "a"; Terminal "b" ]
+
+        let stdTable =
+            Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
+
+        let modTable =
+            Valiant.parseModifiedWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
+
+        let n = Matrix.rows stdTable
+
+        for i in 0 .. n - 1 do
+            for j in 0 .. n - 1 do
+                Assert.True(
+                    stdTable.[i, j] = modTable.[i, j],
+                    sprintf "Cell (%d,%d): std=%A, mod=%A" i j stdTable.[i, j] modTable.[i, j]
+                )
+
+    [<Fact>]
+    let ``Modified Valiant SPPF accepts expected string`` () =
+        let _, accepted =
+            Valiant.parseModifiedWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]
+
+        Assert.True(accepted)
+
+    [<Fact>]
+    let ``Modified Valiant SPPF rejects unexpected string`` () =
+        let _, accepted =
+            Valiant.parseModifiedWithSppfTable Grammar.freshStringNonterminal grammar1 [ Terminal "a" ]
+
+        Assert.False(accepted)

@@ -116,7 +116,7 @@ module Valiant =
                     let existing = target.[ti, tj]
                     target.[ti, tj] <- Set.union existing toAdd
 
-    let private snapshot (table: Matrix<Set<Nonterminal<'nt>>>) (n: int) : ParsingTable<'nt> =
+    let private snapshot (table: Matrix<'a>) (n: int) : Matrix<'a> =
         Matrix.create n n (fun ri rj -> table.[ri, rj + 1])
 
     let private copyFullTable (table: Matrix<Set<Nonterminal<'nt>>>) (tableSize: int) : ParsingTable<'nt> =
@@ -489,3 +489,305 @@ module Valiant =
 
     let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
         parseModifiedWithTable freshNonterminal g terminals |> snd
+
+    let private terminalRulesFromGrammarSppf (cnf: Grammar<'t, 'nt>) : Map<'t, (Nonterminal<'nt> * int) list> =
+        cnf.Rules
+        |> List.indexed
+        |> List.choose (fun (idx, r) ->
+            match Rhs.toNonEpsilonList r.Rhs with
+            | [ Symbol.T(Terminal t) ] -> Some(t, (r.Lhs, idx))
+            | _ -> None)
+        |> List.groupBy fst
+        |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
+        |> Map.ofList
+
+    let private binaryRulesFromGrammarSppf (cnf: Grammar<'t, 'nt>) : (Nonterminal<'nt> * BinaryPair<'nt> * int) list =
+        cnf.Rules
+        |> List.indexed
+        |> List.choose (fun (idx, r) ->
+            match Rhs.toNonEpsilonList r.Rhs with
+            | [ Symbol.N left; Symbol.N right ] -> Some(r.Lhs, { Left = left; Right = right }, idx)
+            | _ -> None)
+
+    type private InitDataSppf<'t, 'nt when 't: comparison and 'nt: comparison> =
+        { Table: SppfParsingTable<'nt>
+          TokensArr: 't[]
+          TableSize: int
+          N: int
+          BinaryRules: (Nonterminal<'nt> * BinaryPair<'nt> * int) list
+          TerminalRules: Map<'t, (Nonterminal<'nt> * int) list> }
+
+    let private initValiantSppf (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitDataSppf<'t, 'nt> =
+        let n = tokensArr.Length
+        let paddedN = nextPowerOfTwo (n + 1) - 1
+        let tableSize = paddedN + 1
+
+        let terminalRules = terminalRulesFromGrammarSppf cnf
+        let binaryRules = binaryRulesFromGrammarSppf cnf
+
+        let table = Matrix.init tableSize tableSize Set.empty
+
+        for i in 0 .. tokensArr.Length - 1 do
+            match Map.tryFind tokensArr.[i] terminalRules with
+            | Some pairs -> table.[i, i + 1] <- pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList
+            | None -> ()
+
+        { Table = table
+          TokensArr = tokensArr
+          TableSize = tableSize
+          N = n
+          BinaryRules = binaryRules
+          TerminalRules = terminalRules }
+
+    let private mxmSetSppf
+        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt> * int) list)
+        (a: Matrix<Set<SppfParsingEntry<'nt>>>)
+        (b: Matrix<Set<SppfParsingEntry<'nt>>>)
+        : Matrix<Set<SppfParsingEntry<'nt>>> =
+        Matrix.mxmi
+            (fun _ _ acc newSet -> Set.union acc newSet)
+            (fun i k j leftSet rightSet ->
+                if Set.isEmpty leftSet || Set.isEmpty rightSet then
+                    Set.empty
+                else
+                    binaryRules
+                    |> List.choose (fun (lhs, pair, prodIdx) ->
+                        let hasLeft = leftSet |> Set.exists (fun (nt, _, _) -> nt = pair.Left)
+
+                        let hasRight = rightSet |> Set.exists (fun (nt, _, _) -> nt = pair.Right)
+
+                        if hasLeft && hasRight then Some(lhs, k, prodIdx) else None)
+                    |> Set.ofList)
+            Set.empty
+            a
+            b
+
+    let private writeSliceUnionSppf
+        (target: SppfParsingTable<'nt>)
+        (m: Submatrix)
+        (slice: Matrix<Set<SppfParsingEntry<'nt>>>)
+        : unit =
+        for i in 0 .. m.Size - 1 do
+            for j in 0 .. m.Size - 1 do
+                let toAdd = slice.[i, j]
+
+                if not (Set.isEmpty toAdd) then
+                    let ti = m.Row - m.Size + 1 + i
+                    let tj = m.Col + j
+                    let existing = target.[ti, tj]
+                    target.[ti, tj] <- Set.union existing toAdd
+
+    let private doMultiplicationsSppf
+        (init: InitDataSppf<'t, 'nt>)
+        (table: SppfParsingTable<'nt>)
+        (tasks: (Submatrix * Submatrix * Submatrix) list)
+        : unit =
+        if List.isEmpty init.BinaryRules then
+            ()
+        else
+            for (mTarget, m1, m2) in tasks do
+                let leftSlice = extractSlice table m1
+                let rightSlice = extractSlice table m2
+
+                let product = mxmSetSppf init.BinaryRules leftSlice rightSlice
+                writeSliceUnionSppf table mTarget product
+
+    let rec private completeSppf (init: InitDataSppf<'t, 'nt>) (table: SppfParsingTable<'nt>) (m: Submatrix) : unit =
+        if m.Size = 1 then
+            let i = m.Row - m.Size + 1
+            let j = m.Col
+
+            if i + 1 = j && i < init.TokensArr.Length then
+                let ch = init.TokensArr.[i]
+
+                let existing = table.[i, j]
+
+                match Map.tryFind ch init.TerminalRules with
+                | Some pairs ->
+                    table.[i, j] <-
+                        Set.union existing (pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList)
+                | None -> ()
+
+            ()
+        else
+            let b = bottomSubmatrix m
+            let l = leftSubmatrix m
+            let r = rightSubmatrix m
+            let te = topSubmatrix m
+
+            completeSppf init table b
+            doMultiplicationsSppf init table [ (l, leftGrounded l, b) ]
+            completeSppf init table l
+            doMultiplicationsSppf init table [ (r, b, rightGrounded r) ]
+            completeSppf init table r
+            doMultiplicationsSppf init table [ (te, leftGrounded te, r) ]
+            doMultiplicationsSppf init table [ (te, l, rightGrounded te) ]
+            completeSppf init table te
+
+    and private computeSppf (init: InitDataSppf<'t, 'nt>) (table: SppfParsingTable<'nt>) (i: int) (j: int) : unit =
+        if j - i >= 4 then
+            let mid = (i + j) / 2
+            computeSppf init table i mid
+            computeSppf init table mid j
+
+        let a = (i + j) / 2 - 1
+        let b = (i + j) / 2
+        let size = (j - i) / 2
+
+        let m = { Row = a; Col = b; Size = size }
+        completeSppf init table m
+
+    let rec private completeLayerModifiedSppf
+        (init: InitDataSppf<'t, 'nt>)
+        (table: SppfParsingTable<'nt>)
+        (mList: Submatrix list)
+        : unit =
+        match mList with
+        | [] -> ()
+        | first :: _ ->
+            if first.Size = 1 then
+                for m in mList do
+                    let i = m.Row - m.Size + 1
+                    let j = m.Col
+
+                    if i + 1 = j && i < init.TokensArr.Length then
+                        let ch = init.TokensArr.[i]
+
+                        let existing = table.[i, j]
+
+                        match Map.tryFind ch init.TerminalRules with
+                        | Some pairs ->
+                            table.[i, j] <-
+                                Set.union
+                                    existing
+                                    (pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList)
+                        | None -> ()
+            else
+                let bottomLayer = mList |> List.map bottomSubmatrix
+                completeLayerModifiedSppf init table bottomLayer
+                completeVLayerModifiedSppf init table mList
+
+    and private completeVLayerModifiedSppf
+        (init: InitDataSppf<'t, 'nt>)
+        (table: SppfParsingTable<'nt>)
+        (mList: Submatrix list)
+        : unit =
+        let leftSubLayer = mList |> List.map leftSubmatrix
+        let rightSubLayer = mList |> List.map rightSubmatrix
+        let topSubLayer = mList |> List.map topSubmatrix
+
+        let firstTasks =
+            [ for m in leftSubLayer do
+                  yield (m, leftGrounded m, rightNeighbor m)
+              for m in rightSubLayer do
+                  yield (m, leftNeighbor m, rightGrounded m) ]
+
+        doMultiplicationsSppf init table firstTasks
+        completeLayerModifiedSppf init table (leftSubLayer @ rightSubLayer)
+
+        let secondTasks =
+            [ for m in topSubLayer do
+                  yield (m, leftGrounded m, rightNeighbor m) ]
+
+        doMultiplicationsSppf init table secondTasks
+
+        let thirdTasks =
+            [ for m in topSubLayer do
+                  yield (m, leftNeighbor m, rightGrounded m) ]
+
+        doMultiplicationsSppf init table thirdTasks
+        completeLayerModifiedSppf init table topSubLayer
+
+    /// Run Valiant and return an enriched parsing table with SPPF construction data.
+    let parseWithSppfInfo
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : SppfParsingTable<'nt> =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
+
+        if tokensArr.Length = 0 then
+            Matrix.init 0 0 Set.empty
+        else
+            let init = initValiantSppf cnf tokensArr
+
+            let table =
+                Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
+
+            computeSppf init table 0 init.TableSize
+            snapshot table init.N
+
+    /// Run Valiant and return the enriched parsing table with acceptance status.
+    let parseWithSppfTable
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : SppfParsingTable<'nt> * bool =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
+
+        if tokensArr.Length = 0 then
+            let epsAccepted = Grammar.isEpsilonAccepted cnf
+            let emptyResult = Matrix.init 0 0 Set.empty
+            (emptyResult, epsAccepted)
+        else
+            let init = initValiantSppf cnf tokensArr
+
+            let table =
+                Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
+
+            computeSppf init table 0 init.TableSize
+            let finalTable = snapshot table init.N
+
+            let accepted =
+                Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
+
+            (finalTable, accepted)
+
+    /// Run modified Valiant and return an enriched parsing table with SPPF construction data.
+    let parseModifiedWithSppfInfo
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : SppfParsingTable<'nt> =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
+
+        if tokensArr.Length = 0 then
+            Matrix.init 0 0 Set.empty
+        else
+            let init = initValiantSppf cnf tokensArr
+            let tableSize = init.TableSize
+            let table = Matrix.create tableSize tableSize (fun i j -> init.Table.[i, j])
+            let n = init.N
+
+            let maxLayer = int (System.Math.Log(float tableSize, 2.0))
+
+            for layer in 1..maxLayer do
+                let layerSubmatrices = constructLayer layer tableSize
+
+                if not (List.isEmpty layerSubmatrices) then
+                    completeLayerModifiedSppf init table layerSubmatrices
+
+            snapshot table n
+
+    /// Run modified Valiant and return the enriched parsing table with acceptance status.
+    let parseModifiedWithSppfTable
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : SppfParsingTable<'nt> * bool =
+        let cnf = Grammar.toCnf freshNonterminal g
+
+        if terminals.IsEmpty then
+            let epsAccepted = Grammar.isEpsilonAccepted cnf
+            let emptyResult = Matrix.init 0 0 Set.empty
+            (emptyResult, epsAccepted)
+        else
+            let finalTable = parseModifiedWithSppfInfo freshNonterminal g terminals
+
+            let accepted =
+                Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
+
+            (finalTable, accepted)

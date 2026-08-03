@@ -166,6 +166,30 @@ val parseModifiedWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> 
 ```
 Run the modified Valiant algorithm with step-by-step tracing. Each step captures the table state before/after processing one V-layer.
 
+### `parseWithSppfInfo`
+```fsharp
+val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
+```
+Runs standard Valiant and returns an enriched parsing table with `(nonterminal, splitPoint, productionIndex)` entries for BasicSPPF construction. Uses `mxmi` for indexed matrix multiplication, capturing the split point `k` in each entry.
+
+### `parseWithSppfTable`
+```fsharp
+val parseWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
+```
+Returns both the enriched SPPF table and acceptance status.
+
+### `parseModifiedWithSppfInfo`
+```fsharp
+val parseModifiedWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
+```
+Runs layer-based modified Valiant and returns an enriched SPPF table.
+
+### `parseModifiedWithSppfTable`
+```fsharp
+val parseModifiedWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
+```
+Returns both the enriched modified SPPF table and acceptance status.
+
 ## Design Decisions
 
 | Decision | Rationale |
@@ -177,6 +201,8 @@ Run the modified Valiant algorithm with step-by-step tracing. Each step captures
 | Padding to next power of 2 | Valiant's precondition: n+1 = 2^k for some k |
 | Recursive `complete` with `and compute` | F# `let rec ... and ...` for mutually recursive functions |
 | V-shaped layers of disjoint submatrices | Enables batched parallel multiplications as described in the book |
+| `mxmi` with closure over binary rules | Indexed multiplication captures split point `k` for SPPF entry construction; grammar captured by closure |
+| Separate SPPF-aware `completeSppf`/`computeSppf` | Different cell type (`SppfParsingTable` vs `ParsingTable`) requires parallel implementations |
 
 ## Book Reference
 
@@ -185,5 +211,6 @@ Section `\label{sec:Valiant}`: Valiant's algorithm reduces context-free parsing 
 ## See Also
 
 - [CYK algorithm](cyk.md) — classic O(n³) CYK, shares `ParsingTable<'nt>` type
+- [SPPF Parsing Table types](sppf-parsing-table.md) — enriched table format for BasicSPPF construction
 - [Grammar module](grammar.md) — CNF transformation
 - [Matrix module](matrix.md) — underlying matrix type and set-based operations
