@@ -77,3 +77,23 @@ let ``RNGLR runs successfully with EBNF grammar`` () =
         ()
 
     Assert.Equal(0, code)
+
+[<Fact>]
+let ``Valiant runs successfully`` () =
+    let code = runAlgorithm "Valiant" exampleGrammar exampleInput
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``LR0 runs successfully`` () =
+    let code = runAlgorithm "LR0" exampleLRGrammar exampleLRInput
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``SLR1 runs successfully`` () =
+    let code = runAlgorithm "SLR1" exampleLRGrammar exampleLRInput
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``CYK runs successfully`` () =
+    let code = runAlgorithm "CYK" exampleGrammar exampleInput
+    Assert.Equal(0, code)

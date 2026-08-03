@@ -60,3 +60,49 @@ let ``LL summary produces merged TeX`` () =
 let ``SLR(1) summary produces merged TeX`` () =
     let outDir = runWithSummary "SLR1"
     assertMergedTexExists outDir "SLR1"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``LR(0) summary produces merged TeX`` () =
+    let outDir = runWithSummary "LR0"
+    assertMergedTexExists outDir "LR0"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``CLR(1) summary produces merged TeX`` () =
+    let outDir = runWithSummary "CLR1"
+    assertMergedTexExists outDir "CLR1"
+
+let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputText: string) : string =
+    let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
+    let inputFile = Path.Combine(tmpDir, "input.txt")
+    let outDir = Path.Combine(tmpDir, "output")
+    Directory.CreateDirectory(tmpDir) |> ignore
+    File.WriteAllText(grammarFile, grammarText)
+    File.WriteAllText(inputFile, inputText)
+
+    let args =
+        [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir; "-s" |]
+
+    let code = Program.runCli args
+    Assert.Equal(0, code)
+    outDir
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``GLL summary produces merged TeX`` () =
+    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    assertMergedTexExists outDir "GLL"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary produces merged TeX`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    assertMergedTexExists outDir "RNGLR"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ValiantModified summary produces merged TeX`` () =
+    let outDir = runWithSummary "ValiantModified"
+    assertMergedTexExists outDir "ValiantModified"
