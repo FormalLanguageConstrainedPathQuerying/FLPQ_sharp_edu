@@ -875,4 +875,29 @@
                                                        & Current GSS node \\
      ? 
      ```
-     4.   Add summary compilation test.
+      4.   Add summary compilation test.
+
+ 224. Implement basic SPPF (Rekers-style) type. Current Sppf.fs implements the RSM-based SPPF with 5 node types. The basic SPPF is simpler — built directly from BNF productions with numbered rules, only 2 structural node types (symbol + production), matching the classical derivation tree structure.
+       1.   Types in new file `src/FLPQ.Languages/BasicSppf.fs`:
+            - `BasicSppfNodeInfo<'t,'nt>`: DU = `Terminal of Terminal<'t> * leftPos: int * rightPos: int` | `Nonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int` | `Epsilon of pos: int` | `Production of ruleIndex: int * leftPos: int * rightPos: int`.
+            - `BasicSppfEdgeLabel`: DU = `Derives` (nonterminal → production) | `ChildOf of positionInRhs: int` (production → child node).
+            - `BasicSPPF<'t,'nt>`: record = `{ Graph: Graph<BasicSppfNodeInfo<'t,'nt>, Option<BasicSppfEdgeLabel>>; RootIndex: int }`.
+       2.   Node semantics (per def:basicSPPF):
+            - Terminal node ($a_{i,i+1}$): leaf, stores matched terminal at position $i$.
+            - Nonterminal node ($X_{i,j}$): internal, one node per unique $(X, i, j)$. May have multiple production children (packing alternatives).
+            - Epsilon node ($\varepsilon_i$): leaf, empty derivation at position $i$.
+            - Production node (rule $k$): internal, stores rule index and span. Parent is single nonterminal node $(X_k)_{i,j}$. Children are terminal/nonterminal/epsilon nodes for each element of RHS $\alpha_k$, covering $[i, j)$ with split points.
+       3.   Tree extraction function: similar to existing lazy trees enumeration for existing SPPF.
+       4.   DOT visualization in `src/FLPQ.Printers/BasicSppfDot.fs`:
+            - Nonterminal nodes: rounded rectangles with label `$X_{i,j}$`.
+            - Terminal/Epsilon nodes: circles with label `$a_{i,i+1}$` / `$\varepsilon_i$`.
+            - Production nodes: ovals with rule number.
+225. [done] Reorganize RNGLR to canonical shift-then-reduce ordering with per-input-position visualization steps.
+       1.   Reorder `processNode` in `Rnglr.fs`: shift first, then reduce. Shift creates terminal GSS edges and descriptors at V+1, then reduce phase cascades through the GSS (which now includes freshly-shifted terminal edges). storedStates from reductions at V are consumed during shifts at V+1 (canonical per-position semantics).
+       2.   Change step capture from per-descriptor to per-input-position: move the `onStep` call from inside the per-descriptor `while` loop to after the while loop completes for each vertex. Step 0 stays initial empty state. Step 1 = after all descriptors at v=0, step 2 = after v=1, etc.
+       3.   Reset `stepShiftTerminals`/`stepReduceNt` per-vertex instead of per-descriptor. `levelReductions` logic stays vertex-aware.
+       4.   Update `CurrentDescriptor`/`CurrentLrState` to `None` for position-level steps (no single descriptor). `AttemptedDescriptors`/`NewDescriptors` reflect all descriptors from the entire vertex.
+       5.   Update visualization: descriptors table shows ALL descriptors at the vertex in "to handle" block; "current" descriptor row removed.
+       6.   Update golden data for step 0 (unchanged) and regenerate any other golden files. Update tests that check step-specific content.
+       7.   Update `docs/developer/rnglr.md`: fix algorithm description (currently says "shift then reduce" but implementation did opposite), update design decisions.
+       8.   All existing RNGLR tests must pass.
