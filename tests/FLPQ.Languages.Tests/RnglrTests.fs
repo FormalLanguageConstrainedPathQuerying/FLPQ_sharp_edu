@@ -47,19 +47,19 @@ module RnglrTreeYield =
     [<Fact>]
     let ``S -> a S b S | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar1Inputs do
-            let desc = String.concat " " input
+            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
             Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[0].Grammar) input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammarSaSb_epsInputs do
-            let desc = String.concat " " input
+            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
             Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[2].Grammar) input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S S | a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar2Inputs do
-            let desc = String.concat " " input
+            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
             Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[1].Grammar) input, $"tree yield: {desc}")
 
     [<Fact>]
@@ -147,7 +147,7 @@ module RnglrPropertyTreeYield =
 
 module SppfDotTests =
 
-    let private buildSppf (grammarText: string) (input: string list) : SPPF<string, string> =
+    let private buildSppf (grammarText: string) (input: Terminal<string> list) : SPPF<string, string> =
         let rsm = RsmBuilder.buildRSMFromText grammarText
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }

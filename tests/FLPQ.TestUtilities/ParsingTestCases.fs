@@ -5,9 +5,9 @@ open FsCheck
 open FLPQ.Languages
 open FLPQ.TestUtilities
 
-type AcceptFn = RSM<string, string> -> string list -> bool
+type AcceptFn = RSM<string, string> -> Terminal<string> list -> bool
 
-type RejectFn = RSM<string, string> -> string list -> bool
+type RejectFn = RSM<string, string> -> Terminal<string> list -> bool
 
 /// A single acceptance test case from the language registry.
 type AcceptanceCase =
@@ -16,7 +16,7 @@ type AcceptanceCase =
       GrammarName: string
       Rsm: RSM<string, string>
       Grammar: Grammar<string, string>
-      Input: string list
+      Input: Terminal<string> list
       ExpectedAccepted: bool }
 
 /// Auto-generated acceptance cases from ALL languages in the registry.
@@ -86,12 +86,18 @@ module GrammarAcceptanceCases =
     let private aplus = LanguageRegistry.APlus
 
     let acceptInputsG1 =
-        aplus.AcceptStrings |> List.map (fun s -> (s, String.concat "" s))
+        aplus.AcceptStrings
+        |> List.map (fun s -> (s, String.concat "" (s |> List.map (fun (Terminal x) -> x))))
 
     let rejectInputsG1 =
         aplus.RejectStrings
         |> List.map (fun s ->
-            let desc = if List.isEmpty s then "empty" else String.concat "" s
+            let desc =
+                if List.isEmpty s then
+                    "empty"
+                else
+                    String.concat "" (s |> List.map (fun (Terminal x) -> x))
+
             (s, desc))
 
     let acceptInputsG2 = acceptInputsG1
@@ -99,11 +105,16 @@ module GrammarAcceptanceCases =
 
     let acceptInputsG3 =
         LanguageRegistry.AStar.AcceptStrings
-        |> List.map (fun s -> (s, if List.isEmpty s then "empty" else String.concat "" s))
+        |> List.map (fun s ->
+            (s,
+             if List.isEmpty s then
+                 "empty"
+             else
+                 String.concat "" (s |> List.map (fun (Terminal x) -> x))))
 
     let rejectInputsG3 =
         LanguageRegistry.AStar.RejectStrings
-        |> List.map (fun s -> (s, String.concat "" s))
+        |> List.map (fun s -> (s, String.concat "" (s |> List.map (fun (Terminal x) -> x))))
 
     let acceptInputsG4 = acceptInputsG1
     let rejectInputsG4 = rejectInputsG1
@@ -144,7 +155,10 @@ module Runners =
 
         let rsm = TestHelpers.buildRegexRsm regexText
         let dfa = TestHelpers.dfaFromRegexRsm rsm
-        let input = TestHelpers.stringToTerminals s |> List.filter filterFn
+
+        let input =
+            TestHelpers.stringToTerminals s |> List.filter (fun (Terminal t) -> filterFn t)
+
         accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
     let runPropertyTreeYieldTest

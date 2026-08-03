@@ -28,7 +28,7 @@ module PathIndexGolden =
         let rsm = TestHelpers.grammarToRsm g
         let freshStart = Nonterminal("S'")
         let ersm = ExtendedRSM.create freshStart rsm
-        let input = [ "a"; "a" ]
+        let input = [ Terminal "a"; Terminal "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex freshStart ersm graph
         TestHelpers.assertPathIndexInvariant "GLL golden" pathIndex None None None
@@ -49,7 +49,7 @@ module PathIndexGolden =
         let rsm = TestHelpers.grammarToRsm g
         let startNt = (RSM.startBlock rsm).Nonterminal
         let freshStart = Nonterminal("S'")
-        let input = [ "a"; "a" ]
+        let input = [ Terminal "a"; Terminal "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let rsmFixed = { rsm with StartBlock = startNt }
         let ersm = ExtendedRSM.create freshStart rsmFixed
@@ -82,7 +82,7 @@ module PathIndexCompilation =
         let rsm = TestHelpers.grammarToRsm g
         let freshStart = Nonterminal("S'")
         let ersm = ExtendedRSM.create freshStart rsm
-        let input = [ "a"; "a" ]
+        let input = [ Terminal "a"; Terminal "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let pathIndex = GLL.buildPathIndex freshStart ersm graph
         TestHelpers.assertPathIndexInvariant "GLL compilation" pathIndex None None None
@@ -104,7 +104,7 @@ module PathIndexCompilation =
         let rsm = TestHelpers.grammarToRsm g
         let startNt = (RSM.startBlock rsm).Nonterminal
         let freshStart = Nonterminal("S'")
-        let input = [ "a"; "a" ]
+        let input = [ Terminal "a"; Terminal "a" ]
         let graph = TestHelpers.terminalsToGraph input
         let rsmFixed = { rsm with StartBlock = startNt }
         let ersm = ExtendedRSM.create freshStart rsmFixed

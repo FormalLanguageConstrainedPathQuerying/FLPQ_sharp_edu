@@ -108,9 +108,11 @@ module TestHelpers =
         let rsm = RsmBuilder.buildRSMFromText (grammarToEbnfText g)
         { rsm with StartBlock = g.Start }
 
-    let stringToTerminals (s: string) : string list = s |> Seq.map string |> Seq.toList
+    let stringToTerminals (s: string) : Terminal<string> list =
+        s |> Seq.map (string >> Terminal) |> Seq.toList
 
-    let terminalsToGraph (terminals: string list) : Graph<int, Option<string>> = GLL.stringToGraph terminals
+    let terminalsToGraph (terminals: Terminal<string> list) : Graph<int, Option<string>> =
+        GLL.stringToGraph (terminals |> List.map (fun (Terminal s) -> s))
 
     let blockOffset (rsm: RSM<'t, 'nt>) (target: Nonterminal<'nt>) : int =
         RSM.blocks rsm
@@ -129,12 +131,15 @@ module TestHelpers =
 
     let dfaFromRegexRsm (rsm: RSM<string, string>) : DFA<RsmSymbol<string, string>, int> = (RSM.startBlock rsm).Dfa
 
-    let dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: string list) : bool =
-        let input' = input |> List.map (Terminal << RsmSymbol.RTerm << Terminal)
+    let dfaAcceptsRegex (dfa: DFA<RsmSymbol<string, string>, int>) (input: Terminal<string> list) : bool =
+        let input' =
+            input
+            |> List.map (fun (Terminal t) -> Terminal << RsmSymbol.RTerm << Terminal <| t)
+
         Dfa.accept dfa input'
 
-    let cykAccepts (g: Grammar<string, string>) (input: string list) : bool =
-        Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal)
+    let cykAccepts (g: Grammar<string, string>) (input: Terminal<string> list) : bool =
+        Cyk.parse Grammar.freshStringNonterminal g input
 
     let nonEpsilon (tree: DerivationTree<string, string>) : bool =
         match tree with
@@ -165,7 +170,7 @@ module TestHelpers =
                 -> PathIndex<string, string>)
         (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
         (rsm: RSM<string, string>)
-        (input: string list)
+        (input: Terminal<string> list)
         : bool =
         let freshStart = Nonterminal("S'")
         let startNt = (RSM.startBlock rsm).Nonterminal
@@ -235,8 +240,9 @@ module TestHelpers =
             match tree with
             | Some t ->
                 let leaves = DerivationTree.leaves t
+                let inputStrs = input |> List.map (fun (Terminal s) -> s)
 
-                if leaves = input then
+                if leaves = inputStrs then
                     true
                 else
                     failwithf "Tree leaves %A <> input %A for RSM" leaves input
@@ -252,7 +258,7 @@ module TestHelpers =
                 -> PathIndex<string, string>)
         (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
         (rsm: RSM<string, string>)
-        (input: string list)
+        (input: Terminal<string> list)
         : bool =
         let freshStart = Nonterminal("S'")
         let startNt = (RSM.startBlock rsm).Nonterminal
@@ -274,9 +280,9 @@ module TestHelpers =
     /// Iterates all grammars of a language against all accept strings.
     /// Returns the list of (grammarName, input) pairs that were incorrectly rejected.
     let collectAcceptFailures
-        (parseFn: Grammar<string, string> -> string list -> bool)
+        (parseFn: Grammar<string, string> -> Terminal<string> list -> bool)
         (lang: Language)
-        : (string * string list) list =
+        : (string * Terminal<string> list) list =
         lang.Grammars
         |> List.filter (fun g -> not g.Properties.IsRsmDerived)
         |> List.collect (fun g ->
@@ -290,9 +296,9 @@ module TestHelpers =
     /// Iterates all grammars of a language against all reject strings.
     /// Returns the list of (grammarName, input) pairs that were incorrectly accepted.
     let collectRejectFailures
-        (parseFn: Grammar<string, string> -> string list -> bool)
+        (parseFn: Grammar<string, string> -> Terminal<string> list -> bool)
         (lang: Language)
-        : (string * string list) list =
+        : (string * Terminal<string> list) list =
         lang.Grammars
         |> List.filter (fun g -> not g.Properties.IsRsmDerived)
         |> List.collect (fun g ->

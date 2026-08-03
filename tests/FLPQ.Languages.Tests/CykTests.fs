@@ -35,9 +35,7 @@ module Grammar1Tests =
         let lang = LanguageRegistry.Dyck1
 
         let failures =
-            TestHelpers.collectAcceptFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
-                lang
+            TestHelpers.collectAcceptFailures (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input) lang
 
         Assert.Empty(failures)
 
@@ -46,9 +44,7 @@ module Grammar1Tests =
         let lang = LanguageRegistry.Dyck1
 
         let failures =
-            TestHelpers.collectRejectFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
-                lang
+            TestHelpers.collectRejectFailures (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input) lang
 
         Assert.Empty(failures)
 
@@ -73,9 +69,7 @@ module Grammar3Tests =
         let lang = LanguageRegistry.APlus
 
         let failures =
-            TestHelpers.collectAcceptFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
-                lang
+            TestHelpers.collectAcceptFailures (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input) lang
 
         Assert.Empty(failures)
 
@@ -84,9 +78,7 @@ module Grammar3Tests =
         let lang = LanguageRegistry.APlus
 
         let failures =
-            TestHelpers.collectRejectFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
-                lang
+            TestHelpers.collectRejectFailures (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input) lang
 
         Assert.Empty(failures)
 
@@ -139,8 +131,8 @@ module FactTests =
 
         for s in LanguageRegistry.AStar.AcceptStrings do
             Assert.True(
-                Cyk.parse Grammar.freshStringNonterminal g (s |> List.map Terminal),
-                $"""{String.concat " " s}"""
+                Cyk.parse Grammar.freshStringNonterminal g s,
+                $"""{String.concat " " (s |> List.map (fun (Terminal x) -> x))}"""
             )
 
 
@@ -152,7 +144,7 @@ module Grammar6Tests =
     let ``CYK accepts expected expression strings`` () =
         let failures =
             TestHelpers.collectAcceptFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input)
                 LanguageRegistry.ArithExpr
 
         Assert.Empty(failures)
@@ -161,7 +153,7 @@ module Grammar6Tests =
     let ``CYK rejects expected expression strings`` () =
         let failures =
             TestHelpers.collectRejectFailures
-                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g (input |> List.map Terminal))
+                (fun g input -> Cyk.parse Grammar.freshStringNonterminal g input)
                 LanguageRegistry.ArithExpr
 
         Assert.Empty(failures)

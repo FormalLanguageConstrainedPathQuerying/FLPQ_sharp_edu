@@ -35,8 +35,8 @@ type Language =
     { Name: string
       Description: string
       Grammars: AnnotatedGrammar list
-      AcceptStrings: (string list) list
-      RejectStrings: (string list) list
+      AcceptStrings: (Terminal<string> list) list
+      RejectStrings: (Terminal<string> list) list
       GenString: Gen<string> }
 
 module LanguageRegistry =
@@ -217,21 +217,42 @@ module LanguageRegistry =
             "All strings over {a,b} where every prefix has at least as many a's as b's, and total #a = total #b."
           Grammars = [ grammar1; grammar2; grammarSaSbEps; grammarDyckEbnf ]
           AcceptStrings =
-            [ [ "a"; "b"; "a"; "b" ]
-              [ "a"; "b" ]
+            [ [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
               []
-              [ "a"; "a"; "b"; "b" ]
-              [ "a"; "a"; "b"; "a"; "b"; "b" ]
-              [ "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ] ]
+              [ Terminal "a"; Terminal "a"; Terminal "b"; Terminal "b" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b" ] ]
           RejectStrings =
-            [ [ "a"; "a" ]
-              [ "b"; "b" ]
-              [ "a"; "b"; "b" ]
-              [ "a"; "b"; "b"; "a" ]
-              [ "b" ]
-              [ "a" ]
-              [ "a"; "b"; "a"; "b"; "a" ] ]
+            [ [ Terminal "a"; Terminal "a" ]
+              [ Terminal "b"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "b"; Terminal "a" ]
+              [ Terminal "b" ]
+              [ Terminal "a" ]
+              [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "b"; Terminal "a" ] ]
           GenString = abStringGen }
 
     // ============================================================
@@ -347,18 +368,18 @@ module LanguageRegistry =
               grammarAplusEbnf1
               grammarAplusEbnf2 ]
           AcceptStrings =
-            [ [ "a" ]
-              [ "a"; "a" ]
-              [ "a"; "a"; "a" ]
-              [ "a"; "a"; "a"; "a" ]
-              [ "a"; "a"; "a"; "a"; "a" ] ]
+            [ [ Terminal "a" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a" ] ]
           RejectStrings =
             [ []
-              [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+              [ Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "a" ] ]
           GenString = aStringGen }
 
     // ============================================================
@@ -407,17 +428,17 @@ module LanguageRegistry =
           Grammars = [ grammar13; grammarASaA_eps; grammarAstarEbnf ]
           AcceptStrings =
             [ []
-              [ "a" ]
-              [ "a"; "a" ]
-              [ "a"; "a"; "a" ]
-              [ "a"; "a"; "a"; "a" ]
-              [ "a"; "a"; "a"; "a"; "a" ] ]
+              [ Terminal "a" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a"; Terminal "a" ] ]
           RejectStrings =
-            [ [ "b" ]
-              [ "a"; "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "a"; "a"; "b" ]
-              [ "a"; "b"; "a"; "a" ] ]
+            [ [ Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "a" ] ]
           GenString = aStringGen }
 
     // ============================================================
@@ -465,19 +486,33 @@ module LanguageRegistry =
           Description = "Arithmetic expressions over {x, add, mult, lbr, rbr}."
           Grammars = [ grammar6; grammar7; grammar8 ]
           AcceptStrings =
-            [ [ "x" ]
-              [ "lbr"; "x"; "rbr" ]
-              [ "lbr"; "x"; "rbr"; "mult"; "x" ]
-              [ "x"; "add"; "x" ]
-              [ "x"; "add"; "x"; "mult"; "x" ]
-              [ "x"; "mult"; "lbr"; "x"; "add"; "x"; "rbr" ]
-              [ "lbr"; "x"; "mult"; "lbr"; "x"; "add"; "x"; "rbr"; "rbr" ] ]
+            [ [ Terminal "x" ]
+              [ Terminal "lbr"; Terminal "x"; Terminal "rbr" ]
+              [ Terminal "lbr"; Terminal "x"; Terminal "rbr"; Terminal "mult"; Terminal "x" ]
+              [ Terminal "x"; Terminal "add"; Terminal "x" ]
+              [ Terminal "x"; Terminal "add"; Terminal "x"; Terminal "mult"; Terminal "x" ]
+              [ Terminal "x"
+                Terminal "mult"
+                Terminal "lbr"
+                Terminal "x"
+                Terminal "add"
+                Terminal "x"
+                Terminal "rbr" ]
+              [ Terminal "lbr"
+                Terminal "x"
+                Terminal "mult"
+                Terminal "lbr"
+                Terminal "x"
+                Terminal "add"
+                Terminal "x"
+                Terminal "rbr"
+                Terminal "rbr" ] ]
           RejectStrings =
             [ []
-              [ "lbr"; "rbr" ]
-              [ "add"; "x" ]
-              [ "x"; "add" ]
-              [ "x"; "add"; "lbr"; "rbr" ] ]
+              [ Terminal "lbr"; Terminal "rbr" ]
+              [ Terminal "add"; Terminal "x" ]
+              [ Terminal "x"; Terminal "add" ]
+              [ Terminal "x"; Terminal "add"; Terminal "lbr"; Terminal "rbr" ] ]
           GenString = exprStringGen }
 
     // ============================================================
@@ -514,23 +549,43 @@ module LanguageRegistry =
           Grammars = [ grammar9; grammar10 ]
           AcceptStrings =
             [ []
-              [ "a"; "b"; "c" ]
-              [ "a"; "x"; "y" ]
-              [ "a"; "b"; "a"; "b"; "c"; "c" ]
-              [ "a"; "x"; "a"; "x"; "y"; "y" ]
-              [ "a"; "x"; "a"; "b"; "c"; "y" ]
-              [ "a"; "b"; "a"; "x"; "y"; "c" ] ]
+              [ Terminal "a"; Terminal "b"; Terminal "c" ]
+              [ Terminal "a"; Terminal "x"; Terminal "y" ]
+              [ Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "c"
+                Terminal "c" ]
+              [ Terminal "a"
+                Terminal "x"
+                Terminal "a"
+                Terminal "x"
+                Terminal "y"
+                Terminal "y" ]
+              [ Terminal "a"
+                Terminal "x"
+                Terminal "a"
+                Terminal "b"
+                Terminal "c"
+                Terminal "y" ]
+              [ Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "x"
+                Terminal "y"
+                Terminal "c" ] ]
           RejectStrings =
-            [ [ "a" ]
-              [ "x" ]
-              [ "y" ]
-              [ "c" ]
-              [ "a"; "x"; "c" ]
-              [ "a"; "b"; "y" ]
-              [ "a"; "x"; "a"; "b" ]
-              [ "a"; "b"; "a"; "x"; "y" ]
-              [ "a"; "x"; "a"; "b"; "c" ]
-              [ "a"; "x"; "a"; "b"; "y" ] ]
+            [ [ Terminal "a" ]
+              [ Terminal "x" ]
+              [ Terminal "y" ]
+              [ Terminal "c" ]
+              [ Terminal "a"; Terminal "x"; Terminal "c" ]
+              [ Terminal "a"; Terminal "b"; Terminal "y" ]
+              [ Terminal "a"; Terminal "x"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "x"; Terminal "y" ]
+              [ Terminal "a"; Terminal "x"; Terminal "a"; Terminal "b"; Terminal "c" ]
+              [ Terminal "a"; Terminal "x"; Terminal "a"; Terminal "b"; Terminal "y" ] ]
           GenString = abcdxyStringGen }
 
     // ============================================================
@@ -553,8 +608,17 @@ module LanguageRegistry =
         { Name = "a^n b"
           Description = "L = {a^n b | n >= 0}"
           Grammars = [ grammarASB ]
-          AcceptStrings = [ [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "a"; "a"; "b" ] ]
-          RejectStrings = [ []; [ "a" ]; [ "a"; "a" ]; [ "a"; "a"; "a" ]; [ "b"; "a" ] ]
+          AcceptStrings =
+            [ [ Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "b" ] ]
+          RejectStrings =
+            [ []
+              [ Terminal "a" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "a" ]
+              [ Terminal "b"; Terminal "a" ] ]
           GenString = abStringGen }
 
     // ============================================================
@@ -577,13 +641,22 @@ module LanguageRegistry =
         { Name = "a^n b^n"
           Description = "L = {a^n b^n | n >= 0}"
           Grammars = [ grammarASbEps ]
-          AcceptStrings = [ []; [ "a"; "b" ]; [ "a"; "a"; "b"; "b" ]; [ "a"; "a"; "a"; "b"; "b"; "b" ] ]
+          AcceptStrings =
+            [ []
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b"; Terminal "b" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "b" ] ]
           RejectStrings =
-            [ [ "a" ]
-              [ "b" ]
-              [ "a"; "a"; "b" ]
-              [ "a"; "b"; "b" ]
-              [ "a"; "b"; "a"; "b" ] ]
+            [ [ Terminal "a" ]
+              [ Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "b" ] ]
           GenString = abStringGen }
 
     // ============================================================
@@ -606,8 +679,14 @@ module LanguageRegistry =
         { Name = "a^m b^n"
           Description = "L = {a^m b^n | m,n >= 0}"
           Grammars = [ grammarRightNullable ]
-          AcceptStrings = [ []; [ "a" ]; [ "b" ]; [ "a"; "b" ]; [ "a"; "a"; "b" ]; [ "a"; "b"; "b" ] ]
-          RejectStrings = [ [ "b"; "a" ]; [ "a"; "b"; "a" ] ]
+          AcceptStrings =
+            [ []
+              [ Terminal "a" ]
+              [ Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "b" ] ]
+          RejectStrings = [ [ Terminal "b"; Terminal "a" ]; [ Terminal "a"; Terminal "b"; Terminal "a" ] ]
           GenString = abStringGen }
 
     // ============================================================
@@ -630,8 +709,12 @@ module LanguageRegistry =
         { Name = "SingleA ({a})"
           Description = "L = {a}"
           Grammars = [ grammarS2a ]
-          AcceptStrings = [ [ "a" ] ]
-          RejectStrings = [ []; [ "b" ]; [ "a"; "a" ]; [ "a"; "b" ] ]
+          AcceptStrings = [ [ Terminal "a" ] ]
+          RejectStrings =
+            [ []
+              [ Terminal "b" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "b" ] ]
           GenString = constantGen "a" }
 
     // ============================================================
@@ -654,8 +737,13 @@ module LanguageRegistry =
         { Name = "SingleAB ({ab})"
           Description = "L = {ab}"
           Grammars = [ grammarAB ]
-          AcceptStrings = [ [ "a"; "b" ] ]
-          RejectStrings = [ []; [ "a" ]; [ "b" ]; [ "b"; "a" ]; [ "a"; "a"; "b" ] ]
+          AcceptStrings = [ [ Terminal "a"; Terminal "b" ] ]
+          RejectStrings =
+            [ []
+              [ Terminal "a" ]
+              [ Terminal "b" ]
+              [ Terminal "b"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ] ]
           GenString = constantGen "a b" }
 
     // ============================================================
@@ -771,7 +859,12 @@ module LanguageRegistry =
               grammarAltEps
               grammarCascade ]
           AcceptStrings = [ [] ]
-          RejectStrings = [ [ "a" ]; [ "b" ]; [ "a"; "b" ]; [ "a"; "a" ]; [ "b"; "b" ] ]
+          RejectStrings =
+            [ [ Terminal "a" ]
+              [ Terminal "b" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "b"; Terminal "b" ] ]
           GenString = constantGen "" }
 
     // ============================================================
@@ -794,14 +887,16 @@ module LanguageRegistry =
         { Name = "LL2Test ({abc, aad})"
           Description = "L = {abc, aad}. Test grammar for LL(2) lookahead resolution."
           Grammars = [ ll2Grammar ]
-          AcceptStrings = [ [ "a"; "b"; "c" ]; [ "a"; "a"; "d" ] ]
+          AcceptStrings =
+            [ [ Terminal "a"; Terminal "b"; Terminal "c" ]
+              [ Terminal "a"; Terminal "a"; Terminal "d" ] ]
           RejectStrings =
             [ []
-              [ "a" ]
-              [ "a"; "b" ]
-              [ "a"; "a" ]
-              [ "a"; "b"; "d" ]
-              [ "a"; "a"; "c" ] ]
+              [ Terminal "a" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "b"; Terminal "d" ]
+              [ Terminal "a"; Terminal "a"; Terminal "c" ] ]
           GenString = MyGen.elements [ "a b c"; "a a d" ] }
 
     // ============================================================
@@ -824,15 +919,17 @@ module LanguageRegistry =
         { Name = "LL3Test ({abcx, abdy})"
           Description = "L = {abcx, abdy}. Test grammar for LL(3) lookahead resolution."
           Grammars = [ ll3Grammar ]
-          AcceptStrings = [ [ "a"; "b"; "c"; "x" ]; [ "a"; "b"; "d"; "y" ] ]
+          AcceptStrings =
+            [ [ Terminal "a"; Terminal "b"; Terminal "c"; Terminal "x" ]
+              [ Terminal "a"; Terminal "b"; Terminal "d"; Terminal "y" ] ]
           RejectStrings =
             [ []
-              [ "a" ]
-              [ "a"; "b" ]
-              [ "a"; "b"; "c" ]
-              [ "a"; "b"; "d" ]
-              [ "a"; "b"; "c"; "y" ]
-              [ "a"; "b"; "d"; "x" ] ]
+              [ Terminal "a" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "a"; Terminal "b"; Terminal "c" ]
+              [ Terminal "a"; Terminal "b"; Terminal "d" ]
+              [ Terminal "a"; Terminal "b"; Terminal "c"; Terminal "y" ]
+              [ Terminal "a"; Terminal "b"; Terminal "d"; Terminal "x" ] ]
           GenString = MyGen.elements [ "a b c x"; "a b d y" ] }
 
     // ============================================================
@@ -855,8 +952,12 @@ module LanguageRegistry =
         { Name = "AltAB ({a, b})"
           Description = "L = {a, b}. Two-alternative terminal language."
           Grammars = [ grammarAltAB ]
-          AcceptStrings = [ [ "a" ]; [ "b" ] ]
-          RejectStrings = [ []; [ "a"; "a" ]; [ "a"; "b" ]; [ "b"; "a" ] ]
+          AcceptStrings = [ [ Terminal "a" ]; [ Terminal "b" ] ]
+          RejectStrings =
+            [ []
+              [ Terminal "a"; Terminal "a" ]
+              [ Terminal "a"; Terminal "b" ]
+              [ Terminal "b"; Terminal "a" ] ]
           GenString = MyGen.elements [ "a"; "b" ] }
 
     // ============================================================
@@ -880,26 +981,97 @@ module LanguageRegistry =
           Description = "Concatenation of two independent Dyck languages: a-b blocks then c-d blocks."
           Grammars = [ dualDyckEbnf ]
           AcceptStrings =
-            [ [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b" ]
-              [ "a"
-                "a"
-                "a"
-                "b"
-                "a"
-                "b"
-                "b"
-                "a"
-                "b"
-                "b"
-                "c"
-                "c"
-                "d"
-                "c"
-                "d"
-                "d" ]
-              [ "a"; "a"; "a"; "b"; "a"; "b"; "b"; "a"; "b"; "b"; "c"; "d" ] ]
+            [ [ Terminal "a"
+                Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "c"
+                Terminal "c"
+                Terminal "d"
+                Terminal "c"
+                Terminal "d"
+                Terminal "d" ]
+              [ Terminal "a"
+                Terminal "a"
+                Terminal "a"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "a"
+                Terminal "b"
+                Terminal "b"
+                Terminal "c"
+                Terminal "d" ] ]
           RejectStrings = []
           GenString = MyGen.constant "" }
+
+    let private opExprStringGen: Gen<string> =
+        let terminals = [ "x"; "x op_plus x"; "x op_mul x"; "x op_plus x op_mul x" ]
+        MyGen.elements terminals
+
+    let OpExpr: Language =
+        let grammarOpExpr =
+            mkEntry
+                "grammarOpExpr"
+                "E -> T op_plus E\nE -> T\nT -> F op_mul T\nT -> F\nF -> x"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "expression grammar with op_plus/op_mul operators; for RSM round-trip testing"
+
+        { Name = "OpExpr (binary operators x, op_plus, op_mul)"
+          Description = "Binary expressions over {x, op_plus, op_mul}."
+          Grammars = [ grammarOpExpr ]
+          AcceptStrings =
+            [ [ Terminal "x" ]
+              [ Terminal "x"; Terminal "op_plus"; Terminal "x" ]
+              [ Terminal "x"; Terminal "op_mul"; Terminal "x" ]
+              [ Terminal "x"
+                Terminal "op_plus"
+                Terminal "x"
+                Terminal "op_mul"
+                Terminal "x" ]
+              [ Terminal "x"
+                Terminal "op_mul"
+                Terminal "x"
+                Terminal "op_plus"
+                Terminal "x" ]
+              [ Terminal "x"
+                Terminal "op_plus"
+                Terminal "x"
+                Terminal "op_plus"
+                Terminal "x"
+                Terminal "op_mul"
+                Terminal "x" ] ]
+          RejectStrings =
+            [ []
+              [ Terminal "op_plus" ]
+              [ Terminal "op_mul" ]
+              [ Terminal "op_plus"; Terminal "x" ]
+              [ Terminal "x"; Terminal "op_plus" ]
+              [ Terminal "x"; Terminal "x" ]
+              [ Terminal "x"; Terminal "op_plus"; Terminal "op_mul"; Terminal "x" ] ]
+          GenString = opExprStringGen }
 
     /// All languages in the registry.
     let allLanguages: Language list =
@@ -917,7 +1089,8 @@ module LanguageRegistry =
           EpsilonOnly
           LL2Test
           LL3Test
-          DualDyck ]
+          DualDyck
+          OpExpr ]
 
     /// Look up a grammar by name within a language.
     let findGrammar (lang: Language) (name: string) : AnnotatedGrammar =

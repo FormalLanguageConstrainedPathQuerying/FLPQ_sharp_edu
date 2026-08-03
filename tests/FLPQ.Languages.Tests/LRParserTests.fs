@@ -11,8 +11,6 @@ open FLPQ.TestUtilities
 let private g (lang: Language) (name: string) =
     lang.Grammars |> List.find (fun g -> g.Name = name)
 
-let private acceptStrToSpace (ss: (string list) list) = ss |> List.map (String.concat " ")
-
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
@@ -20,22 +18,22 @@ let private twoTrack = LanguageRegistry.TwoTrackDyck
 
 let private grammar1 = (g dyck1 "grammar1").Grammar
 let private augGrammar1 = (g dyck1 "grammar1").AugmentedGrammar
-let private grammar1Accept = dyck1.AcceptStrings |> acceptStrToSpace
-let private grammar1Reject = dyck1.RejectStrings |> acceptStrToSpace
+let private grammar1Accept = dyck1.AcceptStrings
+let private grammar1Reject = dyck1.RejectStrings
 
 let private augGrammar2 = (g dyck1 "grammar2").AugmentedGrammar
 
 let private grammar3 = (g aplus "grammar3").Grammar
 let private augGrammar3 = (g aplus "grammar3").AugmentedGrammar
-let private grammar3Accept = aplus.AcceptStrings |> acceptStrToSpace
-let private grammar3Reject = aplus.RejectStrings |> acceptStrToSpace
+let private grammar3Accept = aplus.AcceptStrings
+let private grammar3Reject = aplus.RejectStrings
 
 let private augGrammar6 = (g expr "grammar6").AugmentedGrammar
 let private augGrammar7 = (g expr "grammar7").AugmentedGrammar
 let private augGrammar8 = (g expr "grammar8").AugmentedGrammar
 
-let private exprAccept = expr.AcceptStrings |> acceptStrToSpace
-let private exprReject = expr.RejectStrings |> acceptStrToSpace
+let private exprAccept = expr.AcceptStrings
+let private exprReject = expr.RejectStrings
 
 module FactTests =
 
@@ -43,19 +41,20 @@ module FactTests =
         let table = builder augGrammar
 
         for s in accept do
-            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) |> Option.isSome, s)
+            Assert.True(LRParser.parse augGrammar table s |> Option.isSome, $"{s}")
 
         for s in reject do
-            Assert.True(LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) |> Option.isNone, s)
+            Assert.True(LRParser.parse augGrammar table s |> Option.isNone, $"{s}")
 
     let private testLeaves builder augGrammar accept =
         let table = builder augGrammar
 
         for s in accept do
-            match LRParser.parse augGrammar table (Tokenizer.tokenizeTerminals s) with
+            match LRParser.parse augGrammar table s with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                Assert.Equal(s, leafTokens)
+                let inputStr = s |> List.map (fun (Terminal x) -> x) |> String.concat " "
+                Assert.Equal(inputStr, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
     let private testNoConflicts builder augGrammar =
@@ -247,11 +246,9 @@ module FactTests =
             let clr = clrBuilder augGrammar
 
             for s in accept @ reject do
-                let slrResult =
-                    LRParser.parse augGrammar slr (Tokenizer.tokenizeTerminals s) |> Option.isSome
+                let slrResult = LRParser.parse augGrammar slr s |> Option.isSome
 
-                let clrResult =
-                    LRParser.parse augGrammar clr (Tokenizer.tokenizeTerminals s) |> Option.isSome
+                let clrResult = LRParser.parse augGrammar clr s |> Option.isSome
 
                 Assert.Equal(slrResult, clrResult)
 
@@ -273,11 +270,8 @@ module FactTests =
             let t8 = LRParser.buildCLR1Table augGrammar8
 
             for s in exprAccept @ exprReject do
-                let r7 =
-                    LRParser.parse augGrammar7 t7 (Tokenizer.tokenizeTerminals s) |> Option.isSome
-
-                let r8 =
-                    LRParser.parse augGrammar8 t8 (Tokenizer.tokenizeTerminals s) |> Option.isSome
+                let r7 = LRParser.parse augGrammar7 t7 s |> Option.isSome
+                let r8 = LRParser.parse augGrammar8 t8 s |> Option.isSome
 
                 Assert.Equal(r7, r8)
 
