@@ -22,6 +22,7 @@
     <Compile Include="LRParser.fs" />
     <Compile Include="PathIndex.fs" />
     <Compile Include="Sppf.fs" />
+    <Compile Include="BasicSppf.fs" />
     <Compile Include="GllTypes.fs" />
     <Compile Include="Gll.fs" />
     <Compile Include="RnglrTypes.fs" />

@@ -21,6 +21,7 @@
     <Compile Include="CrossParserEquivalenceTests.fs" />
     <Compile Include="GllTests.fs" />
     <Compile Include="RnglrTests.fs" />
+    <Compile Include="BasicSppfTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

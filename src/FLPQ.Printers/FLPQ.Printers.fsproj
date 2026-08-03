@@ -14,6 +14,7 @@
     <Compile Include="TeXRenderer.fs" />
     <Compile Include="DerivationTreeDot.fs" />
     <Compile Include="SppfDot.fs" />
+    <Compile Include="BasicSppfDot.fs" />
     <Compile Include="RsmDot.fs" />
     <Compile Include="GssDot.fs" />
     <Compile Include="InputGraphDot.fs" />
