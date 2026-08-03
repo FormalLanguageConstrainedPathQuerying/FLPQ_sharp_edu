@@ -22,8 +22,7 @@ let private astarBStar = LanguageRegistry.AStarBStar
 let private epsilonOnly = LanguageRegistry.EpsilonOnly
 
 module RnglrSharedAcceptance =
-    let private rnglrCases =
-        ParsingTestCases.AcceptanceCases.allCases
+    let private rnglrCases = ParsingTestCases.AcceptanceCases.allCases
 
     [<Fact>]
     let ``All registered accept/reject strings handled correctly`` () =

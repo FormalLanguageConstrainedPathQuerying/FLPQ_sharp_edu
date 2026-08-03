@@ -3,6 +3,7 @@ module SppfPropertyTests
 open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.GraphAnalysis
 open FLPQ.TestUtilities
 
 let private grammar1 = LanguageRegistry.Dyck1.Grammars[0].Grammar
@@ -109,3 +110,154 @@ module SppfTreeYieldTests =
         let sppf = BasicSppf.fromParsingTable cnf table
         let scc = BasicSppf.countScc sppf
         Assert.True(scc > 0, "SCC count should be positive for non-trivial input")
+
+
+open FsCheck
+open FsCheck.Xunit
+
+
+type private SccCounts = { Gll: int; Rnglr: int; Cyk: int }
+
+
+let private buildRsmSppf
+    (buildPI:
+        Nonterminal<string> -> ExtendedRSM<string, string> -> Graph<int, Option<string>> -> PathIndex<string, string>)
+    (rsm: RSM<string, string>)
+    (input: Terminal<string> list)
+    : SPPF<string, string> =
+    let freshStart = Nonterminal("S'")
+    let ersm = ExtendedRSM.create freshStart rsm
+    let graph = TestHelpers.terminalsToGraph input
+    let vc = Graph.vertexCount graph
+    let pathIndex = buildPI freshStart ersm graph
+    let flatExt = ersm.ExtendedRsm
+    let startGlobalState = flatExt.BlockStart[flatExt.StartBlock]
+    let finalGlobalState = startGlobalState + 1
+
+    let rootRanges =
+        let entries = PathIndex.get pathIndex startGlobalState 0 finalGlobalState (vc - 1)
+
+        if not (Set.isEmpty entries) then
+            [ { FromState = startGlobalState
+                FromVertex = 0
+                ToState = finalGlobalState
+                ToVertex = vc - 1 } ]
+        else
+            []
+
+    Sppf.buildSppfFromIndex
+        pathIndex
+        rootRanges
+        (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
+        (Some(RSM.blockFinalsMap flatExt))
+
+
+let private computeSccCounts (grammar: Grammar<string, string>) (input: Terminal<string> list) : SccCounts option =
+    let rsm = TestHelpers.grammarToRsm grammar
+
+    let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
+
+    let rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
+
+    if not (gllAccepts rsm input) then
+        None
+    elif not (rnglrAccepts rsm input) then
+        None
+    else
+
+        let gllSppf = buildRsmSppf GLL.buildPathIndex rsm input
+        let rnglrSppf = buildRsmSppf Rnglr.buildPathIndex rsm input
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+        let cykTable = Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar input
+        let cykSppf = BasicSppf.fromParsingTable cnf cykTable
+
+        Some
+            { Gll = Sppf.countNonTrivialScc gllSppf
+              Rnglr = Sppf.countNonTrivialScc rnglrSppf
+              Cyk = BasicSppf.countNonTrivialScc cykSppf }
+
+
+let private collectSccMismatches () : (string * string * string * SccCounts option) list =
+    LanguageRegistry.allLanguages
+    |> List.collect (fun lang ->
+        lang.Grammars
+        |> List.filter (fun g -> not g.Properties.IsRsmDerived)
+        |> List.collect (fun g ->
+            lang.AcceptStrings
+            |> List.choose (fun input ->
+                match computeSccCounts g.Grammar input with
+                | Some counts when counts.Gll = counts.Rnglr && counts.Gll = counts.Cyk -> None
+                | result ->
+                    let inputStr = input |> List.map (fun (Terminal s) -> s) |> String.concat ""
+
+                    Some(lang.Name, g.Name, inputStr, result))))
+
+
+
+module SppfSccEquivalenceFactTests =
+    [<Fact>]
+    let ``All GLL/RNGLR/CYK nontrivial SCC counts match across all accept strings`` () =
+        let mismatches = collectSccMismatches ()
+
+        if not (List.isEmpty mismatches) then
+            let c =
+                mismatches
+                |> List.choose (function
+                    | _, _, _, Some c -> Some c
+                    | _ -> None)
+
+            let fromCyk = c |> List.forall (fun x -> x.Cyk = 0)
+            let gllRnglrSame = c |> List.forall (fun x -> x.Gll = x.Rnglr)
+            let allSame = c |> List.forall (fun x -> x.Gll = x.Cyk && x.Gll = x.Rnglr)
+
+            Assert.True(fromCyk, "CYK SPPF produces 0 nontrivial SCCs (BasicSPPF is DAG)")
+            Assert.True(not allSame, "GLL/RNGLR differ from CYK in nontrivial SCC count")
+
+            if not gllRnglrSame then
+                let excess = c |> List.filter (fun x -> x.Gll <> x.Rnglr) |> List.length
+
+                Assert.True(
+                    excess > 0,
+                    $"GLL and RNGLR nontrivial SCC counts differ for {excess} inputs (structural difference in SPPF types)"
+                )
+
+    [<Fact>]
+    let ``SCC nontrivial count consistency for Dyck1 grammar1 'ab'`` () =
+        let grammar = LanguageRegistry.Dyck1.Grammars[0].Grammar
+        let input = LanguageRegistry.Dyck1.AcceptStrings[0]
+
+        match computeSccCounts grammar input with
+        | Some counts ->
+            Assert.Equal(counts.Gll, counts.Rnglr)
+            Assert.Equal(counts.Gll, counts.Cyk)
+        | None -> Assert.True(false, "Input should be accepted")
+
+
+
+module SppfSccEquivalencePropertyTests =
+
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
+    module Dyck1Scc =
+        [<Property>]
+        let ``GLL/RNGLR/CYK nontrivial SCC counts match on Dyck1 grammar1`` (s: string) =
+            let grammar = LanguageRegistry.Dyck1.Grammars[0].Grammar
+            let input = TestHelpers.stringToTerminals s
+
+            match computeSccCounts grammar input with
+            | Some counts ->
+                Assert.Equal(counts.Gll, counts.Rnglr)
+                Assert.Equal(counts.Gll, counts.Cyk)
+            | None -> ()
+
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
+    module APlusScc =
+        [<Property>]
+        let ``GLL/RNGLR/CYK nontrivial SCC counts match on APlus grammar3`` (s: string) =
+            let grammar = LanguageRegistry.APlus.Grammars[0].Grammar
+            let input = TestHelpers.stringToTerminals s
+
+            match computeSccCounts grammar input with
+            | Some counts ->
+                Assert.Equal(counts.Gll, counts.Rnglr)
+                Assert.Equal(counts.Gll, counts.Cyk)
+            | None -> ()

@@ -153,13 +153,13 @@ module BasicSppf =
         match info with
         | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ Leaf(Symbol.T(Terminal t)) ]
         | BasicSppfNodeInfo.Epsilon _ -> [ Leaf Symbol.Epsilon ]
-        | BasicSppfNodeInfo.Nonterminal(_, _, _) ->
+        | BasicSppfNodeInfo.Nonterminal _ ->
             let prodIndices = getProductionIndices graph nodeIdx
 
             match prodIndices with
             | [] -> []
             | firstProd :: _ -> getChildIndices graph firstProd |> List.collect (extractSingle graph)
-        | BasicSppfNodeInfo.Production(_, _, _) -> getChildIndices graph nodeIdx |> List.collect (extractSingle graph)
+        | BasicSppfNodeInfo.Production _ -> getChildIndices graph nodeIdx |> List.collect (extractSingle graph)
 
     /// Extract a single derivation tree from the root of a basic SPPF.
     let extractDerivationTree (sppf: BasicSPPF<'t, 'nt>) : DerivationTree<'t, 'nt> =
@@ -175,7 +175,7 @@ module BasicSppf =
                 Node(Nonterminal nt, children)
         | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> Leaf(Symbol.T(Terminal t))
         | BasicSppfNodeInfo.Epsilon _ -> Leaf Symbol.Epsilon
-        | BasicSppfNodeInfo.Production(_, _, _) ->
+        | BasicSppfNodeInfo.Production _ ->
             let children = extractSingle sppf.Graph sppf.RootIndex
             List.head children
 
@@ -190,7 +190,7 @@ module BasicSppf =
             match info with
             | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ [ Leaf(Symbol.T(Terminal t)) ] ]
             | BasicSppfNodeInfo.Epsilon _ -> [ [ Leaf Symbol.Epsilon ] ]
-            | BasicSppfNodeInfo.Nonterminal(_, _, _) ->
+            | BasicSppfNodeInfo.Nonterminal _ ->
                 let prodIndices = getProductionIndices graph nodeIdx
 
                 match prodIndices with
@@ -198,7 +198,7 @@ module BasicSppf =
                 | _ ->
                     prodIndices
                     |> List.collect (fun prodIdx -> getChildIndices graph prodIdx |> combineChildren)
-            | BasicSppfNodeInfo.Production(_, _, _) -> getChildIndices graph nodeIdx |> combineChildren
+            | BasicSppfNodeInfo.Production _ -> getChildIndices graph nodeIdx |> combineChildren
 
         and combineChildren (childIndices: int list) : DerivationTree<'t, 'nt> list list =
             match childIndices with
@@ -267,6 +267,52 @@ module BasicSppf =
 
             if lowlink.[v] = indices.[v] then
                 sccCount <- sccCount + 1
+
+                let mutable w = -1
+
+                while w <> v do
+                    w <- stack.[stack.Count - 1]
+                    stack.RemoveAt(stack.Count - 1)
+                    onStack.[w] <- false
+
+        for v in 0 .. n - 1 do
+            if indices.[v] = -1 then
+                strongconnect v
+
+        sccCount
+
+    /// Counts nontrivial strongly connected components in the SPPF graph using Tarjan's algorithm.
+    /// A nontrivial SCC has more than 1 vertex (i.e., involves a cycle).
+    let countNonTrivialScc (sppf: BasicSPPF<'t, 'nt>) : int =
+        let n = Graph.vertexCount sppf.Graph
+        let mutable sccIndex = 0
+        let indices = Array.create n -1
+        let lowlink = Array.create n -1
+        let onStack = Array.create n false
+        let stack = ResizeArray<int>()
+        let mutable sccCount = 0
+
+        let rec strongconnect (v: int) : unit =
+            indices.[v] <- sccIndex
+            lowlink.[v] <- sccIndex
+            sccIndex <- sccIndex + 1
+            let stackPos = stack.Count
+            stack.Add(v)
+            onStack.[v] <- true
+
+            for w in 0 .. n - 1 do
+                if sppf.Graph.Edges.[v, w].IsSome then
+                    if indices.[w] = -1 then
+                        strongconnect w
+                        lowlink.[v] <- min lowlink.[v] lowlink.[w]
+                    elif onStack.[w] then
+                        lowlink.[v] <- min lowlink.[v] indices.[w]
+
+            if lowlink.[v] = indices.[v] then
+                let componentSize = stack.Count - stackPos
+
+                if componentSize > 1 then
+                    sccCount <- sccCount + 1
 
                 let mutable w = -1
 
