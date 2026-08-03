@@ -32,8 +32,8 @@ from common import (
 OUTPUT_FILE = "tmp/hard-gate.txt"
 SOLUTION = "FLPQ.slnx"
 
-PER_PROJECT_THRESHOLD = 75.0
-TOTAL_THRESHOLD = 80.0
+PER_PROJECT_THRESHOLD = 85.0
+TOTAL_THRESHOLD = 90.0
 
 
 def flush_log(lines: list[str], detailed_logs: list[str], status: str = "IN_PROGRESS") -> None:
