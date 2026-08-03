@@ -922,9 +922,9 @@
 231.  [done] Improve CYK and Valiant visualization. 
       1.    Improve cell content rendering: sell is a set of tuples of form <nonterminal>,<k>,<prod_id>
       2.    Add final SPPF visualization. Include SPPF to summary.
-232.  Add one more property check for SPPF checking fotr GLL and RNGLR
-      1.    Treat SPPF as directed graph, implement algorithm to computew strongly connected components (SCC). Can algo for BasicSPPF be reused or generalized?
-      2.    Add invariant: for same grammar and input SPPF from GLL and from CYK has same number of SCC.
-      3.    Add invariant: for same grammar and input SPPF from GLL and from RNGLR has same number of SCC.
-      4.    Add invariant: for same grammar and input SPPF from GYK and from RNGLR has same number of SCC.
+232.  Add one more property check for SPPF checking for GLL and RNGLR
+      1.    Treat SPPF as directed graph, implement algorithm to compute number of nontrivial strongly connected components (SCC). Nontrivial --- number of vertices more than one. Can algo for BasicSPPF be reused or generalized?
+      2.    Add invariant: for same grammar and input SPPF from GLL and from CYK has same number of nontrivial SCC.
+      3.    Add invariant: for same grammar and input SPPF from GLL and from RNGLR has same number of nontrivial SCC.
+      4.    Add invariant: for same grammar and input SPPF from GYK and from RNGLR has same number of nontrivial SCC.
 233.  [done] Store AcceptStrings and RejectStrings in LanguageRegistry as `Terminal<string> list` (pre-tokenized). Adapt helpers and callers to consume tokenized strings directly, removing ~175 `tokenizeTerminals`/`List.map Terminal` conversions throughout the test suite. Update `terminalsToGraph`, `accepts`, `checkReject`, `collectAcceptFailures`, `collectRejectFailures` signatures to accept `Terminal<string> list`. Remove `tokenized` and `acceptStrToSpace` helpers from test files.
