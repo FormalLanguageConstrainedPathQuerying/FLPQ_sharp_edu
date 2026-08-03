@@ -225,10 +225,13 @@ module Rnglr =
 
                 let preds = productBfs invData starts
 
-                if invData.Finals |> Set.contains invData.Start && preds.IsEmpty then
-                    [ (gssIdx, vxLrState, vxInputVertex, invData.GlobalOffset + invData.Start) ]
-                else
-                    preds
+                let epsPredecessors =
+                    if invData.Finals |> Set.contains invData.Start then
+                        [ (gssIdx, vxLrState, vxInputVertex, invData.GlobalOffset + invData.Start) ]
+                    else
+                        []
+
+                preds @ epsPredecessors
             | None -> []
 
         let pending = Array.init vertexCount (fun _ -> Queue<RnglrDescriptor>())

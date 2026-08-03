@@ -24,13 +24,6 @@ let private epsilonOnly = LanguageRegistry.EpsilonOnly
 module RnglrSharedAcceptance =
     let private rnglrCases =
         ParsingTestCases.AcceptanceCases.allCases
-        |> List.filter (fun c ->
-            c.GrammarName <> "grammar_aSa_eps"
-            && c.LanguageName <> "ArithExpr (arithmetic expressions)"
-            && c.LanguageName <> "TwoTrackDyck (ab/c, ax/y)"
-            && c.LanguageName <> "AltAB ({a, b})"
-            && c.LanguageName <> "LL2Test ({abc, aad})"
-            && c.LanguageName <> "LL3Test ({abcx, abdy})")
 
     [<Fact>]
     let ``All registered accept/reject strings handled correctly`` () =
