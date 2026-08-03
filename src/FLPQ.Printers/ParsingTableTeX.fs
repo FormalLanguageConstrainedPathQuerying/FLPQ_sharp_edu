@@ -30,3 +30,12 @@ module ParsingTableTeX =
 
     /// Render a boolean as TeX: 1 for true, \cdot for false.
     let boolToTeX (b: bool) : string = if b then "1" else @"\cdot"
+
+    /// Render a set of SPPF parsing entries as TeX tuples.
+    let sppfEntryCellToTeX (nonterminalPrinter: 'nt -> string) (entries: Set<SppfParsingEntry<'nt>>) : string =
+        setToTeX
+            (fun (nt, k, prodIdx) ->
+                let ntStr = SymbolTeX.nonterminalContent nonterminalPrinter nt
+
+                $"({ntStr}, {k}, {prodIdx})")
+            entries

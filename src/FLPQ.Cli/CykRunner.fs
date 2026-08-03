@@ -37,4 +37,12 @@ module CykRunner =
 
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
+        if not (List.isEmpty tokenList) then
+            let sppfTable =
+                Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
+
+            let sppf = BasicSppf.fromParsingTable cnf sppfTable
+            let dot = BasicSppfDot.toDot id id sppf
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+
         printfn "CYK trace: %d steps written to %s" trace.Length outputDir

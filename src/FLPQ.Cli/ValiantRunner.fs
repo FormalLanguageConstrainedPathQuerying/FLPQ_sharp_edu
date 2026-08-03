@@ -38,6 +38,14 @@ module ValiantRunner =
             let tex = ValiantTeX.stepToTeX string step
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
+        if not (List.isEmpty tokenList) then
+            let sppfTable =
+                Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
+
+            let sppf = BasicSppf.fromParsingTable cnf sppfTable
+            let dot = BasicSppfDot.toDot id id sppf
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 
     let runValiantModified (grammarFile: string) (inputFile: string) (outputDir: string) =
@@ -73,5 +81,13 @@ module ValiantRunner =
 
             let tex = ValiantTeX.modifiedStepToTeX string step
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
+
+        if not (List.isEmpty tokenList) then
+            let sppfTable =
+                Valiant.parseModifiedWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
+
+            let sppf = BasicSppf.fromParsingTable cnf sppfTable
+            let dot = BasicSppfDot.toDot id id sppf
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
 
         printfn "Modified Valiant trace: %d steps written to %s" trace.Length outputDir

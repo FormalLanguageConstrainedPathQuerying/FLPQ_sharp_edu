@@ -284,6 +284,15 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
+    /// Builds the SPPF DOT section if the file exists.
+    let sppfDotSection (vizDir: string) : string list =
+        match readIfExists (Path.Combine(vizDir, "sppf.dot")) with
+        | Some _ ->
+            [ section "SPPF (Shared Packed Parse Forest)"
+              includePdf "dot_pdfs/sppf.pdf"
+              "" ]
+        | None -> []
+
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
     let buildContent
@@ -328,4 +337,4 @@ module SummaryTeX =
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList
 
-        prefix @ headerLines @ stepLines
+        prefix @ headerLines @ stepLines @ (sppfDotSection vizDir)
