@@ -208,9 +208,15 @@ module GLL =
                             let vFinal = popRange.ToVertex
                             let qNFinal = popRange.ToState
 
+                            let callerNt = stateInfo.[q0].BlockNonterminal
+
                             if v0 = vFinal then
-                                addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
-                                addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                                if callerNt = nt && v0 = 0 then
+                                    addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                                    addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
+                                else
+                                    addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
+                                    addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                             else
                                 addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
 
@@ -293,11 +299,22 @@ module GLL =
                     if vStart = vFinal then
                         addToIndex qNStart vStart qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal myNt)
 
+                    let isSelfRecursive =
+                        outgoingEdges
+                        |> List.exists (fun (_, edgeInfo) -> stateInfo.[edgeInfo.PreCallState].BlockNonterminal = myNt)
+
                     for (parentGssIdx, edgeInfo) in outgoingEdges do
                         let qRet = edgeInfo.ReturnState
                         let parentRange = edgeInfo.MatchedRange
 
-                        if vStart = vFinal then
+                        if vStart = vFinal && vStart = 0 && isSelfRecursive then
+                            addToIndex
+                                edgeInfo.PreCallState
+                                edgeInfo.PreCallVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PNonterminal myNt)
+                        else if vStart = vFinal then
                             addToIndex
                                 edgeInfo.PreCallState
                                 edgeInfo.PreCallVertex

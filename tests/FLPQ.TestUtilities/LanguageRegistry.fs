@@ -1122,3 +1122,15 @@ module GenToArbitrary =
             MyGen.choose (0, 8)
             |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
             |> MyArb.fromGen
+
+    type OpExprString() =
+        static member OpExprString() : Arbitrary<string> =
+            LanguageRegistry.OpExpr.GenString |> MyArb.fromGen
+
+    type PolyAlphabetString() =
+        static member PolyAlphabetString() : Arbitrary<string> =
+            let chars = [ "a"; "b"; "c"; "d"; "x"; "y" ]
+
+            MyGen.choose (0, 8)
+            |> MyGen.bind (fun len -> MyGen.listOfLength len (MyGen.elements chars) |> MyGen.map (String.concat " "))
+            |> MyArb.fromGen
