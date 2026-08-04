@@ -161,8 +161,8 @@ module TestHelpers =
         Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
 
     /// Shared pipeline for acceptance check: create ExtendedRSM → build path index → check acceptance → build SPPF → validate tree leaves.
-    /// Parameterized by buildPathIndex and isAccepted functions to support both GLL and RNGLR.
-    let accepts
+    /// Returns (accepted, sppfOption) — the SPPF is Some if the input was accepted and tree validation succeeded.
+    let private acceptsInternal
         (buildPI:
             Nonterminal<string>
                 -> ExtendedRSM<string, string>
@@ -171,7 +171,7 @@ module TestHelpers =
         (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
         (rsm: RSM<string, string>)
         (input: Terminal<string> list)
-        : bool =
+        : bool * SPPF<string, string> option =
         let freshStart = Nonterminal("S'")
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
@@ -188,7 +188,7 @@ module TestHelpers =
             (Some ersm.ExtendedRsm.FinalStates)
 
         if not (isAcc pathIndex ersm vc) then
-            false
+            false, None
         else
 
             match PathIndex.checkAcceptanceInvariant id pathIndex ersm vc with
@@ -243,10 +243,42 @@ module TestHelpers =
                 let inputStrs = input |> List.map (fun (Terminal s) -> s)
 
                 if leaves = inputStrs then
-                    true
+                    true, Some sppf
                 else
                     failwithf "Tree leaves %A <> input %A for RSM" leaves input
             | None -> failwith "Could not extract derivation tree for accepted input"
+
+    /// Shared pipeline for acceptance check: create ExtendedRSM → build path index → check acceptance → build SPPF → validate tree leaves.
+    /// Parameterized by buildPathIndex and isAccepted functions to support both GLL and RNGLR.
+    let accepts
+        (buildPI:
+            Nonterminal<string>
+                -> ExtendedRSM<string, string>
+                -> Graph<int, Option<string>>
+                -> PathIndex<string, string>)
+        (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
+        (rsm: RSM<string, string>)
+        (input: Terminal<string> list)
+        : bool =
+        acceptsInternal buildPI isAcc rsm input |> fst
+
+    /// Like accepts, but also returns the nontrivial SCC count of the built SPPF.
+    /// The SCC count is 0 if the input was rejected.
+    let acceptsWithScc
+        (buildPI:
+            Nonterminal<string>
+                -> ExtendedRSM<string, string>
+                -> Graph<int, Option<string>>
+                -> PathIndex<string, string>)
+        (isAcc: PathIndex<string, string> -> ExtendedRSM<string, string> -> int -> bool)
+        (rsm: RSM<string, string>)
+        (input: Terminal<string> list)
+        : bool * int =
+        let ok, sppfOpt = acceptsInternal buildPI isAcc rsm input
+
+        match sppfOpt with
+        | Some sppf -> ok, Sppf.countNonTrivialScc sppf
+        | None -> ok, 0
 
     /// Shared pipeline for rejection check: create ExtendedRSM → build path index → verify NOT accepted.
     /// Parameterized by buildPathIndex and isAccepted functions to support both GLL and RNGLR.

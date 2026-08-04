@@ -70,9 +70,14 @@ module GllVsRnglr =
         let ``GLL and RNGLR agree on Dyck1 grammar1`` (s: string) =
             let g = dyck1.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            let rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = rnglrAccepts (TestHelpers.grammarToRsm g) input
+            let gllAccepts = TestHelpers.acceptsWithScc GLL.buildPathIndex PathIndex.isAccepted
+
+            let rnglrAccepts =
+                TestHelpers.acceptsWithScc Rnglr.buildPathIndex PathIndex.isAccepted
+
+            let gllOk, gllScc = gllAccepts (TestHelpers.grammarToRsm g) input
+            let rnglrOk, rnglrScc = rnglrAccepts (TestHelpers.grammarToRsm g) input
+            gllOk = rnglrOk && gllScc = rnglrScc
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module APlus =
@@ -80,9 +85,14 @@ module GllVsRnglr =
         let ``GLL and RNGLR agree on APlus grammar3`` (s: string) =
             let g = aplus.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
-            let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            let rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = rnglrAccepts (TestHelpers.grammarToRsm g) input
+            let gllAccepts = TestHelpers.acceptsWithScc GLL.buildPathIndex PathIndex.isAccepted
+
+            let rnglrAccepts =
+                TestHelpers.acceptsWithScc Rnglr.buildPathIndex PathIndex.isAccepted
+
+            let gllOk, gllScc = gllAccepts (TestHelpers.grammarToRsm g) input
+            let rnglrOk, rnglrScc = rnglrAccepts (TestHelpers.grammarToRsm g) input
+            gllOk = rnglrOk && gllScc = rnglrScc
 
 module VsDfa =
 
