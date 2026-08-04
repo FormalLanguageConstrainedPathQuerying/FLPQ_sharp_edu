@@ -98,51 +98,103 @@ let ``runGll produces step visualization with descriptors table`` () =
     cleanup outDir
 
 [<Fact>]
-let ``runGll step GSS dot has current vertex highlighted`` () =
+let ``runGll step 0 GSS dot has no highlighted vertex`` () =
     let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
 
-    let checkStep stepNum =
-        let gssDot = Path.Combine(outDir, sprintf "step_%d" stepNum, "gss.dot")
+    if File.Exists gssDot then
+        let content = File.ReadAllText gssDot
+        Assert.DoesNotContain("fillcolor=lightblue", content)
+        Assert.DoesNotContain("fillcolor=lightyellow", content)
 
-        if File.Exists gssDot then
-            let content = File.ReadAllText gssDot
-            Assert.Contains("fillcolor=lightblue", content)
-
-    checkStep 5
-    checkStep 12
-    checkStep 19
     cleanup outDir
 
 [<Fact>]
-let ``runGll step descriptors table has current descriptor highlighted`` () =
+let ``runGll step 0 descriptors table has no highlighted row`` () =
     let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let table = Path.Combine(outDir, "step_0", "descriptors_table.tex")
 
-    let checkStep stepNum =
-        let table = Path.Combine(outDir, sprintf "step_%d" stepNum, "descriptors_table.tex")
+    if File.Exists table then
+        let content = File.ReadAllText table
+        Assert.DoesNotContain(@"\rowcolor{yellow!20}", content)
 
-        if File.Exists table then
-            let content = File.ReadAllText table
-            Assert.Contains(@"\rowcolor{yellow!20}", content)
-
-    checkStep 5
-    checkStep 12
-    checkStep 19
     cleanup outDir
 
 [<Fact>]
-let ``runGll step input DOT has current vertex highlighted`` () =
+let ``runGll step 0 input DOT has no highlighted vertex`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let inputDot = Path.Combine(outDir, "step_0", "input.dot")
+
+    if File.Exists inputDot then
+        let content = File.ReadAllText inputDot
+        Assert.DoesNotContain("fillcolor=lightgreen", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll non-init step GSS dot has current vertex highlighted`` () =
     let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
 
-    let checkStep stepNum =
-        let inputDot = Path.Combine(outDir, sprintf "step_%d" stepNum, "input.dot")
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
 
-        if File.Exists inputDot then
-            let content = File.ReadAllText inputDot
-            Assert.Contains("fillcolor=lightgreen", content)
+        if stepNum.Success then
+            let num = int stepNum.Groups.[1].Value
+            let gssDot = Path.Combine(stepDir, "gss.dot")
 
-    checkStep 5
-    checkStep 12
-    checkStep 19
+            if File.Exists gssDot then
+                let content = File.ReadAllText gssDot
+
+                if num = 0 then
+                    Assert.DoesNotContain("fillcolor=lightblue", content)
+                else
+                    Assert.Contains("fillcolor=lightblue", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll non-init step descriptors table has current descriptor highlighted`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success then
+            let num = int stepNum.Groups.[1].Value
+            let table = Path.Combine(stepDir, "descriptors_table.tex")
+
+            if File.Exists table then
+                let content = File.ReadAllText table
+
+                if num = 0 then
+                    Assert.DoesNotContain(@"\rowcolor{yellow!20}", content)
+                else
+                    Assert.Contains(@"\rowcolor{yellow!20}", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll non-init step input DOT has current vertex highlighted`` () =
+    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success then
+            let num = int stepNum.Groups.[1].Value
+            let inputDot = Path.Combine(stepDir, "input.dot")
+
+            if File.Exists inputDot then
+                let content = File.ReadAllText inputDot
+
+                if num = 0 then
+                    Assert.DoesNotContain("fillcolor=lightgreen", content)
+                else
+                    Assert.Contains("fillcolor=lightgreen", content)
+
     cleanup outDir
 
 [<Fact>]

@@ -165,6 +165,54 @@ module GllStepVisualizer =
           Input = InputGraphDot.toDot terminalPrinter inputGraph (Some step.InputPosition)
           RsmDot = rsmDot }
 
+    /// Render the initialization step with no highlights.
+    /// The initial descriptor is present in the table but not highlighted;
+    /// no GSS/RSM/input vertices are highlighted; no new descriptor coloring;
+    /// path index has no cell highlights.
+    let renderInit
+        (symbolVisualizer: Symbol<'t, 'nt> -> string)
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (step: GLLParsingStep<'t, 'nt>)
+        (pathIndex: PathIndex<'t, 'nt>)
+        (vertexCount: int)
+        (inputGraph: Graph<int, Option<'t>>)
+        : GllVisualizationStep =
+
+        let gssDot =
+            GssDot.toDotFromSets
+                (fun idx ->
+                    let state = idx / vertexCount
+                    let vertex = idx % vertexCount
+                    sprintf "%d: (%d,%d)" idx state vertex)
+                (fun (from, to_) ->
+                    let s1 = from / vertexCount
+                    let v1 = from % vertexCount
+                    let s2 = to_ / vertexCount
+                    let v2 = to_ % vertexCount
+                    sprintf "%d,%d → %d,%d" s1 v1 s2 v2)
+                step.ActiveGssVertices
+                step.ActiveGssEdges
+                Set.empty
+                Set.empty
+                None
+
+        let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
+
+        let stepPathIndex =
+            { Matrix = step.PathIndexMatrix
+              StateCount = pathIndex.StateCount
+              VertexCount = pathIndex.VertexCount }
+
+        { Queue = queueToTeX step.Queue
+          DescriptorsTable = descriptorsTableToTeX step.CurrentDescriptor step.Queue step.HandledDescriptors
+          NewDescriptors = @"\{ \emptyset \}"
+          GssDot = gssDot
+          PathIndex = PathIndexTeX.toTeX string string stepPathIndex
+          Input = InputGraphDot.toDot terminalPrinter inputGraph None
+          RsmDot = rsmDot }
+
     /// Render a list of GLL parsing steps to visualization steps.
     let renderSteps
         (symbolVisualizer: Symbol<'t, 'nt> -> string)
@@ -178,4 +226,24 @@ module GllStepVisualizer =
         : GllVisualizationStep list =
         steps
         |> List.map (fun step ->
-            renderStep symbolVisualizer terminalPrinter nonterminalPrinter ersm step pathIndex vertexCount inputGraph)
+            match step.CurrentDescriptor with
+            | None ->
+                renderInit
+                    symbolVisualizer
+                    terminalPrinter
+                    nonterminalPrinter
+                    ersm
+                    step
+                    pathIndex
+                    vertexCount
+                    inputGraph
+            | Some _ ->
+                renderStep
+                    symbolVisualizer
+                    terminalPrinter
+                    nonterminalPrinter
+                    ersm
+                    step
+                    pathIndex
+                    vertexCount
+                    inputGraph)

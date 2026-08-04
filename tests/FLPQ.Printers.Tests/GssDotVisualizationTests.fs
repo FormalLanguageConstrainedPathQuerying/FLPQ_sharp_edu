@@ -29,7 +29,9 @@ let private renderGssDots (ebnfText: string) (input: string list) : string list 
 let private verifyGssDots (dots: string list) =
     Assert.NotEmpty dots
 
-    for dot in dots do
+    dots
+    |> List.indexed
+    |> List.iter (fun (i, dot) ->
         let info = ExternalTools.compileDotStringToInfo dot
 
         for label in info.NodeLabels do
@@ -44,7 +46,10 @@ let private verifyGssDots (dots: string list) =
             |> List.length
 
         if info.NodeCount > 0 then
-            Assert.Equal(1, blueCount)
+            if i = 0 then
+                Assert.Equal(0, blueCount)
+            else
+                Assert.Equal(1, blueCount))
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]

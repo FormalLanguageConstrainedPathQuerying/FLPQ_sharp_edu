@@ -211,7 +211,13 @@ module SummaryTeX =
 
     /// Builds the content lines for a single GLL step using the side-by-side template layout.
     let gllStepSection (stepDir: string) (stepNum: int) (template: string) : string list =
-        let header = section (sprintf "Step %d" stepNum)
+        let title =
+            if stepNum = 0 then
+                "Initialization"
+            else
+                sprintf "Step %d" stepNum
+
+        let header = section title
 
         let stepName = Path.GetFileName(stepDir)
 
