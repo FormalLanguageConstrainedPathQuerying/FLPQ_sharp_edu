@@ -928,4 +928,12 @@
       3.    Add invariant: for same grammar and input SPPF from GLL and from RNGLR has same number of nontrivial SCC.
       4.    Add invariant: for same grammar and input SPPF from GYK and from RNGLR has same number of nontrivial SCC.
 233.  [done] Store AcceptStrings and RejectStrings in LanguageRegistry as `Terminal<string> list` (pre-tokenized). Adapt helpers and callers to consume tokenized strings directly, removing ~175 `tokenizeTerminals`/`List.map Terminal` conversions throughout the test suite. Update `terminalsToGraph`, `accepts`, `checkReject`, `collectAcceptFailures`, `collectRejectFailures` signatures to accept `Terminal<string> list`. Remove `tokenized` and `acceptStrToSpace` helpers from test files.
-234.  Extend GllVsRnglr property tests on all existing grammars and languages from language registry. Design it to avoid massive code duplication.
+234. [done] Extend GllVsRnglr property tests on all existing grammars and languages from language registry. Design it to avoid massive code duplication.
+      1.    Note that some new tests may fail. Fix respective algortihm.
+      2.    Note that SCC-s count for RNGLR looks more correct. So, be careful with algorithms analysis and fixes.
+235. [done] Fix grammar2 filter workaround in CrossParserEquivalenceTests GllVsRnglr. The grammar2 (S -> a S b | eps | S S) is filtered out (`g.Name <> "grammar2"`) because GLL and RNGLR produce different SCC counts. The root cause is that GLL uses PEpsilonNonterminal in places where RNGLR uses PNonterminal, creating structurally different SPPFs. Analyze GLL carefully and fix the PEpsilonNonterminal/PNonterminal discrepancy so that grammar2 produces matching SCC counts without the filter.
+236. Reorganize GllVsCyk and RnglrVsCyk tests in CrossParserEquivalenceTests using the GllVsRnglr iteration pattern.
+     1.    Replace individual `[<Property>]` tests (one per grammar: Dyck1 grammar1/grammar2, APlus grammar3/grammar4) with `[<Fact>]` + `Check.One` tests that iterate over all languages and all their grammars, grouped by string generator type.
+     2.    Compare acceptance only — CYK does not produce an SCC-compatible SPPF, so no SCC comparison.
+     3.    GLL/RNGLR: use `TestHelpers.accepts` with `g.Rsm` (already precomputed in AnnotatedGrammar). CYK: use `TestHelpers.cykAccepts` with `g.Grammar`.
+     4.    Minimal changes — no new types, no new helpers, no CNF precomputation.
