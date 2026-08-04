@@ -87,6 +87,19 @@ module GLL =
 
         let gss = GSS.init stateCount vertexCount
 
+        let blocksWithSelfCallFromStart =
+            let mutable result = Set.empty<Nonterminal<'nt>>
+
+            for kv in blockStart do
+                let nt = kv.Key
+                let startState = kv.Value
+
+                for (callNt, _) in nontermTrans.[startState] do
+                    if callNt = nt then
+                        result <- Set.add nt result
+
+            result
+
         let queue = Queue<Descriptor>()
         let handled = HashSet<Descriptor>()
 
@@ -214,6 +227,9 @@ module GLL =
                                 if callerNt = nt && v0 = 0 then
                                     addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
                                     addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
+                                else if callerNt = nt && Set.contains nt blocksWithSelfCallFromStart then
+                                    addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PNonterminal nt)
+                                    addToIndex q0 v0 qRet vFinal (PathIndexEntry.PNonterminal nt)
                                 else
                                     addToIndex qNStart v0 qNFinal vFinal (PathIndexEntry.PEpsilonNonterminal nt)
                                     addToIndex q0 v0 qRet vFinal (PathIndexEntry.PEpsilonNonterminal nt)
@@ -307,7 +323,16 @@ module GLL =
                         let qRet = edgeInfo.ReturnState
                         let parentRange = edgeInfo.MatchedRange
 
+                        let selfCallBlock = Set.contains myNt blocksWithSelfCallFromStart
+
                         if vStart = vFinal && vStart = 0 && isSelfRecursive then
+                            addToIndex
+                                edgeInfo.PreCallState
+                                edgeInfo.PreCallVertex
+                                qRet
+                                vFinal
+                                (PathIndexEntry.PNonterminal myNt)
+                        else if vStart = vFinal && isSelfRecursive && selfCallBlock then
                             addToIndex
                                 edgeInfo.PreCallState
                                 edgeInfo.PreCallVertex

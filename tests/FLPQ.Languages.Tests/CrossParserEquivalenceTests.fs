@@ -84,12 +84,6 @@ module GllVsRnglr =
                     langs
                     |> List.iter (fun lang ->
                         lang.Grammars
-                        |> List.filter (fun g ->
-                            // Dyck1 grammar2 (S->aSb|eps|SS) has pre-existing SCC differences
-                            // with RNGLR on non-empty input. The cycle structure differs for
-                            // self-recursive ambiguous grammars — RNGLR produces more nontrivial
-                            // SCCs via productBFS that GLL's descriptor-based approach doesn't capture.
-                            g.Name <> "grammar2")
                         |> List.iter (fun g ->
                             let gllOk, gllScc = gllAccepts g.Rsm input
                             let rnglrOk, rnglrScc = rnglrAccepts g.Rsm input
