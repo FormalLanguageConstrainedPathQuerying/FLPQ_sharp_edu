@@ -29,11 +29,11 @@ The absence of code changes **never** justifies batching multiple subtasks into 
 
 ### 1. Implement
 
-Write the subtask's outputs: types, functions, and code as specified in the detailed plan.
+**Load the `fsharp-coder` skill before writing any F# code.** Then write the subtask's outputs: types, functions, and code as specified in the detailed plan.
 
 ### 2. Write Tests
 
-Write tests for the subtask's outputs. See the `tests-writer` skill for FsCheck API, golden test patterns, and generator best practices. For F#-specific FsCheck API quirks (Gen shadowing, naming, overloads), see the `fsharp-coder` skill.
+**Load the `tests-writer` skill before writing any test code.** Write tests for the subtask's outputs. See that skill for FsCheck API, golden test patterns, generator best practices, and the Language Registry workflow. For F#-specific FsCheck API quirks (Gen shadowing, naming, overloads), the `fsharp-coder` skill is also required.
 
 **Hard gate — this step is not complete until:**
 
@@ -58,7 +58,7 @@ FsCheck generators:
 
 ### 3. Update Documentation
 
-Update all task-related documentation per the `documentation` skill. The skill references `docs/developer/guides/documentation-conventions.md` for the complete mapping of source changes to required doc updates and the completeness verification criteria.
+**Load the `documentation` skill before updating any docs.** Update all task-related documentation per that skill. It references `docs/developer/guides/documentation-conventions.md` for the complete mapping of source changes to required doc updates and the completeness verification criteria.
 
 **Hard gate — this step is not complete until:**
 
@@ -91,6 +91,8 @@ This runs format check + build without timeout. Read and deeply analyze `tmp/qua
 - **Separation check**: verify algorithm modules do not contain TeX/dot string generation or file I/O
 
 ### 6. Commit
+
+**Load the `git-workflow` skill before committing.** Then proceed with the hard gate checks below.
 
 **Hard gate — before committing, verify:**
 

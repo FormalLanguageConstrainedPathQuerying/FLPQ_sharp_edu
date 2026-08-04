@@ -88,6 +88,8 @@ Lint configuration: see the `quality-gates` skill.
 
 ## Skills
 
+Loading the relevant skill is a **hard requirement** before starting any activity listed below. The table is not advisory — load the skill using the `skill` tool before writing code, tests, or docs for that activity.
+
 Operational procedures are in standalone skills. Load the relevant skill for each activity:
 
 | Activity | Skill |
