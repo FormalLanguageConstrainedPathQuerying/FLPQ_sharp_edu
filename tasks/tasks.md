@@ -936,4 +936,14 @@
      1.    Replace individual `[<Property>]` tests (one per grammar: Dyck1 grammar1/grammar2, APlus grammar3/grammar4) with `[<Fact>]` + `Check.One` tests that iterate over all languages and all their grammars, grouped by string generator type.
      2.    Compare acceptance only — CYK does not produce an SCC-compatible SPPF, so no SCC comparison.
      3.    GLL/RNGLR: use `TestHelpers.accepts` with `g.Rsm` (already precomputed in AnnotatedGrammar). CYK: use `TestHelpers.cykAccepts` with `g.Grammar`.
-     4.    Minimal changes — no new types, no new helpers, no CNF precomputation.
+      4.    Minimal changes — no new types, no new helpers, no CNF precomputation.
+
+237. [done] Improve GLL visualization. Split initialization from steps. Initialization draws initial state with the same template, but no new descriptors, no highlighted vertices in RSM, GSS, input, no highlighted descriptor in descriptors table. Just initial descriptor in it. For steps flow we visualize one descriptor handling. Table contains descriptors at start of step. Current descriptor highlighted. Current position, RSM state, GSS vertex highlighted. Changes highlighted: new vertices and edges in GSS, updated cells in path index.
+      1.   Add `renderInit` function to `GllStepVisualizer.fs` — renders init step with zero highlights: GSS without `currentVertex`/`highlightedVertices`/`highlightedEdges`, RSM without `highlightedState`, input without position highlight, path index via `PathIndexTeX.toTeX` (no cell highlights), new descriptors as `\{ \emptyset \}` (no green/red boxes).
+      2.   Dispatch init vs regular step in `renderSteps` — detect `CurrentDescriptor = None` (uniquely identifies init) and call `renderInit` instead of `renderStep`.
+      3.   Label step 0 as "Initialization" in summary builder — `SummaryTeX.gllStepSection`: when `stepNum = 0`, use section title `"Initialization"` instead of `"Step 0"`.
+      4.   Fix `verifyGssDots` in `GssDotVisualizationTests.fs` — currently asserts `blueCount == 1` for all dots including init. After fix, first dot (init) must have `blueCount == 0`; remaining dots `blueCount == 1`. Each guarded by `NodeCount > 0`.
+      5.   Fix step-highlight tests in `GllRunnerTests.fs` — current tests check only hardcoded non-init steps (5, 12, 19). Add tests asserting step 0 has NO highlights. Update existing tests to iterate all step dirs: step ≥ 1 must have highlights; step 0 must NOT.
+ 238. Add tikz visualization for GSS, SPPF, RSM, input graph.
+      1.   Reuse existing functions for automata to tikz visualization.
+      2.   Use tikz visualization as default for GLL (steps and summary). Reuse existing CLI flag to switch to dot. 
