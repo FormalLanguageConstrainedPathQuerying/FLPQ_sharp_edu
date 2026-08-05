@@ -7,7 +7,7 @@ open FLPQ.Printers
 
 module GllRunner =
 
-    let runGll (grammarFile: string) (inputFile: string) (outputDir: string) =
+    let runGll (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
 
@@ -33,17 +33,30 @@ module GllRunner =
             (Path.Combine(outputDir, "grammar_ebnf.tex"))
             (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "input.dot")) (InputGraphDot.toDot string inputGraph None)
+        if useDot then
+            Helpers.writeOutputFile (Path.Combine(outputDir, "input.dot")) (InputGraphDot.toDot string inputGraph None)
+            Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "ext_rsm.dot"))
+                (RsmDot.extendedRsmToDot string string ersm None)
 
-        Helpers.writeOutputFile
-            (Path.Combine(outputDir, "ext_rsm.dot"))
-            (RsmDot.extendedRsmToDot string string ersm None)
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
+        else
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "input.tikz.tex"))
+                (InputGraphTikz.toTikz string inputGraph None)
+
+            Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
+
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "ext_rsm.tikz.tex"))
+                (RsmTikz.extendedRsmToTikz string string ersm None)
+
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) (SppfTikz.toTikz string string sppf)
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "path_index.tex")) (PathIndexTeX.toTeX string string pathIndex)
-
-        Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
         // Write step-by-step visualization
         let vizSteps =
@@ -57,7 +70,7 @@ module GllRunner =
                 vertexCount
                 inputGraph
 
-        Helpers.writeGllStepsVisualization outputDir vizSteps
+        Helpers.writeGllStepsVisualization outputDir useDot vizSteps
 
         let status = if accepted then "Accepted" else "Rejected"
         printfn "GLL: %s (%d tokens, %d steps) — %s" status inputTokens.Length steps.Length status

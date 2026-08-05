@@ -7,16 +7,51 @@ and output file management. No timeout on subprocess calls.
 
 import subprocess
 import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 
 def run_cmd(cmd: list[str]) -> tuple[int, str, str]:
-    """Run a command without timeout. Returns (exit_code, stdout, stderr)."""
+    """Run a command without timeout. Returns (exit_code, stdout, stderr).
+
+    Uses temp files instead of capture_output=True (pipes) to avoid
+    deadlocks when the command spawns subprocesses that inherit pipe fds.
+    """
+    stdout_path: str = ""
+    stderr_path: str = ""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=None)
-        return result.returncode, result.stdout, result.stderr
+        with (
+            tempfile.NamedTemporaryFile(mode="w+", suffix=".stdout", delete=False) as stdout_f,
+            tempfile.NamedTemporaryFile(mode="w+", suffix=".stderr", delete=False) as stderr_f,
+        ):
+            stdout_path = stdout_f.name
+            stderr_path = stderr_f.name
+
+        with open(stdout_path, "w") as stdout_f, open(stderr_path, "w") as stderr_f:
+            result = subprocess.run(
+                cmd,
+                stdout=stdout_f,
+                stderr=stderr_f,
+                text=True,
+                timeout=None,
+            )
+
+        with open(stdout_path, "r") as stdout_f:
+            stdout_text = stdout_f.read()
+        with open(stderr_path, "r") as stderr_f:
+            stderr_text = stderr_f.read()
+
+        os.unlink(stdout_path)
+        os.unlink(stderr_path)
+
+        return result.returncode, stdout_text, stderr_text
     except Exception as e:
+        for p in [stdout_path, stderr_path]:
+            try:
+                os.unlink(p)
+            except (OSError, NameError):
+                pass
         return -1, "", f"ERROR: {e}"
 
 

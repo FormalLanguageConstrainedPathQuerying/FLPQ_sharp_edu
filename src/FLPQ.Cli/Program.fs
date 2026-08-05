@@ -29,14 +29,14 @@ module Program =
             | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
-            | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output
-            | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output
+            | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output useDot
+            | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output useDot
 
             if summary then
                 let templatePath = Helpers.findSummaryTemplate ()
                 let resultDir = Path.Combine(output, "results")
 
-                if not (Summary.buildSummary templatePath algorithm output resultDir) then
+                if not (Summary.buildSummary templatePath algorithm output resultDir useDot) then
                     1
                 else
                     0

@@ -144,6 +144,7 @@ module SummaryTeX =
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
         (rsmSppfPdfs: (string * string) list)
+        (useTikz: bool)
         : string list =
         let maybe (file: string) (label: string) (wrap: string -> string) =
             match readIfExists (Path.Combine(vizDir, file)) with
@@ -170,18 +171,36 @@ module SummaryTeX =
                    | None -> [])
 
             | SummaryKind.GLL ->
-                [ section "Color Legend"; gllColorLegend (); "" ]
-                @ [ section "Input String"; includePdf "dot_pdfs/input.pdf"; "" ]
-                @ (rsmSppfPdfs
-                   |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
-                @ maybe "path_index.tex" "Path Index" wrapMathResized
+                let colorLegend = [ section "Color Legend"; gllColorLegend (); "" ]
+
+                let inputSection =
+                    if useTikz then
+                        match readIfExists (Path.Combine(vizDir, "input.tikz.tex")) with
+                        | Some tikz -> [ section "Input String"; wrapTikzCenter tikz; "" ]
+                        | None -> []
+                    else
+                        [ section "Input String"; includePdf "dot_pdfs/input.pdf"; "" ]
+
+                let rsmSppfLines =
+                    rsmSppfPdfs
+                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
+
+                let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
+
+                colorLegend @ inputSection @ rsmSppfLines @ pathIndexLines
 
             | SummaryKind.RNGLR ->
-                [ section "Color Legend"; rnglrColorLegend (); "" ]
-                @ maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
-                @ (rsmSppfPdfs
-                   |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ]))
-                @ maybe "path_index.tex" "Path Index" wrapMathResized
+                let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
+
+                let tableLines = maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
+
+                let rsmSppfLines =
+                    rsmSppfPdfs
+                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
+
+                let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
+
+                colorLegend @ tableLines @ rsmSppfLines @ pathIndexLines
 
         grammar @ algoLines
 
@@ -210,7 +229,13 @@ module SummaryTeX =
         header @ pdfLine @ inputLines
 
     /// Builds the content lines for a single GLL step using the side-by-side template layout.
-    let gllStepSection (stepDir: string) (stepNum: int) (template: string) : string list =
+    let gllStepSection
+        (stepDir: string)
+        (stepNum: int)
+        (template: string)
+        (tikzTemplate: string)
+        (useTikz: bool)
+        : string list =
         let title =
             if stepNum = 0 then
                 "Initialization"
@@ -241,17 +266,47 @@ module SummaryTeX =
         let inputPdf = sprintf "dot_pdfs/%s_input.pdf" stepName
 
         let filledTemplate =
-            template
-                .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
-                .Replace("__STEP_GSS_PDF__", gssPdf)
-                .Replace("__STEP_RSM_PDF__", rsmPdf)
-                .Replace("__STEP_INPUT_PDF__", inputPdf)
-                .Replace("__PATH_INDEX__", pathIndex)
-                .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+            if useTikz then
+                let gssTikz =
+                    match readIfExists (Path.Combine(stepDir, "gss.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                let rsmTikz =
+                    match readIfExists (Path.Combine(stepDir, "rsm.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                let inputTikz =
+                    match readIfExists (Path.Combine(stepDir, "input.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                tikzTemplate
+                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                    .Replace("__STEP_GSS_TIKZ__", gssTikz)
+                    .Replace("__STEP_RSM_TIKZ__", rsmTikz)
+                    .Replace("__STEP_INPUT_TIKZ__", inputTikz)
+                    .Replace("__PATH_INDEX__", pathIndex)
+                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+            else
+                template
+                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                    .Replace("__STEP_GSS_PDF__", gssPdf)
+                    .Replace("__STEP_RSM_PDF__", rsmPdf)
+                    .Replace("__STEP_INPUT_PDF__", inputPdf)
+                    .Replace("__PATH_INDEX__", pathIndex)
+                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
 
         [ header; filledTemplate; "" ]
 
-    let rnglrStepSection (stepDir: string) (stepNum: int) (template: string) : string list =
+    let rnglrStepSection
+        (stepDir: string)
+        (stepNum: int)
+        (template: string)
+        (tikzTemplate: string)
+        (useTikz: bool)
+        : string list =
         let header = section (sprintf "Step %d" stepNum)
 
         let stepName = Path.GetFileName(stepDir)
@@ -280,13 +335,32 @@ module SummaryTeX =
         let inputPdf = sprintf "dot_pdfs/%s_input.pdf" stepName
 
         let filledTemplate =
-            template
-                .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
-                .Replace("__STEP_GSS_PDF__", gssPdf)
-                .Replace("__LR_TABLE__", lrTable)
-                .Replace("__STEP_INPUT_PDF__", inputPdf)
-                .Replace("__PATH_INDEX__", pathIndex)
-                .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+            if useTikz then
+                let gssTikz =
+                    match readIfExists (Path.Combine(stepDir, "gss.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                let inputTikz =
+                    match readIfExists (Path.Combine(stepDir, "input.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                tikzTemplate
+                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                    .Replace("__STEP_GSS_TIKZ__", gssTikz)
+                    .Replace("__LR_TABLE__", lrTable)
+                    .Replace("__STEP_INPUT_TIKZ__", inputTikz)
+                    .Replace("__PATH_INDEX__", pathIndex)
+                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
+            else
+                template
+                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
+                    .Replace("__STEP_GSS_PDF__", gssPdf)
+                    .Replace("__LR_TABLE__", lrTable)
+                    .Replace("__STEP_INPUT_PDF__", inputPdf)
+                    .Replace("__PATH_INDEX__", pathIndex)
+                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
 
         [ header; filledTemplate; "" ]
 
@@ -311,6 +385,9 @@ module SummaryTeX =
         (rsmSppfPdfs: (string * string) list)
         (gllStepTemplate: string)
         (rnglrStepTemplate: string)
+        (gllStepTikzTemplate: string)
+        (rnglrStepTikzTemplate: string)
+        (useTikz: bool)
         : string list =
         let prefix =
             [ section ("Algorithm: " + algo)
@@ -318,7 +395,7 @@ module SummaryTeX =
               "" ]
 
         let headerLines =
-            headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmSppfPdfs
+            headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmSppfPdfs useTikz
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
         let isGll = algoKind = SummaryKind.GLL
@@ -336,9 +413,11 @@ module SummaryTeX =
                 if isTableBased then
                     tableStepSection stepDir stepNum |> List.toArray
                 elif isGll then
-                    gllStepSection stepDir stepNum gllStepTemplate |> List.toArray
+                    gllStepSection stepDir stepNum gllStepTemplate gllStepTikzTemplate useTikz
+                    |> List.toArray
                 elif isRnglr then
-                    rnglrStepSection stepDir stepNum rnglrStepTemplate |> List.toArray
+                    rnglrStepSection stepDir stepNum rnglrStepTemplate rnglrStepTikzTemplate useTikz
+                    |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList

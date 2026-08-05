@@ -12,7 +12,7 @@ let private runRnglrRunner (grammarText: string) (inputText: string) : string =
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    RnglrRunner.runRnglr grammarFile inputFile outDir
+    RnglrRunner.runRnglr grammarFile inputFile outDir true
     outDir
 
 let private cleanup (outDir: string) =
@@ -89,4 +89,47 @@ let ``runRnglr produces step visualization files`` () =
         Assert.True(File.Exists path, sprintf "Missing: %s" f)
         Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
 
+    cleanup outDir
+
+let private runRnglrRunnerTikz (grammarText: string) (inputText: string) : string =
+    let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
+    let inputFile = Path.Combine(tmpDir, "input.txt")
+    let outDir = Path.Combine(tmpDir, "output")
+    Directory.CreateDirectory(tmpDir) |> ignore
+    File.WriteAllText(grammarFile, grammarText)
+    File.WriteAllText(inputFile, inputText)
+    RnglrRunner.runRnglr grammarFile inputFile outDir false
+    outDir
+
+[<Fact>]
+let ``runRnglr tikz mode produces input.tikz.tex`` () =
+    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "input.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr tikz mode produces sppf.tikz.tex`` () =
+    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "sppf.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr tikz mode step 0 produces gss.tikz.tex`` () =
+    let outDir = runRnglrRunnerTikz "S -> a a" "a a"
+    let f = Path.Combine(outDir, "step_0", "gss.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr tikz mode step 0 produces input.tikz.tex`` () =
+    let outDir = runRnglrRunnerTikz "S -> a a" "a a"
+    let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir

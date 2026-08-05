@@ -14,7 +14,7 @@ let private runGllRunner (grammarText: string) (inputText: string) : string =
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    GllRunner.runGll grammarFile inputFile outDir
+    GllRunner.runGll grammarFile inputFile outDir true
     outDir
 
 let private cleanup (outDir: string) =
@@ -213,5 +213,131 @@ let ``runGll input DOT compiles with graphviz`` () =
 
         if File.Exists inputDot then
             checkInputDot inputDot
+
+    cleanup outDir
+
+let private runGllRunnerTikz (grammarText: string) (inputText: string) : string =
+    let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
+    let inputFile = Path.Combine(tmpDir, "input.txt")
+    let outDir = Path.Combine(tmpDir, "output")
+    Directory.CreateDirectory(tmpDir) |> ignore
+    File.WriteAllText(grammarFile, grammarText)
+    File.WriteAllText(inputFile, inputText)
+    GllRunner.runGll grammarFile inputFile outDir false
+    outDir
+
+[<Fact>]
+let ``runGll tikz mode produces input.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "input.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode produces ext_rsm.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode produces sppf.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "sppf.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode step 0 produces gss.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "step_0", "gss.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode step 0 produces input.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode step 0 produces rsm.tikz.tex`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "step_0", "rsm.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode step 0 gss tikz has no highlighted vertex`` () =
+    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let gssTikz = Path.Combine(outDir, "step_0", "gss.tikz.tex")
+
+    if File.Exists gssTikz then
+        let content = File.ReadAllText gssTikz
+        Assert.DoesNotContain("fill=lightblue!20", content)
+        Assert.DoesNotContain("fill=yellow!20", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode step 0 input tikz has no highlighted vertex`` () =
+    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let inputTikz = Path.Combine(outDir, "step_0", "input.tikz.tex")
+
+    if File.Exists inputTikz then
+        let content = File.ReadAllText inputTikz
+        Assert.DoesNotContain("fill=lightgreen!20", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode non-init step gss tikz has current vertex highlighted`` () =
+    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success then
+            let num = int stepNum.Groups.[1].Value
+            let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
+
+            if File.Exists gssTikz then
+                let content = File.ReadAllText gssTikz
+
+                if num = 0 then
+                    Assert.DoesNotContain("fill=lightblue!20", content)
+                else
+                    Assert.Contains("fill=lightblue!20", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode non-init step input tikz has current vertex highlighted`` () =
+    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success then
+            let num = int stepNum.Groups.[1].Value
+            let inputTikz = Path.Combine(stepDir, "input.tikz.tex")
+
+            if File.Exists inputTikz then
+                let content = File.ReadAllText inputTikz
+
+                if num = 0 then
+                    Assert.DoesNotContain("fill=lightgreen!20", content)
+                else
+                    Assert.Contains("fill=lightgreen!20", content)
 
     cleanup outDir

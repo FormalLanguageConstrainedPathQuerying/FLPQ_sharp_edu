@@ -190,13 +190,14 @@ def run_tests_per_project() -> tuple[list[str], bool]:
                 "dotnet",
                 "dotnet-coverage",
                 "collect",
-                "dotnet",
-                "test",
-                proj_path,
                 "-o",
                 cov_file,
                 "-f",
                 "cobertura",
+                "--",
+                "dotnet",
+                "test",
+                proj_path,
                 "--nologo",
             ]
         )

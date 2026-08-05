@@ -44,7 +44,19 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
             File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
 
         let content =
-            SummaryTeX.buildContent "CYK" SummaryTeX.SummaryKind.TablePerStep tmpDir trace.Length None None [] "" ""
+            SummaryTeX.buildContent
+                "CYK"
+                SummaryTeX.SummaryKind.TablePerStep
+                tmpDir
+                trace.Length
+                None
+                None
+                []
+                ""
+                ""
+                ""
+                ""
+                false
             |> String.concat "\n"
 
         let template = File.ReadAllText templatePath

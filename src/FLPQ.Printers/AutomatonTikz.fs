@@ -8,7 +8,7 @@ open FLPQ.Languages
 /// Tikz visualization for finite automata using graphdrawing with layered layout.
 module AutomatonTikz =
 
-    let private escapeLatex (s: string) : string =
+    let escapeLatex (s: string) : string =
         s
             .Replace(@"\", @"\textbackslash ")
             .Replace("_", @"\_")
@@ -21,7 +21,7 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
-    let private nodeOptions (idx: int) (stateContent: string) (isStart: bool) (isFinal: bool) (shape: string) : string =
+    let nodeOptions (idx: int) (stateContent: string) (isStart: bool) (isFinal: bool) (shape: string) : string =
         let parts = ResizeArray<string>()
 
         parts.Add(sprintf "as={%s}" stateContent)
@@ -96,7 +96,7 @@ module AutomatonTikz =
                     |> ignore
                 | _ -> ()
 
-    let private tikzHeader (shape: string) (sb: StringBuilder) : unit =
+    let tikzHeader (shape: string) (sb: StringBuilder) : unit =
         sb.AppendLine(@"\begin{tikzpicture}") |> ignore
 
         sb.AppendLine(
@@ -106,7 +106,7 @@ module AutomatonTikz =
         )
         |> ignore
 
-    let private tikzFooter (sb: StringBuilder) : unit =
+    let tikzFooter (sb: StringBuilder) : unit =
         sb.AppendLine("  };") |> ignore
         sb.AppendLine(@"\end{tikzpicture}") |> ignore
 

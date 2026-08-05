@@ -45,4 +45,4 @@ module AlgorithmTypes =
                 | Output _ -> "Output directory for step-by-step visualization"
                 | Lookahead _ -> "Lookahead k for LL parser (default: 1)"
                 | Summary -> "Generate merged TeX summary file"
-                | UseDot -> "Use Graphviz dot for LR automaton rendering (default: Tikz)"
+                | UseDot -> "Use Graphviz dot for graph rendering instead of TikZ (default: TikZ)"

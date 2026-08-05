@@ -59,6 +59,7 @@ module Summary =
         (algo: AlgorithmTypes.Algorithm)
         (vizDir: string)
         (resultDir: string)
+        (useDot: bool)
         : bool =
         let algoLower = algorithmLower algo
         let algoDir = Path.Combine(resultDir, algoLower)
@@ -110,20 +111,23 @@ module Summary =
                 | _ -> (None, None, [])
 
             let algoKind = algorithmToKind algo
+            let useTikz = not useDot
 
-            let gllStepTemplate =
+            let gllStepTemplate, gllStepTikzTemplate =
                 if algoKind = SummaryTeX.SummaryKind.GLL then
                     let templatePath = Helpers.findGllStepTemplate ()
-                    File.ReadAllText templatePath
+                    let tikzTemplatePath = Helpers.findGllStepTikzTemplate ()
+                    File.ReadAllText templatePath, File.ReadAllText tikzTemplatePath
                 else
-                    ""
+                    "", ""
 
-            let rnglrStepTemplate =
+            let rnglrStepTemplate, rnglrStepTikzTemplate =
                 if algoKind = SummaryTeX.SummaryKind.RNGLR then
                     let templatePath = Helpers.findRnglrStepTemplate ()
-                    File.ReadAllText templatePath
+                    let tikzTemplatePath = Helpers.findRnglrStepTikzTemplate ()
+                    File.ReadAllText templatePath, File.ReadAllText tikzTemplatePath
                 else
-                    ""
+                    "", ""
 
             let content =
                 SummaryTeX.buildContent
@@ -136,6 +140,9 @@ module Summary =
                     rsmSppfPdfs
                     gllStepTemplate
                     rnglrStepTemplate
+                    gllStepTikzTemplate
+                    rnglrStepTikzTemplate
+                    useTikz
                 |> String.concat "\n"
 
             let template = File.ReadAllText templatePath

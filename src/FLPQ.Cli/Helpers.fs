@@ -37,28 +37,47 @@ module Helpers =
             writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].TreeAndStack
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
 
-    let writeGllStepsVisualization (outputDir: string) (steps: GllStepVisualizer.GllVisualizationStep list) =
+    let writeGllStepsVisualization
+        (outputDir: string)
+        (useDot: bool)
+        (steps: GllStepVisualizer.GllVisualizationStep list)
+        =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
             writeOutputFile (Path.Combine(stepDir, "queue.tex")) steps.[idx].Queue
             writeOutputFile (Path.Combine(stepDir, "descriptors_table.tex")) steps.[idx].DescriptorsTable
             writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
-            writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
-            writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
-            writeOutputFile (Path.Combine(stepDir, "rsm.dot")) steps.[idx].RsmDot
 
-    let writeRnglrStepsVisualization (outputDir: string) (steps: RnglrStepVisualizer.RnglrVisualizationStep list) =
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
+                writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
+                writeOutputFile (Path.Combine(stepDir, "rsm.dot")) steps.[idx].RsmDot
+            else
+                writeOutputFile (Path.Combine(stepDir, "gss.tikz.tex")) steps.[idx].GssTikz
+                writeOutputFile (Path.Combine(stepDir, "input.tikz.tex")) steps.[idx].InputTikz
+                writeOutputFile (Path.Combine(stepDir, "rsm.tikz.tex")) steps.[idx].RsmTikz
+
+    let writeRnglrStepsVisualization
+        (outputDir: string)
+        (useDot: bool)
+        (steps: RnglrStepVisualizer.RnglrVisualizationStep list)
+        =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
             writeOutputFile (Path.Combine(stepDir, "descriptors_table.tex")) steps.[idx].DescriptorsTable
             writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
-            writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
-            writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
             writeOutputFile (Path.Combine(stepDir, "lr_table.tex")) steps.[idx].LrTable
+
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "gss.dot")) steps.[idx].GssDot
+                writeOutputFile (Path.Combine(stepDir, "input.dot")) steps.[idx].Input
+            else
+                writeOutputFile (Path.Combine(stepDir, "gss.tikz.tex")) steps.[idx].GssTikz
+                writeOutputFile (Path.Combine(stepDir, "input.tikz.tex")) steps.[idx].InputTikz
 
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
@@ -140,3 +159,41 @@ module Helpers =
         match candidates |> List.tryFind File.Exists with
         | Some p -> p
         | None -> failwithf "Could not locate RNGLR_step_template.tex. Tried: %A" candidates
+
+    let findGllStepTikzTemplate () : string =
+        let candidates =
+            [ Path.Combine("data", "GLL_step_tikz_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_tikz_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "GLL_step_tikz_template.tex"
+              ) ]
+
+        match candidates |> List.tryFind File.Exists with
+        | Some p -> p
+        | None -> failwithf "Could not locate GLL_step_tikz_template.tex. Tried: %A" candidates
+
+    let findRnglrStepTikzTemplate () : string =
+        let candidates =
+            [ Path.Combine("data", "RNGLR_step_tikz_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_tikz_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "RNGLR_step_tikz_template.tex"
+              ) ]
+
+        match candidates |> List.tryFind File.Exists with
+        | Some p -> p
+        | None -> failwithf "Could not locate RNGLR_step_tikz_template.tex. Tried: %A" candidates

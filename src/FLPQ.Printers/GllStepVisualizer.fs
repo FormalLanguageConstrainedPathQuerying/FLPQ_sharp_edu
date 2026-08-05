@@ -17,12 +17,18 @@ module GllStepVisualizer =
             NewDescriptors: string
             /// GSS graph rendered as DOT.
             GssDot: string
+            /// GSS graph rendered as TikZ.
+            GssTikz: string
             /// Path index matrix rendered as TeX.
             PathIndex: string
             /// Input tokens with position underline rendered as TeX.
             Input: string
+            /// Input graph rendered as TikZ.
+            InputTikz: string
             /// Extended RSM rendered as DOT with highlighted current state.
             RsmDot: string
+            /// Extended RSM rendered as TikZ with highlighted current state.
+            RsmTikz: string
         }
 
     /// Render the matched range component of a descriptor as TeX.
@@ -147,9 +153,31 @@ module GllStepVisualizer =
                 step.NewGssEdges
                 step.CurrentGssIdx
 
+        let gssTikz =
+            GssTikz.toTikzFromSets
+                (fun idx ->
+                    let state = idx / vertexCount
+                    let vertex = idx % vertexCount
+                    sprintf "%d: (%d,%d)" idx state vertex)
+                (fun (from, to_) ->
+                    let s1 = from / vertexCount
+                    let v1 = from % vertexCount
+                    let s2 = to_ / vertexCount
+                    let v2 = to_ % vertexCount
+                    sprintf "%d,%d \\to %d,%d" s1 v1 s2 v2)
+                step.ActiveGssVertices
+                step.ActiveGssEdges
+                step.NewGssVertices
+                step.NewGssEdges
+                step.CurrentGssIdx
+
         let rsmDot =
             let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
             RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm currentState
+
+        let rsmTikz =
+            let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
+            RsmTikz.extendedRsmToTikz terminalPrinter nonterminalPrinter ersm currentState
 
         // Create a temporary PathIndex from the step's matrix snapshot for rendering
         let stepPathIndex =
@@ -161,9 +189,12 @@ module GllStepVisualizer =
           DescriptorsTable = descriptorsTableToTeX step.CurrentDescriptor step.Queue step.HandledDescriptors
           NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
           GssDot = gssDot
+          GssTikz = gssTikz
           PathIndex = PathIndexTeX.toTeXWithHighlights string string stepPathIndex step.ChangedCells
           Input = InputGraphDot.toDot terminalPrinter inputGraph (Some step.InputPosition)
-          RsmDot = rsmDot }
+          InputTikz = InputGraphTikz.toTikz terminalPrinter inputGraph (Some step.InputPosition)
+          RsmDot = rsmDot
+          RsmTikz = rsmTikz }
 
     /// Render the initialization step with no highlights.
     /// The initial descriptor is present in the table but not highlighted;
@@ -198,7 +229,27 @@ module GllStepVisualizer =
                 Set.empty
                 None
 
+        let gssTikz =
+            GssTikz.toTikzFromSets
+                (fun idx ->
+                    let state = idx / vertexCount
+                    let vertex = idx % vertexCount
+                    sprintf "%d: (%d,%d)" idx state vertex)
+                (fun (from, to_) ->
+                    let s1 = from / vertexCount
+                    let v1 = from % vertexCount
+                    let s2 = to_ / vertexCount
+                    let v2 = to_ % vertexCount
+                    sprintf "%d,%d \\to %d,%d" s1 v1 s2 v2)
+                step.ActiveGssVertices
+                step.ActiveGssEdges
+                Set.empty
+                Set.empty
+                None
+
         let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
+
+        let rsmTikz = RsmTikz.extendedRsmToTikz terminalPrinter nonterminalPrinter ersm None
 
         let stepPathIndex =
             { Matrix = step.PathIndexMatrix
@@ -209,9 +260,12 @@ module GllStepVisualizer =
           DescriptorsTable = descriptorsTableToTeX step.CurrentDescriptor step.Queue step.HandledDescriptors
           NewDescriptors = @"\{ \emptyset \}"
           GssDot = gssDot
+          GssTikz = gssTikz
           PathIndex = PathIndexTeX.toTeX string string stepPathIndex
           Input = InputGraphDot.toDot terminalPrinter inputGraph None
-          RsmDot = rsmDot }
+          InputTikz = InputGraphTikz.toTikz terminalPrinter inputGraph None
+          RsmDot = rsmDot
+          RsmTikz = rsmTikz }
 
     /// Render a list of GLL parsing steps to visualization steps.
     let renderSteps

@@ -8,7 +8,7 @@ open FLPQ.Printers
 
 module RnglrRunner =
 
-    let runRnglr (grammarFile: string) (inputFile: string) (outputDir: string) =
+    let runRnglr (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
 
@@ -50,6 +50,13 @@ module RnglrRunner =
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
+        if not useDot then
+            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) (SppfTikz.toTikz string string sppf)
+
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "input.tikz.tex"))
+                (InputGraphTikz.toTikz string inputGraph None)
+
         let vizSteps =
             RnglrStepVisualizer.renderSteps
                 string
@@ -62,7 +69,7 @@ module RnglrRunner =
                 vertexCount
                 inputGraph
 
-        Helpers.writeRnglrStepsVisualization outputDir vizSteps
+        Helpers.writeRnglrStepsVisualization outputDir useDot vizSteps
 
         let status = if accepted then "Accepted" else "Rejected"
         printfn "RNGLR: %s (%d tokens, %d steps) — %s" status inputTokens.Length steps.Length status

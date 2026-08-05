@@ -11,8 +11,10 @@ module RnglrStepVisualizer =
         { DescriptorsTable: string
           NewDescriptors: string
           GssDot: string
+          GssTikz: string
           PathIndex: string
           Input: string
+          InputTikz: string
           LrTable: string }
 
     let private rnglrDescriptorToTeX (desc: RnglrDescriptor) : string =
@@ -117,6 +119,29 @@ module RnglrStepVisualizer =
                 step.NewGssEdges
                 currentGssIdx
 
+        let gssTikz =
+            GssTikz.toTikzFromSets
+                (fun idx ->
+                    let lrState, inputVertex = vertexInfo idx
+                    sprintf "%d: (%d,%d)" idx lrState inputVertex)
+                (fun (fromIdx, toIdx) ->
+                    match Map.tryFind (fromIdx, toIdx) step.ActiveGssEdgeSymbols with
+                    | Some symbols ->
+                        symbols
+                        |> NonEmptySet.toSeq
+                        |> Seq.map (fun sym ->
+                            match sym with
+                            | Symbol.T(Terminal t) -> terminals t
+                            | Symbol.N(Nonterminal nt) -> nonterminals nt
+                            | Symbol.Epsilon -> "\\varepsilon")
+                        |> String.concat ", "
+                    | None -> "")
+                step.ActiveGssVertices
+                step.ActiveGssEdges
+                step.NewGssVertices
+                step.NewGssEdges
+                currentGssIdx
+
         let activeActions =
             let shifts =
                 step.ActiveShiftTerminals |> Set.map (fun (Terminal t) -> Symbol.T(Terminal t))
@@ -146,8 +171,10 @@ module RnglrStepVisualizer =
                 step.HandledDescriptors
           NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
           GssDot = gssDot
+          GssTikz = gssTikz
           PathIndex = PathIndexTeX.toTeXWithHighlights terminals nonterminals stepPi step.ChangedCells
           Input = InputGraphDot.toDot terminals inputGraph (Some step.InputVertex)
+          InputTikz = InputGraphTikz.toTikz terminals inputGraph (Some step.InputVertex)
           LrTable = lrTable }
 
     let renderSteps
