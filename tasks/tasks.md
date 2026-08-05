@@ -944,6 +944,10 @@
       3.   Label step 0 as "Initialization" in summary builder — `SummaryTeX.gllStepSection`: when `stepNum = 0`, use section title `"Initialization"` instead of `"Step 0"`.
       4.   Fix `verifyGssDots` in `GssDotVisualizationTests.fs` — currently asserts `blueCount == 1` for all dots including init. After fix, first dot (init) must have `blueCount == 0`; remaining dots `blueCount == 1`. Each guarded by `NodeCount > 0`.
       5.   Fix step-highlight tests in `GllRunnerTests.fs` — current tests check only hardcoded non-init steps (5, 12, 19). Add tests asserting step 0 has NO highlights. Update existing tests to iterate all step dirs: step ≥ 1 must have highlights; step 0 must NOT.
- 238. Add tikz visualization for GSS, SPPF, RSM, input graph.
+ 238. [done] Add tikz visualization for GSS, SPPF, RSM, input graph.
       1.   Reuse existing functions for automata to tikz visualization.
       2.   Use tikz visualization as default for GLL (steps and summary). Reuse existing CLI flag to switch to dot. 
+      3.   Use tikz visualization as default for RNGLR (steps and summary). Reuse existing CLI flag to switch to dot.
+ 239. Improve GLL Tikz GSS visualization (preserve DOT viaualization "as is")
+      1.   Use R-based notation for ranges on edges. Like ranges in descriptor table
+      2.   Use rounded rectangle shape for vertices.
