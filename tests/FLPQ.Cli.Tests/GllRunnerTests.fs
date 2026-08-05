@@ -341,3 +341,39 @@ let ``runGll tikz mode non-init step input tikz has current vertex highlighted``
                     Assert.Contains("fill=lightgreen!20", content)
 
     cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode gss uses rounded rectangle shape`` () =
+    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
+
+        if File.Exists gssTikz then
+            let content = File.ReadAllText gssTikz
+            Assert.Contains("rectangle, rounded corners", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll tikz mode gss edges use R-based range notation`` () =
+    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+
+    let mutable foundEdges = false
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success && int stepNum.Groups.[1].Value > 0 then
+            let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
+
+            if File.Exists gssTikz then
+                let content = File.ReadAllText gssTikz
+
+                if content.Contains(@"R\^") then
+                    foundEdges <- true
+
+    Assert.True(foundEdges, "Expected R-based range notation R^{...}_{...} on GSS edges")
+
+    cleanup outDir

@@ -31,12 +31,15 @@ module GllStepVisualizer =
             RsmTikz: string
         }
 
+    /// Render a range as TeX: R^{fromState,fromVertex}_{toState,toVertex}.
+    let rangeToTeX (fromState: int) (fromVertex: int) (toState: int) (toVertex: int) : string =
+        sprintf @"R^{%d,%d}_{%d,%d}" fromState fromVertex toState toVertex
+
     /// Render the matched range component of a descriptor as TeX.
     let rangeDescriptorToTeX (range: RangeDescriptor) : string =
         match range with
         | RangeDescriptor.EmptyRange -> @"\emptyset"
-        | RangeDescriptor.NonEmptyRange rk ->
-            sprintf @"R^{%d,%d}_{%d,%d}" rk.FromState rk.FromVertex rk.ToState rk.ToVertex
+        | RangeDescriptor.NonEmptyRange rk -> rangeToTeX rk.FromState rk.FromVertex rk.ToState rk.ToVertex
 
     /// Render a single descriptor as a tuple: (rsmState, vertex, gssIdx, matchedRange).
     let descriptorToTeX (desc: Descriptor) : string =
@@ -164,12 +167,13 @@ module GllStepVisualizer =
                     let v1 = from % vertexCount
                     let s2 = to_ / vertexCount
                     let v2 = to_ % vertexCount
-                    sprintf "%d,%d \\to %d,%d" s1 v1 s2 v2)
+                    rangeToTeX s1 v1 s2 v2)
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
                 step.CurrentGssIdx
+                "rectangle, rounded corners"
 
         let rsmDot =
             let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
@@ -240,12 +244,13 @@ module GllStepVisualizer =
                     let v1 = from % vertexCount
                     let s2 = to_ / vertexCount
                     let v2 = to_ % vertexCount
-                    sprintf "%d,%d \\to %d,%d" s1 v1 s2 v2)
+                    rangeToTeX s1 v1 s2 v2)
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 Set.empty
                 Set.empty
                 None
+                "rectangle, rounded corners"
 
         let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
 

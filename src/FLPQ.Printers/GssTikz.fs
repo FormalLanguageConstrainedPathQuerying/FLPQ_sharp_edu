@@ -19,10 +19,11 @@ module GssTikz =
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
         (currentVertex: int option)
+        (shape: string)
         : string =
         let sb = StringBuilder()
 
-        AutomatonTikz.tikzHeader "circle" sb
+        AutomatonTikz.tikzHeader shape sb
 
         let allVertices =
             let fromEdges =
