@@ -20,6 +20,7 @@ module GssTikz =
         (highlightedEdges: Set<int * int>)
         (currentVertex: int option)
         (shape: string)
+        (skipEscaping: bool)
         : string =
         let sb = StringBuilder()
 
@@ -62,7 +63,13 @@ module GssTikz =
         | _ -> ()
 
         for fromIdx, toIdx in activeEdges do
-            let label = edgeLabelPrinter (fromIdx, toIdx) |> AutomatonTikz.escapeLatex
+            let rawLabel = edgeLabelPrinter (fromIdx, toIdx)
+
+            let label =
+                if skipEscaping then
+                    rawLabel
+                else
+                    AutomatonTikz.escapeLatex rawLabel
 
             let isHighlighted = Set.contains (fromIdx, toIdx) highlightedEdges
 

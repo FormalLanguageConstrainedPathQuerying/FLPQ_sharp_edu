@@ -167,13 +167,14 @@ module GllStepVisualizer =
                     let v1 = from % vertexCount
                     let s2 = to_ / vertexCount
                     let v2 = to_ % vertexCount
-                    rangeToTeX s1 v1 s2 v2)
+                    sprintf "$%s$" (rangeToTeX s1 v1 s2 v2))
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
                 step.CurrentGssIdx
                 "rectangle, rounded corners"
+                true
 
         let rsmDot =
             let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
@@ -244,13 +245,14 @@ module GllStepVisualizer =
                     let v1 = from % vertexCount
                     let s2 = to_ / vertexCount
                     let v2 = to_ % vertexCount
-                    rangeToTeX s1 v1 s2 v2)
+                    sprintf "$%s$" (rangeToTeX s1 v1 s2 v2))
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 Set.empty
                 Set.empty
                 None
                 "rectangle, rounded corners"
+                true
 
         let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
 

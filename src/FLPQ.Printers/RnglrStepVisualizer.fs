@@ -142,6 +142,7 @@ module RnglrStepVisualizer =
                 step.NewGssEdges
                 currentGssIdx
                 "circle"
+                false
 
         let activeActions =
             let shifts =

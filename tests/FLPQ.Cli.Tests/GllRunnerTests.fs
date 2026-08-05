@@ -371,7 +371,7 @@ let ``runGll tikz mode gss edges use R-based range notation`` () =
             if File.Exists gssTikz then
                 let content = File.ReadAllText gssTikz
 
-                if content.Contains(@"R\^") then
+                if content.Contains("$R^") then
                     foundEdges <- true
 
     Assert.True(foundEdges, "Expected R-based range notation R^{...}_{...} on GSS edges")
