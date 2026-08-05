@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from datetime import datetime
 
 from common import (
     run_cmd,
@@ -173,12 +174,23 @@ def parse_test_output(test_output: str) -> tuple[int, int]:
     return failed_count, skipped_count
 
 
-def run_tests_per_project() -> tuple[list[str], bool]:
+def run_tests_per_project(
+    lines: list[str],
+    detailed_logs: list[str],
+    next_step,
+    total_steps: int,
+    test_start_step: int,
+) -> bool:
+    """Run dotnet test with coverage per project, flushing progress after each project.
+    Returns True if all projects pass (0 failed, 0 skipped)."""
     test_packages = find_test_packages()
     all_projects = find_fsproj_paths()
-    results: list[str] = []
     cov_files: list[str] = []
     all_ok = True
+
+    detailed_logs.append("--- STEP 3: TESTS (per project) ---")
+    test_end_step = test_start_step + len(test_packages) - 1
+    lines.append(f"Step {test_start_step}-{test_end_step}/{total_steps} (Tests):")
 
     for pkg_name in test_packages:
         proj_path = all_projects[pkg_name]
@@ -204,13 +216,16 @@ def run_tests_per_project() -> tuple[list[str], bool]:
         test_output = test_stdout + test_stderr
         failed, skipped = parse_test_output(test_output)
 
+        s = next_step()
         if test_rc != 0 or failed > 0 or skipped > 0:
             all_ok = False
-            results.append(
-                f"  {pkg_name}: FAILED ({failed} failed, {skipped} skipped)"
-            )
+            result_line = f"  Step {s}/{total_steps} {pkg_name}: FAILED ({failed} failed, {skipped} skipped)"
         else:
-            results.append(f"  {pkg_name}: OK (0 failed, 0 skipped)")
+            result_line = f"  Step {s}/{total_steps} {pkg_name}: OK (0 failed, 0 skipped)"
+
+        lines.append(result_line)
+        detailed_logs.append(result_line)
+        flush_log(lines, detailed_logs)
 
     if cov_files:
         run_cmd(
@@ -220,7 +235,12 @@ def run_tests_per_project() -> tuple[list[str], bool]:
         for f in cov_files:
             remove_output_file(f)
 
-    return results, all_ok
+    if all_ok:
+        lines.append("  Test gate: PASS")
+    else:
+        lines.append("  Test gate: BLOCKED")
+
+    return all_ok
 
 
 def main() -> None:
@@ -248,6 +268,7 @@ def main() -> None:
         return current_step
 
     # --- Step 1: Format ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 1 (Format) started")
     fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
     detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas . --check) ---")
     detailed_logs.append(fmt_stdout.strip() if fmt_stdout else "(no output)")
@@ -263,6 +284,7 @@ def main() -> None:
     flush_log(lines, detailed_logs)
 
     # --- Step 2: Build ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 2 (Build) started")
     build_rc, build_stdout, build_stderr = run_cmd(
         ["dotnet", "build", SOLUTION, "-c", "Debug"]
     )
@@ -285,24 +307,18 @@ def main() -> None:
         sys.exit(1)
 
     # --- Step 3: Tests (per project) ---
-    test_results, test_all_ok = run_tests_per_project()
-    detailed_logs.append("--- STEP 3: TESTS (per project) ---")
-    for tr in test_results:
-        detailed_logs.append(tr)
-    lines.append(f"Step {current_step + 1}-{current_step + len(test_projects)}/{total_steps} (Tests):")
-    for tr in test_results:
-        s = next_step()
-        prefix = f"Step {s}/{total_steps}"
-        lines.append(f"  {prefix} {tr.removeprefix('  ')}")
-    if test_all_ok:
-        lines.append("  Test gate: PASS")
-    else:
-        lines.append("  Test gate: BLOCKED")
+    test_start_step = current_step + 1
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 3 (Tests) started")
+    test_all_ok = run_tests_per_project(
+        lines, detailed_logs, next_step, total_steps, test_start_step
+    )
+    if not test_all_ok:
         overall_pass = False
 
     flush_log(lines, detailed_logs)
 
     # --- Step 4: Coverage Gate ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 4 (Coverage) started")
     cov_lines, _under_threshold, cov_ok = run_coverage_gate()
     detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
     for cl in cov_lines:
@@ -321,13 +337,16 @@ def main() -> None:
 
     # --- Step 5: Lint on changed projects ---
     detailed_logs.append("--- STEP 5: LINT (on changed projects) ---")
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 5 (Lint) started")
 
     if not changed_projects:
         lines.append("Lint: SKIP (no changed .fs files)")
         detailed_logs.append("(no changed .fs files — lint skipped)")
     else:
+        lint_start = current_step + 1
+        lint_end = current_step + len(changed_projects)
+        lines.append(f"Step {lint_start}-{lint_end}/{total_steps} (Lint):")
         lint_all_ok = True
-        per_project_lint: list[str] = []
 
         lint_env = os.environ.copy()
         lint_env["DOTNET_ROOT"] = "/usr/lib/dotnet"
@@ -358,27 +377,28 @@ def main() -> None:
                 lint_all_ok = False
                 overall_pass = False
                 if "ERROR running fsharplint" in lint_output:
-                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log")
+                    lint_line = f"  Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log"
                 else:
                     summary_match = re.search(r"Summary:\s*(\d+)\s+warnings?", lint_output)
                     warn_count = int(summary_match.group(1)) if summary_match else 0
                     if warn_count > 0:
-                        per_project_lint.append(f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED")
+                        lint_line = f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
                     else:
-                        per_project_lint.append(f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})")
+                        lint_line = f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})"
             else:
                 warning_match = re.search(r"(\d+) warnings?", lint_output)
                 warn_count = int(warning_match.group(1)) if warning_match else 0
                 if warn_count > 0:
                     lint_all_ok = False
                     overall_pass = False
-                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED")
+                    lint_line = f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
                 else:
-                    per_project_lint.append(f"  Step {s}/{total_steps} {proj}: 0 warnings — PASS")
+                    lint_line = f"  Step {s}/{total_steps} {proj}: 0 warnings — PASS"
 
-        lines.append(f"Step {current_step + 1}-{current_step + len(changed_projects)}/{total_steps} (Lint):")
-        for pl in per_project_lint:
-            lines.append(pl)
+            lines.append(lint_line)
+            detailed_logs.append(lint_line)
+            flush_log(lines, detailed_logs)
+
         if lint_all_ok:
             lines.append("  Lint gate: PASS")
         else:

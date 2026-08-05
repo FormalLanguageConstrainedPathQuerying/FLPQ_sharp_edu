@@ -115,13 +115,34 @@ The gate runs in background and writes progress incrementally to `tmp/hard-gate.
 
 **Poll interval: every 5 minutes.** Set a timer — do not poll more frequently as the gate file may not be updated between flushes.
 
+Run all three checks together:
+
 ```bash
+# 1. Gate status — terminal state?
 grep "STATUS:" tmp/hard-gate.txt
+
+# 2. Step progress — which steps completed, which is running?
+head -15 tmp/hard-gate.txt
+
+# 3. Process health — is the gate process alive? How long has it been running?
+ps -p $(cat tmp/hard-gate.pid) -o pid,stat,etime --no-headers 2>&1 \
+  || echo "Gate process not found (exited or killed)"
 ```
+
+**Terminal states:**
 
 - **`STATUS: PASS`** — gate finished successfully (exit code 0). Proceed to merge.
 - **`STATUS: BLOCKED`** — gate finished with exit code non-zero. **This is absolute.** Do not assess whether a failure is pre-existing, unrelated to your changes, or insignificant. Do not rationalize. The gate is the gate — if it says `BLOCKED`, the task is not complete. Read the step summary at the top of `tmp/hard-gate.txt` to identify which step(s) failed, then read the detailed log to identify the failure, fix all problems, and **re-run the gate from the start**.
-- **`STATUS: IN_PROGRESS`** — gate is still running. Read `head -15` for the step summary: if step numbers advanced since the last poll, the gate is making progress — continue waiting. If the step counter has not advanced after 3+ polling cycles (>15 minutes with no progress), check `tail -20` for the currently executing command and verify it hasn't hung. **Keep polling** until `IN_PROGRESS` changes to `PASS` or `BLOCKED`.
+
+**When `STATUS: IN_PROGRESS`:**
+
+Check the three outputs from above together:
+
+1. **Step progress** (`head -15`): compare with your last poll. If step numbers advanced, the gate is working — continue waiting.
+2. **Timestamps** (in detailed log via `tail -20`): compare the last timestamp with `ps etime`. If the current step started recently relative to the gate's total run time, it's expected.
+3. **Process health** (`ps`): if the process is alive and has a reasonable `etime`, keep polling.
+
+**If the process is gone but STATUS shows IN_PROGRESS** — the gate crashed before writing its final status. Read `tail -20 tmp/hard-gate.txt` to identify the last completed step. Fix the problem at that step and re-run from the start.
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
 
