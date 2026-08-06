@@ -951,11 +951,11 @@
  239. [done] Improve GLL Tikz GSS visualization (preserve DOT viaualization "as is")
       1.   Use R-based notation for ranges on edges. Like ranges in descriptor table
       2.   Use rounded rectangle shape for vertices.
- 240. Fix toCNF function. 
+ 240. [done] Fix toCNF function. 
       1.   To CNF conversion must include gramar cleanup (as last step of transformations): non-generating and unreachable nonterminals must be removed. Note: order of removing is important. Wrong order leads to incorrect result. Add these two cleanup subcteps. Simple test is grammar S -> a; S -> S S; S -> S S S. Currently it contains N_2 -> a rule in CNF where N_2 is unreachable.
       2.   Add tests. Add two functions: one checks that all nonterminals in grammar reachable from start nonterminal, one checks that each nonterminal in grammar can produce terminal or empty string. both applicable for grammar in BNF. Tests: for all grammars in language registry convert grammar to CNF and use cretaed functions to check that there are no non-generating and unreachable nonterminalsin result. 
- 241. Improve CYK and Valiant (+ modified) table rendering. Render each nonempty cell as a set of tuples of form (nonterm, split_point, prod_id).
- 242. Improve BasicSPPF creation and visualization (rendering). 
+ 241. [done] Improve CYK and Valiant (+ modified) table rendering. Render each nonempty cell as a set of tuples of form (nonterm, split_point, prod_id).
+ 242. [done] Improve BasicSPPF creation and visualization (rendering). 
       1.   SPPF must be built only for start nonterminal in respective cell (if string accepted). Not for all nonterminals from all cells.
       2.   Do not mark edges with `derives` and numbers.
       3.   Production node store not left and right positins, but split point. Render it with respective lable of form `split_point, prod_id`
