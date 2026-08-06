@@ -49,7 +49,6 @@ N_4 &\rightarrow ( \\
 N_5 &\rightarrow ) \\
 N_6 &\rightarrow * \\
 N_7 &\rightarrow + \\
-N_8 &\rightarrow x \\
 F &\rightarrow N_4\ N_3 \\
 F &\rightarrow x \\
 N_1 &\rightarrow N_7\ T \\
@@ -73,9 +72,9 @@ T &\rightarrow T\ N_2 \\
 \[
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
- & \cellcolor{yellow}{\{E, F, N_8, T\}} & \cdot & \cdot \\
+ & \cellcolor{yellow}{\{E, F, T\}} & \cdot & \cdot \\
  & \cdot & \cellcolor{yellow}{\{N_7\}} & \cdot \\
- & \cdot & \cdot & \cellcolor{yellow}{\{E, F, N_8, T\}} \\
+ & \cdot & \cdot & \cellcolor{yellow}{\{E, F, T\}} \\
 \end{pNiceMatrix}
 \]
 \end{center}
@@ -85,9 +84,9 @@ T &\rightarrow T\ N_2 \\
 \[
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
- & \{E, F, N_8, T\} & \cdot & \cdot \\
+ & \{E, F, T\} & \cdot & \cdot \\
  & \cdot & \{N_7\} & \cellcolor{yellow}{\{N_1\}} \\
- & \cdot & \cdot & \{E, F, N_8, T\} \\
+ & \cdot & \cdot & \{E, F, T\} \\
 \end{pNiceMatrix}
 \]
 \end{center}
@@ -97,9 +96,9 @@ T &\rightarrow T\ N_2 \\
 \[
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
- & \{E, F, N_8, T\} & \cdot & \cellcolor{yellow}{\{E\}} \\
+ & \{E, F, T\} & \cdot & \cellcolor{yellow}{\{E\}} \\
  & \cdot & \{N_7\} & \{N_1\} \\
- & \cdot & \cdot & \{E, F, N_8, T\} \\
+ & \cdot & \cdot & \{E, F, T\} \\
 \end{pNiceMatrix}
 \]
 \end{center}

@@ -408,11 +408,110 @@ module Grammar =
     /// for use with string-based grammars (Nonterminal<string>).
     let freshStringNonterminal (i: int) : string = $"N_{i}"
 
+    let private computeGenerating (rules: Rule<'t, 'nt> list) : Set<Nonterminal<'nt>> =
+        let rec loop (current: Set<Nonterminal<'nt>>) =
+            let newGenerating =
+                rules
+                |> List.filter (fun r ->
+                    Rhs.toNonEpsilonList r.Rhs
+                    |> List.forall (function
+                        | Symbol.N nt -> Set.contains nt current
+                        | Symbol.T _ -> true
+                        | Symbol.Epsilon -> true))
+                |> List.map (fun r -> r.Lhs)
+                |> Set.ofList
+
+            let updated = Set.union current newGenerating
+
+            if Set.count updated > Set.count current then
+                loop updated
+            else
+                updated
+
+        rules
+        |> List.filter (fun r ->
+            Rhs.toNonEpsilonList r.Rhs
+            |> List.forall (function
+                | Symbol.N _ -> false
+                | Symbol.T _ -> true
+                | Symbol.Epsilon -> true))
+        |> List.map (fun r -> r.Lhs)
+        |> Set.ofList
+        |> loop
+
+    let private removeNonGenerating (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
+        let generating = computeGenerating g.Rules
+
+        let newRules =
+            g.Rules
+            |> List.filter (fun r ->
+                Set.contains r.Lhs generating
+                && (Rhs.toNonEpsilonList r.Rhs
+                    |> List.forall (function
+                        | Symbol.N nt -> Set.contains nt generating
+                        | _ -> true)))
+
+        { g with Rules = newRules }
+
+    let private removeUnreachable (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
+        let rec collectReachable (current: Set<Nonterminal<'nt>>) : Set<Nonterminal<'nt>> =
+            let newReachable =
+                g.Rules
+                |> List.filter (fun r -> Set.contains r.Lhs current)
+                |> List.collect (fun r ->
+                    Rhs.toNonEpsilonList r.Rhs
+                    |> List.choose (function
+                        | Symbol.N nt -> Some nt
+                        | _ -> None))
+                |> Set.ofList
+
+            let updated = Set.union current newReachable
+
+            if Set.count updated > Set.count current then
+                collectReachable updated
+            else
+                updated
+
+        let reachable = collectReachable (Set.singleton g.Start)
+
+        let newRules = g.Rules |> List.filter (fun r -> Set.contains r.Lhs reachable)
+
+        { g with Rules = newRules }
+
+    let allNonterminalsReachable (g: Grammar<'t, 'nt>) : bool =
+        let rec collectReachable (current: Set<Nonterminal<'nt>>) : Set<Nonterminal<'nt>> =
+            let newReachable =
+                g.Rules
+                |> List.filter (fun r -> Set.contains r.Lhs current)
+                |> List.collect (fun r ->
+                    Rhs.toNonEpsilonList r.Rhs
+                    |> List.choose (function
+                        | Symbol.N nt -> Some nt
+                        | _ -> None))
+                |> Set.ofList
+
+            let updated = Set.union current newReachable
+
+            if Set.count updated > Set.count current then
+                collectReachable updated
+            else
+                updated
+
+        let reachable = collectReachable (Set.singleton g.Start)
+        let allNts = nonterminalsOf g
+        Set.isSubset allNts reachable
+
+    let allNonterminalsGenerating (g: Grammar<'t, 'nt>) : bool =
+        let generating = computeGenerating g.Rules
+        let allNts = nonterminalsOf g
+        Set.isSubset allNts generating
+
     /// Transform a grammar into Chomsky Normal Form.
     /// Resulting grammar has only rules of the form:
     /// A -> BC (two nonterminals), A -> a (one terminal), or S -> eps (only start).
     /// Binarization is applied first to reduce the number of combinations
     /// generated during epsilon elimination for long rules with nullable nonterminals.
+    /// As a final step, non-generating and unreachable nonterminals are removed.
     /// `freshNonterminal` produces a fresh nonterminal from an integer index.
     /// The caller is responsible for ensuring uniqueness (different indices produce different nonterminals).
     let toCnf (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
@@ -426,7 +525,9 @@ module Grammar =
         let s2 = eliminateEpsilon fresh s1
         let s3 = eliminateUnit s2
         let s4 = replaceTerminals fresh s3
-        s4
+        let s5 = removeNonGenerating s4
+        let s6 = removeUnreachable s5
+        s6
 
 
 /// An extended grammar: the original grammar augmented with a fresh start nonterminal S'.

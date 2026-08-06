@@ -146,6 +146,8 @@ module FactTests =
 
 module CnfTests =
 
+    open FLPQ.TestUtilities
+
     let private isCnf (g: Grammar<string, string>) : bool =
         g.Rules
         |> List.forall (fun r ->
@@ -348,30 +350,40 @@ module CnfTests =
         Assert.True(isCnf cnf)
 
     [<Fact>]
-    let ``toCnf result has no unit productions`` () =
+    let ``toCnf result has no unreachable or non-generating nonterminals`` () =
         let text =
             "
-        S -> A
-        A -> a
-        A -> B
-        B -> b
+        S -> a
+        S -> S S
+        S -> S S S
         "
 
         let g = Grammar.parseGrammar text
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
-        let hasUnit =
-            cnf.Rules
-            |> List.exists (fun r ->
-                match r.Rhs with
-                | Symbols nel ->
-                    NonEmptyList.length nel = 1
-                    && (match NonEmptyList.head nel with
-                        | Symbol.N _ -> true
-                        | _ -> false)
-                | _ -> false)
+        Assert.True(isCnf cnf)
+        Assert.True(Grammar.allNonterminalsReachable cnf)
+        Assert.True(Grammar.allNonterminalsGenerating cnf)
 
-        Assert.False(hasUnit)
+    [<Fact>]
+    let ``toCnf produces no unreachable or non-generating nonterminals for all registry grammars`` () =
+        let failures =
+            LanguageRegistry.allLanguages
+            |> List.collect (fun lang ->
+                lang.Grammars
+                |> List.choose (fun g ->
+                    let cnf = Grammar.toCnf Grammar.freshStringNonterminal g.Grammar
+
+                    let reachableOk = Grammar.allNonterminalsReachable cnf
+                    let generatingOk = Grammar.allNonterminalsGenerating cnf
+
+                    if not reachableOk || not generatingOk then
+                        Some(sprintf "%s/%s: reachable=%b generating=%b" lang.Name g.Name reachableOk generatingOk)
+                    else
+                        None))
+
+        if not (List.isEmpty failures) then
+            Assert.Fail(sprintf "Failures:\n%s" (String.concat "\n" failures))
 
 
 module PropertyCnfTests =

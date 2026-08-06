@@ -1,50 +1,63 @@
-# Global Plan: RNGLR Refactoring (Tasks 216, 217, 218)
+# Global Plan: CNF Cleanup, Table Rendering, BasicSPPF (Tasks 240, 241, 242)
 
 ## Tasks
 
 | ID | Title | Summary |
 |----|-------|---------|
-| 216 | RNGLR GSS visualization — edge symbols | Show grammar symbols on GSS edges in DOT instead of coordinate pairs |
-| 217 | RNGLR Descriptor refactoring — explicit GssIdx + continuous GSS numbering | Add GssIdx to descriptor; lazy on-demand GSS vertices with sequential IDs |
-| 218 | RNGLR steps — LR table with highlighted actions | Replace LR automaton DOT with highlighted LR table TeX in steps |
+| 240 | Fix toCNF function | Add non-generating + unreachable nonterminal cleanup; add test functions and registry-wide tests |
+| 241 | Improve CYK and Valiant table rendering | Render nonempty cells as `(nonterm, split_point, prod_id)` tuples |
+| 242 | Improve BasicSPPF creation and visualization | Build only from start NT cell; remove edge labels; production stores split point; NT label format |
 
 ## Dependencies
 
-- **217 depends on 216** — 216 establishes edge-symbol-aware visualization that 217 inherits and adapts for new vertex numbering.
-- **218 is independent** of 216/217 — touches different fields of `RnglrParsingStep` and different parts of `RnglrStepVisualizer.fs`.
+- **240 is independent** — touches only `Grammar.fs` (toCNF + new cleanup helpers) and grammar tests.
+- **241 depends on 240** only weakly — if 240 adds unreachable nonterminals cleanup, CNF tables may shrink, but SPPF table rendering is independent of cleanup logic. Tasks can proceed independently.
+- **242 depends on 241** only weakly — 241 changes table rendering format; 242 changes SPPF construction from the same SPPF table. They touch different aspects of the same data but can be done independently.
 
 ## Execution Order
 
-1. **Task 216** — smallest, establishes GSS edge symbol infrastructure
-2. **Task 218** — adds action highlighting to steps; minimal overlap with 216
-3. **Task 217** — largest restructuring; builds on 216's visualization + 218's step fields
+1. **Task 240** — simplest, self-contained, establishes test infrastructure for cleanup checks
+2. **Task 241** — medium, adds trace types + rendering changes for CYK/Valiant
+3. **Task 242** — medium, restructures SPPF node/edge types and rendering
 
-Reasoning: 216 is straightforward (add one field, update label printer). 218 is medium (3 fields, new table rendering). 217 is heavy (redesign GSS type, rewrite algorithm access patterns). Doing the lighter tasks first reduces conflict surface when 217 restructures.
+All three are largely independent. Order chosen for incremental risk: fix core algorithm first (240), then improve visualization bottom-up (241 → 242).
 
 ## Overlapping Files
 
-| File | 216 | 217 | 218 |
+| File | 240 | 241 | 242 |
 |------|-----|-----|-----|
-| `RnglrTypes.fs` (RnglrParsingStep) | +ActiveGssEdgeSymbols | +GssIdx in descriptor | +ActiveShiftTerminals, +ActiveReduceNt, +LevelReductions |
-| `Rnglr.fs` | populate edge symbols | use getOrCreateVertex/desc.GssIdx | capture shift/reduce actions |
-| `RnglrStepVisualizer.fs` | edge label printer | descriptor 3 fields, vertex labels | LR table instead of automaton |
-| `RnglrRunner.fs` | — | pass vertex info | — |
-| `Helpers.fs` | — | — | lr_automaton.dot → lr_table.tex |
-| `RnglrTableTeX.fs` | — | — | +tableToTeXWithHighlights |
-| `GoldenHelpers.fs` | +rnglrEdgeLabelRegex | update regex | — |
-| `RnglrStepVisualizationTests.fs` | edge label test | update for new formats | golden + table compile test |
-| `data/RNGLR_step_template.tex` | — | — | replace STEP_LR_AUTOMATON_PDF |
-| `SummaryTeX.fs` / `Summary.fs` | — | — | remove LR automaton PDF code |
-| `GllTypes.fs` (GraphHelpers) | — | +collectActiveGssForDict | — |
-| `docs/developer/rnglr.md` | — | update types/GSS docs | — |
-| Golden data (6 files) | regenerate (edge symbols) | regenerate (numbering+descriptor) | regenerate (lr_table) |
+| `Grammar.fs` | +removeNonGenerating, +removeUnreachable | — | — |
+| `Cyk.fs` | — | +SppfCykTraceStep, +parseWithSppfTrace | — |
+| `Valiant.fs` | — | +SppfValiantTraceStep, +parseWithSppfTrace | — |
+| `ParsingTable.fs` | — | — (reuses SppfParsingTable) | — |
+| `CykTeX.fs` | — | +sppfTableToTeXStyled (uses sppfEntryCellToTeX) | — |
+| `ValiantTeX.fs` | — | +sppfStepToTeX, +sppfModifiedStepToTeX | — |
+| `CykRunner.fs` | — | use sppfTrace instead of trace for rendering | — |
+| `ValiantRunner.fs` | — | use sppfTrace for rendering | — |
+| `BasicSppf.fs` | — | — | fromParsingTable (start NT only); change Prod type |
+| `BasicSppfDot.fs` | — | — | new labels, no edge labels |
+| `CykTests.fs` / `ValiantTests.fs` | — | test new trace functions | update fromParsingTable tests |
+| `SppfPropertyTests.fs` | — | — | update SPPF construction tests |
+| `BasicSppfDotTests.fs` | — | — | update golden tests |
+| `GrammarTests.fs` or new test file | +cleanup tests | — | — |
 
 ## Reuse Analysis
 
-- `RnglrGSS.outgoingEdges` — used in 216 to collect edge symbols from GSS
-- `RnglrTableTeX.tableToTeX` — existing function; 218 adds variant with highlights
-- `GraphHelpers.collectActiveGss` — existing for Matrix-based edges; 217 needs Dictionary variant
-- `GssDot.toDotFromSets` — existing shared function; used by both GLL and RNGLR visualizers
-- `PathIndexTeX.toTeXWithHighlights` — existing; unchanged in all three tasks
-- `GridIndex.linearIndex` — 217 removes RNGLR dependency on this; PathIndex still uses it
-- Golden test infrastructure (`GoldenHelpers.verifyGolden`, `ExternalTools.compileDotStringToInfo`) — reused in all three tasks
+### Task 240
+- `Grammar.nonterminalsOf` — existing, used to enumerate all nonterminals
+- `Grammar.terminalsOf` — existing
+- `Grammar.computeNullable` — existing, can be reused for computing generating set
+- No new external deps needed
+
+### Task 241
+- `ParsingTableTeX.sppfEntryCellToTeX` — **already exists** at `ParsingTableTeX.fs:35`, renders `(nt, k, prodIdx)` tuples. Task 241 just switches CYK/Valiant rendering from `ntCellToTeX` to `sppfEntryCellToTeX`.
+- `SppfParsingTable<'nt>` — **already exists** at `ParsingTable.fs:17`
+- `Cyk.parseWithSppfInfo` — **already exists**, returns `SppfParsingTable`
+- `Valiant.parseWithSppfInfo` — **already exists**
+- Need new SPPF-aware trace collection in CYK and Valiant
+
+### Task 242
+- `BasicSppf.fromParsingTable` — **already exists**, needs modification
+- `BasicSppfDot.toDot` — **already exists**, needs modification
+- `BasicSppfNodeInfo`, `BasicSppfEdgeLabel`, `BasicSPPF` — **already exist**
+- Tree extraction functions rely on edge labels — need update when labels are removed
