@@ -5,6 +5,22 @@ description: Use when running quality checks: format check, lint, build, test (w
 
 # Quality Gates
 
+## Invocation (Critical — Read Before Any Command)
+
+**`hard_gate.py` takes tens of minutes. It must run asynchronously in the background.**
+
+```
+# WRONG — hangs the shell indefinitely:
+python3 tools/hard_gate.py
+
+# RIGHT — launches in background, writes progress to tmp/hard-gate.txt:
+python3 tools/hard_gate.py &
+echo $! > tmp/hard-gate.pid
+```
+
+The script writes its own output file (`tmp/hard-gate.txt`). Do **NOT** redirect (`>`, `2>&1`). Do **NOT** run synchronously.
+Poll with: `grep "STATUS:" tmp/hard-gate.txt`
+
 Every quality gate MUST pass before a commit or merge. A single failing test, lint warning, or coverage drop is a blocker. Zero means absolute zero. Non-zero exit code from any gate tool means STOP — no exceptions, no partial passes.
 
 ## Tools
@@ -112,6 +128,14 @@ The output has two sections separated by `--- DETAILED LOG ---`:
 head -15 tmp/hard-gate.txt   # step summary
 tail -20 tmp/hard-gate.txt   # current detailed output
 ```
+
+### Before Starting — Checklist
+
+- [ ] `&` appended to the command to launch in background
+- [ ] PID written to `tmp/hard-gate.pid`
+- [ ] No `>`, `>>`, or `2>&1` redirect — script writes its own output file
+- [ ] Poll interval: 5 minutes minimum (do not poll more frequently)
+- [ ] Source files committed and working tree clean
 
 ### Starting the Gate
 
