@@ -4,7 +4,7 @@
 
 Reviewed all 62 `.fs` source files (`src/`) and 49 `.fs` test files (`tests/`).
 Report generated: 2026-08-06. Fresh full-repo review — all prior reports verified and consolidated.
-**Status: 56 OPEN issues. FSharpLint: 0 warnings on all source files.**
+**Status: 56 OPEN issues. FSharpLint: 0 warnings on all source files. §19 (documentation completeness) not fully verified — ~15 Printer modules, CLI files, and BasicSppf.fs pending module-doc audit.**
 
 Each issue was verified against the current codebase. Issues from prior reports that are now fixed (R1, R3–R6, N7, R7, 4.4/N10, 4.6, 4.8, 4.9, N6, 5.2) or obsolete (N9/GllCykEquivalence) have been removed.
 
@@ -141,3 +141,32 @@ These files test EBNF/RSM-related functions but hardcode EBNF grammar text inste
 | # | Description | Severity |
 |---|-------------|----------|
 | RV27 | 7 `.bnf` files in `data/` duplicate LanguageRegistry entries: `example_grammar.bnf` (Dyck1 grammar1), `example_grammar_amb.bnf` (Dyck1 grammar2), `example_grammar_a_a_a.bnf` (APlus grammar5), `example_grammar_an_bn.bnf` (ANBN), `example_grammar_chain.bnf`, `example_grammar_simple.bnf`, `example_lr_grammar.bnf` (ArithExpr grammar7). Used by `FLPQ.Cli.Tests`. Fix: CLI tests should generate temp files from the registry or read `.Text`. | Low |
+
+## 8. Verification Completeness
+
+This table tracks whether each constraint source (rows §1–§22 from the [Constraint Sources Map](.opencode/skills/code-review/SKILL.md#constraint-sources-map)) was verified during this review. "Verified" means either the tool reported zero violations, or manual inspection confirmed compliance or produced findings.
+
+| § | Constraint | Status | Evidence |
+|---|-----------|--------|----------|
+| 1 | Naming case | Auto — 0 FSharpLint warnings | FSharpLint |
+| 2 | Code style idioms | Auto — 0 FSharpLint warnings | FSharpLint |
+| 3 | Tab chars, redundant keywords, unused bindings | Auto — 0 FSharpLint warnings | FSharpLint |
+| 4 | Formatting | Auto — 0 Fantomas diffs | Fantomas |
+| 5 | XML doc comments on public API | Verified | Findings: D1–D4 (Section 6) |
+| 6 | Genericity (no hardcoded `string`) | Verified | Findings: G1–G5 (Section 4), T1 (§6+§22) |
+| 7 | Non-empty collections by type | Verified | Findings: T2 (§7+§11) |
+| 8 | Separation data/presentation | Verified | Findings: A1–A3 (Section 2) |
+| 9 | One algorithm per file | Verified | Findings: A5 (Valiant.fs at 912 lines) |
+| 10 | Variants as thin layers | Verified | Findings captured by §12: D6, D7 (duplicated variant implementations) |
+| 11 | Compile-time safety over runtime checks | Verified | Findings: T2 (list where NonEmptyList would be correct) |
+| 12 | No code duplication | Verified | Findings: D1–D7 (Section 1) |
+| 13 | Language registry | Verified | Findings: RV1–RV27 (Section 7) |
+| 14 | No stubbed tests | Verified | Searched for `Assert.True(true)`, empty test bodies, `[<Fact(Skip=...)>]` — zero matches |
+| 15 | Property vs Fact labeling | Verified | Findings: T3 (§15), T2 (§15+§16) |
+| 16 | FsCheck generators in shared `Generators.fs` | Verified | Findings: T1, T2 (§16) |
+| 17 | Equivalence tests for all variants | Verified | Checked: `ValiantTests.testEquivalence`, `CrossParserEquivalenceTests.fs`, `SppfPropertyTests.fs`, `EbnfParserTests.ParsingEquivalenceTests` |
+| 18 | Test coverage | Verified | Findings: T4, T5 (Section 5) |
+| 19 | Documentation completeness | **Not fully verified** | Module docs checked for ~39/62 source files via Section 6 D1–D5. ~15 Printer module files, multiple CLI files, and `BasicSppf.fs` not verified for module doc existence per the documentation mapping table in `documentation-conventions.md`. Full audit deferred. |
+| 20 | Book traceability | Verified | Findings: D5 (Section 6) |
+| 21 | Code clarity | Verified | Findings: A4 (§21) |
+| 22 | Naming semantics | Verified | Findings: T1 (§6+§22), T2 (§7+§11) |
