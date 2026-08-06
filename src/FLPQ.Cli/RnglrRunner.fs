@@ -22,8 +22,12 @@ module RnglrRunner =
         let inputGraph = GLL.stringToGraph rawTokens
         let vertexCount = Graph.vertexCount inputGraph
 
-        let pathIndex, steps, vertexInfoArr =
+        let result =
             Rnglr.buildPathIndexWithSteps (ExtendedRSM.freshStart extRsm) extRsm inputGraph
+
+        let pathIndex = result.PathIndex
+        let steps = result.Steps
+        let vertexInfoArr = result.VertexInfo
 
         let vertexInfo (idx: int) = vertexInfoArr.[idx]
 

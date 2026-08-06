@@ -37,19 +37,19 @@ module GllTreeYield =
     let ``S -> a S b S | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar1Inputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[0].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[0].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammarSaSb_epsInputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[2].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[2].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S S | a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar2Inputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[1].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[1].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
@@ -59,31 +59,29 @@ module GllTreeYield =
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches input: a a a b a b b a b b`` () =
         let input = dyck1.AcceptStrings[6]
-        Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[2].Grammar) input)
+        Assert.True(accepts dyck1.Grammars[2].Rsm input)
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches input: a a b a b b a b`` () =
         let input = dyck1.AcceptStrings[5]
-        Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[2].Grammar) input)
+        Assert.True(accepts dyck1.Grammars[2].Rsm input)
 
     [<Fact>]
     let ``Tree extraction for S->aSbS|eps on abab produces tree with correct yield`` () =
         let s = dyck1.AcceptStrings[0]
-        Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[0].Grammar) s)
+        Assert.True(accepts dyck1.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``Tree extraction for S->aSb|eps on aabb produces tree with correct yield`` () =
-        let g = LanguageRegistry.ANBN.Grammars[0].Grammar
         let s = LanguageRegistry.ANBN.AcceptStrings[2]
-        Assert.True(accepts (TestHelpers.grammarToRsm g) s)
+        Assert.True(accepts LanguageRegistry.ANBN.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``Tree extraction for S->a|b on a produces tree with leaf`` () =
         let lang = LanguageRegistry.AltAB
-        let g = lang.Grammars[0].Grammar
 
         for s in lang.AcceptStrings do
-            Assert.True(accepts (TestHelpers.grammarToRsm g) s)
+            Assert.True(accepts lang.Grammars[0].Rsm s)
 
 module GllPropertyTreeYield =
     let private propertyRunner =
@@ -91,55 +89,54 @@ module GllPropertyTreeYield =
 
     [<Property>]
     let ``S -> a S b S | eps tree yield (Dyck1 grammar1)`` (s: string) =
-        propertyRunner dyck1.Grammars[0].Grammar "S -> a S b S | eps" s
+        propertyRunner dyck1.Grammars[0].Rsm "S -> a S b S | eps" s
 
     [<Property>]
     let ``S -> S S | a S b | eps tree yield (Dyck1 grammar2)`` (s: string) =
-        propertyRunner dyck1.Grammars[1].Grammar "S -> S S | a S b | eps" s
+        propertyRunner dyck1.Grammars[1].Rsm "S -> S S | a S b | eps" s
 
     [<Property>]
     let ``S -> a S | a tree yield (APlus grammar3)`` (s: string) =
-        propertyRunner aplus.Grammars[0].Grammar "S -> a S | a" s
+        propertyRunner aplus.Grammars[0].Rsm "S -> a S | a" s
 
     [<Property>]
     let ``S -> S a | a tree yield (APlus grammar4)`` (s: string) =
-        propertyRunner aplus.Grammars[1].Grammar "S -> S a | a" s
+        propertyRunner aplus.Grammars[1].Rsm "S -> S a | a" s
 
     [<Property>]
     let ``S -> N a* tree yield (APlus grammar11)`` (s: string) =
-        propertyRunner aplus.Grammars[3].Grammar "S -> N a*" s
+        propertyRunner aplus.Grammars[3].Rsm "S -> N a*" s
 
     [<Property>]
     let ``S -> a* N tree yield (APlus grammar12)`` (s: string) =
-        propertyRunner aplus.Grammars[4].Grammar "S -> a* N" s
+        propertyRunner aplus.Grammars[4].Rsm "S -> a* N" s
 
     [<Property>]
     let ``S -> N* tree yield (AStar grammar13)`` (s: string) =
-        propertyRunner astar.Grammars[0].Grammar "S -> N*" s
+        propertyRunner astar.Grammars[0].Rsm "S -> N*" s
 
     [<Property>]
     let ``S -> a | S S | S S S tree yield (APlus grammar14)`` (s: string) =
-        propertyRunner aplus.Grammars[5].Grammar "S -> a | S S | S S S" s
+        propertyRunner aplus.Grammars[5].Rsm "S -> a | S S | S S S" s
 
 module GllRightNullable =
-    let private g = astarBStar.Grammars[0].Grammar
     let private lang = astarBStar
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps accepts accept strings`` () =
         for s in lang.AcceptStrings do
-            Assert.True(accepts (TestHelpers.grammarToRsm g) s)
+            Assert.True(accepts astarBStar.Grammars[0].Rsm s)
 
     [<Fact>]
     let ``S -> A B, A -> a A | eps, B -> b B | eps rejects reject strings`` () =
         for s in lang.RejectStrings do
-            Assert.False(accepts (TestHelpers.grammarToRsm g) s)
+            Assert.False(accepts astarBStar.Grammars[0].Rsm s)
 
 module GllReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
         let g = epsilonOnly.Grammars |> List.find (fun g -> g.Name = "grammarCascade")
-        Assert.True(accepts (TestHelpers.grammarToRsm g.Grammar) [])
+        Assert.True(accepts g.Rsm [])
 
 module GllEpsilonGrammars =
     [<Fact>]

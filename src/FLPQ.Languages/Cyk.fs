@@ -223,11 +223,14 @@ module Cyk =
                 Seq.empty
             else
                 leftSet
-                |> Seq.collect (fun (leftNt, _, _) ->
+                |> Seq.collect (fun leftEntry ->
                     rightSet
-                    |> Seq.collect (fun (rightNt, _, _) ->
-                        findBinaryProductionsWithProdIdx rules leftNt rightNt
-                        |> List.map (fun (lhs, prodIdx) -> (lhs, k, prodIdx))
+                    |> Seq.collect (fun rightEntry ->
+                        findBinaryProductionsWithProdIdx rules leftEntry.Nt rightEntry.Nt
+                        |> List.map (fun (lhs, prodIdx) ->
+                            { Nt = lhs
+                              SplitPoint = k
+                              ProdIdx = prodIdx })
                         |> List.toSeq)))
         |> Set.ofSeq
 
@@ -240,7 +243,12 @@ module Cyk =
 
             if not (List.isEmpty producing) then
                 let entries =
-                    producing |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList
+                    producing
+                    |> List.map (fun (nt, prodIdx) ->
+                        { Nt = nt
+                          SplitPoint = i
+                          ProdIdx = prodIdx })
+                    |> Set.ofList
 
                 table.[i, i] <- entries
 
@@ -260,7 +268,7 @@ module Cyk =
         if n = 0 then
             false
         else
-            table.[0, n - 1] |> Set.exists (fun (nt, _, _) -> nt = cnf.Start)
+            table.[0, n - 1] |> Set.exists (fun entry -> entry.Nt = cnf.Start)
 
     /// Run CYK and return an enriched parsing table with SPPF construction data.
     let parseWithSppfInfo
@@ -313,7 +321,12 @@ module Cyk =
 
                 if not (List.isEmpty producing) then
                     let entries =
-                        producing |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList
+                        producing
+                        |> List.map (fun (nt, prodIdx) ->
+                            { Nt = nt
+                              SplitPoint = i
+                              ProdIdx = prodIdx })
+                        |> Set.ofList
 
                     table.[i, i] <- entries
 

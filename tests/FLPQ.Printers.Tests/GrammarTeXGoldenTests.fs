@@ -3,22 +3,19 @@ module GrammarTeXGoldenTests
 open System.IO
 open FLPQ.Languages
 open FLPQ.Printers
+open FLPQ.TestUtilities
 open Xunit
 
 open GoldenHelpers
 
 module private Grammars =
-    let grammar1Bnf = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let grammar1Bnf = LanguageRegistry.Dyck1.Grammars.[0].Grammar
     let grammar1Cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar1Bnf
 
-    let grammar7Bnf =
-        Grammar.parseGrammar "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x"
-
+    let grammar7Bnf = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
     let grammar7Cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar7Bnf
 
-    let grammar9Bnf =
-        Grammar.parseGrammar "S -> S1\nS -> S2\nS1 -> a b S c\nS1 -> eps\nS2 -> a x S y\nS2 -> eps"
-
+    let grammar9Bnf = LanguageRegistry.TwoTrackDyck.Grammars.[0].Grammar
     let grammar9Cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar9Bnf
 
 type ``Grammar to TeX golden tests``() =

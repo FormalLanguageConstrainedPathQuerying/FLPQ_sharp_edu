@@ -38,6 +38,12 @@ module Valiant =
             submatrices: Submatrix list *
             ChangedCells: (int * int) list
 
+    [<Struct>]
+    type private SubmatrixTask =
+        { Submatrix: Submatrix
+          Left: Submatrix
+          Right: Submatrix }
+
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
         { Table: Matrix<Set<Nonterminal<'nt>>>
           TokensArr: 't[]
@@ -194,13 +200,17 @@ module Valiant =
     let private doMultiplications
         (init: InitData<'t, 'nt>)
         (table: Matrix<Set<Nonterminal<'nt>>>)
-        (tasks: (Submatrix * Submatrix * Submatrix) list)
+        (tasks: SubmatrixTask list)
         (traceAcc: ResizeArray<ValiantTraceStep<'nt>> option)
         : unit =
         if List.isEmpty init.BinaryRules then
             ()
         else
-            for (mTarget, m1, m2) in tasks do
+            for task in tasks do
+                let mTarget = task.Submatrix
+                let m1 = task.Left
+                let m2 = task.Right
+
                 let before =
                     Matrix.create mTarget.Size mTarget.Size (fun i j ->
                         let ti = mTarget.Row - mTarget.Size + 1 + i
@@ -258,12 +268,43 @@ module Valiant =
             let te = topSubmatrix m
 
             complete init table b traceAcc
-            doMultiplications init table [ (l, leftGrounded l, b) ] traceAcc
+
+            doMultiplications
+                init
+                table
+                [ { Submatrix = l
+                    Left = leftGrounded l
+                    Right = b } ]
+                traceAcc
+
             complete init table l traceAcc
-            doMultiplications init table [ (r, b, rightGrounded r) ] traceAcc
+
+            doMultiplications
+                init
+                table
+                [ { Submatrix = r
+                    Left = b
+                    Right = rightGrounded r } ]
+                traceAcc
+
             complete init table r traceAcc
-            doMultiplications init table [ (te, leftGrounded te, r) ] traceAcc
-            doMultiplications init table [ (te, l, rightGrounded te) ] traceAcc
+
+            doMultiplications
+                init
+                table
+                [ { Submatrix = te
+                    Left = leftGrounded te
+                    Right = r } ]
+                traceAcc
+
+            doMultiplications
+                init
+                table
+                [ { Submatrix = te
+                    Left = l
+                    Right = rightGrounded te } ]
+                traceAcc
+
             complete init table te traceAcc
 
     and private compute
@@ -324,15 +365,24 @@ module Valiant =
 
         let firstTasks =
             [ for m in leftSubLayer do
-                  yield (m, leftGrounded m, rightNeighbor m)
+                  yield
+                      { Submatrix = m
+                        Left = leftGrounded m
+                        Right = rightNeighbor m }
               for m in rightSubLayer do
-                  yield (m, leftNeighbor m, rightGrounded m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftNeighbor m
+                        Right = rightGrounded m } ]
 
-        let collectTaskChanges (tasks: (Submatrix * Submatrix * Submatrix) list) : unit =
+        let collectTaskChanges (tasks: SubmatrixTask list) : unit =
             if List.isEmpty init.BinaryRules then
                 ()
             else
-                for (mTarget, m1, m2) in tasks do
+                for task in tasks do
+                    let mTarget = task.Submatrix
+                    let m1 = task.Left
+                    let m2 = task.Right
                     let leftSlice = extractSlice table m1
                     let rightSlice = extractSlice table m2
 
@@ -345,13 +395,19 @@ module Valiant =
 
         let secondTasks =
             [ for m in topSubLayer do
-                  yield (m, leftGrounded m, rightNeighbor m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftGrounded m
+                        Right = rightNeighbor m } ]
 
         collectTaskChanges secondTasks
 
         let thirdTasks =
             [ for m in topSubLayer do
-                  yield (m, leftNeighbor m, rightGrounded m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftNeighbor m
+                        Right = rightGrounded m } ]
 
         collectTaskChanges thirdTasks
 
@@ -545,7 +601,14 @@ module Valiant =
 
         for i in 0 .. tokensArr.Length - 1 do
             match Map.tryFind tokensArr.[i] terminalRules with
-            | Some pairs -> table.[i, i + 1] <- pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList
+            | Some pairs ->
+                table.[i, i + 1] <-
+                    pairs
+                    |> List.map (fun (nt, prodIdx) ->
+                        { Nt = nt
+                          SplitPoint = i
+                          ProdIdx = prodIdx })
+                    |> Set.ofList
             | None -> ()
 
         { Table = table
@@ -568,11 +631,17 @@ module Valiant =
                 else
                     binaryRules
                     |> List.choose (fun (lhs, pair, prodIdx) ->
-                        let hasLeft = leftSet |> Set.exists (fun (nt, _, _) -> nt = pair.Left)
+                        let hasLeft = leftSet |> Set.exists (fun entry -> entry.Nt = pair.Left)
 
-                        let hasRight = rightSet |> Set.exists (fun (nt, _, _) -> nt = pair.Right)
+                        let hasRight = rightSet |> Set.exists (fun entry -> entry.Nt = pair.Right)
 
-                        if hasLeft && hasRight then Some(lhs, k, prodIdx) else None)
+                        if hasLeft && hasRight then
+                            Some
+                                { Nt = lhs
+                                  SplitPoint = k
+                                  ProdIdx = prodIdx }
+                        else
+                            None)
                     |> Set.ofList)
             Set.empty
             a
@@ -617,13 +686,16 @@ module Valiant =
     let private doMultiplicationsSppf
         (init: InitDataSppf<'t, 'nt>)
         (table: SppfParsingTable<'nt>)
-        (tasks: (Submatrix * Submatrix * Submatrix) list)
+        (tasks: SubmatrixTask list)
         (traceAcc: ResizeArray<ValiantSppfTraceStep<'nt>> option)
         : unit =
         if List.isEmpty init.BinaryRules then
             ()
         else
-            for (mTarget, m1, m2) in tasks do
+            for task in tasks do
+                let mTarget = task.Submatrix
+                let m1 = task.Left
+                let m2 = task.Right
                 let beforeSnapshot = extractSlice table mTarget
 
                 let leftSlice = extractSlice table m1
@@ -662,7 +734,14 @@ module Valiant =
                 match Map.tryFind ch init.TerminalRules with
                 | Some pairs ->
                     table.[i, j] <-
-                        Set.union existing (pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList)
+                        Set.union
+                            existing
+                            (pairs
+                             |> List.map (fun (nt, prodIdx) ->
+                                 { Nt = nt
+                                   SplitPoint = i
+                                   ProdIdx = prodIdx })
+                             |> Set.ofList)
                 | None -> ()
 
             ()
@@ -673,12 +752,43 @@ module Valiant =
             let te = topSubmatrix m
 
             completeSppf init table b traceAcc
-            doMultiplicationsSppf init table [ (l, leftGrounded l, b) ] traceAcc
+
+            doMultiplicationsSppf
+                init
+                table
+                [ { Submatrix = l
+                    Left = leftGrounded l
+                    Right = b } ]
+                traceAcc
+
             completeSppf init table l traceAcc
-            doMultiplicationsSppf init table [ (r, b, rightGrounded r) ] traceAcc
+
+            doMultiplicationsSppf
+                init
+                table
+                [ { Submatrix = r
+                    Left = b
+                    Right = rightGrounded r } ]
+                traceAcc
+
             completeSppf init table r traceAcc
-            doMultiplicationsSppf init table [ (te, leftGrounded te, r) ] traceAcc
-            doMultiplicationsSppf init table [ (te, l, rightGrounded te) ] traceAcc
+
+            doMultiplicationsSppf
+                init
+                table
+                [ { Submatrix = te
+                    Left = leftGrounded te
+                    Right = r } ]
+                traceAcc
+
+            doMultiplicationsSppf
+                init
+                table
+                [ { Submatrix = te
+                    Left = l
+                    Right = rightGrounded te } ]
+                traceAcc
+
             completeSppf init table te traceAcc
 
     and private computeSppf
@@ -723,7 +833,12 @@ module Valiant =
                             table.[i, j] <-
                                 Set.union
                                     existing
-                                    (pairs |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList)
+                                    (pairs
+                                     |> List.map (fun (nt, prodIdx) ->
+                                         { Nt = nt
+                                           SplitPoint = i
+                                           ProdIdx = prodIdx })
+                                     |> Set.ofList)
                         | None -> ()
             else
                 let bottomLayer = mList |> List.map bottomSubmatrix
@@ -741,22 +856,34 @@ module Valiant =
 
         let firstTasks =
             [ for m in leftSubLayer do
-                  yield (m, leftGrounded m, rightNeighbor m)
+                  yield
+                      { Submatrix = m
+                        Left = leftGrounded m
+                        Right = rightNeighbor m }
               for m in rightSubLayer do
-                  yield (m, leftNeighbor m, rightGrounded m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftNeighbor m
+                        Right = rightGrounded m } ]
 
         doMultiplicationsSppf init table firstTasks None
         completeLayerModifiedSppf init table (leftSubLayer @ rightSubLayer)
 
         let secondTasks =
             [ for m in topSubLayer do
-                  yield (m, leftGrounded m, rightNeighbor m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftGrounded m
+                        Right = rightNeighbor m } ]
 
         doMultiplicationsSppf init table secondTasks None
 
         let thirdTasks =
             [ for m in topSubLayer do
-                  yield (m, leftNeighbor m, rightGrounded m) ]
+                  yield
+                      { Submatrix = m
+                        Left = leftNeighbor m
+                        Right = rightGrounded m } ]
 
         doMultiplicationsSppf init table thirdTasks None
         completeLayerModifiedSppf init table topSubLayer
@@ -804,7 +931,7 @@ module Valiant =
             let finalTable = snapshot table init.N
 
             let accepted =
-                Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
+                Set.exists (fun entry -> entry.Nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
 
@@ -872,7 +999,7 @@ module Valiant =
             let finalTable = parseModifiedWithSppfInfo freshNonterminal g terminals
 
             let accepted =
-                Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
+                Set.exists (fun entry -> entry.Nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
 

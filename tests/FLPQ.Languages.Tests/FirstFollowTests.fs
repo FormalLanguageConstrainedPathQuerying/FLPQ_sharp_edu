@@ -5,17 +5,13 @@ open FsCheck
 open FsCheck.Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.TestUtilities
 
 module FactTests =
 
     [<Fact>]
     let ``firstK for grammar3 with k=1`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> a
-        "
+        let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
         let first = FirstFollow.firstK g 1
 
@@ -24,12 +20,7 @@ module FactTests =
 
     [<Fact>]
     let ``firstK for grammar1 with k=1 includes epsilon`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S b S
-        S -> eps
-        "
+        let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
         let first = FirstFollow.firstK g 1
 
@@ -40,12 +31,7 @@ module FactTests =
 
     [<Fact>]
     let ``followK for grammar1 with k=1`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S b S
-        S -> eps
-        "
+        let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
         let follow = FirstFollow.followK g 1
 
@@ -55,12 +41,7 @@ module FactTests =
 
     [<Fact>]
     let ``firstK with k=2 for grammar3`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> a
-        "
+        let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
         let first = FirstFollow.firstK g 2
 
@@ -73,31 +54,18 @@ module FactTests =
 
     [<Fact>]
     let ``firstK handles expression grammar 7`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        E -> E + T
-        E -> T
-        T -> T * F
-        T -> F
-        F -> ( E )
-        F -> x
-        "
+        let g = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
 
         let first = FirstFollow.firstK g 1
         let eFirst = Map.find (Nonterminal "E") first
 
         Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "x") ], eFirst)
-        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "(") ], eFirst)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "lbr") ], eFirst)
 
     [<Fact>]
     let ``firstKOfString concatenates correctly`` () =
         let g =
-            Grammar.parseGrammar
-                "
-        S -> a B
-        B -> b
-        "
+            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
 
         let first = FirstFollow.firstK g 2
 
@@ -106,23 +74,14 @@ module FactTests =
 
     [<Fact>]
     let ``firstK with k=0 returns only epsilon`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a
-        "
+        let g = LanguageRegistry.SingleA.Grammars.[0].Grammar
 
         let first = FirstFollow.firstK g 0
         Assert.Equal<Symbol<string, string> list>(set [ [ Symbol.Epsilon ] ], Map.find (Nonterminal "S") first)
 
     [<Fact>]
     let ``followK for grammar3 with k=1`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a S
-        S -> a
-        "
+        let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
         let follow = FirstFollow.followK g 1
 
@@ -130,22 +89,13 @@ module FactTests =
 
     [<Fact>]
     let ``followK for expression grammar 7 with k=1`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        E -> E + T
-        E -> T
-        T -> T * F
-        T -> F
-        F -> ( E )
-        F -> x
-        "
+        let g = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
 
         let follow = FirstFollow.followK g 1
         let eFollow = Map.find (Nonterminal "E") follow
 
-        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "+") ], eFollow)
-        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal ")") ], eFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "add") ], eFollow)
+        Assert.Contains<Symbol<string, string> list>([ Symbol.T(Terminal "rbr") ], eFollow)
         Assert.Contains<Symbol<string, string> list>([ Symbol.Epsilon ], eFollow)
 
 module PropertyTests =
@@ -181,11 +131,11 @@ module PropertyTests =
     [<Fact>]
     let ``firstK matches brute-force derivation`` () =
         let grammars =
-            [ Grammar.parseGrammar "S -> a S b S\nS -> eps"
-              Grammar.parseGrammar "S -> a S\nS -> a"
-              Grammar.parseGrammar "S -> a B\nB -> b"
-              Grammar.parseGrammar "S -> S S\nS -> a\nS -> b"
-              Grammar.parseGrammar "E -> E + T\nE -> T\nT -> x" ]
+            [ LanguageRegistry.Dyck1.Grammars.[0].Grammar
+              LanguageRegistry.APlus.Grammars.[0].Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_SS_a_b").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_EEaddT").Grammar ]
 
         grammars
         |> List.forall (fun g ->

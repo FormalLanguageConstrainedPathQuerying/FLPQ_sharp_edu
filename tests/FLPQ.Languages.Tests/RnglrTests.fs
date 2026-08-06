@@ -9,6 +9,12 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 open FLPQ.TestUtilities
 
+[<Struct>]
+type private TerminalPosition =
+    { Terminal: string
+      Left: int
+      Right: int }
+
 let private accepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
 
 let private checkReject =
@@ -40,19 +46,19 @@ module RnglrTreeYield =
     let ``S -> a S b S | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar1Inputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[0].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[0].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammarSaSb_epsInputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[2].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[2].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S S | a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar2Inputs do
             let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
-            Assert.True(accepts (TestHelpers.grammarToRsm dyck1.Grammars[1].Grammar) input, $"tree yield: {desc}")
+            Assert.True(accepts dyck1.Grammars[1].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> (a S b)* tree yield matches input: a a a b a b b a b b`` () =
@@ -78,24 +84,23 @@ module RnglrTreeYield =
         Assert.True(accepts rsm input, "Should produce a tree")
 
 module RnglrRightNullable =
-    let private g = astarBStar.Grammars[0].Grammar
     let private lang = astarBStar
 
     [<Fact>]
     let ``S -> A B accepts all accept strings`` () =
         for s in lang.AcceptStrings do
-            Assert.True(accepts (TestHelpers.grammarToRsm g) s, "Should accept and produce tree")
+            Assert.True(accepts astarBStar.Grammars[0].Rsm s, "Should accept and produce tree")
 
     [<Fact>]
     let ``S -> A B rejects all reject strings`` () =
         for s in lang.RejectStrings do
-            Assert.True(checkReject (TestHelpers.grammarToRsm g) s)
+            Assert.True(checkReject astarBStar.Grammars[0].Rsm s)
 
 module RnglrReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
         let g = epsilonOnly.Grammars |> List.find (fun g -> g.Name = "grammarCascade")
-        Assert.True(accepts (TestHelpers.grammarToRsm g.Grammar) [], "Should accept and produce tree")
+        Assert.True(accepts g.Rsm [], "Should accept and produce tree")
 
 module RnglrPropertyTreeYield =
     let private propertyRunner =
@@ -105,42 +110,41 @@ module RnglrPropertyTreeYield =
     module Ab =
         [<Property>]
         let ``S -> a S b S | eps tree yield (Dyck1 grammar1)`` (s: string) =
-            propertyRunner dyck1.Grammars[0].Grammar "S -> a S b S | eps" s
+            propertyRunner dyck1.Grammars[0].Rsm "S -> a S b S | eps" s
 
         [<Property>]
         let ``S -> S S | a S b | eps tree yield (Dyck1 grammar2)`` (s: string) =
-            propertyRunner dyck1.Grammars[1].Grammar "S -> S S | a S b | eps" s
+            propertyRunner dyck1.Grammars[1].Rsm "S -> S S | a S b | eps" s
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module A =
         [<Property>]
         let ``S -> a S | a tree yield (APlus grammar3)`` (s: string) =
-            propertyRunner aplus.Grammars[0].Grammar "S -> a S | a" s
+            propertyRunner aplus.Grammars[0].Rsm "S -> a S | a" s
 
         [<Property>]
         let ``S -> S a | a tree yield (APlus grammar4)`` (s: string) =
-            propertyRunner aplus.Grammars[1].Grammar "S -> S a | a" s
+            propertyRunner aplus.Grammars[1].Rsm "S -> S a | a" s
 
         [<Property>]
         let ``S -> N a* tree yield (APlus grammar11)`` (s: string) =
-            propertyRunner aplus.Grammars[3].Grammar "S -> N a*" s
+            propertyRunner aplus.Grammars[3].Rsm "S -> N a*" s
 
         [<Property>]
         let ``S -> a* N tree yield (APlus grammar12)`` (s: string) =
-            propertyRunner aplus.Grammars[4].Grammar "S -> a* N" s
+            propertyRunner aplus.Grammars[4].Rsm "S -> a* N" s
 
         [<Property>]
         let ``S -> N* tree yield (AStar grammar13)`` (s: string) =
-            propertyRunner astar.Grammars[0].Grammar "S -> N*" s
+            propertyRunner astar.Grammars[0].Rsm "S -> N*" s
 
         [<Property>]
         let ``S -> a | S S | S S S tree yield (APlus grammar14)`` (s: string) =
-            propertyRunner aplus.Grammars[5].Grammar "S -> a | S S | S S S" s
+            propertyRunner aplus.Grammars[5].Rsm "S -> a | S S | S S S" s
 
 module SppfDotTests =
 
-    let private buildSppf (grammarText: string) (input: Terminal<string> list) : SPPF<string, string> =
-        let rsm = RsmBuilder.buildRSMFromText grammarText
+    let private buildSppf (rsm: RSM<string, string>) (input: Terminal<string> list) : SPPF<string, string> =
         let startNt = (RSM.startBlock rsm).Nonterminal
         let rsmFixed = { rsm with StartBlock = startNt }
         let freshStart = Nonterminal("S'")
@@ -177,10 +181,10 @@ module SppfDotTests =
 
     [<Fact>]
     let ``RNGLR SPPF contains all terminals for S->aSb|SS|eps with aababb`` () =
-        let grammarText = dyck1.Grammars[1].Text
+        let rsm = dyck1.Grammars[1].Rsm
         let input = dyck1.AcceptStrings[4]
 
-        let sppf = buildSppf grammarText input
+        let sppf = buildSppf rsm input
 
         TestHelpers.assertSppfInvariant sppf
 
@@ -188,21 +192,27 @@ module SppfDotTests =
             Graph.vertices sppf.Graph
             |> List.choose (fun (_, v) ->
                 match v with
-                | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> Some(t, l, r)
+                | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> Some { Terminal = t; Left = l; Right = r }
                 | _ -> None)
             |> Set.ofList
 
-        let expected: Set<string * int * int> =
-            set [ ("a", 0, 1); ("a", 1, 2); ("b", 2, 3); ("a", 3, 4); ("b", 4, 5); ("b", 5, 6) ]
+        let expected: Set<TerminalPosition> =
+            set
+                [ { Terminal = "a"; Left = 0; Right = 1 }
+                  { Terminal = "a"; Left = 1; Right = 2 }
+                  { Terminal = "b"; Left = 2; Right = 3 }
+                  { Terminal = "a"; Left = 3; Right = 4 }
+                  { Terminal = "b"; Left = 4; Right = 5 }
+                  { Terminal = "b"; Left = 5; Right = 6 } ]
 
-        Assert.Equal<Set<string * int * int>>(expected, terminalPositions)
+        Assert.Equal<Set<TerminalPosition>>(expected, terminalPositions)
 
     [<Fact>]
     let ``RNGLR SPPF has root nodes for S->aSb|SS|eps with aababb`` () =
-        let grammarText = dyck1.Grammars[1].Text
+        let rsm = dyck1.Grammars[1].Rsm
         let input = dyck1.AcceptStrings[4]
 
-        let sppf = buildSppf grammarText input
+        let sppf = buildSppf rsm input
 
         TestHelpers.assertSppfInvariant sppf
 

@@ -7,6 +7,9 @@ open FLPQ.GraphAnalysis
 [<Struct>]
 type Config = { State: int; Position: int }
 
+[<Struct>]
+type Trans<'a> = { From: int; Label: 'a; To: int }
+
 type AutomatonLabel<'t> =
     | ATerm of 't
     | AEpsilon
@@ -55,17 +58,17 @@ module Nfa =
     /// Multiple transitions between the same pair of states are merged into a non-empty set.
     let buildMatrix
         (n: int)
-        (transitionsList: (int * AutomatonLabel<'t> * int) list)
+        (transitionsList: Trans<AutomatonLabel<'t>> list)
         : Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>> =
         let matrix = Matrix.init n n None
 
-        for (fromIdx, sym, toIdx) in transitionsList do
+        for t in transitionsList do
             let current =
-                match matrix.[fromIdx, toIdx] with
-                | Some nes -> NonEmptySet.add sym nes
-                | None -> NonEmptySet.singleton sym
+                match matrix.[t.From, t.To] with
+                | Some nes -> NonEmptySet.add t.Label nes
+                | None -> NonEmptySet.singleton t.Label
 
-            matrix.[fromIdx, toIdx] <- Some current
+            matrix.[t.From, t.To] <- Some current
 
         matrix
 
@@ -73,14 +76,22 @@ module Nfa =
     /// epsTransitions are merged into the matrix as AEpsilon-labeled edges.
     let fromTransitions
         (states: 's list)
-        (transitionsList: (int * 't * int) list)
+        (transitionsList: Trans<'t> list)
         (epsTransitions: Set<int * int>)
         (startStates: Set<int>)
         (finalStates: Set<int>)
         : NFA<'t, 's> =
-        let termTransitions = transitionsList |> List.map (fun (f, s, t) -> (f, ATerm s, t))
+        let termTransitions =
+            transitionsList
+            |> List.map (fun t ->
+                { From = t.From
+                  Label = ATerm t.Label
+                  To = t.To })
 
-        let epsT = epsTransitions |> Set.toList |> List.map (fun (f, t) -> (f, AEpsilon, t))
+        let epsT =
+            epsTransitions
+            |> Set.toList
+            |> List.map (fun (f, t) -> { From = f; Label = AEpsilon; To = t })
 
         let allTransitions = termTransitions @ epsT
 
@@ -275,12 +286,16 @@ module Dfa =
     /// Build a DFA from a list of transitions.
     let fromTransitions
         (states: 's list)
-        (transitionsList: (int * 't * int) list)
+        (transitionsList: Trans<'t> list)
         (startState: int)
         (finalStates: Set<int>)
         : DFA<'t, 's> =
         let labeledTransitions =
-            transitionsList |> List.map (fun (f, s, t) -> (f, ATerm s, t))
+            transitionsList
+            |> List.map (fun t ->
+                { From = t.From
+                  Label = ATerm t.Label
+                  To = t.To })
 
         { Graph = Graph.fromEdges states (Nfa.buildMatrix (List.length states) labeledTransitions)
           StartState = startState
@@ -360,7 +375,7 @@ module Automaton =
         (isAcceptState: Set<'item> -> bool)
         : DFA<'sym, Set<'item>> =
         let mutable states = [ startItems ]
-        let mutable transitions: (int * 'sym * int) list = []
+        let mutable transitions: Trans<'sym> list = []
         let mutable queue = [ startItems ]
 
         while not (List.isEmpty queue) do
@@ -383,7 +398,11 @@ module Automaton =
                             queue <- queue @ [ target ]
                             idx
 
-                    transitions <- (stateIdx, sym, targetIdx) :: transitions
+                    transitions <-
+                        { From = stateIdx
+                          Label = sym
+                          To = targetIdx }
+                        :: transitions
 
         let finalStates =
             states

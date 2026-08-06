@@ -4,18 +4,14 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
 let private symbolPrinter = SymbolTeX.toLaTeX string string
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``LL step visualization for grammar1 produces valid combined DOT and TeX`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -34,12 +30,7 @@ let ``LL step visualization for grammar1 produces valid combined DOT and TeX`` (
 
 [<Fact>]
 let ``LL step visualization includes input position marker`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b a b"
@@ -51,11 +42,7 @@ let ``LL step visualization includes input position marker`` () =
 [<Fact>]
 let ``LL step visualization stack has bottom on left`` () =
     let g =
-        Grammar.parseGrammar
-            "
-        S -> a B
-        B -> b
-        "
+        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -66,12 +53,7 @@ let ``LL step visualization stack has bottom on left`` () =
 
 [<Fact>]
 let ``LL step visualization for accepted string returns success steps`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -87,12 +69,7 @@ let ``LL step visualization for accepted string returns success steps`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``LL step visualization combined tree includes dashed stack chain`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -106,12 +83,7 @@ let ``LL step visualization combined tree includes dashed stack chain`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``LL step visualization stack leaves are connected by dashed edges and same rank`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
@@ -128,12 +100,7 @@ let ``LL step visualization stack leaves are connected by dashed edges and same 
 
 [<Fact>]
 let ``LL step visualization tree is properly nested`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"

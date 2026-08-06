@@ -29,11 +29,11 @@
 \subsection*{Original Grammar}
 \begin{center}
 \begin{align*}
-E &\rightarrow E\ +\ T \\
+E &\rightarrow E\ add\ T \\
 E &\rightarrow T \\
-T &\rightarrow T\ *\ F \\
+T &\rightarrow T\ mult\ F \\
 T &\rightarrow F \\
-F &\rightarrow (\ E\ ) \\
+F &\rightarrow lbr\ E\ rbr \\
 F &\rightarrow x \\
 \end{align*}
 \end{center}
@@ -42,19 +42,19 @@ F &\rightarrow x \\
 \begin{center}
 \begin{align*}
 E &\rightarrow E\ N_1 \\
-E &\rightarrow N_4\ N_3 \\
+E &\rightarrow N_5\ N_3 \\
 E &\rightarrow x \\
 E &\rightarrow T\ N_2 \\
-N_4 &\rightarrow ( \\
-N_5 &\rightarrow ) \\
-N_6 &\rightarrow * \\
-N_7 &\rightarrow + \\
-F &\rightarrow N_4\ N_3 \\
+N_4 &\rightarrow add \\
+N_5 &\rightarrow lbr \\
+N_6 &\rightarrow mult \\
+N_7 &\rightarrow rbr \\
+F &\rightarrow N_5\ N_3 \\
 F &\rightarrow x \\
-N_1 &\rightarrow N_7\ T \\
+N_1 &\rightarrow N_4\ T \\
 N_2 &\rightarrow N_6\ F \\
-N_3 &\rightarrow E\ N_5 \\
-T &\rightarrow N_4\ N_3 \\
+N_3 &\rightarrow E\ N_7 \\
+T &\rightarrow N_5\ N_3 \\
 T &\rightarrow x \\
 T &\rightarrow T\ N_2 \\
 \end{align*}
@@ -63,7 +63,7 @@ T &\rightarrow T\ N_2 \\
 \subsection*{Input String}
 \begin{center}
 \[
-\begin{pNiceMatrix}[margin=2pt] x & + & x \end{pNiceMatrix}
+\begin{pNiceMatrix}[margin=2pt] x & add & x \end{pNiceMatrix}
 \]
 \end{center}
 
@@ -73,7 +73,7 @@ T &\rightarrow T\ N_2 \\
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
  & \cellcolor{yellow}{\{E, F, T\}} & \cdot & \cdot \\
- & \cdot & \cellcolor{yellow}{\{N_7\}} & \cdot \\
+ & \cdot & \cellcolor{yellow}{\{N_4\}} & \cdot \\
  & \cdot & \cdot & \cellcolor{yellow}{\{E, F, T\}} \\
 \end{pNiceMatrix}
 \]
@@ -85,7 +85,7 @@ T &\rightarrow T\ N_2 \\
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
  & \{E, F, T\} & \cdot & \cdot \\
- & \cdot & \{N_7\} & \cellcolor{yellow}{\{N_1\}} \\
+ & \cdot & \{N_4\} & \cellcolor{yellow}{\{N_1\}} \\
  & \cdot & \cdot & \{E, F, T\} \\
 \end{pNiceMatrix}
 \]
@@ -97,7 +97,7 @@ T &\rightarrow T\ N_2 \\
 \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
  &  &  &  \\
  & \{E, F, T\} & \cdot & \cellcolor{yellow}{\{E\}} \\
- & \cdot & \{N_7\} & \{N_1\} \\
+ & \cdot & \{N_4\} & \{N_1\} \\
  & \cdot & \cdot & \{E, F, T\} \\
 \end{pNiceMatrix}
 \]

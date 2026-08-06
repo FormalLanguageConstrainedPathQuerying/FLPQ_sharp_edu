@@ -8,6 +8,12 @@ module SppfDot =
 
     let escapeLabel (s: string) = s.Replace("\"", "\\\"")
 
+    [<Struct>]
+    type private NodeStyle =
+        { Label: string
+          Shape: string
+          Extra: string }
+
     /// Render an SPPF as a Graphviz DOT digraph.
     /// terminalPrinter converts a terminal value to a display string.
     /// nonterminalPrinter converts a nonterminal value to a display string.
@@ -30,17 +36,28 @@ module SppfDot =
         for i in 0 .. vertexCount - 1 do
             let info = FLPQ.GraphAnalysis.Graph.getVertex i sppf.Graph
 
-            let label, shape, extra =
+            let style: NodeStyle =
                 match info with
                 | SppfNodeInfo.SppfTerminal(Terminal t, l, r) ->
-                    sprintf "%s [%d,%d]" (terminalPrinter t) l r, "oval", ""
+                    { Label = sprintf "%s [%d,%d]" (terminalPrinter t) l r
+                      Shape = "oval"
+                      Extra = "" }
                 | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r, _, _) ->
-                    sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r, "oval", ""
+                    { Label = sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r
+                      Shape = "oval"
+                      Extra = "" }
                 | SppfNodeInfo.SppfEpsilon(Nonterminal nt, p) ->
-                    sprintf "%s^ε @%d" (nonterminalPrinter nt) p, "none", ""
-                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]→[s%d,v%d]" fs fp ts tp, "rectangle", ""
+                    { Label = sprintf "%s^ε @%d" (nonterminalPrinter nt) p
+                      Shape = "none"
+                      Extra = "" }
+                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) ->
+                    { Label = sprintf "[s%d,v%d]→[s%d,v%d]" fs fp ts tp
+                      Shape = "rectangle"
+                      Extra = "" }
                 | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
-                    sprintf "I(%d,%d) @[s%d,v%d]→[s%d,v%d]" s p fs fp ts tp, "diamond", ""
+                    { Label = sprintf "I(%d,%d) @[s%d,v%d]→[s%d,v%d]" s p fs fp ts tp
+                      Shape = "diamond"
+                      Extra = "" }
 
             let rootStyle =
                 if Set.contains i rootSet then
@@ -48,7 +65,15 @@ module SppfDot =
                 else
                     ""
 
-            sb.AppendLine(sprintf "  n%d [label=\"%s\", shape=%s%s%s];" i (escapeLabel label) shape extra rootStyle)
+            sb.AppendLine(
+                sprintf
+                    "  n%d [label=\"%s\", shape=%s%s%s];"
+                    i
+                    (escapeLabel style.Label)
+                    style.Shape
+                    style.Extra
+                    rootStyle
+            )
             |> ignore
 
         for i in 0 .. vertexCount - 1 do

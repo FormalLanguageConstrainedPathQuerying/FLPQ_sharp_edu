@@ -196,15 +196,16 @@ module CykSppfTests =
         let entries = table.[0, 0]
         Assert.False(Set.isEmpty entries, "Cell (0,0) should have entries")
 
-        let startEntry = entries |> Set.filter (fun (nt, _, _) -> nt = grammar3.Start)
+        let startEntry = entries |> Set.filter (fun entry -> entry.Nt = grammar3.Start)
 
         Assert.NotEmpty startEntry
-        Assert.True(Set.exists (fun (nt, _, _) -> nt = grammar3.Start) startEntry)
+        Assert.True(Set.exists (fun entry -> entry.Nt = grammar3.Start) startEntry)
 
-        for (_, k, prodIdx) in startEntry do
-            Assert.Equal(0, k)
+        for entry in startEntry do
+            Assert.Equal(0, entry.SplitPoint)
 
-            let rule = (Grammar.toCnf Grammar.freshStringNonterminal grammar3).Rules.[prodIdx]
+            let rule =
+                (Grammar.toCnf Grammar.freshStringNonterminal grammar3).Rules.[entry.ProdIdx]
 
             let isTerminalRule =
                 match rule.Rhs with
@@ -214,7 +215,7 @@ module CykSppfTests =
                     | _ -> false
                 | _ -> false
 
-            Assert.True(isTerminalRule, sprintf "Rule at index %d should be a terminal rule for 'a'" prodIdx)
+            Assert.True(isTerminalRule, sprintf "Rule at index %d should be a terminal rule for 'a'" entry.ProdIdx)
 
     [<Fact>]
     let ``enriched table for dyck grammar with input 'ab' has correct structure`` () =
@@ -225,12 +226,12 @@ module CykSppfTests =
         Assert.False(Set.isEmpty table.[1, 1], "Cell (1,1) should have entries")
         Assert.False(Set.isEmpty table.[0, 1], "Cell (0,1) should have entries")
 
-        Assert.True(table.[0, 0] |> Set.exists (fun (_, k, _) -> k = 0), "Terminal entries at (0,0) should have k=0")
+        Assert.True(table.[0, 0] |> Set.exists (fun e -> e.SplitPoint = 0), "Terminal entries at (0,0) should have k=0")
 
-        Assert.True(table.[1, 1] |> Set.exists (fun (_, k, _) -> k = 1), "Terminal entries at (1,1) should have k=1")
+        Assert.True(table.[1, 1] |> Set.exists (fun e -> e.SplitPoint = 1), "Terminal entries at (1,1) should have k=1")
 
         Assert.True(
-            table.[0, 1] |> Set.exists (fun (_, k, _) -> k = 0),
+            table.[0, 1] |> Set.exists (fun e -> e.SplitPoint = 0),
             "Binary entries at (0,1) should have split point k=0"
         )
 
@@ -260,7 +261,7 @@ module CykSppfTests =
 
         for i in 0 .. n - 1 do
             for j in 0 .. n - 1 do
-                let sppfNonterminals = table.[i, j] |> Set.map (fun (nt, _, _) -> nt)
+                let sppfNonterminals = table.[i, j] |> Set.map (fun e -> e.Nt)
 
                 let parseNonterminals = parseTable.[i, j]
                 let bothEmpty = Set.isEmpty sppfNonterminals && Set.isEmpty parseNonterminals

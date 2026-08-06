@@ -137,21 +137,24 @@ let ``diagonal matrix with all indices is identity`` () =
     Assert.Equal(1, d.[2, 2])
     Assert.Equal(0, d.[0, 1])
 
+[<Struct>]
+type private CellIndexValue = { I: int; J: int; A: int; B: int }
+
 [<Fact>]
 let ``map2i passes correct row and col indices`` () =
     let a = Matrix.create 2 3 (fun i j -> i * 10 + j)
     let b = Matrix.create 2 3 (fun i j -> i * 100 + j * 10)
 
-    let m = Matrix.map2i (fun i j aVal bVal -> (i, j, aVal, bVal)) a b
+    let m = Matrix.map2i (fun i j aVal bVal -> { I = i; J = j; A = aVal; B = bVal }) a b
 
     Assert.Equal(2, Matrix.rows m)
     Assert.Equal(3, Matrix.cols m)
-    Assert.Equal((0, 0, 0, 0), m.[0, 0])
-    Assert.Equal((0, 1, 1, 10), m.[0, 1])
-    Assert.Equal((0, 2, 2, 20), m.[0, 2])
-    Assert.Equal((1, 0, 10, 100), m.[1, 0])
-    Assert.Equal((1, 1, 11, 110), m.[1, 1])
-    Assert.Equal((1, 2, 12, 120), m.[1, 2])
+    Assert.Equal({ I = 0; J = 0; A = 0; B = 0 }, m.[0, 0])
+    Assert.Equal({ I = 0; J = 1; A = 1; B = 10 }, m.[0, 1])
+    Assert.Equal({ I = 0; J = 2; A = 2; B = 20 }, m.[0, 2])
+    Assert.Equal({ I = 1; J = 0; A = 10; B = 100 }, m.[1, 0])
+    Assert.Equal({ I = 1; J = 1; A = 11; B = 110 }, m.[1, 1])
+    Assert.Equal({ I = 1; J = 2; A = 12; B = 120 }, m.[1, 2])
 
 [<Fact>]
 let ``map2i throws when dimensions differ`` () =

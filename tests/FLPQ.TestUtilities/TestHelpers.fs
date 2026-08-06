@@ -84,30 +84,6 @@ module TestHelpers =
 
             failwith msg
 
-    let grammarToEbnfText (g: Grammar<string, string>) : string =
-        g.Rules
-        |> List.map (fun r ->
-            let (Nonterminal nt) = r.Lhs
-
-            let rhsStr =
-                match r.Rhs with
-                | Rhs.EpsilonRhs -> "eps"
-                | Rhs.Symbols symbols ->
-                    NonEmptyList.toList symbols
-                    |> List.map (fun s ->
-                        match s with
-                        | Symbol.T(Terminal t) -> t
-                        | Symbol.N(Nonterminal nt') -> nt'
-                        | Symbol.Epsilon -> "eps")
-                    |> String.concat " "
-
-            $"{nt} -> {rhsStr}")
-        |> String.concat "\n"
-
-    let grammarToRsm (g: Grammar<string, string>) : RSM<string, string> =
-        let rsm = RsmBuilder.buildRSMFromText (grammarToEbnfText g)
-        { rsm with StartBlock = g.Start }
-
     let stringToTerminals (s: string) : Terminal<string> list =
         s |> Seq.map (string >> Terminal) |> Seq.toList
 
@@ -146,17 +122,17 @@ module TestHelpers =
         | Leaf Symbol.Epsilon -> false
         | _ -> true
 
-    let buildDfa (transitions: (int * string * int) list) (startState: int) (finalStates: int list) =
+    let buildDfa (transitions: Trans<string> list) (startState: int) (finalStates: int list) =
         let allStates =
             transitions
-            |> List.collect (fun (f, _, t) -> [ f; t ])
+            |> List.collect (fun t -> [ t.From; t.To ])
             |> List.append (startState :: finalStates)
             |> List.distinct
             |> List.sort
 
         Dfa.fromTransitions allStates transitions startState (Set.ofList finalStates)
 
-    let nfaFromEdges (vCount: int) (edges: (int * string * int) list) (sources: int[]) : NFA<string, int> =
+    let nfaFromEdges (vCount: int) (edges: Trans<string> list) (sources: int[]) : NFA<string, int> =
         let states = [ 0 .. vCount - 1 ]
         Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
 

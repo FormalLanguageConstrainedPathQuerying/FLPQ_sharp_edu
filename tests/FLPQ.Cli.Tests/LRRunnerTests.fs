@@ -3,15 +3,15 @@ module LRRunnerTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private exampleGrammar = Path.Combine(baseDir, "example_lr_grammar.bnf")
 let private exampleInput = Path.Combine(baseDir, "example_lr_input.txt")
 
 let private runRunner (algo: AlgorithmTypes.Algorithm) (useDot: bool) : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    LRRunner.runLR exampleGrammar exampleInput outDir algo useDot
+    LRRunner.runLR (TestGrammarFiles.exampleLRGrammar ()) exampleInput outDir algo useDot
     outDir
 
 [<Fact>]

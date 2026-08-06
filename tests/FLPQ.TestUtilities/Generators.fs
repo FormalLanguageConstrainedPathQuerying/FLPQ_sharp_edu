@@ -118,7 +118,7 @@ type RandomGraphGenerators =
 
 type RPQTestData =
     { VertexCount: int
-      Edges: (int * string * int) list
+      Edges: Trans<string> list
       Sources: int[] }
 
 type RPQGenerators =
@@ -142,7 +142,8 @@ type RPQGenerators =
                                 |> MyGen.map (fun sources ->
                                     let edges =
                                         List.zip3 fromList labelList toList
-                                        |> List.filter (fun (f, _, t) -> f <> t)
+                                        |> List.map (fun (f, l, t) -> { From = f; Label = l; To = t })
+                                        |> List.filter (fun t -> t.From <> t.To)
 
                                     { VertexCount = n
                                       Edges = edges
@@ -170,7 +171,8 @@ type RPQExtendedAlphabetGenerators =
                                 |> MyGen.map (fun sources ->
                                     let edges =
                                         List.zip3 fromList labelList toList
-                                        |> List.filter (fun (f, _, t) -> f <> t)
+                                        |> List.map (fun (f, l, t) -> { From = f; Label = l; To = t })
+                                        |> List.filter (fun t -> t.From <> t.To)
 
                                     { VertexCount = n
                                       Edges = edges
@@ -199,7 +201,10 @@ type IntersectionGenerators =
                         MyGen.elements alphabet
                         |> MyGen.bind (fun label ->
                             MyGen.choose (0, stateCount - 1)
-                            |> MyGen.map (fun toIdx -> (fromIdx, label, toIdx))))
+                            |> MyGen.map (fun toIdx ->
+                                { From = fromIdx
+                                  Label = label
+                                  To = toIdx })))
                 )
                 |> MyGen.bind (fun transitions ->
                     MyGen.choose (1, min 2 stateCount)
@@ -242,7 +247,7 @@ type RegexGenerators =
 type RegexAndGraph =
     { Regex: Regexp<string, string>
       VertexCount: int
-      Edges: (int * string * int) list
+      Edges: Trans<string> list
       Sources: int[] }
 
 type RegexAndGraphGenerators =
@@ -293,7 +298,8 @@ type RegexAndGraphGenerators =
                                     |> MyGen.map (fun regex ->
                                         let edges =
                                             List.zip3 fromList labelList toList
-                                            |> List.filter (fun (f, _, t) -> f <> t)
+                                            |> List.map (fun (f, l, t) -> { From = f; Label = l; To = t })
+                                            |> List.filter (fun t -> t.From <> t.To)
 
                                         { Regex = regex
                                           VertexCount = n
@@ -332,7 +338,8 @@ type StressNfaGenerators =
                                     |> MyGen.map (fun finalStates ->
                                         let trans =
                                             List.zip3 fromStates labels toStates
-                                            |> List.filter (fun (f, _, t) -> f <> t)
+                                            |> List.map (fun (f, l, t) -> { From = f; Label = l; To = t })
+                                            |> List.filter (fun t -> t.From <> t.To)
 
                                         Nfa.fromTransitions
                                             ([ 0 .. stateCount - 1 ])
@@ -363,7 +370,8 @@ type StressRpqGenerators =
                                 |> MyGen.map (fun sources ->
                                     let edges =
                                         List.zip3 fromList labelList toList
-                                        |> List.filter (fun (f, _, t) -> f <> t)
+                                        |> List.map (fun (f, l, t) -> { From = f; Label = l; To = t })
+                                        |> List.filter (fun t -> t.From <> t.To)
 
                                     { VertexCount = n
                                       Edges = edges

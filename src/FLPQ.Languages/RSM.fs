@@ -154,7 +154,10 @@ module RSM =
                               | Some labels ->
                                   for label in NonEmptySet.toSeq labels do
                                       match label with
-                                      | AutomatonLabel.ATerm sym -> (fromLocal, sym, toLocal)
+                                      | AutomatonLabel.ATerm sym ->
+                                          { From = fromLocal
+                                            Label = sym
+                                            To = toLocal }
                                       | _ -> ()
                               | None -> () ]
 

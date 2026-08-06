@@ -5,12 +5,21 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.GraphAnalysis
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
-let private renderViz
-    (ebnfText: string)
-    (input: string list)
-    : string list * string list * string list * string list * string list * string list =
-    let rsm = RsmBuilder.buildRSMFromText ebnfText
+[<Struct>]
+type private RnglrVizData =
+    { DescriptorsTables: string list
+      NewDescriptors: string list
+      GssDots: string list
+      PathIndices: string list
+      Inputs: string list
+      LrTables: string list }
+
+let private renderViz (input: string list) : RnglrVizData =
+    let rsm =
+        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm
+
     let freshStart = Nonterminal "S'"
     let graph = GLL.stringToGraph input
     let vertexCount = Graph.vertexCount graph
@@ -18,61 +27,68 @@ let private renderViz
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
     let lrStateCount = Dfa.stateCount lrTable.Automaton
 
-    let pathIndex, steps, vertexInfoArr =
-        Rnglr.buildPathIndexWithSteps freshStart ersm graph
+    let rnglrResult = Rnglr.buildPathIndexWithSteps freshStart ersm graph
 
+    let vertexInfoArr = rnglrResult.VertexInfo
     let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let viz =
-        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount vertexInfo steps pathIndex vertexCount graph
+        RnglrStepVisualizer.renderSteps
+            string
+            string
+            lrTable
+            lrStateCount
+            vertexInfo
+            rnglrResult.Steps
+            rnglrResult.PathIndex
+            vertexCount
+            graph
 
-    let descriptorsTables = viz |> List.map (fun s -> s.DescriptorsTable)
-    let newDescriptors = viz |> List.map (fun s -> s.NewDescriptors)
-    let gssDots = viz |> List.map (fun s -> s.GssDot)
-    let pathIndices = viz |> List.map (fun s -> s.PathIndex)
-    let inputs = viz |> List.map (fun s -> s.Input)
-    let lrTables = viz |> List.map (fun s -> s.LrTable)
-
-    descriptorsTables, newDescriptors, gssDots, pathIndices, inputs, lrTables
+    { DescriptorsTables = viz |> List.map (fun s -> s.DescriptorsTable)
+      NewDescriptors = viz |> List.map (fun s -> s.NewDescriptors)
+      GssDots = viz |> List.map (fun s -> s.GssDot)
+      PathIndices = viz |> List.map (fun s -> s.PathIndex)
+      Inputs = viz |> List.map (fun s -> s.Input)
+      LrTables = viz |> List.map (fun s -> s.LrTable) }
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — descriptors_table step 0`` () =
-    let tables, _, _, _, _, _ = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_descriptors_table_step0.tex" tables.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_descriptors_table_step0.tex" data.DescriptorsTables.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — new_descriptors step 0`` () =
-    let _, newDescs, _, _, _, _ = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_new_descriptors_step0.tex" newDescs.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_new_descriptors_step0.tex" data.NewDescriptors.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — gss step 0`` () =
-    let _, _, gssDots, _, _, _ = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_gss_step0.dot" gssDots.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_gss_step0.dot" data.GssDots.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — path_index step 0`` () =
-    let _, _, _, pi, _, _ = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_path_index_step0.tex" pi.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_path_index_step0.tex" data.PathIndices.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — input step 0`` () =
-    let _, _, _, _, inputs, _ = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_input_step0.dot" inputs.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_input_step0.dot" data.Inputs.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — lr_table step 0`` () =
-    let _, _, _, _, _, tables = renderViz "S -> a a" [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_lr_table_step0.tex" tables.[0]
+    let data = renderViz [ "a"; "a" ]
+    GoldenHelpers.verifyGolden "rnglr_lr_table_step0.tex" data.LrTables.[0]
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
-    let _, _, gssDots, _, _, _ = renderViz "S -> a a" [ "a"; "a" ]
+    let data = renderViz [ "a"; "a" ]
 
-    Assert.NotEmpty gssDots
+    Assert.NotEmpty data.GssDots
 
-    for dot in gssDots do
+    for dot in data.GssDots do
         let info = ExternalTools.compileDotStringToInfo dot
 
         for label in info.NodeLabels do
@@ -90,32 +106,32 @@ let ``RNGLR GSS DOT vertex/edge label format for S->a a`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``RNGLR LR table TeX compiles for S->a a`` () =
-    let _, _, _, _, _, tables = renderViz "S -> a a" [ "a"; "a" ]
+    let data = renderViz [ "a"; "a" ]
 
-    Assert.NotEmpty tables
+    Assert.NotEmpty data.LrTables
 
     let templatePath =
         Path.Combine(System.AppContext.BaseDirectory, "tex_table_color_template.tex")
 
-    for lrTable in tables do
+    for lrTable in data.LrTables do
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath lrTable)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``RNGLR input DOT compiles for S->a a`` () =
-    let _, _, _, _, inputs, _ = renderViz "S -> a a" [ "a"; "a" ]
+    let data = renderViz [ "a"; "a" ]
 
-    Assert.NotEmpty inputs
+    Assert.NotEmpty data.Inputs
 
-    for inputDot in inputs do
+    for inputDot in data.Inputs do
         Assert.True(ExternalTools.compileDotString inputDot)
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``RNGLR GSS DOT compiles for S->a a`` () =
-    let _, _, gssDots, _, _, _ = renderViz "S -> a a" [ "a"; "a" ]
+    let data = renderViz [ "a"; "a" ]
 
-    Assert.NotEmpty gssDots
+    Assert.NotEmpty data.GssDots
 
-    for gssDot in gssDots do
+    for gssDot in data.GssDots do
         Assert.True(ExternalTools.compileDotString gssDot)

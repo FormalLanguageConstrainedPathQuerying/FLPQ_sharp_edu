@@ -33,6 +33,35 @@ type SPPF<'t, 'nt when 't: comparison and 'nt: comparison> =
 /// SPPF construction and traversal functions.
 module Sppf =
 
+    [<Struct>]
+    type private TerminalKey<'t> =
+        { Terminal: Terminal<'t>
+          Left: int
+          Right: int }
+
+    [<Struct>]
+    type private NontermKey<'nt> =
+        { Nt: Nonterminal<'nt>
+          Left: int
+          Right: int
+          FromSt: int
+          ToSt: int }
+
+    [<Struct>]
+    type private InterKey =
+        { State: int
+          Pos: int
+          FromState: int
+          FromPos: int
+          ToState: int
+          ToPos: int }
+
+    [<Struct>]
+    type private EdgeTuple =
+        { From: int
+          Label: Option<SppfEdgeLabel>
+          To: int }
+
     /// Builds the SPPF from a path index starting from the given root ranges.
     /// Top-down traversal with memoization: range nodes are created once and reused for packed alternatives.
     /// Each range is processed exactly once to avoid infinite recursion.
@@ -44,20 +73,20 @@ module Sppf =
         (blockFinals: Map<Nonterminal<'nt>, Set<int>> option)
         : SPPF<'t, 'nt> =
         let mutable vertices: SppfNodeInfo<'t, 'nt> list = []
-        let mutable edgeList: (int * Option<SppfEdgeLabel> * int) list = []
+        let mutable edgeList: EdgeTuple list = []
 
         let rangeNodeMap = Dictionary<RangeKey, int>()
         let rangeResultMap = Dictionary<RangeKey, int>()
 
-        let terminalNodeMap = Dictionary<Terminal<'t> * int * int, int>()
-        let nonterminalNodeMap = Dictionary<Nonterminal<'nt> * int * int * int * int, int>()
+        let terminalNodeMap = Dictionary<TerminalKey<'t>, int>()
+        let nonterminalNodeMap = Dictionary<NontermKey<'nt>, int>()
         let epsilonNodeMap = Dictionary<int, int>()
-        let intermediateNodeMap = Dictionary<int * int * int * int * int * int, int>()
+        let intermediateNodeMap = Dictionary<InterKey, int>()
 
         let getOrCreateNode (info: SppfNodeInfo<'t, 'nt>) : int =
             match info with
             | SppfNodeInfo.SppfTerminal(t, l, r) ->
-                let key = (t, l, r)
+                let key = { Terminal = t; Left = l; Right = r }
 
                 match terminalNodeMap.TryGetValue(key) with
                 | true, idx -> idx
@@ -68,7 +97,12 @@ module Sppf =
                     idx
 
             | SppfNodeInfo.SppfNonterminal(nt, l, r, fs, ts) ->
-                let key = (nt, l, r, fs, ts)
+                let key =
+                    { Nt = nt
+                      Left = l
+                      Right = r
+                      FromSt = fs
+                      ToSt = ts }
 
                 match nonterminalNodeMap.TryGetValue(key) with
                 | true, idx -> idx
@@ -88,7 +122,13 @@ module Sppf =
                     idx
 
             | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
-                let key = (s, p, fs, fp, ts, tp)
+                let key =
+                    { State = s
+                      Pos = p
+                      FromState = fs
+                      FromPos = fp
+                      ToState = ts
+                      ToPos = tp }
 
                 match intermediateNodeMap.TryGetValue(key) with
                 | true, idx -> idx
@@ -119,8 +159,12 @@ module Sppf =
         let addEdge (fromIdx: int) (label: SppfEdgeLabel) (toIdx: int) =
             let lbl = Some label
 
-            if not (List.exists (fun (f, l, t) -> f = fromIdx && l = lbl && t = toIdx) edgeList) then
-                edgeList <- (fromIdx, lbl, toIdx) :: edgeList
+            if not (List.exists (fun edge -> edge.From = fromIdx && edge.Label = lbl && edge.To = toIdx) edgeList) then
+                edgeList <-
+                    { From = fromIdx
+                      Label = lbl
+                      To = toIdx }
+                    :: edgeList
 
         let rec processRange (fromState: int) (fromPos: int) (toState: int) (toPos: int) : int =
             let rk =
@@ -205,8 +249,8 @@ module Sppf =
 
         let sortedEdges = List.rev edgeList
 
-        for (fromIdx, label, toIdx) in sortedEdges do
-            edgeMatrix.[fromIdx, toIdx] <- label
+        for edge in sortedEdges do
+            edgeMatrix.[edge.From, edge.To] <- edge.Label
 
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndices = rootIndices }

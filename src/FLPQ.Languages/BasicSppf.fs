@@ -58,7 +58,8 @@ module BasicSppf =
         if n = 0 then
             fromEdges [] [] 0
         else
-            let startEntries = table.[0, n - 1] |> Set.filter (fun (nt, _, _) -> nt = cnf.Start)
+            let startEntries =
+                table.[0, n - 1] |> Set.filter (fun entry -> entry.Nt = cnf.Start)
 
             if Set.isEmpty startEntries then
                 fromEdges [] [] 0
@@ -79,10 +80,10 @@ module BasicSppf =
                 let childNtInCell (row: int) (col: int) (targetNt: Nonterminal<'nt>) : Nonterminal<'nt> option =
                     if row <= col && row >= 0 && col < n then
                         table.[row, col]
-                        |> Set.filter (fun (nt, _, _) -> nt = targetNt)
+                        |> Set.filter (fun entry -> entry.Nt = targetNt)
                         |> Set.toList
                         |> List.tryHead
-                        |> Option.map (fun (nt, _, _) -> nt)
+                        |> Option.map (fun entry -> entry.Nt)
                     else
                         None
 
@@ -96,40 +97,50 @@ module BasicSppf =
 
                         let entries = table.[i, j]
 
-                        for (nt, k, prodIdx) in entries do
-                            let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, i, j + 1))
-                            let prodNode = getOrCreate (BasicSppfNodeInfo.Production(prodIdx, k))
+                        for entry in entries do
+                            let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, i, j + 1))
+
+                            let prodNode =
+                                getOrCreate (BasicSppfNodeInfo.Production(entry.ProdIdx, entry.SplitPoint))
+
                             edges.Add(ntNode, prodNode)
 
-                            let rule = cnf.Rules.[prodIdx]
+                            let rule = cnf.Rules.[entry.ProdIdx]
 
                             match Rhs.toNonEpsilonList rule.Rhs with
                             | [ Symbol.T(Terminal t) ] ->
-                                let termNode = getOrCreate (BasicSppfNodeInfo.Terminal(Terminal t, k, k + 1))
+                                let termNode =
+                                    getOrCreate (
+                                        BasicSppfNodeInfo.Terminal(Terminal t, entry.SplitPoint, entry.SplitPoint + 1)
+                                    )
 
                                 edges.Add(prodNode, termNode)
                             | [ Symbol.N leftNt; Symbol.N rightNt ] ->
-                                match childNtInCell i k leftNt with
+                                match childNtInCell i entry.SplitPoint leftNt with
                                 | Some _ ->
-                                    let leftNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, k + 1))
+                                    let leftNode =
+                                        getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, entry.SplitPoint + 1))
 
                                     edges.Add(prodNode, leftNode)
-                                    processCell i k
+                                    processCell i entry.SplitPoint
                                 | None -> ()
 
-                                match childNtInCell (k + 1) j rightNt with
+                                match childNtInCell (entry.SplitPoint + 1) j rightNt with
                                 | Some _ ->
-                                    let rightNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(rightNt, k + 1, j + 1))
+                                    let rightNode =
+                                        getOrCreate (
+                                            BasicSppfNodeInfo.Nonterminal(rightNt, entry.SplitPoint + 1, j + 1)
+                                        )
 
                                     edges.Add(prodNode, rightNode)
-                                    processCell (k + 1) j
+                                    processCell (entry.SplitPoint + 1) j
                                 | None -> ()
                             | _ -> ()
 
                 let mutable rootIdx = -1
 
-                for (nt, _, _) in startEntries do
-                    let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, 0, n))
+                for entry in startEntries do
+                    let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, 0, n))
                     rootIdx <- ntNode
                     processCell 0 (n - 1)
 

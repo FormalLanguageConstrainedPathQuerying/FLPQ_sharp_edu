@@ -7,6 +7,13 @@ open FLPQ.GraphAnalysis
 
 module Rnglr =
 
+    [<Struct>]
+    type private PredecessorInfo =
+        { GssIdx: int
+          LrState: int
+          Vertex: int
+          Aux: int }
+
     let private invertRsmTransitions (block: RsmBlock<'t, 'nt>) : Map<int * RsmSymbol<'t, 'nt>, int list> =
         let n = Dfa.stateCount block.Dfa
         let mutable result = Map.empty
@@ -131,23 +138,25 @@ module Rnglr =
             | Symbol.N nt -> Some(RsmSymbol.RNonterm nt)
             | Symbol.Epsilon -> None
 
-        let productBfs
-            (invData: InvBlockData<'t, 'nt>)
-            (starts: (int * int * int * int) list)
-            : (int * int * int * int) list =
+        let productBfs (invData: InvBlockData<'t, 'nt>) (starts: PredecessorInfo list) : PredecessorInfo list =
             let visited = HashSet<int * int>()
-            let startSet = starts |> List.map (fun (g, i, _, _) -> (g, i)) |> set
-            let queue = Queue<int * int * int * int>()
-            let mutable predecessors = []
+            let startSet = starts |> List.map (fun p -> (p.GssIdx, p.LrState)) |> set
+            let queue = Queue<PredecessorInfo>()
 
-            for (gssIdx, invState, endState, endVertex) in starts do
-                let p = (gssIdx, invState)
+            let mutable predecessors: PredecessorInfo list = []
 
-                if visited.Add(p) then
-                    queue.Enqueue(gssIdx, invState, endState, endVertex)
+            for p in starts do
+                let key = (p.GssIdx, p.LrState)
+
+                if visited.Add(key) then
+                    queue.Enqueue(p)
 
             while queue.Count > 0 do
-                let (currGss, currInv, endState, endVertex) = queue.Dequeue()
+                let p = queue.Dequeue()
+                let currGss = p.GssIdx
+                let currInv = p.LrState
+                let endState = p.Vertex
+                let endVertex = p.Aux
                 let (currLrState, vCurr) = RnglrGSS.getVertexInfo gss currGss
                 let globalCurrInv = invData.GlobalOffset + currInv
                 let globalEnd = invData.GlobalOffset + endState
@@ -194,7 +203,12 @@ module Rnglr =
                                         (PathIndexEntry.PIntermediate(globalCurrInv, vCurr))
 
                                 if isStart then
-                                    predecessors <- (nextGss, nextLrState, vNext, currInv) :: predecessors
+                                    predecessors <-
+                                        { GssIdx = nextGss
+                                          LrState = nextLrState
+                                          Vertex = vNext
+                                          Aux = currInv }
+                                        :: predecessors
 
                                 let np = (nextGss, nextInv)
 
@@ -207,13 +221,18 @@ module Rnglr =
                                             nextGss
                                             (Set.add (invData.Nonterminal, nextInv, endState, endVertex) cur)
 
-                                    queue.Enqueue(nextGss, nextInv, endState, endVertex)
+                                    queue.Enqueue(
+                                        { GssIdx = nextGss
+                                          LrState = nextInv
+                                          Vertex = endState
+                                          Aux = endVertex }
+                                    )
                         | None -> ()
                     | None -> ()
 
             predecessors
 
-        let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : (int * int * int * int) list =
+        let findPredecessors (gssIdx: int) (nt: Nonterminal<'nt>) : PredecessorInfo list =
             match Map.tryFind nt invBlockData with
             | Some invData ->
                 let (vxLrState, vxInputVertex) = RnglrGSS.getVertexInfo gss gssIdx
@@ -221,13 +240,20 @@ module Rnglr =
                 let starts =
                     invData.Finals
                     |> Set.toList
-                    |> List.map (fun finalState -> (gssIdx, finalState, finalState, vxInputVertex))
+                    |> List.map (fun finalState ->
+                        { GssIdx = gssIdx
+                          LrState = finalState
+                          Vertex = finalState
+                          Aux = vxInputVertex })
 
                 let preds = productBfs invData starts
 
                 let epsPredecessors =
                     if invData.Finals |> Set.contains invData.Start then
-                        [ (gssIdx, vxLrState, vxInputVertex, invData.GlobalOffset + invData.Start) ]
+                        [ { GssIdx = gssIdx
+                            LrState = vxLrState
+                            Vertex = vxInputVertex
+                            Aux = invData.GlobalOffset + invData.Start } ]
                     else
                         []
 
@@ -303,10 +329,15 @@ module Rnglr =
                             match Map.tryFind storedNt invBlockData with
                             | Some invData ->
                                 let extPredecessors =
-                                    productBfs invData [ (targetGssIdx, storedInv, storedEndState, storedEndVertex) ]
+                                    productBfs
+                                        invData
+                                        [ { GssIdx = targetGssIdx
+                                            LrState = storedInv
+                                            Vertex = storedEndState
+                                            Aux = storedEndVertex } ]
 
-                                for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in extPredecessors do
-                                    processReduction storedNt storedInv lrStatePre gssIdxPre vPre vNext depth
+                                for pred in extPredecessors do
+                                    processReduction storedNt storedInv pred.LrState pred.GssIdx pred.Vertex vNext depth
                             | None -> ()
 
                         pending.[vNext].Enqueue
@@ -321,8 +352,8 @@ module Rnglr =
                 let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
                 let predecessors = findPredecessors gssIdx reduceNt
 
-                for (gssIdxPre, lrStatePre, vPre, _finalRsmState) in predecessors do
-                    processReduction reduceNt finalRsmState lrStatePre gssIdxPre vPre v depth
+                for pred in predecessors do
+                    processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v depth
 
         let collectActiveGss () : Set<int> * Set<int * int> =
             GraphHelpers.collectActiveGssForDict gss.Edges
@@ -430,7 +461,7 @@ module Rnglr =
         (freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
-        : PathIndex<'t, 'nt> * RnglrParsingStep<'t, 'nt> list * ResizeArray<int * int> =
+        : RnglrResult<'t, 'nt> =
         let steps = ResizeArray<RnglrParsingStep<'t, 'nt>>()
         let mutable prevVertices = Set.empty<int>
         let mutable prevEdges = Set.empty<int * int>
@@ -481,4 +512,7 @@ module Rnglr =
             )
 
         buildPathIndexCore ersm inputGraph onStep
-        |> fun (pi, vertexInfo) -> pi, steps.ToArray() |> List.ofArray, vertexInfo
+        |> fun (pi, vertexInfo) ->
+            { PathIndex = pi
+              Steps = steps.ToArray() |> List.ofArray
+              VertexInfo = vertexInfo }

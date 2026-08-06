@@ -5,13 +5,21 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``simple automaton dot compiles`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 }
+              { From = 0; Label = 'b'; To = 0 }
+              { From = 1; Label = 'a'; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
 
     let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
     Assert.Contains("digraph Automaton", dot)
@@ -26,12 +34,7 @@ let ``simple automaton dot compiles`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``DFA from LR(0) automaton dot compiles`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S
-        S -> a
-        "
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -83,7 +86,12 @@ let ``automaton with no transitions compiles`` () =
 [<Trait("Category", "Graphviz")>]
 let ``multiple start and final states`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] Set.empty (set [ 0; 1 ]) (set [ 1; 2 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1"; "q2" ]
+            [ { From = 0; Label = 'x'; To = 1 }; { From = 1; Label = 'y'; To = 2 } ]
+            Set.empty
+            (set [ 0; 1 ])
+            (set [ 1; 2 ])
 
     let dot = AutomatonDot.nfaToDot string (fun i s -> s) aut
     Assert.Contains("fillcolor=green", dot)
@@ -100,7 +108,14 @@ let private tikzTemplatePath =
 [<Trait("Category", "TeX")>]
 let ``automaton with loop edges tikz compiles`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 0); (0, 'b', 1); (1, 'c', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 0 }
+              { From = 0; Label = 'b'; To = 1 }
+              { From = 1; Label = 'c'; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
@@ -128,7 +143,14 @@ let ``automaton with epsilon loop tikz compiles`` () =
 [<Trait("Category", "TeX")>]
 let ``simple automaton tikz compiles`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (0, 'b', 0); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 }
+              { From = 0; Label = 'b'; To = 0 }
+              { From = 1; Label = 'a'; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
@@ -154,7 +176,12 @@ let ``automaton with no transitions tikz compiles`` () =
 [<Trait("Category", "TeX")>]
 let ``multiple start and final states tikz compiles`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, 'x', 1); (1, 'y', 2) ] Set.empty (set [ 0; 1 ]) (set [ 1; 2 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1"; "q2" ]
+            [ { From = 0; Label = 'x'; To = 1 }; { From = 1; Label = 'y'; To = 2 } ]
+            Set.empty
+            (set [ 0; 1 ])
+            (set [ 1; 2 ])
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
@@ -166,7 +193,12 @@ let ``multiple start and final states tikz compiles`` () =
 [<Trait("Category", "TeX")>]
 let ``automaton with epsilon tikz compiles`` () =
     let aut =
-        Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] (Set.ofList [ (0, 1) ]) (set [ 0 ]) (set [ 1 ])
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 } ]
+            (Set.ofList [ (0, 1) ])
+            (set [ 0 ])
+            (set [ 1 ])
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
@@ -177,7 +209,8 @@ let ``automaton with epsilon tikz compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``DFA tikz with rectangle shape compiles`` () =
-    let aut = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+    let aut =
+        Dfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] 0 (set [ 1 ])
 
     let tikz = AutomatonTikz.dfaToTikz string (fun _i s -> s) "rectangle" aut
 
@@ -188,12 +221,7 @@ let ``DFA tikz with rectangle shape compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LR(0) automaton Tikz compiles`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S
-        S -> a
-        "
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -218,7 +246,7 @@ let ``LR(0) automaton Tikz compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
-    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -242,7 +270,7 @@ let ``SLR(1) automaton Tikz for grammar1 compiles`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LR(0) automaton Tikz has correct number of states`` () =
-    let g = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -297,7 +325,12 @@ module AutomatonGoldenTests =
     [<Fact>]
     let ``NFA a+ dot golden`` () =
         let aut =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions
+                [ "q0"; "q1" ]
+                [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'a'; To = 1 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
         verifyGolden "nfa_aplus.Dot" dot
@@ -305,7 +338,11 @@ module AutomatonGoldenTests =
     [<Fact>]
     let ``DFA a+ dot golden`` () =
         let aut =
-            Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] 0 (set [ 1 ])
+            Dfa.fromTransitions
+                [ "q0"; "q1" ]
+                [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'a'; To = 1 } ]
+                0
+                (set [ 1 ])
 
         let dot = AutomatonDot.dfaToDot string (fun _i s -> s) aut
         verifyGolden "dfa_aplus.Dot" dot
@@ -313,7 +350,12 @@ module AutomatonGoldenTests =
     [<Fact>]
     let ``NFA a+ tikz golden`` () =
         let aut =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1); (1, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions
+                [ "q0"; "q1" ]
+                [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'a'; To = 1 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
         verifyGolden "nfa_aplus.tikz" tikz

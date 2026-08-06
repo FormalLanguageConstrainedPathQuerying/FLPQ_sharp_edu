@@ -2,15 +2,15 @@ module LRTableTeXGoldenTests
 
 open FLPQ.Languages
 open FLPQ.Printers
+open FLPQ.TestUtilities
 open Xunit
 
 open GoldenHelpers
 
 module private Grammars =
-    let grammar1Bnf = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+    let grammar1Bnf = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
-    let grammar7Bnf =
-        Grammar.parseGrammar "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x"
+    let grammar7Bnf = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
 
     let private freshStart grammar =
         Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")

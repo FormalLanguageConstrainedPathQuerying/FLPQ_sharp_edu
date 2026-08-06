@@ -4,6 +4,7 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
 
 [<Fact>]
@@ -48,7 +49,7 @@ let ``epsilon leaf dot compiles`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``LR parser tree dot compiles`` () =
-    let grammar = Grammar.parseGrammar "S -> a S\nS -> a"
+    let grammar = LanguageRegistry.APlus.Grammars.[0].Grammar
     let freshStart = Nonterminal(grammar.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart grammar
     let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol

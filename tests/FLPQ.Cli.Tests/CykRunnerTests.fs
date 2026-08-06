@@ -3,15 +3,15 @@ module CykRunnerTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private exampleGrammar = Path.Combine(baseDir, "example_grammar.bnf")
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    CykRunner.runCyk exampleGrammar exampleInput outDir
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir
     outDir
 
 [<Fact>]

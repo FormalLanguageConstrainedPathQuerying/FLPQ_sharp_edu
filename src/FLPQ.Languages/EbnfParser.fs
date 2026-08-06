@@ -111,7 +111,7 @@ module Regexp =
         (regexp: Regexp<'t, 'nt>)
         : DFA<'sym, int> =
         let stateMap = System.Collections.Generic.Dictionary<Regexp<'t, 'nt>, int>()
-        let mutable transitions: (int * 'sym * int) list = []
+        let mutable transitions: Trans<'sym> list = []
         let mutable stateList: Regexp<'t, 'nt> list = []
 
         let getStateId (r: Regexp<'t, 'nt>) =
@@ -141,7 +141,12 @@ module Regexp =
 
                     let fromId = stateMap.[state]
                     let toId = getStateId deriv
-                    transitions <- (fromId, sym, toId) :: transitions
+
+                    transitions <-
+                        { From = fromId
+                          Label = sym
+                          To = toId }
+                        :: transitions
 
         let finalStates =
             stateMap

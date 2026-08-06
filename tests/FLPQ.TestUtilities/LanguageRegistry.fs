@@ -1073,6 +1073,261 @@ module LanguageRegistry =
               [ Terminal "x"; Terminal "op_plus"; Terminal "op_mul"; Terminal "x" ] ]
           GenString = opExprStringGen }
 
+    let MiscTestGrammars: Language =
+        let grammar_aB_b =
+            mkEntry
+                "grammar_aB_b"
+                "S -> a B\nB -> b"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "two-rule simple grammar S -> a B, B -> b; used in FirstFollow and LL visualization tests"
+
+        let grammar_SS_a_b =
+            mkEntry
+                "grammar_SS_a_b"
+                "S -> S S\nS -> a\nS -> b"
+                { HasLeftRecursion = true
+                  HasDirectLeftRecursion = true
+                  IsAmbiguous = true
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "ambiguous two-terminal grammar; used in FirstFollow tests"
+
+        let grammar_abc =
+            mkEntry
+                "grammar_abc"
+                "S -> a b c d"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "single rule with long RHS a b c d; used in toCnf tests"
+
+        let grammar_AaBb =
+            mkEntry
+                "grammar_AaBb"
+                "S -> A a B b\nA -> a\nB -> b"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "grammar with mixed terminals and nonterminals in RHS; used in toCnf tests"
+
+        let grammar_AB_BC_C =
+            mkEntry
+                "grammar_AB_BC_C"
+                "S -> A B\nS -> a\nA -> B C\nB -> b\nC -> c"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "CNF-adjacent grammar; used in toCnf tests"
+
+        let grammar_aS_eps =
+            mkEntry
+                "grammar_aS_eps"
+                "S -> a S\nS -> eps"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "right-recursive grammar with epsilon; used in toCnf tests"
+
+        let grammar_A_B_a =
+            mkEntry
+                "grammar_A_B_a"
+                "S -> A\nA -> B\nB -> a"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "unit-production chain S -> A -> B -> a; used in toCnf and GrammarTests"
+
+        let grammar_ABCDE =
+            mkEntry
+                "grammar_ABCDE"
+                "S -> A B C D\nS -> eps\nA -> a\nB -> b\nC -> c\nD -> d\nE -> A B"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "multi-nonterminal grammar with epsilon; used in toCnf CNF-rules-only test"
+
+        let grammar_long_chain =
+            mkEntry
+                "grammar_long_chain"
+                "S -> A\nA -> B\nB -> C\nC -> D\nD -> a"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "long unit-production chain S->A->B->C->D->a; used in toCnf tests"
+
+        let grammar_aBcD =
+            mkEntry
+                "grammar_aBcD"
+                "S -> a B c D"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "single rule with mixed terminal/nonterminal symbols; used in parseGrammar classification test"
+
+        let grammar_A_a__S_b =
+            mkEntry
+                "grammar_A_a__S_b"
+                "A -> a\nS -> b"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "two-rule grammar where first rule is not start symbol; used in parseGrammar start-nonterminal test"
+
+        let grammar_a__eps =
+            mkEntry
+                "grammar_a__eps"
+                "S -> a\nS -> eps"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "two-rule grammar with explicit epsilon; used in parseGrammar blank-lines test (test inserts blank lines around this text)"
+
+        let grammar_x_aA =
+            mkEntry
+                "grammar_x_aA"
+                "A -> x\nS -> a A"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "grammar where start symbol is not first rule; used in ExtendedGrammarTests"
+
+        let grammar_aT_bE_c =
+            mkEntry
+                "grammar_aT_bE_c"
+                "E -> a T\nT -> b E\nT -> c"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "multi-nonterminal grammar with mutual recursion; used in LL table visualization tests"
+
+        let grammar_aSbS_no_eps =
+            mkEntry
+                "grammar_aSbS_no_eps"
+                "S -> a S b S"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "single-rule Dyck-like grammar (no epsilon); used in parseGrammar single-rule test"
+
+        let grammar_N_A_a =
+            mkEntry
+                "grammar_N_A_a"
+                "S -> N\nN -> A\nA -> a"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "unit-production chain S->N->A->a; used in data/example_grammar_chain.bnf"
+
+        let grammar_EEaddT =
+            mkEntry
+                "grammar_EEaddT"
+                "E -> E add T\nE -> T\nT -> x"
+                { HasLeftRecursion = true
+                  HasDirectLeftRecursion = true
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "simplified expression grammar for FirstFollow property test"
+
+        let grammar_ebnf_a_eps =
+            mkEntry
+                "grammar_ebnf_a_eps"
+                "S -> a | eps"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = true }
+                "EBNF grammar S -> a | eps; for RSM-based visualization tests"
+
+        let grammar_ebnf_aa =
+            mkEntry
+                "grammar_ebnf_aa"
+                "S -> a a"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = false
+                  IsRsmDerived = false }
+                "simple two-terminal grammar S -> a a; for RSM-based visualization tests"
+
+        { Name = "MiscTestGrammars (ad-hoc test grammars)"
+          Description = "Miscellaneous grammars used in parser and transformation tests."
+          Grammars =
+            [ grammar_aB_b
+              grammar_SS_a_b
+              grammar_abc
+              grammar_AaBb
+              grammar_AB_BC_C
+              grammar_aS_eps
+              grammar_A_B_a
+              grammar_ABCDE
+              grammar_long_chain
+              grammar_aBcD
+              grammar_A_a__S_b
+              grammar_a__eps
+              grammar_x_aA
+              grammar_aT_bE_c
+              grammar_aSbS_no_eps
+              grammar_N_A_a
+              grammar_EEaddT
+              grammar_ebnf_a_eps
+              grammar_ebnf_aa ]
+          AcceptStrings = []
+          RejectStrings = []
+          GenString = MyGen.constant "a" }
+
     /// All languages in the registry.
     let allLanguages: Language list =
         [ Dyck1
@@ -1090,7 +1345,8 @@ module LanguageRegistry =
           LL2Test
           LL3Test
           DualDyck
-          OpExpr ]
+          OpExpr
+          MiscTestGrammars ]
 
     /// Look up a grammar by name within a language.
     let findGrammar (lang: Language) (name: string) : AnnotatedGrammar =

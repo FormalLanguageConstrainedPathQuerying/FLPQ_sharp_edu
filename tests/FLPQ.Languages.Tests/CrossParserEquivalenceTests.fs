@@ -20,14 +20,14 @@ module VsCyk =
             let g = dyck1.Grammars[0].Grammar
             let input = TestHelpers.stringToTerminals s
             let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            gllAccepts dyck1.Grammars[0].Rsm input = TestHelpers.cykAccepts g input
 
         [<Property>]
         let ``GLL and CYK agree on Dyck1 grammar2`` (s: string) =
             let g = dyck1.Grammars[1].Grammar
             let input = TestHelpers.stringToTerminals s
             let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            gllAccepts dyck1.Grammars[1].Rsm input = TestHelpers.cykAccepts g input
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module GllVsCykAplus =
@@ -36,14 +36,14 @@ module VsCyk =
             let g = aplus.Grammars[0].Grammar
             let input = TestHelpers.stringToTerminals s
             let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            gllAccepts aplus.Grammars[0].Rsm input = TestHelpers.cykAccepts g input
 
         [<Property>]
         let ``GLL and CYK agree on APlus grammar4`` (s: string) =
             let g = aplus.Grammars[1].Grammar
             let input = TestHelpers.stringToTerminals s
             let gllAccepts = TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted
-            gllAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            gllAccepts aplus.Grammars[1].Rsm input = TestHelpers.cykAccepts g input
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
     module RnglrVsCyk =
@@ -52,7 +52,7 @@ module VsCyk =
             let g = dyck1.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
             let rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
-            rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            rnglrAccepts dyck1.Grammars[0].Rsm input = TestHelpers.cykAccepts g input
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
     module RnglrVsCykAplus =
@@ -61,7 +61,7 @@ module VsCyk =
             let g = aplus.Grammars[0].Grammar
             let input = s.Replace(" ", "") |> TestHelpers.stringToTerminals
             let rnglrAccepts = TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted
-            rnglrAccepts (TestHelpers.grammarToRsm g) input = TestHelpers.cykAccepts g input
+            rnglrAccepts aplus.Grammars[0].Rsm input = TestHelpers.cykAccepts g input
 
 module GllVsRnglr =
 

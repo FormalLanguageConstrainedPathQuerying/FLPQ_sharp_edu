@@ -3,15 +3,15 @@ module ValiantRunnerTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private exampleGrammar = Path.Combine(baseDir, "example_grammar.bnf")
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiant exampleGrammar exampleInput outDir
+    ValiantRunner.runValiant (TestGrammarFiles.exampleGrammar ()) exampleInput outDir
     outDir
 
 [<Fact>]
@@ -57,7 +57,7 @@ let ``runValiant produces step directories with table.tex in each step`` () =
 
 let private runModifiedRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiantModified exampleGrammar exampleInput outDir
+    ValiantRunner.runValiantModified (TestGrammarFiles.exampleGrammar ()) exampleInput outDir
     outDir
 
 [<Fact>]

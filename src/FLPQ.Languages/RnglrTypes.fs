@@ -155,3 +155,10 @@ type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
       ActiveShiftTerminals: Set<Terminal<'t>>
       ActiveReduceNonterminals: Set<Nonterminal<'nt>>
       LevelReductions: Set<Nonterminal<'nt>> }
+
+/// Result of RNGLR path index construction with step-by-step visualization data.
+[<Struct>]
+type RnglrResult<'t, 'nt when 't: comparison and 'nt: comparison> =
+    { PathIndex: PathIndex<'t, 'nt>
+      Steps: RnglrParsingStep<'t, 'nt> list
+      VertexInfo: ResizeArray<int * int> }

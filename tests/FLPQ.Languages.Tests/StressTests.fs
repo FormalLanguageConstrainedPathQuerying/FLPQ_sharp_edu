@@ -7,7 +7,7 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-let private balancedGrammar = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+let private balancedGrammar = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
 let private makeAnBn (n: int) : string =
     let aPart = System.String.Concat(Array.replicate n "a ")
@@ -76,7 +76,7 @@ module NfaToDfaStress =
     [<Trait("Category", "Stress")>]
     let ``NFA to DFA with 50-state chain succeeds`` () =
         let states = [ 0..49 ]
-        let transitions = [ for i in 0..48 -> (i, "a", i + 1) ]
+        let transitions = [ for i in 0..48 -> { From = i; Label = "a"; To = i + 1 } ]
 
         let nfa =
             Nfa.fromTransitions states transitions Set.empty (Set.singleton 0) (Set.singleton 49)
@@ -89,7 +89,7 @@ module NfaToDfaStress =
     let ``NFA to DFA with 30-state diamond succeeds`` () =
         let n = 30
         let states = [ 0 .. n - 1 ]
-        let transitions = [ for i in 0 .. n - 2 -> (i, "a", i + 1) ]
+        let transitions = [ for i in 0 .. n - 2 -> { From = i; Label = "a"; To = i + 1 } ]
         let epsTransitions = Set.singleton (n - 2, 0)
 
         let nfa =

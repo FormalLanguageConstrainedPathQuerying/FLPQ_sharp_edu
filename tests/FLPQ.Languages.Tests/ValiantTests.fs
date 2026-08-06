@@ -590,7 +590,7 @@ module ValiantSppfTests =
 
         for i in 0 .. n - 1 do
             for j in 0 .. n - 1 do
-                let sppfNts = sppfTable.[i, j] |> Set.map (fun (nt, _, _) -> nt)
+                let sppfNts = sppfTable.[i, j] |> Set.map (fun e -> e.Nt)
                 let parseNts = parseTable.[i, j]
                 Assert.True(Set.isEmpty sppfNts = Set.isEmpty parseNts || sppfNts = parseNts)
 
@@ -602,13 +602,13 @@ module ValiantSppfTests =
             Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 terminals
 
         Assert.False(Set.isEmpty table.[0, 0])
-        Assert.True(table.[0, 0] |> Set.forall (fun (_, k, _) -> k = 0))
+        Assert.True(table.[0, 0] |> Set.forall (fun e -> e.SplitPoint = 0))
 
         Assert.False(Set.isEmpty table.[1, 1])
-        Assert.True(table.[1, 1] |> Set.forall (fun (_, k, _) -> k = 1))
+        Assert.True(table.[1, 1] |> Set.forall (fun e -> e.SplitPoint = 1))
 
         if not (Set.isEmpty table.[0, 1]) then
-            Assert.True(table.[0, 1] |> Set.forall (fun (_, k, _) -> k = 0))
+            Assert.True(table.[0, 1] |> Set.forall (fun e -> e.SplitPoint = 0))
 
     [<Fact>]
     let ``Valiant SPPF accepts expected string`` () =

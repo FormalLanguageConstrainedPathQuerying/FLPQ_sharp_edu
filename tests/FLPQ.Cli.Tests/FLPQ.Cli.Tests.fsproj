@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="TestGrammarFiles.fs" />
     <Compile Include="AlgorithmTypesTests.fs" />
     <Compile Include="HelpersTests.fs" />
     <Compile Include="SummaryTests.fs" />
@@ -32,19 +33,12 @@
     <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
+    <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\data\example_grammar.bnf">
-      <Link>example_grammar.bnf</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="..\..\data\example_input.txt">
       <Link>example_input.txt</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\..\data\example_lr_grammar.bnf">
-      <Link>example_lr_grammar.bnf</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\data\example_lr_input.txt">

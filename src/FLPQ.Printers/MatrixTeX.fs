@@ -6,6 +6,15 @@ open FLPQ.LinearAlgebra
 /// TeX rendering for matrices using the nicematrix package.
 module MatrixTeX =
 
+    [<Struct>]
+    type private HighlightCell = { Row: int; Col: int; Color: string }
+
+    [<Struct>]
+    type private BlockInfo =
+        { Options: string
+          RowCount: int
+          ColCount: int }
+
     let toTeXStyled
         (showRowNumbers: bool)
         (showColNumbers: bool)
@@ -52,7 +61,10 @@ module MatrixTeX =
 
         let highlightSet =
             highlights
-            |> List.map (fun h -> (h.Row + dataRowOffset, h.Col + dataColOffset, "yellow"))
+            |> List.map (fun h ->
+                { Row = h.Row + dataRowOffset
+                  Col = h.Col + dataColOffset
+                  Color = "yellow" })
             |> Set.ofList
 
         let blockColor idx =
@@ -94,7 +106,10 @@ module MatrixTeX =
                     else
                         "[" + String.concat "," opts + "]"
 
-                (r, c), (blockOptions, b.RowCount, b.ColCount))
+                (r, c),
+                { Options = blockOptions
+                  RowCount = b.RowCount
+                  ColCount = b.ColCount })
             |> List.groupBy fst
             |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
             |> Map.ofList
@@ -131,21 +146,21 @@ module MatrixTeX =
                               cellPrinter matrix.[dataRow, dataCol]
 
                       let hc =
-                          highlightSet |> Set.toList |> List.tryFind (fun (r, c, _) -> r = row && c = col)
+                          highlightSet |> Set.toList |> List.tryFind (fun h -> h.Row = row && h.Col = col)
 
                       match Map.tryFind (row, col) blockMap with
-                      | Some(blockOpts, rowCount, colCount) ->
+                      | Some block ->
                           sprintf
                               @"\Block%s{%d-%d}{%s}"
-                              blockOpts
-                              rowCount
-                              colCount
+                              block.Options
+                              block.RowCount
+                              block.ColCount
                               (match hc with
-                               | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
+                               | Some h -> sprintf @"\cellcolor{%s}{%s}" h.Color content
                                | None -> content)
                       | None ->
                           match hc with
-                          | Some(_, _, color) -> sprintf @"\cellcolor{%s}{%s}" color content
+                          | Some h -> sprintf @"\cellcolor{%s}{%s}" h.Color content
                           | None -> content ]
 
             if not (List.isEmpty cells) then

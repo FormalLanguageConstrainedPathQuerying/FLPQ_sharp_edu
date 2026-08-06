@@ -8,6 +8,12 @@ open System.Diagnostics
 /// Reused by both the test suite and the CLI summary generator.
 module ExternalTools =
 
+    [<Struct>]
+    type private ProcessResult =
+        { ExitCode: int
+          Stdout: string
+          Stderr: string }
+
     /// Parsed information from a Graphviz `-Tplain` output.
     type DotInfo =
         { NodeCount: int
@@ -48,8 +54,8 @@ module ExternalTools =
 
         List.rev tokens
 
-    /// Run a process synchronously, returning (exitCode, stdout, stderr).
-    let private runProcess (fileName: string) (arguments: string) (workingDir: string option) : int * string * string =
+    /// Run a process synchronously, returning a ProcessResult.
+    let private runProcess (fileName: string) (arguments: string) (workingDir: string option) : ProcessResult =
         let p = new Process()
         p.StartInfo.FileName <- fileName
         p.StartInfo.Arguments <- arguments
@@ -65,7 +71,10 @@ module ExternalTools =
         let out = p.StandardOutput.ReadToEnd()
         let err = p.StandardError.ReadToEnd()
         p.WaitForExit(30000) |> ignore
-        (p.ExitCode, out, err)
+
+        { ExitCode = p.ExitCode
+          Stdout = out
+          Stderr = err }
 
     /// Parse Graphviz `-Tplain` output into structured information.
     /// Throws if `dot` returns a non-zero exit code.
@@ -74,10 +83,10 @@ module ExternalTools =
         File.WriteAllText(tempFile, dot)
 
         try
-            let (code, out, err) = runProcess "dot" ("-Tplain " + tempFile) None
+            let r = runProcess "dot" ("-Tplain " + tempFile) None
 
-            if code <> 0 then
-                failwithf "dot compilation failed (exit %d): %s" code err
+            if r.ExitCode <> 0 then
+                failwithf "dot compilation failed (exit %d): %s" r.ExitCode r.Stderr
 
             let mutable nodeCount = 0
             let mutable edgeCount = 0
@@ -85,7 +94,7 @@ module ExternalTools =
             let mutable edgeLabels = []
             let mutable nodeFillColors = []
 
-            for line in out.Split('\n', StringSplitOptions.RemoveEmptyEntries) do
+            for line in r.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries) do
                 let tokens = tokenizePlainLine line
 
                 match tokens with
@@ -135,11 +144,10 @@ module ExternalTools =
             if not (Directory.Exists dir) then
                 Directory.CreateDirectory dir |> ignore
 
-            let (code, _out, err) =
-                runProcess "dot" (sprintf "-Tpdf -o \"%s\" \"%s\"" pdfPath dotPath) None
+            let r = runProcess "dot" (sprintf "-Tpdf -o \"%s\" \"%s\"" pdfPath dotPath) None
 
-            if code <> 0 then
-                eprintfn "dot failed for %s: %s" dotPath err
+            if r.ExitCode <> 0 then
+                eprintfn "dot failed for %s: %s" dotPath r.Stderr
                 false
             else
                 File.Exists pdfPath && FileInfo(pdfPath).Length > 0L
@@ -173,14 +181,14 @@ module ExternalTools =
         try
             File.WriteAllText(texFile, fullDoc)
 
-            let (code, out, _err) =
+            let r =
                 runProcess
                     "lualatex"
                     (sprintf "-interaction=nonstopmode -output-directory=\"%s\" \"%s\"" tempDir texFile)
                     (Some tempDir)
 
             let pdfPath = Path.Combine(tempDir, "test.pdf")
-            latexSucceeded code out pdfPath
+            latexSucceeded r.ExitCode r.Stdout pdfPath
         finally
             try
                 Directory.Delete(tempDir, true)
@@ -194,7 +202,7 @@ module ExternalTools =
             if not (Directory.Exists outputDir) then
                 Directory.CreateDirectory outputDir |> ignore
 
-            let (code, out, err) =
+            let r =
                 runProcess
                     "lualatex"
                     (sprintf "-interaction=nonstopmode -output-directory=\"%s\" \"%s\"" outputDir texPath)
@@ -203,11 +211,11 @@ module ExternalTools =
             let pdfName = Path.GetFileNameWithoutExtension(texPath) + ".pdf"
             let pdfPath = Path.Combine(outputDir, pdfName)
 
-            if not (latexSucceeded code out pdfPath) then
-                eprintfn "lualatex failed for %s (exit %d)" texPath code
+            if not (latexSucceeded r.ExitCode r.Stdout pdfPath) then
+                eprintfn "lualatex failed for %s (exit %d)" texPath r.ExitCode
 
-                if not (String.IsNullOrEmpty err) then
-                    eprintfn "%s" err
+                if not (String.IsNullOrEmpty r.Stderr) then
+                    eprintfn "%s" r.Stderr
 
                 false
             else

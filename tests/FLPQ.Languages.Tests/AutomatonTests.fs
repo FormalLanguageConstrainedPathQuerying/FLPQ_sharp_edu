@@ -12,7 +12,7 @@ module FactTests =
     [<Fact>]
     let ``fromTransitions builds correct automaton`` () =
         let a =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = "a"; To = 1 } ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.Equal(2, Nfa.stateCount a)
         Assert.Equal<string>(set [ "a" ], Nfa.alphabet a)
@@ -22,7 +22,9 @@ module FactTests =
         let a =
             Nfa.fromTransitions
                 [ "q0"; "q1"; "q2" ]
-                [ (0, "a", 1); (0, "a", 2); (1, "b", 2) ]
+                [ { From = 0; Label = "a"; To = 1 }
+                  { From = 0; Label = "a"; To = 2 }
+                  { From = 1; Label = "b"; To = 2 } ]
                 Set.empty
                 (set [ 0 ])
                 (set [ 2 ])
@@ -35,7 +37,12 @@ module FactTests =
     [<Fact>]
     let ``moveSet handles multiple states`` () =
         let a =
-            Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 2); (1, "a", 2) ] Set.empty (set [ 0 ]) (set [ 2 ])
+            Nfa.fromTransitions
+                [ "q0"; "q1"; "q2" ]
+                [ { From = 0; Label = "a"; To = 2 }; { From = 1; Label = "a"; To = 2 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 2 ])
 
         let targets = Nfa.moveSet a (set [ 0; 1 ]) "a"
         Assert.Equal<int>(set [ 2 ], targets)
@@ -45,7 +52,10 @@ module FactTests =
         let nfa =
             Nfa.fromTransitions
                 [ "q0"; "q1"; "q2" ]
-                [ (0, "a", 1); (0, "a", 2); (1, "b", 0); (2, "b", 0) ]
+                [ { From = 0; Label = "a"; To = 1 }
+                  { From = 0; Label = "a"; To = 2 }
+                  { From = 1; Label = "b"; To = 0 }
+                  { From = 2; Label = "b"; To = 0 } ]
                 Set.empty
                 (set [ 0 ])
                 (set [ 0 ])
@@ -58,7 +68,9 @@ module FactTests =
         let nfa =
             Nfa.fromTransitions
                 [ "q0"; "q1"; "q2" ]
-                [ (0, "a", 1); (0, "a", 2); (1, "b", 2) ]
+                [ { From = 0; Label = "a"; To = 1 }
+                  { From = 0; Label = "a"; To = 2 }
+                  { From = 1; Label = "b"; To = 2 } ]
                 Set.empty
                 (set [ 0 ])
                 (set [ 2 ])
@@ -69,7 +81,11 @@ module FactTests =
     [<Fact>]
     let ``DFA has single start state`` () =
         let dfa =
-            Dfa.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1); (1, "b", 0) ] 0 (set [ 1 ])
+            Dfa.fromTransitions
+                [ "q0"; "q1" ]
+                [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "b"; To = 0 } ]
+                0
+                (set [ 1 ])
 
         Assert.Equal(0, dfa.StartState)
 
@@ -78,7 +94,9 @@ module FactTests =
         let a =
             Nfa.fromTransitions
                 [ "q0"; "q1" ]
-                [ (0, "a", 1); (1, "b", 0); (1, "c", 0) ]
+                [ { From = 0; Label = "a"; To = 1 }
+                  { From = 1; Label = "b"; To = 0 }
+                  { From = 1; Label = "c"; To = 0 } ]
                 Set.empty
                 (set [ 0 ])
                 (set [ 1 ])
@@ -88,7 +106,12 @@ module FactTests =
     [<Fact>]
     let ``stateCount returns correct number`` () =
         let a =
-            Nfa.fromTransitions [ "q0"; "q1"; "q2" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions
+                [ "q0"; "q1"; "q2" ]
+                [ { From = 0; Label = "a"; To = 1 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         Assert.Equal(3, Nfa.stateCount a)
 
@@ -130,7 +153,7 @@ module FactTests =
     [<Fact>]
     let ``epsilonClosure no epsilon transitions`` () =
         let a =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = "a"; To = 1 } ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.Equal<int>(set [ 0 ], Nfa.epsilonClosure a 0)
         Assert.Equal<int>(set [ 1 ], Nfa.epsilonClosure a 1)
@@ -141,7 +164,12 @@ module AcceptanceTests =
 
     module Re_aPlus =
         let nfa =
-            Nfa.fromTransitions [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions
+                [ 0; 1 ]
+                [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 1 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         let dfa = Automaton.toDfa nfa
 
@@ -171,7 +199,7 @@ module AcceptanceTests =
 
     module Re_aStar =
         let nfa =
-            Nfa.fromTransitions [ 0 ] [ (0, "a", 0) ] Set.empty (set [ 0 ]) (set [ 0 ])
+            Nfa.fromTransitions [ 0 ] [ { From = 0; Label = "a"; To = 0 } ] Set.empty (set [ 0 ]) (set [ 0 ])
 
         let dfa = Automaton.toDfa nfa
 
@@ -206,7 +234,10 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions
                 [ 0; 1; 2; 3 ]
-                [ (0, "a", 1); (1, "b", 2); (2, "a", 3); (3, "b", 0) ]
+                [ { From = 0; Label = "a"; To = 1 }
+                  { From = 1; Label = "b"; To = 2 }
+                  { From = 2; Label = "a"; To = 3 }
+                  { From = 3; Label = "b"; To = 0 } ]
                 (set [ (2, 0) ])
                 (set [ 0 ])
                 (set [ 0 ])
@@ -252,7 +283,11 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions
                 [ 0; 1; 2; 3; 4 ]
-                [ (0, "c", 1); (1, "a", 2); (2, "b", 3); (3, "a", 4); (4, "b", 1) ]
+                [ { From = 0; Label = "c"; To = 1 }
+                  { From = 1; Label = "a"; To = 2 }
+                  { From = 2; Label = "b"; To = 3 }
+                  { From = 3; Label = "a"; To = 4 }
+                  { From = 4; Label = "b"; To = 1 } ]
                 (set [ (3, 1) ])
                 (set [ 0 ])
                 (set [ 1 ])
@@ -309,7 +344,11 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions
                 [ 0; 1; 2; 3; 4 ]
-                [ (0, "c", 1); (1, "a", 2); (2, "b", 3); (3, "a", 4); (4, "b", 1) ]
+                [ { From = 0; Label = "c"; To = 1 }
+                  { From = 1; Label = "a"; To = 2 }
+                  { From = 2; Label = "b"; To = 3 }
+                  { From = 3; Label = "a"; To = 4 }
+                  { From = 4; Label = "b"; To = 1 } ]
                 (set [ (3, 1) ])
                 (set [ 0 ])
                 (set [ 3 ])
@@ -366,13 +405,13 @@ module AcceptanceTests =
         let nfa =
             Nfa.fromTransitions
                 [ 0; 1; 2 ]
-                [ (0, "c", 1)
-                  (1, "a", 1)
-                  (1, "b", 1)
-                  (1, "a", 2)
-                  (1, "b", 2)
-                  (2, "a", 1)
-                  (2, "b", 1) ]
+                [ { From = 0; Label = "c"; To = 1 }
+                  { From = 1; Label = "a"; To = 1 }
+                  { From = 1; Label = "b"; To = 1 }
+                  { From = 1; Label = "a"; To = 2 }
+                  { From = 1; Label = "b"; To = 2 }
+                  { From = 2; Label = "a"; To = 1 }
+                  { From = 2; Label = "b"; To = 1 } ]
                 (set [ (2, 1) ])
                 (set [ 0 ])
                 (set [ 1; 2 ])
@@ -466,7 +505,12 @@ module AcceptanceTests =
         let ``rejects a`` () = Assert.False(Nfa.accept nfa [ T "a" ])
 
     module DFA_aPlus =
-        let dfa = Dfa.fromTransitions [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] 0 (set [ 1 ])
+        let dfa =
+            Dfa.fromTransitions
+                [ 0; 1 ]
+                [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 1 } ]
+                0
+                (set [ 1 ])
 
         [<Fact>]
         let ``accepts a`` () = Assert.True(Dfa.accept dfa [ T "a" ])
@@ -484,7 +528,12 @@ module AcceptanceTests =
 
     module NFA_aPlus_nondet =
         let nfa =
-            Nfa.fromTransitions [ 0; 1 ] [ (0, "a", 0); (0, "a", 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions
+                [ 0; 1 ]
+                [ { From = 0; Label = "a"; To = 0 }; { From = 0; Label = "a"; To = 1 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
 
         [<Fact>]
         let ``accepts a`` () = Assert.True(Nfa.accept nfa [ T "a" ])
@@ -504,19 +553,15 @@ module IntersectionTests =
 
     let T s = Terminal s
 
-    let private nfaFromEdges
-        (states: int list)
-        (edges: (int * string * int) list)
-        (starts: int list)
-        (finals: int list)
-        =
+    let private nfaFromEdges (states: int list) (edges: Trans<string> list) (starts: int list) (finals: int list) =
         Nfa.fromTransitions states edges Set.empty (Set.ofList starts) (Set.ofList finals)
 
     [<Fact>]
     let ``Intersection of a+ and a* equals a+`` () =
-        let aPlus = nfaFromEdges [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] [ 0 ] [ 1 ]
+        let aPlus =
+            nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 1 } ] [ 0 ] [ 1 ]
 
-        let aStar = nfaFromEdges [ 0 ] [ (0, "a", 0) ] [ 0 ] [ 0 ]
+        let aStar = nfaFromEdges [ 0 ] [ { From = 0; Label = "a"; To = 0 } ] [ 0 ] [ 0 ]
 
         let inter = Nfa.intersect aPlus aStar
 
@@ -526,7 +571,7 @@ module IntersectionTests =
 
     [<Fact>]
     let ``Intersection of a* and empty-string-only automaton equals empty-string-only`` () =
-        let aStar = nfaFromEdges [ 0 ] [ (0, "a", 0) ] [ 0 ] [ 0 ]
+        let aStar = nfaFromEdges [ 0 ] [ { From = 0; Label = "a"; To = 0 } ] [ 0 ] [ 0 ]
 
         let emptyOnly = nfaFromEdges [ 0 ] [] [ 0 ] [ 0 ]
 
@@ -537,9 +582,11 @@ module IntersectionTests =
 
     [<Fact>]
     let ``Intersection of a+ and a (single) accepts a only`` () =
-        let aPlus = nfaFromEdges [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] [ 0 ] [ 1 ]
+        let aPlus =
+            nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 1 } ] [ 0 ] [ 1 ]
 
-        let singleA = nfaFromEdges [ 0; 1 ] [ (0, "a", 1) ] [ 0 ] [ 1 ]
+        let singleA =
+            nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 } ] [ 0 ] [ 1 ]
 
         let inter = Nfa.intersect aPlus singleA
 
@@ -549,9 +596,9 @@ module IntersectionTests =
 
     [<Fact>]
     let ``Intersection of disjoint languages is empty`` () =
-        let onlyA = nfaFromEdges [ 0; 1 ] [ (0, "a", 1) ] [ 0 ] [ 1 ]
+        let onlyA = nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 } ] [ 0 ] [ 1 ]
 
-        let onlyB = nfaFromEdges [ 0; 1 ] [ (0, "b", 1) ] [ 0 ] [ 1 ]
+        let onlyB = nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "b"; To = 1 } ] [ 0 ] [ 1 ]
 
         let inter = Nfa.intersect onlyA onlyB
 
@@ -559,9 +606,11 @@ module IntersectionTests =
 
     [<Fact>]
     let ``Intersection with identity automaton returns equivalent automaton`` () =
-        let aPlus = nfaFromEdges [ 0; 1 ] [ (0, "a", 1); (1, "a", 1) ] [ 0 ] [ 1 ]
+        let aPlus =
+            nfaFromEdges [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 1 } ] [ 0 ] [ 1 ]
 
-        let universal = nfaFromEdges [ 0 ] [ (0, "a", 0); (0, "b", 0) ] [ 0 ] [ 0 ]
+        let universal =
+            nfaFromEdges [ 0 ] [ { From = 0; Label = "a"; To = 0 }; { From = 0; Label = "b"; To = 0 } ] [ 0 ] [ 0 ]
 
         let inter = Nfa.intersect aPlus universal
 
@@ -600,7 +649,7 @@ module BackwardCompatibilityTests =
     [<Fact>]
     let ``NFA member states provides backward compatibility`` () =
         let nfa =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         let states = nfa.States
         Assert.Equal<string list>([ "q0"; "q1" ], states)
@@ -608,17 +657,21 @@ module BackwardCompatibilityTests =
     [<Fact>]
     let ``NFA member transitions provides backward compatibility`` () =
         let nfa =
-            Nfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] Set.empty (set [ 0 ]) (set [ 1 ])
+            Nfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] Set.empty (set [ 0 ]) (set [ 1 ])
 
         Assert.True(nfa.Transitions.[0, 1].IsSome)
 
     [<Fact>]
     let ``DFA member states provides backward compatibility`` () =
-        let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+        let dfa =
+            Dfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] 0 (set [ 1 ])
+
         let states = dfa.States
         Assert.Equal<string list>([ "q0"; "q1" ], states)
 
     [<Fact>]
     let ``DFA member transitions provides backward compatibility`` () =
-        let dfa = Dfa.fromTransitions [ "q0"; "q1" ] [ (0, 'a', 1) ] 0 (set [ 1 ])
+        let dfa =
+            Dfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] 0 (set [ 1 ])
+
         Assert.True(dfa.Transitions.[0, 1].IsSome)

@@ -4,6 +4,7 @@ open System.IO
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
+open FLPQ.TestUtilities
 open Xunit
 
 open GoldenHelpers
@@ -17,7 +18,7 @@ type ``Valiant trace TeX golden tests``() =
 
     [<Fact>]
     member _.``Valiant trace grammar1 abab``() =
-        let grammar = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+        let grammar = LanguageRegistry.Dyck1.Grammars.[0].Grammar
         let tokens = Tokenizer.tokenizeTerminals "a b a b"
 
         let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokens
@@ -30,7 +31,7 @@ type ``Valiant trace TeX golden tests``() =
 
     [<Fact>]
     member _.``Modified Valiant trace grammar1 ab``() =
-        let grammar = Grammar.parseGrammar "S -> a S b S\nS -> eps"
+        let grammar = LanguageRegistry.Dyck1.Grammars.[0].Grammar
         let tokens = Tokenizer.tokenizeTerminals "a b"
 
         let trace =

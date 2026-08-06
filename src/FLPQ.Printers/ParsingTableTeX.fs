@@ -34,8 +34,8 @@ module ParsingTableTeX =
     /// Render a set of SPPF parsing entries as TeX tuples.
     let sppfEntryCellToTeX (nonterminalPrinter: 'nt -> string) (entries: Set<SppfParsingEntry<'nt>>) : string =
         setToTeX
-            (fun (nt, k, prodIdx) ->
-                let ntStr = SymbolTeX.nonterminalContent nonterminalPrinter nt
+            (fun entry ->
+                let ntStr = SymbolTeX.nonterminalContent nonterminalPrinter entry.Nt
 
-                $"({ntStr}, {k}, {prodIdx})")
+                $"({ntStr}, {entry.SplitPoint}, {entry.ProdIdx})")
             entries

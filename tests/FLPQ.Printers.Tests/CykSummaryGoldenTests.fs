@@ -3,6 +3,7 @@ module CykSummaryGoldenTests
 open System.IO
 open FLPQ.Languages
 open FLPQ.Printers
+open FLPQ.TestUtilities
 open Xunit
 
 open GoldenHelpers
@@ -72,13 +73,13 @@ type ``CYK summary golden tests``() =
 
     [<Fact>]
     member _.``CYK summary grammar1 aababb``() =
-        let tex = generateCykSummaryTex "S -> a S b S\nS -> eps" "aababb"
+        let tex = generateCykSummaryTex LanguageRegistry.Dyck1.Grammars.[0].Text "aababb"
 
         verifyGolden "cyk_grammar1_aababb_summary.tex" tex
 
     [<Fact>]
     member _.``CYK summary grammar7 x+x``() =
         let tex =
-            generateCykSummaryTex "E -> E + T\nE -> T\nT -> T * F\nT -> F\nF -> ( E )\nF -> x" "x + x"
+            generateCykSummaryTex LanguageRegistry.ArithExpr.Grammars.[1].Text "x add x"
 
         verifyGolden "cyk_grammar7_xplusx_summary.tex" tex

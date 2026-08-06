@@ -16,16 +16,8 @@ module PathIndexGolden =
 
     [<Fact>]
     let ``GLL path index TeX golden for S->aaA|aA, A->aA|eps, input aa`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
-
-        let rsm = TestHelpers.grammarToRsm g
+        let g = LanguageRegistry.APlus.Grammars.[3]
+        let rsm = g.Rsm
         let freshStart = Nonterminal("S'")
         let ersm = ExtendedRSM.create freshStart rsm
         let input = [ Terminal "a"; Terminal "a" ]
@@ -37,16 +29,8 @@ module PathIndexGolden =
 
     [<Fact>]
     let ``RNGLR path index TeX golden for S->aaA|aA, A->aA|eps, input aa`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
-
-        let rsm = TestHelpers.grammarToRsm g
+        let g = LanguageRegistry.APlus.Grammars.[3]
+        let rsm = g.Rsm
         let startNt = (RSM.startBlock rsm).Nonterminal
         let freshStart = Nonterminal("S'")
         let input = [ Terminal "a"; Terminal "a" ]
@@ -70,16 +54,8 @@ module PathIndexCompilation =
     [<Fact>]
     [<Trait("Category", "TeX")>]
     let ``GLL path index TeX compiles with lualatex`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
-
-        let rsm = TestHelpers.grammarToRsm g
+        let g = LanguageRegistry.APlus.Grammars.[3]
+        let rsm = g.Rsm
         let freshStart = Nonterminal("S'")
         let ersm = ExtendedRSM.create freshStart rsm
         let input = [ Terminal "a"; Terminal "a" ]
@@ -92,16 +68,8 @@ module PathIndexCompilation =
     [<Fact>]
     [<Trait("Category", "TeX")>]
     let ``RNGLR path index TeX compiles with lualatex`` () =
-        let g =
-            Grammar.parseGrammar
-                "
-        S -> a a A
-        S -> a A
-        A -> a A
-        A -> eps
-        "
-
-        let rsm = TestHelpers.grammarToRsm g
+        let g = LanguageRegistry.APlus.Grammars.[3]
+        let rsm = g.Rsm
         let startNt = (RSM.startBlock rsm).Nonterminal
         let freshStart = Nonterminal("S'")
         let input = [ Terminal "a"; Terminal "a" ]

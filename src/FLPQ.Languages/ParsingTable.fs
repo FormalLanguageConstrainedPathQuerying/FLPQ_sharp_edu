@@ -10,7 +10,11 @@ type ParsingTable<'nt when 'nt: comparison> = Matrix<Set<Nonterminal<'nt>>>
 /// Fields: (nonterminal, splitPoint_k, productionIndex).
 /// For terminal rules, splitPoint_k is the position of the terminal character.
 /// For binary rules, splitPoint_k is the index where the left child ends and right child begins.
-type SppfParsingEntry<'nt when 'nt: comparison> = Nonterminal<'nt> * int * int
+[<Struct>]
+type SppfParsingEntry<'nt when 'nt: comparison> =
+    { Nt: Nonterminal<'nt>
+      SplitPoint: int
+      ProdIdx: int }
 
 /// Enriched parsing table where each cell stores a set of SPPF entries.
 /// Shared by CYK and Valiant algorithms for BasicSPPF construction.

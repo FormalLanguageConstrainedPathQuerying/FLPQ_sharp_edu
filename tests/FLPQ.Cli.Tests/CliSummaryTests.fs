@@ -3,10 +3,10 @@ module CliSummaryTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private exampleGrammar = Path.Combine(baseDir, "example_grammar.bnf")
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runWithSummary (algorithm: string) : string =
@@ -17,7 +17,7 @@ let private runWithSummary (algorithm: string) : string =
         [| "-a"
            algorithm
            "-g"
-           exampleGrammar
+           (TestGrammarFiles.exampleGrammar ())
            "-i"
            exampleInput
            "-o"

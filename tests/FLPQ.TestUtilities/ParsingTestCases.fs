@@ -161,12 +161,7 @@ module Runners =
 
         accepts rsm input = TestHelpers.dfaAcceptsRegex dfa input
 
-    let runPropertyTreeYieldTest
-        (accepts: AcceptFn)
-        (grammar: Grammar<string, string>)
-        (desc: string)
-        (s: string)
-        : bool =
+    let runPropertyTreeYieldTest (accepts: AcceptFn) (rsm: RSM<string, string>) (desc: string) (s: string) : bool =
 
         if s.Length > 30 then
             true
@@ -174,7 +169,7 @@ module Runners =
             let input = TestHelpers.stringToTerminals s
 
             try
-                accepts (TestHelpers.grammarToRsm grammar) input |> ignore
+                accepts rsm input |> ignore
                 true
             with _ ->
                 false

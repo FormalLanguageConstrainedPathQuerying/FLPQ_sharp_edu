@@ -9,16 +9,16 @@ open FLPQ.RPQ
 open FLPQ.GraphAnalysis
 open FLPQ.TestUtilities
 
-let private nfaWithSources (vCount: int) (edges: (int * string * int) list) (sources: int list) : NFA<string, int> =
+let private nfaWithSources (vCount: int) (edges: Trans<string> list) (sources: int list) : NFA<string, int> =
     TestHelpers.nfaFromEdges vCount edges (Array.ofList sources)
 
 [<Fact>]
 [<Trait("Category", "Stress")>]
 let ``RPQ Belyanin and Kronecker agree on 100-vertex line graph`` () =
     let n = 100
-    let edges = [ for i in 0 .. n - 2 -> (i, "a", i + 1) ]
+    let edges = [ for i in 0 .. n - 2 -> { From = i; Label = "a"; To = i + 1 } ]
     let nfa = nfaWithSources n edges [ 0 ]
-    let dfa = TestHelpers.buildDfa [ (0, "a", 0) ] 0 [ 0 ]
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 0 } ] 0 [ 0 ]
 
     let belyResult = BelyaninRPQ.evaluate dfa nfa
     let kronResult = KroneckerRPQ.evaluate dfa nfa
@@ -33,15 +33,17 @@ let ``RPQ Belyanin and Kronecker agree on 100-vertex line graph`` () =
 [<Trait("Category", "Stress")>]
 let ``RPQ Belyanin and Kronecker agree on 80-vertex random-like graph`` () =
     let n = 80
-    let dfa = TestHelpers.buildDfa [ (0, "a", 1); (1, "b", 2) ] 0 [ 2 ]
+
+    let dfa =
+        TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "b"; To = 2 } ] 0 [ 2 ]
 
     let edges =
         [ for i in 0 .. n - 2 do
-              yield (i, "a", i + 1)
+              yield { From = i; Label = "a"; To = i + 1 }
 
               if i % 3 = 0 then
-                  yield (i, "b", i + 2) ]
-        |> List.filter (fun (_, _, t) -> t < n)
+                  yield { From = i; Label = "b"; To = i + 2 } ]
+        |> List.filter (fun t -> t.To < n)
 
     let nfa = nfaWithSources n edges [ 0 ]
 
@@ -62,7 +64,7 @@ module StressRpqProperties =
         else
             let source = min d.Sources.[0] (d.VertexCount - 1)
             let nfa = TestHelpers.nfaFromEdges d.VertexCount d.Edges [| source |]
-            let dfa = TestHelpers.buildDfa [ (0, "a", 1) ] 0 [ 1 ]
+            let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 [ 1 ]
 
             let belyResult = BelyaninRPQ.evaluate dfa nfa
             let kronResult = KroneckerRPQ.evaluate dfa nfa

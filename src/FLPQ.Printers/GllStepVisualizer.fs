@@ -55,9 +55,20 @@ module GllStepVisualizer =
             sprintf @"\begin{gathered} %s \end{gathered}" items
 
     /// Render descriptor components as TeX cells for table row.
-    let private descriptorToRowCells (desc: Descriptor) : string * string * string * string =
+    [<Struct>]
+    type private DescriptorRowCells =
+        { Q: string
+          I: string
+          G: string
+          Mr: string }
+
+    let private descriptorToRowCells (desc: Descriptor) : DescriptorRowCells =
         let rangeTex = rangeDescriptorToTeX desc.MatchedRange
-        string desc.RsmState, string desc.Vertex, string desc.GssIdx, rangeTex
+
+        { Q = string desc.RsmState
+          I = string desc.Vertex
+          G = string desc.GssIdx
+          Mr = rangeTex }
 
     /// Render a table of descriptors with to-handle and handled blocks,
     /// highlighting the current descriptor with yellow background.
@@ -75,12 +86,12 @@ module GllStepVisualizer =
         let header = @"q & i & g & \mathcal{MR} \\ \hline\hline"
 
         let renderRow (desc: Descriptor) (isCurrent: bool) : string =
-            let q, i, g, mr = descriptorToRowCells desc
+            let cells = descriptorToRowCells desc
 
             if isCurrent then
-                sprintf @"\rowcolor{yellow!20} %s & %s & %s & %s \\" q i g mr
+                sprintf @"\rowcolor{yellow!20} %s & %s & %s & %s \\" cells.Q cells.I cells.G cells.Mr
             else
-                sprintf @"%s & %s & %s & %s \\" q i g mr
+                sprintf @"%s & %s & %s & %s \\" cells.Q cells.I cells.G cells.Mr
 
         let toHandleRows =
             if List.isEmpty toHandle then

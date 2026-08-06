@@ -12,7 +12,7 @@ open FLPQ.Languages
 /// Returns the graph as an NFA where states are vertices and transitions are edges.
 module GraphReader =
 
-    let private parseLine (line: string) : (int * string * int) option =
+    let private parseLine (line: string) : Trans<string> option =
         let trimmed = line.Trim()
 
         if trimmed.Length = 0 then
@@ -26,7 +26,11 @@ module GraphReader =
             let fromV = System.Int32.Parse parts.[0]
             let label = parts.[1]
             let toV = System.Int32.Parse parts.[2]
-            Some(fromV, label, toV)
+
+            Some
+                { From = fromV
+                  Label = label
+                  To = toV }
 
     /// Parse a graph from text and return it as an NFA.
     /// Vertices become states, edges become transitions, start vertices become start states.
@@ -62,7 +66,7 @@ module GraphReader =
             else
                 let mutable m = -1
 
-                for (fromV, _, toV) in edges do
+                for { From = fromV; To = toV } in edges do
                     m <- max m (max fromV toV)
 
                 m
@@ -71,7 +75,7 @@ module GraphReader =
 
         let states = [ 0 .. vertexCount - 1 ]
 
-        let transitions = edges |> List.map (fun (fromV, label, toV) -> (fromV, label, toV))
+        let transitions = edges
 
         let startStatesSet =
             if startVertices.Length = 0 && vertexCount > 0 then

@@ -70,7 +70,7 @@ digraph StackTree {
 digraph StackTree {
   rankdir=TB;
   n1 [label="s6", shape=box, style=filled, fillcolor=lightgray];
-  n2 [label="+", shape=box];
+  n2 [label="add", shape=box];
   n3 [label="s1", shape=box, style=filled, fillcolor=lightgray];
   n4 [label="E"];
   n5 [label="T"];
@@ -94,7 +94,7 @@ digraph StackTree {
   n1 [label="s4", shape=box, style=filled, fillcolor=lightgray];
   n2 [label="x", shape=box];
   n3 [label="s6", shape=box, style=filled, fillcolor=lightgray];
-  n4 [label="+", shape=box];
+  n4 [label="add", shape=box];
   n5 [label="s1", shape=box, style=filled, fillcolor=lightgray];
   n6 [label="E"];
   n7 [label="T"];
@@ -122,7 +122,7 @@ digraph StackTree {
   n3 [label="x", shape=box];
   n2 -> n3;
   n4 [label="s6", shape=box, style=filled, fillcolor=lightgray];
-  n5 [label="+", shape=box];
+  n5 [label="add", shape=box];
   n6 [label="s1", shape=box, style=filled, fillcolor=lightgray];
   n7 [label="E"];
   n8 [label="T"];
@@ -152,7 +152,7 @@ digraph StackTree {
   n3 -> n4;
   n2 -> n3;
   n5 [label="s6", shape=box, style=filled, fillcolor=lightgray];
-  n6 [label="+", shape=box];
+  n6 [label="add", shape=box];
   n7 [label="s1", shape=box, style=filled, fillcolor=lightgray];
   n8 [label="E"];
   n9 [label="T"];
@@ -185,7 +185,7 @@ digraph StackTree {
   n4 -> n5;
   n3 -> n4;
   n2 -> n3;
-  n7 [label="+", shape=box];
+  n7 [label="add", shape=box];
   n2 -> n7;
   n8 [label="T"];
   n9 [label="F"];

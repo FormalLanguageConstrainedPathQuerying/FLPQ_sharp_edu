@@ -4,9 +4,9 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.GraphAnalysis
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
-let private renderGssDots (ebnfText: string) (input: string list) : string list =
-    let rsm = RsmBuilder.buildRSMFromText ebnfText
+let private renderGssDots (rsm: RSM<string, string>) (input: string list) : string list =
     let freshStart = Nonterminal "S'"
     let graph = GLL.stringToGraph input
     let vertexCount = Graph.vertexCount graph
@@ -54,24 +54,28 @@ let private verifyGssDots (dots: string list) =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a a with input a a`` () =
-    renderGssDots "S -> a a" [ "a"; "a" ] |> verifyGssDots
+    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm [ "a"; "a" ]
+    |> verifyGssDots
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a S b|eps with input a a b b`` () =
-    renderGssDots "S -> a S b | eps" [ "a"; "a"; "b"; "b" ] |> verifyGssDots
+    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.ANBN "grammar_aSb_eps").Rsm [ "a"; "a"; "b"; "b" ]
+    |> verifyGssDots
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a S|a with input a a`` () =
-    renderGssDots "S -> a S | a" [ "a"; "a" ] |> verifyGssDots
+    renderGssDots LanguageRegistry.APlus.Grammars.[0].Rsm [ "a"; "a" ]
+    |> verifyGssDots
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a with input a`` () =
-    renderGssDots "S -> a" [ "a" ] |> verifyGssDots
+    renderGssDots LanguageRegistry.SingleA.Grammars.[0].Rsm [ "a" ] |> verifyGssDots
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->(a b)* with input a b a b`` () =
-    renderGssDots "S -> (a b)*" [ "a"; "b"; "a"; "b" ] |> verifyGssDots
+    renderGssDots (RsmBuilder.buildRSMFromText "S -> (a b)*") [ "a"; "b"; "a"; "b" ]
+    |> verifyGssDots

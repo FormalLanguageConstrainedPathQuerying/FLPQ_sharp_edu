@@ -4,18 +4,14 @@ open Xunit
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
 let private symbolPrinter = SymbolTeX.toLaTeX string string
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and TeX`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S
-        S -> a
-        "
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -36,12 +32,7 @@ let ``LR step visualization for SLR(1) grammar3 produces valid combined DOT and 
 
 [<Fact>]
 let ``LR step visualization includes input position marker`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S b S
-        S -> eps
-        "
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
@@ -54,21 +45,12 @@ let ``LR step visualization includes input position marker`` () =
 
 [<Fact>]
 let ``LR step visualization for accepted string returns success steps`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        E -> E + T
-        E -> T
-        T -> T * F
-        T -> F
-        F -> ( E )
-        F -> x
-        "
+    let g = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
-    let tokens = Tokenizer.tokenizeTerminals "x + x"
+    let tokens = Tokenizer.tokenizeTerminals "x add x"
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
 
@@ -80,12 +62,7 @@ let ``LR step visualization for accepted string returns success steps`` () =
 
 [<Fact>]
 let ``LR step visualization includes state frames with sN labels`` () =
-    let g =
-        Grammar.parseGrammar
-            "
-        S -> a S
-        S -> a
-        "
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
 
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g

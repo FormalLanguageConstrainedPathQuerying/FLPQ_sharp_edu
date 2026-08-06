@@ -6,7 +6,7 @@ open FLPQ.LinearAlgebra
 
 let private makeSBlock () : RsmBlock<string, string> =
     let aSym = RsmSymbol.RTerm(Terminal "a")
-    let transitions = [ (0, aSym, 1) ]
+    let transitions = [ { From = 0; Label = aSym; To = 1 } ]
     let dfa = Dfa.fromTransitions [ 0; 1 ] transitions 0 (set [ 1 ])
 
     { Nonterminal = Nonterminal "S"

@@ -3,12 +3,11 @@ module ProgramDispatchTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private exampleGrammar = Path.Combine(baseDir, "example_grammar.bnf")
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
-let private exampleLRGrammar = Path.Combine(baseDir, "example_lr_grammar.bnf")
 let private exampleLRInput = Path.Combine(baseDir, "example_lr_input.txt")
 
 let private runAlgorithm (algorithm: string) (grammarFile: string) (inputFile: string) : int =
@@ -28,12 +27,14 @@ let private runAlgorithm (algorithm: string) (grammarFile: string) (inputFile: s
 
 [<Fact>]
 let ``ValiantModified runs successfully`` () =
-    let code = runAlgorithm "ValiantModified" exampleGrammar exampleInput
+    let code =
+        runAlgorithm "ValiantModified" (TestGrammarFiles.exampleGrammar ()) exampleInput
+
     Assert.Equal(0, code)
 
 [<Fact>]
 let ``CLR1 runs successfully`` () =
-    let code = runAlgorithm "CLR1" exampleLRGrammar exampleLRInput
+    let code = runAlgorithm "CLR1" (TestGrammarFiles.exampleLRGrammar ()) exampleLRInput
     Assert.Equal(0, code)
 
 [<Fact>]
@@ -80,20 +81,20 @@ let ``RNGLR runs successfully with EBNF grammar`` () =
 
 [<Fact>]
 let ``Valiant runs successfully`` () =
-    let code = runAlgorithm "Valiant" exampleGrammar exampleInput
+    let code = runAlgorithm "Valiant" (TestGrammarFiles.exampleGrammar ()) exampleInput
     Assert.Equal(0, code)
 
 [<Fact>]
 let ``LR0 runs successfully`` () =
-    let code = runAlgorithm "LR0" exampleLRGrammar exampleLRInput
+    let code = runAlgorithm "LR0" (TestGrammarFiles.exampleLRGrammar ()) exampleLRInput
     Assert.Equal(0, code)
 
 [<Fact>]
 let ``SLR1 runs successfully`` () =
-    let code = runAlgorithm "SLR1" exampleLRGrammar exampleLRInput
+    let code = runAlgorithm "SLR1" (TestGrammarFiles.exampleLRGrammar ()) exampleLRInput
     Assert.Equal(0, code)
 
 [<Fact>]
 let ``CYK runs successfully`` () =
-    let code = runAlgorithm "CYK" exampleGrammar exampleInput
+    let code = runAlgorithm "CYK" (TestGrammarFiles.exampleGrammar ()) exampleInput
     Assert.Equal(0, code)

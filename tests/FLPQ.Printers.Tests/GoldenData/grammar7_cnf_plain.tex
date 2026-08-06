@@ -1,18 +1,18 @@
 \begin{align*}
 E &\rightarrow E\ N_1 \\
-E &\rightarrow N_4\ N_3 \\
+E &\rightarrow N_5\ N_3 \\
 E &\rightarrow x \\
 E &\rightarrow T\ N_2 \\
-N_4 &\rightarrow ( \\
-N_5 &\rightarrow ) \\
-N_6 &\rightarrow * \\
-N_7 &\rightarrow + \\
-F &\rightarrow N_4\ N_3 \\
+N_4 &\rightarrow add \\
+N_5 &\rightarrow lbr \\
+N_6 &\rightarrow mult \\
+N_7 &\rightarrow rbr \\
+F &\rightarrow N_5\ N_3 \\
 F &\rightarrow x \\
-N_1 &\rightarrow N_7\ T \\
+N_1 &\rightarrow N_4\ T \\
 N_2 &\rightarrow N_6\ F \\
-N_3 &\rightarrow E\ N_5 \\
-T &\rightarrow N_4\ N_3 \\
+N_3 &\rightarrow E\ N_7 \\
+T &\rightarrow N_5\ N_3 \\
 T &\rightarrow x \\
 T &\rightarrow T\ N_2 \\
 \end{align*}
