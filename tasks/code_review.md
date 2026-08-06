@@ -4,7 +4,7 @@
 
 Reviewed all 62 `.fs` source files (`src/`) and 49 `.fs` test files (`tests/`).
 Report generated: 2026-08-06. Fresh full-repo review — all prior reports verified and consolidated.
-**Status: 29 OPEN issues. FSharpLint: 0 warnings on all source files.**
+**Status: 56 OPEN issues. FSharpLint: 0 warnings on all source files.**
 
 Each issue was verified against the current codebase. Issues from prior reports that are now fixed (R1, R3–R6, N7, R7, 4.4/N10, 4.6, 4.8, 4.9, N6, 5.2) or obsolete (N9/GllCykEquivalence) have been removed.
 
@@ -68,3 +68,74 @@ Each issue was verified against the current codebase. Issues from prior reports 
 | D3 | Missing XML doc comments on `FLPQ.Cli/Summary.fs` (`algorithmToKind`, `algorithmLower`, `buildSummary`) and `Program.fs` (`runCli`). | Low | `Summary.fs`, `Program.fs` |
 | D4 | Missing XML doc comments on various `FLPQ.Printers/` rendering functions (AutomatonDot, CykTeX, step visualizers, SppfDot, GssDot, MatrixTeX, LLTableTeX, LRTableTeX, SummaryTeX). | Low | Multiple files |
 | D5 | Missing book reference comments in 8 algorithm files: `Cyk.fs`, `Valiant.fs`, `LLParser.fs`, `LRParser.fs`, `Rnglr.fs`, `FirstFollow.fs`, `Automaton.fs`, and CNF/Grammar transformation functions in `Grammar.fs`. Every implementation must be traceable to a specific algorithm or example in the book. | Medium | Multiple files |
+
+## 7. Language Registry Violations
+
+The [tests-writer skill](.opencode/skills/tests-writer/SKILL.md) and [language-registry guide](docs/developer/guides/language-registry.md) mandate that `FLPQ.TestUtilities.LanguageRegistry` is the single source of truth for **all** language-dependent information: grammar text, accept/reject strings, generators, pre-built RSMs. **No file — test or utility — may hardcode grammar strings, call `RsmBuilder.buildRSMFromText` directly, or bypass `g.Rsm` via `TestHelpers.grammarToRsm`.** Use `AnnotatedGrammar.Text` for grammar text, `.Grammar` for parsed CFGs, `.Rsm` for pre-built RSMs, `.AcceptStrings`/`.RejectStrings` for test vectors. If a needed grammar is missing, add it to the registry first, then reference it.
+
+### 7.1 Hardcoded `Grammar.parseGrammar` — Non-Printer Test Files
+
+These files call `Grammar.parseGrammar` with hardcoded strings instead of sourcing grammar text from the registry.
+
+| # | File | ~Locations | Duplicates Registry? | Severity |
+|---|------|-----------|---------------------|----------|
+| RV1 | `GrammarTests.fs` — tests verify `Grammar.parseGrammar` itself. Uses `"S -> a S b S \| eps"` (Dyck1), `"S -> a S \| a"` (APlus), `"S -> a"` (SingleA), `"S -> eps"` (EpsilonOnly), etc. Should use `LanguageRegistry.*.Grammars[n].Text`. Edge-case grammars (unit chains, empty input) must be registered first. | ~36 | Partial | Medium |
+| RV2 | `FirstFollowTests.fs` — tests of First/Follow computation. Uses `"S -> a S b S \| eps"` (Dyck1), `"S -> a S \| a"` (APlus), `"S -> a B \| B -> b"` (ANB-like), `"E -> E + T \| T \| T -> x"` (ArithExpr subset), etc. Should use registry grammars. | ~13 | Partial | Medium |
+| RV3 | `StressTests.fs:10` — `balancedGrammar` is Dyck1 grammar1. Should use `LanguageRegistry.Dyck1.Grammars[0].Grammar`. Line 123 dynamically generates grammar text — acceptable. | 1 | Yes | Low |
+| RV4 | `PathIndexTeXTests.fs` — 4 hardcoded Dyck1 `Grammar.parseGrammar` calls, then bypasses registry RSM via `TestHelpers.grammarToRsm`. | ~4 | Yes | Medium |
+
+### 7.2 Hardcoded `Grammar.parseGrammar` — Printer/Golden Test Files
+
+Every printer/golden test hardcodes grammar strings that duplicate LanguageRegistry entries.
+
+| # | File | ~Locations | Registry Equivalent | Severity |
+|---|------|-----------|--------------------|----------|
+| RV5 | `TexCompilationTests.fs` | ~14 | Dyck1, APlus | Medium |
+| RV6 | `AutomatonVisualizationTests.fs` | 4 | Dyck1, APlus | Medium |
+| RV7 | `LLVisualizerTests.fs` | 7 | Dyck1, APlus, ANBN, SingleAB | Medium |
+| RV8 | `LRVisualizerTests.fs` | 4 | Dyck1, APlus, ArithExpr | Medium |
+| RV9 | `LRStepsGoldenTests.fs` | 2 | APlus, ArithExpr | Medium |
+| RV10 | `LRTableTeXGoldenTests.fs` | 2 | Dyck1, ArithExpr | Medium |
+| RV11 | `GrammarTeXGoldenTests.fs` | 3 | Dyck1, ArithExpr, TwoTrackDyck | Medium |
+| RV12 | `LLStepsGoldenTests.fs` | 2 | Dyck1, APlus | Medium |
+| RV13 | `LLTableTeXGoldenTests.fs` | 1 | Dyck1 | Low |
+| RV14 | `ValiantTraceGoldenTests.fs` | 2 | Dyck1 | Low |
+| RV15 | `CykSummaryGoldenTests.fs` | 1 | Dyck1 | Low |
+| RV16 | `DerivationTreeVisualizationTests.fs` | 1 | APlus | Low |
+
+**Total: ~89 hardcoded `Grammar.parseGrammar` calls across 16 files.** Each duplicates grammar text already in LanguageRegistry.
+
+### 7.3 Hardcoded `RsmBuilder.buildRSMFromText` — Parser/Infrastructure Test Files
+
+These files test EBNF/RSM-related functions but hardcode EBNF grammar text instead of sourcing from the registry.
+
+| # | File | ~Locations | Duplicates Registry? | Severity |
+|---|------|-----------|---------------------|----------|
+| RV17 | `EbnfParserTests.fs` | ~20 | Partial | Medium |
+| RV18 | `RSMTests.fs` | ~17 | Partial (SingleA, SingleAB) | Medium |
+| RV19 | `RsmToGrammarTests.fs` | ~10 | Partial | Medium |
+
+### 7.4 Hardcoded `RsmBuilder.buildRSMFromText` — Printer/Golden Test Files
+
+| # | File | ~Locations | Severity |
+|---|------|-----------|----------|
+| RV20 | `TexCompilationTests.fs` | ~7 | Medium |
+| RV21 | `RnglrTests.fs` | 1 | Low |
+| RV22 | `RnglrStepVisualizationTests.fs` | 1 | Low |
+| RV23 | `GssDotVisualizationTests.fs` | 1 | Low |
+
+**Total: ~46 hardcoded `RsmBuilder.buildRSMFromText` calls across 7 files.**
+
+### 7.5 `TestHelpers.grammarToRsm` Bypasses Pre-built `g.Rsm` + Hardcoded Utilities
+
+| # | Description | ~Locations | Severity |
+|---|-------------|-----------|----------|
+| RV24 | `TestHelpers.grammarToRsm` reconstructs RSM from text when `AnnotatedGrammar.Rsm` already exists. Called in `GllTests.fs` (~11), `RnglrTests.fs` (~6), `CrossParserEquivalenceTests.fs` (~6), `ParsingTestCases.fs:177`, `PathIndexTeXTests.fs` (~4). Should use `g.Rsm` directly. | ~28 | Medium |
+| RV25 | `TestHelpers.fs` itself hardcodes `grammarToEbnfText` (line 87), `grammarToRsm` (line 107), `buildRegexRsm` (line 129). These utility functions bypass the registry. Fix: remove `grammarToRsm` (replaced by `g.Rsm`), move `grammarToEbnfText` to registry (or delete — callers should use `AnnotatedGrammar.Text`). | 3 | Medium |
+| RV26 | `grammarToEbnfText` duplicated in `LanguageRegistry.fs:~50` and `TestHelpers.fs:87`. | 2 | Low |
+
+### 7.6 `data/*.bnf` Files Duplicate Registry Grammar Definitions
+
+| # | Description | Severity |
+|---|-------------|----------|
+| RV27 | 7 `.bnf` files in `data/` duplicate LanguageRegistry entries: `example_grammar.bnf` (Dyck1 grammar1), `example_grammar_amb.bnf` (Dyck1 grammar2), `example_grammar_a_a_a.bnf` (APlus grammar5), `example_grammar_an_bn.bnf` (ANBN), `example_grammar_chain.bnf`, `example_grammar_simple.bnf`, `example_lr_grammar.bnf` (ArithExpr grammar7). Used by `FLPQ.Cli.Tests`. Fix: CLI tests should generate temp files from the registry or read `.Text`. | Low |
