@@ -28,29 +28,30 @@ Before reviewing, read each canonical source. For categories marked **Auto**, th
 | 1 | Naming case (PascalCase/camelCase) | `docs/developer/guides/coding-conventions.md` § Casing | Auto — FSharpLint |
 | 2 | Code style idioms (`x=true`→`x`, `List.map f (List.map g x)`→`map(g>>f)x`, etc.) | `fsharplint.json` hints | Auto — FSharpLint |
 | 3 | Tab characters, redundant keywords, unused bindings | `fsharplint.json` | Auto — FSharpLint |
-| 4 | Formatting (indentation, line breaks, spacing) | Fantomas config | Auto — Fantomas |
-| 5 | XML doc comments on public API | `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
-| 6 | Genericity — no hardcoded `string` in algorithm types | `docs/developer/guides/coding-conventions.md` § Maximal genericity, § Genericity over hardcoded types | Manual |
-| 7 | Non-empty collections by type (NonEmptyList/NonEmptySet vs list/Set with runtime check) | `docs/developer/guides/coding-conventions.md` § Non-empty collections by type | Manual |
-| 8 | Separation — algorithms produce F# data, printers render it | `docs/developer/guides/design-guides.md` § Separation of data from presentation | Manual |
-| 9 | One algorithm per file | `docs/developer/guides/design-guides.md` § One algorithm, one file | Manual |
-| 10 | Variants as thin layers over shared infrastructure | `docs/developer/guides/design-guides.md` § Variants as thin layers | Manual |
-| 11 | Compile-time safety — types make illegal states unrepresentable | `docs/developer/guides/design-guides.md` § Compile-time safety over runtime checks | Manual |
-| 12 | No code duplication — if >3 non-trivial lines copied, extract shared function | `docs/developer/guides/design-guides.md` § Avoid code duplication + `docs/developer/guides/reusing.md` § No Duplicates | Manual |
-| 13 | Language registry — single source of truth for grammars, RSMs, accept/reject strings, generators | `docs/developer/guides/language-registry.md` + `.opencode/skills/tests-writer/SKILL.md` § Using the Language Registry, § Do NOT | Manual |
-| 14 | No stubbed tests — no `Assert(true)`, empty bodies `()`, commented-out checks, `Skip` without explanation, or tautological assertions | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
-| 15 | Property vs Fact — `[<Property>]` tests use FsCheck-generated inputs; `()` + hardcoded data → `[<Fact>]` | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
-| 16 | FsCheck generators in shared `Generators.fs`, not duplicated across test projects | `.opencode/skills/tests-writer/SKILL.md` § Shared generators | Manual |
-| 17 | Equivalence tests for every algorithm variant | `docs/developer/guides/quality-standards.md` § Equivalence tests for all variants | Manual |
-| 18 | Test coverage — every `src/` module has at least one correspondent in `tests/` | This section | Manual |
-| 19 | Documentation completeness — module docs, hub docs, architecture docs, navigation links | `docs/developer/guides/documentation-conventions.md` § Documentation Mapping Table, § Documentation Completeness | Manual |
-| 20 | Book traceability — every implementation references specific book section/figure/listing | `AGENTS.md` § Code must be clear + `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
-| 21 | Code clarity — no nontrivial optimizations; clear reference implementations | `AGENTS.md` § Code must be clear | Manual |
-| 22 | Naming semantics — misleading names, type-level inconsistencies (e.g., `list` where `NonEmptyList` is correct) | `docs/developer/guides/coding-conventions.md` § Non-empty collections + § Maximal genericity | Manual |
+| 4 | Tuples limited to 2 items — more fields require a named type (record, struct, DU) | `docs/developer/guides/design-guides.md` § Tuples limited to two items | Auto — FSharpLint (`maxNumberOfItemsInTuple`) |
+| 5 | Formatting (indentation, line breaks, spacing) | Fantomas config | Auto — Fantomas |
+| 6 | XML doc comments on public API | `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
+| 7 | Genericity — no hardcoded `string` in algorithm types | `docs/developer/guides/coding-conventions.md` § Maximal genericity, § Genericity over hardcoded types | Manual |
+| 8 | Non-empty collections by type (NonEmptyList/NonEmptySet vs list/Set with runtime check) | `docs/developer/guides/coding-conventions.md` § Non-empty collections by type | Manual |
+| 9 | Separation — algorithms produce F# data, printers render it | `docs/developer/guides/design-guides.md` § Separation of data from presentation | Manual |
+| 10 | One algorithm per file | `docs/developer/guides/design-guides.md` § One algorithm, one file | Manual |
+| 11 | Variants as thin layers over shared infrastructure | `docs/developer/guides/design-guides.md` § Variants as thin layers | Manual |
+| 12 | Compile-time safety — types make illegal states unrepresentable | `docs/developer/guides/design-guides.md` § Compile-time safety over runtime checks | Manual |
+| 13 | No code duplication — if >3 non-trivial lines copied, extract shared function | `docs/developer/guides/design-guides.md` § Avoid code duplication + `docs/developer/guides/reusing.md` § No Duplicates | Manual |
+| 14 | Language registry — single source of truth for grammars, RSMs, accept/reject strings, generators | `docs/developer/guides/language-registry.md` + `.opencode/skills/tests-writer/SKILL.md` § Using the Language Registry, § Do NOT | Manual |
+| 15 | No stubbed tests — no `Assert(true)`, empty bodies `()`, commented-out checks, `Skip` without explanation, or tautological assertions | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
+| 16 | Property vs Fact — `[<Property>]` tests use FsCheck-generated inputs; `()` + hardcoded data → `[<Fact>]` | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
+| 17 | FsCheck generators in shared `Generators.fs`, not duplicated across test projects | `.opencode/skills/tests-writer/SKILL.md` § Shared generators | Manual |
+| 18 | Equivalence tests for every algorithm variant | `docs/developer/guides/quality-standards.md` § Equivalence tests for all variants | Manual |
+| 19 | Test coverage — every `src/` module has at least one correspondent in `tests/` | This section | Manual |
+| 20 | Documentation completeness — module docs, hub docs, architecture docs, navigation links | `docs/developer/guides/documentation-conventions.md` § Documentation Mapping Table, § Documentation Completeness | Manual |
+| 21 | Book traceability — every implementation references specific book section/figure/listing | `AGENTS.md` § Code must be clear + `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
+| 22 | Code clarity — no nontrivial optimizations; clear reference implementations | `AGENTS.md` § Code must be clear | Manual |
+| 23 | Naming semantics — misleading names, type-level inconsistencies (e.g., `list` where `NonEmptyList` is correct) | `docs/developer/guides/coding-conventions.md` § Non-empty collections + § Maximal genericity | Manual |
 
 ### Scope of Automated Checks
 
-FSharpLint (0 warnings required) checks: naming case, code style hints, tab characters, redundant keywords, unused underscore-prefixed bindings, and structural patterns. It does **not** check: XML doc comments, genericity, type choice (NonEmptyList vs list), architecture, duplication, test quality, documentation completeness, book traceability, or domain-specific rules (language registry). A "0 warnings" lint pass is necessary but far from sufficient.
+FSharpLint (0 warnings required) checks: naming case, tuple size limit (max 2 items), code style hints, tab characters, redundant keywords, unused underscore-prefixed bindings, and structural patterns. It does **not** check: XML doc comments, genericity, type choice (NonEmptyList vs list), architecture, duplication, test quality, documentation completeness, book traceability, or domain-specific rules (language registry). A "0 warnings" lint pass is necessary but far from sufficient.
 
 Fantomas (0 diffs required) checks: formatting consistency only. It does not validate any semantic property of the code.
 

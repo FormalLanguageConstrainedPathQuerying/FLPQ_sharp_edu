@@ -260,9 +260,9 @@
         }
     },
     "maxNumberOfItemsInTuple": {
-        "enabled": false,
+        "enabled": true,
         "config": {
-            "maxItems": 4
+            "maxItems": 2
         }
     },
     "maxNumberOfFunctionParameters": {

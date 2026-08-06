@@ -64,6 +64,26 @@ If you copy-paste more than 3 non-trivial lines, extract a shared function. Afte
 
 **Why**: Duplicated logic diverges over time. When a bug is fixed in one copy but not another, equivalence tests (which are mandatory for all variants) catch the inconsistency, but the root cause — duplication — should have been eliminated earlier.
 
+### Tuples limited to two items
+
+Tuples must have at most two items. If you need more fields, declare a named type — a record, a struct record, or a discriminated union. Never use tuples-of-tuples, nested pairs, or anonymous grouping to circumvent this limit.
+
+```fsharp
+// Allowed — two items, positions are self-documenting
+let (grammar, input) = parseArgs args
+let result = List.fold (fun (count, sum) x -> (count + 1, sum + x)) (0, 0) items
+
+// Prohibited — positions are opaque
+let config = (42, true, "path", 3.14)
+let value = ((a, b), (c, d))  // tuple-of-tuples workaround
+
+// Correct — named type makes each field's meaning explicit
+type Config = { Port: int; UseSsl: bool; RootPath: string; Timeout: float }
+let config = { Port = 42; UseSsl = true; RootPath = "path"; Timeout = 3.14 }
+```
+
+**Why**: A tuple with three or more items loses positional meaning — readers must count positions to understand what each value represents. A named type (record or DU) gives each field a name, documents intent in the type signature, and is checked by the compiler (misspelled field names fail at build time, not silently at runtime). The FSharpLint rule `maxNumberOfItemsInTuple` enforces the limit automatically. Workarounds like tuples-of-tuples defeat the purpose — the positions are still anonymous, just nested.
+
 ### Compile-time safety over runtime checks
 
 Prefer types that make illegal states unrepresentable. Use discriminated unions for mutually exclusive cases. Use `NonEmptyList`/`NonEmptySet` for non-empty collections. Use the type system to enforce constraints rather than `if`/`raise` guards.
