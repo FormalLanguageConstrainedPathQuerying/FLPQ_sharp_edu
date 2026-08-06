@@ -17,59 +17,44 @@ Review → Detect problems → Fix all → Commit fixes → Repeat until zero fi
 
 ## Review Categories
 
-### 1. Architecture
+Code review checks code against rules defined in **canonical source documents**. The reviewer must read each source and verify compliance. Do not rely on a memory of these documents — open and consult them during review. New rules added to any source are automatically picked up next time review runs.
 
-- Is the architecture clear and consistent?
-- Is logic implemented in the right place?
-  - No helper functions (e.g., in tests) that actually fix problems in main logic implementation
-  - No logic that can be generalized and moved up
-- Are algorithm modules free of TeX/dot string generation and file I/O? (Separation: rendering lives in `FLPQ.Printers`, algorithms live in domain projects)
+### Constraint Sources Map
 
-### 2. Code-Level Problems
+Before reviewing, read each canonical source. For categories marked **Auto**, the tool has already verified compliance — skip manual checking but note the tool in the report. For **Manual** categories, check code directly against the rule stated in the referenced source section.
 
-- **Duplicates**: identical or near-identical code blocks, functions, or files. Every copy must be consolidated into exactly one shared location
-- **Signature inconsistencies**: same concept expressed with different signatures across modules
-- **Unclear structure**: modules, types, or functions that obscure intent rather than clarify it
-- **Naming**: names that mislead, shadow types, break conventions, or fail to distinguish intent
+| # | Review Category | Canonical Source | Auto/Manual |
+|---|----------------|-----------------|-------------|
+| 1 | Naming case (PascalCase/camelCase) | `docs/developer/guides/coding-conventions.md` § Casing | Auto — FSharpLint |
+| 2 | Code style idioms (`x=true`→`x`, `List.map f (List.map g x)`→`map(g>>f)x`, etc.) | `fsharplint.json` hints | Auto — FSharpLint |
+| 3 | Tab characters, redundant keywords, unused bindings | `fsharplint.json` | Auto — FSharpLint |
+| 4 | Formatting (indentation, line breaks, spacing) | Fantomas config | Auto — Fantomas |
+| 5 | XML doc comments on public API | `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
+| 6 | Genericity — no hardcoded `string` in algorithm types | `docs/developer/guides/coding-conventions.md` § Maximal genericity, § Genericity over hardcoded types | Manual |
+| 7 | Non-empty collections by type (NonEmptyList/NonEmptySet vs list/Set with runtime check) | `docs/developer/guides/coding-conventions.md` § Non-empty collections by type | Manual |
+| 8 | Separation — algorithms produce F# data, printers render it | `docs/developer/guides/design-guides.md` § Separation of data from presentation | Manual |
+| 9 | One algorithm per file | `docs/developer/guides/design-guides.md` § One algorithm, one file | Manual |
+| 10 | Variants as thin layers over shared infrastructure | `docs/developer/guides/design-guides.md` § Variants as thin layers | Manual |
+| 11 | Compile-time safety — types make illegal states unrepresentable | `docs/developer/guides/design-guides.md` § Compile-time safety over runtime checks | Manual |
+| 12 | No code duplication — if >3 non-trivial lines copied, extract shared function | `docs/developer/guides/design-guides.md` § Avoid code duplication + `docs/developer/guides/reusing.md` § No Duplicates | Manual |
+| 13 | Language registry — single source of truth for grammars, RSMs, accept/reject strings, generators | `docs/developer/guides/language-registry.md` + `.opencode/skills/tests-writer/SKILL.md` § Using the Language Registry, § Do NOT | Manual |
+| 14 | No stubbed tests — no `Assert(true)`, empty bodies `()`, commented-out checks, `Skip` without explanation, or tautological assertions | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
+| 15 | Property vs Fact — `[<Property>]` tests use FsCheck-generated inputs; `()` + hardcoded data → `[<Fact>]` | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
+| 16 | FsCheck generators in shared `Generators.fs`, not duplicated across test projects | `.opencode/skills/tests-writer/SKILL.md` § Shared generators | Manual |
+| 17 | Equivalence tests for every algorithm variant | `docs/developer/guides/quality-standards.md` § Equivalence tests for all variants | Manual |
+| 18 | Test coverage — every `src/` module has at least one correspondent in `tests/` | This section | Manual |
+| 19 | Documentation completeness — module docs, hub docs, architecture docs, navigation links | `docs/developer/guides/documentation-conventions.md` § Documentation Mapping Table, § Documentation Completeness | Manual |
+| 20 | Book traceability — every implementation references specific book section/figure/listing | `AGENTS.md` § Code must be clear + `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
+| 21 | Code clarity — no nontrivial optimizations; clear reference implementations | `AGENTS.md` § Code must be clear | Manual |
+| 22 | Naming semantics — misleading names, type-level inconsistencies (e.g., `list` where `NonEmptyList` is correct) | `docs/developer/guides/coding-conventions.md` § Non-empty collections + § Maximal genericity | Manual |
 
-**Convention checks** (from `docs/developer/guides/coding-conventions.md`):
+### Scope of Automated Checks
 
-| Rule | Expected |
-|------|----------|
-| Types, modules, record fields, union case fields | PascalCase |
-| Functions and values | camelCase |
-| Immutability-first | `let` bindings; mutable only when algorithm explicitly requires it |
-| Types + modules at the same level | `type Foo = ...` then `module Foo = ...` |
-| Public API documentation | XML doc comments (`///`) on all public members |
-| Maximal genericity | Generic over `'t`, `'nt` where possible; never hardcoded to `string` |
-| Non-empty collections by type | `NonEmptyList<'t>` / `NonEmptySet<'t>` for collections that must not be empty |
-| Book traceability | Every implementation directly traceable to a specific algorithm, listing, or example in the book; comments reference section/figure/listing |
+FSharpLint (0 warnings required) checks: naming case, code style hints, tab characters, redundant keywords, unused underscore-prefixed bindings, and structural patterns. It does **not** check: XML doc comments, genericity, type choice (NonEmptyList vs list), architecture, duplication, test quality, documentation completeness, book traceability, or domain-specific rules (language registry). A "0 warnings" lint pass is necessary but far from sufficient.
 
-### 3. Tests
+Fantomas (0 diffs required) checks: formatting consistency only. It does not validate any semantic property of the code.
 
-- **No stubbed tests**: no `Assert(true)`, no commented-out checks, no empty test bodies (`()`), no tests without assertions
-- **Appropriate property checks**: tests verify all relevant properties of the result, not just a single dimension
-- **Equivalence tests**: every algorithm variant has property-based equivalence tests against a reference implementation
-- **FsCheck generators**: shared generators live in `FLPQ.TestUtilities/Generators.fs`, not duplicated across test projects
-- **Property test correctness**: `[<Property>]` tests must use FsCheck-generated inputs; tests iterating over hardcoded data with `[<Property>]` are mislabeled and must be converted to `[<Fact>]`
-- **Golden tests**: verify that golden files capture correct output (not buggy first-run output)
-- **Test coverage gaps**: every new public module or function in `src/` must have at least one test targeting it. For each new `.fs` file in `src/`, verify at least one corresponding test file or test function exists in `tests/`
-
-### 4. Documentation
-
-Verify doc completeness per `docs/developer/guides/documentation-conventions.md` — module doc entries, hub doc updates, architecture doc updates, CLI user doc updates, cross-references, and navigation links.
-
-### 5. Genericity and Type Safety
-
-- Types use generic parameters (`'t`, `'nt`) where applicable — no hardcoded `string` in algorithm implementations
-- Non-empty collections use `NonEmptyList`/`NonEmptySet` at the type level, not runtime checks
-- Unit tests may instantiate at `string` for readability, but the implementation must never depend on it
-
-### 6. Clarity and Book Alignment
-
-- Code is clear, without nontrivial optimizations
-- Every implementation is directly traceable to a specific algorithm or example in the book
-- Comments are in English and reference the book's section, figure, or listing
+The build and test suite ensure code compiles and tests pass. They do not enforce conventions, detect duplication, or validate architecture.
 
 ## Fix Protocol
 
@@ -86,6 +71,7 @@ If a problem cannot be fixed (e.g., requires architectural decision beyond the c
 After the loop completes (zero findings), update `tasks/code_review.md`:
 
 - Add a new report dated today, following the existing section structure (§1 Architecture, §2 Code Quality, §3 Naming, §4 Tests, §5 Visualization, §6 Genericity, §7 Suggestions, §8 Resolved)
+- Each finding must reference its constraint source (row number from the [Constraint Sources Map](#constraint-sources-map) above)
 - Mark issues that were fixed in this review session
 - Record any issues from prior reports that still remain open (these were checked and confirmed still present)
 - **Do not** remove or rewrite prior reports — append the new report at the top, below the header
