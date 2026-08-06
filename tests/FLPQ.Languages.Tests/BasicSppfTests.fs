@@ -9,14 +9,11 @@ open FLPQ.GraphAnalysis
 let ``fromEdges constructs valid SPPF`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 2)
-          BasicSppfNodeInfo.Production(0, 0, 2)
+          BasicSppfNodeInfo.Production(0, 0)
           BasicSppfNodeInfo.Terminal(Terminal "a", 0, 1)
           BasicSppfNodeInfo.Terminal(Terminal "b", 1, 2) ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1)
-          (1, BasicSppfEdgeLabel.ChildOf 0, 2)
-          (1, BasicSppfEdgeLabel.ChildOf 1, 3) ]
+    let edges = [ (0, 1); (1, 2); (1, 3) ]
 
     let sppf = fromEdges vertices edges 0
     Assert.Equal(4, Graph.vertexCount sppf.Graph)
@@ -26,14 +23,11 @@ let ``fromEdges constructs valid SPPF`` () =
 let ``extractDerivationTree simple S -> a b`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 2)
-          BasicSppfNodeInfo.Production(0, 0, 2)
+          BasicSppfNodeInfo.Production(0, 0)
           BasicSppfNodeInfo.Terminal(Terminal "a", 0, 1)
           BasicSppfNodeInfo.Terminal(Terminal "b", 1, 2) ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1)
-          (1, BasicSppfEdgeLabel.ChildOf 0, 2)
-          (1, BasicSppfEdgeLabel.ChildOf 1, 3) ]
+    let edges = [ (0, 1); (1, 2); (1, 3) ]
 
     let sppf = fromEdges vertices edges 0
     let tree = extractDerivationTree sppf
@@ -49,11 +43,10 @@ let ``extractDerivationTree simple S -> a b`` () =
 let ``extractDerivationTree with epsilon`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 0)
-          BasicSppfNodeInfo.Production(0, 0, 0)
+          BasicSppfNodeInfo.Production(0, 0)
           BasicSppfNodeInfo.Epsilon 0 ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1); (1, BasicSppfEdgeLabel.ChildOf 0, 2) ]
+    let edges = [ (0, 1); (1, 2) ]
 
     let sppf = fromEdges vertices edges 0
     let tree = extractDerivationTree sppf
@@ -66,18 +59,13 @@ let ``extractDerivationTree with epsilon`` () =
 let ``extractDerivationTree nested nonterminals`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 2)
-          BasicSppfNodeInfo.Production(0, 0, 2)
+          BasicSppfNodeInfo.Production(0, 0)
           BasicSppfNodeInfo.Nonterminal(Nonterminal "A", 0, 1)
-          BasicSppfNodeInfo.Production(1, 0, 1)
+          BasicSppfNodeInfo.Production(1, 0)
           BasicSppfNodeInfo.Terminal(Terminal "a", 0, 1)
           BasicSppfNodeInfo.Terminal(Terminal "b", 1, 2) ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1)
-          (1, BasicSppfEdgeLabel.ChildOf 0, 2)
-          (1, BasicSppfEdgeLabel.ChildOf 1, 5)
-          (2, BasicSppfEdgeLabel.Derives, 3)
-          (3, BasicSppfEdgeLabel.ChildOf 0, 4) ]
+    let edges = [ (0, 1); (1, 2); (1, 5); (2, 3); (3, 4) ]
 
     let sppf = fromEdges vertices edges 0
     let tree = extractDerivationTree sppf
@@ -88,11 +76,10 @@ let ``extractDerivationTree nested nonterminals`` () =
 let ``enumerateTrees single production`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 1)
-          BasicSppfNodeInfo.Production(0, 0, 1)
+          BasicSppfNodeInfo.Production(0, 0)
           BasicSppfNodeInfo.Terminal(Terminal "a", 0, 1) ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1); (1, BasicSppfEdgeLabel.ChildOf 0, 2) ]
+    let edges = [ (0, 1); (1, 2) ]
 
     let sppf = fromEdges vertices edges 0
     let trees = enumerateTrees sppf |> Seq.toList
@@ -104,16 +91,12 @@ let ``enumerateTrees single production`` () =
 let ``enumerateTrees with packed alternatives`` () =
     let vertices =
         [ BasicSppfNodeInfo.Nonterminal(Nonterminal "S", 0, 1)
-          BasicSppfNodeInfo.Production(0, 0, 1)
-          BasicSppfNodeInfo.Production(1, 0, 1)
+          BasicSppfNodeInfo.Production(0, 0)
+          BasicSppfNodeInfo.Production(1, 0)
           BasicSppfNodeInfo.Terminal(Terminal "a", 0, 1)
           BasicSppfNodeInfo.Terminal(Terminal "b", 0, 1) ]
 
-    let edges =
-        [ (0, BasicSppfEdgeLabel.Derives, 1)
-          (0, BasicSppfEdgeLabel.Derives, 2)
-          (1, BasicSppfEdgeLabel.ChildOf 0, 3)
-          (2, BasicSppfEdgeLabel.ChildOf 0, 4) ]
+    let edges = [ (0, 1); (0, 2); (1, 3); (2, 4) ]
 
     let sppf = fromEdges vertices edges 0
     let trees = enumerateTrees sppf |> Seq.toList

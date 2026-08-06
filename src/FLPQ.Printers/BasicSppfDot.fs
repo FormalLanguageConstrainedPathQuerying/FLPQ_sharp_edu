@@ -20,11 +20,6 @@ module BasicSppfDot =
 
         let vertexCount = FLPQ.GraphAnalysis.Graph.vertexCount sppf.Graph
 
-        let edgeLabelStr (lbl: BasicSppfEdgeLabel) : string =
-            match lbl with
-            | BasicSppfEdgeLabel.Derives -> "derives"
-            | BasicSppfEdgeLabel.ChildOf pos -> sprintf "%d" pos
-
         for i in 0 .. vertexCount - 1 do
             let info = FLPQ.GraphAnalysis.Graph.getVertex i sppf.Graph
 
@@ -32,9 +27,9 @@ module BasicSppfDot =
                 match info with
                 | BasicSppfNodeInfo.Terminal(Terminal t, l, r) -> sprintf "%s_{%d,%d}" (terminalPrinter t) l r, "circle"
                 | BasicSppfNodeInfo.Nonterminal(Nonterminal nt, l, r) ->
-                    sprintf "%s_{%d,%d}" (nonterminalPrinter nt) l r, "rectangle"
+                    sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r, "rectangle"
                 | BasicSppfNodeInfo.Epsilon p -> sprintf "\\varepsilon_{%d}" p, "circle"
-                | BasicSppfNodeInfo.Production(ruleIdx, l, r) -> sprintf "%d [%d,%d]" ruleIdx l r, "oval"
+                | BasicSppfNodeInfo.Production(ruleIdx, k) -> sprintf "%d, %d" k ruleIdx, "oval"
 
             let rootStyle =
                 if i = sppf.RootIndex then
@@ -47,11 +42,8 @@ module BasicSppfDot =
 
         for i in 0 .. vertexCount - 1 do
             for j in 0 .. vertexCount - 1 do
-                match sppf.Graph.Edges.[i, j] with
-                | Some lbl ->
-                    sb.AppendLine(sprintf "  n%d -> n%d [label=\"%s\"];" i j (edgeLabelStr lbl))
-                    |> ignore
-                | None -> ()
+                if sppf.Graph.Edges.[i, j] then
+                    sb.AppendLine(sprintf "  n%d -> n%d;" i j) |> ignore
 
         sb.AppendLine("}") |> ignore
         sb.ToString()

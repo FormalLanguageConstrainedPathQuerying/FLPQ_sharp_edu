@@ -21,147 +21,156 @@ module BasicSppf =
         | Nonterminal of Nonterminal<'nt> * leftPos: int * rightPos: int
         /// Epsilon leaf node: empty derivation at position pos.
         | Epsilon of pos: int
-        /// Production internal node: stores rule index and span [leftPos, rightPos).
-        /// Parent is a single nonterminal node; children are RHS elements with split points.
-        | Production of ruleIndex: int * leftPos: int * rightPos: int
-
-    /// Edge labels in a basic SPPF.
-    [<RequireQualifiedAccess>]
-    type BasicSppfEdgeLabel =
-        /// Nonterminal -> Production (derivation step).
-        | Derives
-        /// Production -> Child node, with position index in the RHS.
-        | ChildOf of positionInRhs: int
+        /// Production internal node: stores rule index and split point.
+        /// Parent is a single nonterminal node; children are RHS elements.
+        | Production of ruleIndex: int * splitPoint: int
 
     /// A basic Shared Packed Parse Forest.
-    /// Wraps a Graph with node/edge types and a root vertex index.
+    /// Wraps a Graph with node types and a root vertex index.
+    /// Edges are unlabeled: NT→Production and Production→Child are implicit.
     type BasicSPPF<'t, 'nt when 't: comparison and 'nt: comparison> =
-        { Graph: Graph<BasicSppfNodeInfo<'t, 'nt>, Option<BasicSppfEdgeLabel>>
+        { Graph: Graph<BasicSppfNodeInfo<'t, 'nt>, bool>
           RootIndex: int }
 
     /// Construct a basic SPPF from a vertex list and edge list.
     let fromEdges
         (vertices: BasicSppfNodeInfo<'t, 'nt> list)
-        (edges: (int * BasicSppfEdgeLabel * int) list)
+        (edges: (int * int) list)
         (rootIdx: int)
         : BasicSPPF<'t, 'nt> =
         let n = vertices.Length
-        let edgeMatrix = Matrix.init n n None
+        let edgeMatrix = Matrix.init n n false
 
-        for (fromIdx, label, toIdx) in edges do
-            edgeMatrix.[fromIdx, toIdx] <- Some label
+        for (fromIdx, toIdx) in edges do
+            edgeMatrix.[fromIdx, toIdx] <- true
 
         { Graph = Graph.fromEdges vertices edgeMatrix
           RootIndex = rootIdx }
 
     /// Build a BasicSPPF from an enriched parsing table and CNF grammar.
+    /// Only builds the SPPF for the start nonterminal in cell (0, n-1).
     /// Each cell entry (nt, k, prodIdx) creates Nonterminal and Production nodes.
     /// Terminal rules produce Terminal children; binary rules link to child Nonterminals.
     /// Returns root Nonterminal(start, 0, n) for input of length n.
     let fromParsingTable (cnf: Grammar<'t, 'nt>) (table: SppfParsingTable<'nt>) : BasicSPPF<'t, 'nt> =
         let n = Matrix.rows table
-        let nodeMap = Dictionary<BasicSppfNodeInfo<'t, 'nt>, int>()
-        let vertices = ResizeArray<BasicSppfNodeInfo<'t, 'nt>>()
-        let edges = ResizeArray<int * BasicSppfEdgeLabel * int>()
 
-        let getOrCreate (info: BasicSppfNodeInfo<'t, 'nt>) : int =
-            match nodeMap.TryGetValue(info) with
-            | true, idx -> idx
-            | false, _ ->
-                let idx = vertices.Count
-                nodeMap.[info] <- idx
-                vertices.Add(info)
-                idx
+        if n = 0 then
+            fromEdges [] [] 0
+        else
+            let startEntries = table.[0, n - 1] |> Set.filter (fun (nt, _, _) -> nt = cnf.Start)
 
-        let childNtInCell (row: int) (col: int) (targetNt: Nonterminal<'nt>) : Nonterminal<'nt> option =
-            if row <= col && row >= 0 && col < n then
-                table.[row, col]
-                |> Set.filter (fun (nt, _, _) -> nt = targetNt)
-                |> Set.toList
-                |> List.tryHead
-                |> Option.map (fun (nt, _, _) -> nt)
+            if Set.isEmpty startEntries then
+                fromEdges [] [] 0
             else
-                None
+                let nodeMap = Dictionary<BasicSppfNodeInfo<'t, 'nt>, int>()
+                let vertices = ResizeArray<BasicSppfNodeInfo<'t, 'nt>>()
+                let edges = ResizeArray<int * int>()
 
-        for i in 0 .. n - 1 do
-            for j in i .. n - 1 do
-                let entries = table.[i, j]
+                let getOrCreate (info: BasicSppfNodeInfo<'t, 'nt>) : int =
+                    match nodeMap.TryGetValue(info) with
+                    | true, idx -> idx
+                    | false, _ ->
+                        let idx = vertices.Count
+                        nodeMap.[info] <- idx
+                        vertices.Add(info)
+                        idx
 
-                for (nt, k, prodIdx) in entries do
-                    let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, i, j + 1))
-                    let prodNode = getOrCreate (BasicSppfNodeInfo.Production(prodIdx, i, j + 1))
-                    edges.Add(ntNode, BasicSppfEdgeLabel.Derives, prodNode)
+                let childNtInCell (row: int) (col: int) (targetNt: Nonterminal<'nt>) : Nonterminal<'nt> option =
+                    if row <= col && row >= 0 && col < n then
+                        table.[row, col]
+                        |> Set.filter (fun (nt, _, _) -> nt = targetNt)
+                        |> Set.toList
+                        |> List.tryHead
+                        |> Option.map (fun (nt, _, _) -> nt)
+                    else
+                        None
 
-                    let rule = cnf.Rules.[prodIdx]
+                let processedCells = HashSet<int * int>()
 
-                    match Rhs.toNonEpsilonList rule.Rhs with
-                    | [ Symbol.T(Terminal t) ] ->
-                        let termNode = getOrCreate (BasicSppfNodeInfo.Terminal(Terminal t, k, k + 1))
-                        edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 0, termNode)
-                    | [ Symbol.N leftNt; Symbol.N rightNt ] ->
-                        match childNtInCell i k leftNt with
-                        | Some _ ->
-                            let leftNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, k + 1))
+                let rec processCell (i: int) (j: int) : unit =
+                    if processedCells.Contains(i, j) then
+                        ()
+                    else
+                        processedCells.Add(i, j) |> ignore
 
-                            edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 0, leftNode)
-                        | None -> ()
+                        let entries = table.[i, j]
 
-                        match childNtInCell (k + 1) j rightNt with
-                        | Some _ ->
-                            let rightNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(rightNt, k + 1, j + 1))
+                        for (nt, k, prodIdx) in entries do
+                            let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, i, j + 1))
+                            let prodNode = getOrCreate (BasicSppfNodeInfo.Production(prodIdx, k))
+                            edges.Add(ntNode, prodNode)
 
-                            edges.Add(prodNode, BasicSppfEdgeLabel.ChildOf 1, rightNode)
-                        | None -> ()
-                    | _ -> ()
+                            let rule = cnf.Rules.[prodIdx]
 
-        let rootIdx = getOrCreate (BasicSppfNodeInfo.Nonterminal(cnf.Start, 0, n))
+                            match Rhs.toNonEpsilonList rule.Rhs with
+                            | [ Symbol.T(Terminal t) ] ->
+                                let termNode = getOrCreate (BasicSppfNodeInfo.Terminal(Terminal t, k, k + 1))
 
-        fromEdges (List.ofSeq vertices) (List.ofSeq edges) rootIdx
+                                edges.Add(prodNode, termNode)
+                            | [ Symbol.N leftNt; Symbol.N rightNt ] ->
+                                match childNtInCell i k leftNt with
+                                | Some _ ->
+                                    let leftNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, k + 1))
 
-    /// Get child indices of a production node (via ChildOf edges).
-    let private getChildIndices
-        (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, Option<BasicSppfEdgeLabel>>)
-        (prodIdx: int)
-        : int list =
+                                    edges.Add(prodNode, leftNode)
+                                    processCell i k
+                                | None -> ()
+
+                                match childNtInCell (k + 1) j rightNt with
+                                | Some _ ->
+                                    let rightNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(rightNt, k + 1, j + 1))
+
+                                    edges.Add(prodNode, rightNode)
+                                    processCell (k + 1) j
+                                | None -> ()
+                            | _ -> ()
+
+                let mutable rootIdx = -1
+
+                for (nt, _, _) in startEntries do
+                    let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(nt, 0, n))
+                    rootIdx <- ntNode
+                    processCell 0 (n - 1)
+
+                if rootIdx < 0 then
+                    fromEdges [] [] 0
+                else
+                    fromEdges (List.ofSeq vertices) (List.ofSeq edges) rootIdx
+
+    let private getChildIndices (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, bool>) (prodIdx: int) : int list =
         [ 0 .. Graph.vertexCount graph - 1 ]
-        |> List.choose (fun j ->
-            match graph.Edges.[prodIdx, j] with
-            | Some(BasicSppfEdgeLabel.ChildOf _) -> Some j
-            | _ -> None)
+        |> List.choose (fun j -> if graph.Edges.[prodIdx, j] then Some j else None)
 
-    /// Get production child indices of a nonterminal node (via Derives edges).
-    let private getProductionIndices
-        (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, Option<BasicSppfEdgeLabel>>)
-        (ntIdx: int)
-        : int list =
+    let private getProductionIndices (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, bool>) (ntIdx: int) : int list =
         [ 0 .. Graph.vertexCount graph - 1 ]
-        |> List.choose (fun j ->
-            match graph.Edges.[ntIdx, j] with
-            | Some BasicSppfEdgeLabel.Derives -> Some j
-            | _ -> None)
+        |> List.choose (fun j -> if graph.Edges.[ntIdx, j] then Some j else None)
 
-    /// Extract a single derivation tree from a basic SPPF starting at the given vertex index.
-    /// For Nonterminal nodes: follows first Derives edge to Production, extracts all children.
-    /// For Production nodes: extracts and concatenates all ChildOf children.
-    /// Returns a list of trees (children to be wrapped by parent Nonterminal).
-    let rec private extractSingle
-        (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, Option<BasicSppfEdgeLabel>>)
+    let private extractSingle
+        (graph: Graph<BasicSppfNodeInfo<'t, 'nt>, bool>)
         (nodeIdx: int)
         : DerivationTree<'t, 'nt> list =
-        let info = Graph.getVertex nodeIdx graph
+        let visited = System.Collections.Generic.HashSet<int>()
 
-        match info with
-        | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ Leaf(Symbol.T(Terminal t)) ]
-        | BasicSppfNodeInfo.Epsilon _ -> [ Leaf Symbol.Epsilon ]
-        | BasicSppfNodeInfo.Nonterminal _ ->
-            let prodIndices = getProductionIndices graph nodeIdx
+        let rec extractLoop (idx: int) : DerivationTree<'t, 'nt> list =
+            if not (visited.Add(idx)) then
+                []
+            else
+                let info = Graph.getVertex idx graph
 
-            match prodIndices with
-            | [] -> []
-            | firstProd :: _ -> getChildIndices graph firstProd |> List.collect (extractSingle graph)
-        | BasicSppfNodeInfo.Production _ -> getChildIndices graph nodeIdx |> List.collect (extractSingle graph)
+                match info with
+                | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ Leaf(Symbol.T(Terminal t)) ]
+                | BasicSppfNodeInfo.Epsilon _ -> [ Leaf Symbol.Epsilon ]
+                | BasicSppfNodeInfo.Nonterminal _ ->
+                    let prodIndices = getProductionIndices graph idx
 
-    /// Extract a single derivation tree from the root of a basic SPPF.
+                    match prodIndices with
+                    | [] -> []
+                    | firstProd :: _ -> getChildIndices graph firstProd |> List.collect extractLoop
+                | BasicSppfNodeInfo.Production _ -> getChildIndices graph idx |> List.collect extractLoop
+
+        extractLoop nodeIdx
+
     let extractDerivationTree (sppf: BasicSPPF<'t, 'nt>) : DerivationTree<'t, 'nt> =
         let info = Graph.getVertex sppf.RootIndex sppf.Graph
 
@@ -179,34 +188,37 @@ module BasicSppf =
             let children = extractSingle sppf.Graph sppf.RootIndex
             List.head children
 
-    /// Enumerate all derivation trees from a basic SPPF.
-    /// Returns a lazy sequence of all distinct trees.
     let enumerateTrees (sppf: BasicSPPF<'t, 'nt>) : seq<DerivationTree<'t, 'nt>> =
         let graph = sppf.Graph
 
-        let rec extractAll (nodeIdx: int) : DerivationTree<'t, 'nt> list list =
-            let info = Graph.getVertex nodeIdx graph
+        let rec extractAll (visited: HashSet<int>) (nodeIdx: int) : DerivationTree<'t, 'nt> list list =
+            if not (visited.Add(nodeIdx)) then
+                [ [] ]
+            else
+                let info = Graph.getVertex nodeIdx graph
 
-            match info with
-            | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ [ Leaf(Symbol.T(Terminal t)) ] ]
-            | BasicSppfNodeInfo.Epsilon _ -> [ [ Leaf Symbol.Epsilon ] ]
-            | BasicSppfNodeInfo.Nonterminal _ ->
-                let prodIndices = getProductionIndices graph nodeIdx
+                match info with
+                | BasicSppfNodeInfo.Terminal(Terminal t, _, _) -> [ [ Leaf(Symbol.T(Terminal t)) ] ]
+                | BasicSppfNodeInfo.Epsilon _ -> [ [ Leaf Symbol.Epsilon ] ]
+                | BasicSppfNodeInfo.Nonterminal _ ->
+                    let prodIndices = getProductionIndices graph nodeIdx
 
-                match prodIndices with
-                | [] -> [ [] ]
-                | _ ->
-                    prodIndices
-                    |> List.collect (fun prodIdx -> getChildIndices graph prodIdx |> combineChildren)
-            | BasicSppfNodeInfo.Production _ -> getChildIndices graph nodeIdx |> combineChildren
+                    match prodIndices with
+                    | [] -> [ [] ]
+                    | _ ->
+                        prodIndices
+                        |> List.collect (fun prodIdx ->
+                            let branchVisited = HashSet<int>(visited)
+                            getChildIndices graph prodIdx |> combineChildren branchVisited)
+                | BasicSppfNodeInfo.Production _ -> getChildIndices graph nodeIdx |> combineChildren visited
 
-        and combineChildren (childIndices: int list) : DerivationTree<'t, 'nt> list list =
+        and combineChildren (visited: HashSet<int>) (childIndices: int list) : DerivationTree<'t, 'nt> list list =
             match childIndices with
             | [] -> [ [] ]
-            | [ single ] -> extractAll single
+            | [ single ] -> extractAll visited single
             | first :: rest ->
-                let firstResults = extractAll first
-                let restResults = rest |> List.map extractAll
+                let firstResults = extractAll visited first
+                let restResults = rest |> List.map (extractAll visited)
 
                 firstResults
                 |> List.collect (fun firstTrees ->
@@ -219,7 +231,7 @@ module BasicSppf =
             | first :: rest -> first |> List.collect (fun a -> combineLists rest |> List.map (fun b -> a @ b))
 
         let rootInfo = Graph.getVertex sppf.RootIndex graph
-        let trees = extractAll sppf.RootIndex
+        let trees = extractAll (HashSet<int>()) sppf.RootIndex
 
         match rootInfo with
         | BasicSppfNodeInfo.Nonterminal(Nonterminal nt, _, _) ->
@@ -239,8 +251,6 @@ module BasicSppf =
                     | _ -> List.head children
             }
 
-    /// Count strongly connected components in the SPPF graph using Tarjan's algorithm.
-    /// Treats the SPPF as a directed graph ignoring edge labels.
     let countScc (sppf: BasicSPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0
@@ -258,7 +268,7 @@ module BasicSppf =
             onStack.[v] <- true
 
             for w in 0 .. n - 1 do
-                if sppf.Graph.Edges.[v, w].IsSome then
+                if sppf.Graph.Edges.[v, w] then
                     if indices.[w] = -1 then
                         strongconnect w
                         lowlink.[v] <- min lowlink.[v] lowlink.[w]
@@ -281,8 +291,6 @@ module BasicSppf =
 
         sccCount
 
-    /// Counts nontrivial strongly connected components in the SPPF graph using Tarjan's algorithm.
-    /// A nontrivial SCC has more than 1 vertex (i.e., involves a cycle).
     let countNonTrivialScc (sppf: BasicSPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0
@@ -301,7 +309,7 @@ module BasicSppf =
             onStack.[v] <- true
 
             for w in 0 .. n - 1 do
-                if sppf.Graph.Edges.[v, w].IsSome then
+                if sppf.Graph.Edges.[v, w] then
                     if indices.[w] = -1 then
                         strongconnect w
                         lowlink.[v] <- min lowlink.[v] lowlink.[w]
