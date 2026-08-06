@@ -11,6 +11,12 @@ module Cyk =
         { Table: ParsingTable<'nt>
           Highlights: Matrix.Highlight list }
 
+    /// Data for a single CYK algorithm trace step with SPPF entries.
+    [<Struct>]
+    type CykSppfTraceStep<'nt when 'nt: comparison> =
+        { Table: SppfParsingTable<'nt>
+          Highlights: Matrix.Highlight list }
+
     let private findTerminalRules (rules: Rule<'t, 'nt> list) (t: Terminal<'t>) : Nonterminal<'nt> list =
         rules
         |> List.choose (fun rule ->
@@ -285,3 +291,66 @@ module Cyk =
             let table = cykSppfCore cnf terminals
             let accepted = isSppfAccepted cnf table
             (table, accepted)
+
+    /// Run CYK with SPPF data and return the sequence of working table states with highlights.
+    let parseWithSppfTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : CykSppfTraceStep<'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let steps = ResizeArray<CykSppfTraceStep<'nt>>()
+        let mutable stepHighlights = []
+
+        if terminals.IsEmpty then
+            []
+        else
+            let n = terminals.Length
+            let table = Matrix.init n n Set.empty
+
+            for i in 0 .. n - 1 do
+                let producing = findTerminalRulesWithProdIdx cnf.Rules terminals.[i]
+
+                if not (List.isEmpty producing) then
+                    let entries =
+                        producing |> List.map (fun (nt, prodIdx) -> (nt, i, prodIdx)) |> Set.ofList
+
+                    table.[i, i] <- entries
+
+                    let h: Matrix.Highlight =
+                        { Row = i
+                          Col = i
+                          Label = Matrix.CurrentCell }
+
+                    stepHighlights <- h :: stepHighlights
+
+            steps.Add(
+                { Table = Matrix.create n n (fun i j -> table.[i, j])
+                  Highlights = List.rev stepHighlights }
+            )
+
+            stepHighlights <- []
+
+            for len in 2..n do
+                for i in 0 .. n - len do
+                    let j = i + len - 1
+                    let accumulated = computeCellSppf cnf.Rules table i j
+
+                    if not (Set.isEmpty accumulated) then
+                        table.[i, j] <- accumulated
+
+                        let h: Matrix.Highlight =
+                            { Row = i
+                              Col = j
+                              Label = Matrix.CurrentCell }
+
+                        stepHighlights <- h :: stepHighlights
+
+                steps.Add(
+                    { Table = Matrix.create n n (fun i j -> table.[i, j])
+                      Highlights = List.rev stepHighlights }
+                )
+
+                stepHighlights <- []
+
+            steps |> List.ofSeq

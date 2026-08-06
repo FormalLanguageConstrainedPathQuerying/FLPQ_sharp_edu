@@ -12,7 +12,7 @@ module CykRunner =
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
 
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
-        let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
+        let trace = Cyk.parseWithSppfTrace Grammar.freshStringNonterminal grammar tokenList
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "input.tex"))
@@ -31,9 +31,9 @@ module CykRunner =
 
             let tex =
                 if step.Highlights.IsEmpty then
-                    CykTeX.tableToTeX string step.Table
+                    CykTeX.sppfTableToTeX string step.Table
                 else
-                    CykTeX.tableToTeXStyled string step.Table step.Highlights
+                    CykTeX.sppfTableToTeXStyled string step.Table step.Highlights
 
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 

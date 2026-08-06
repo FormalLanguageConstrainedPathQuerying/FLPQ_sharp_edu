@@ -22,6 +22,22 @@ module Valiant =
             submatrices: Submatrix list *
             ChangedCells: (int * int) list
 
+    [<Struct>]
+    type ValiantSppfTraceStep<'nt when 'nt: comparison> =
+        { Table: SppfParsingTable<'nt>
+          Target: Submatrix
+          Multiplied: (Submatrix * Submatrix) list
+          ChangedCells: (int * int) list }
+
+    [<Struct>]
+    type ModifiedValiantSppfTraceStep<'nt when 'nt: comparison> =
+        | LayerForwardSppf of table: SppfParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
+        | LayerBackwardSppf of
+            table: SppfParsingTable<'nt> *
+            layerSize: int *
+            submatrices: Submatrix list *
+            ChangedCells: (int * int) list
+
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
         { Table: Matrix<Set<Nonterminal<'nt>>>
           TokensArr: 't[]
@@ -577,22 +593,63 @@ module Valiant =
                     let existing = target.[ti, tj]
                     target.[ti, tj] <- Set.union existing toAdd
 
+    let private copyFullTableSppf (table: SppfParsingTable<'nt>) (tableSize: int) : SppfParsingTable<'nt> =
+        Matrix.create tableSize tableSize (fun i j -> table.[i, j])
+
+    let private diffCellsSppf
+        (before: Matrix<Set<SppfParsingEntry<'nt>>>)
+        (after: Matrix<Set<SppfParsingEntry<'nt>>>)
+        (m: Submatrix)
+        : (int * int) list =
+        let size = m.Size
+
+        [ for i in 0 .. size - 1 do
+              for j in 0 .. size - 1 do
+                  let oldSet = before.[i, j]
+                  let newSet = after.[i, j]
+
+                  if Set.difference newSet oldSet |> (not << Set.isEmpty) then
+                      yield (m.Row - m.Size + 1 + i, m.Col + j) ]
+
+    let private extractSliceSppf (table: SppfParsingTable<'nt>) (m: Submatrix) : Matrix<Set<SppfParsingEntry<'nt>>> =
+        Matrix.create m.Size m.Size (fun i j -> table.[m.Row - m.Size + 1 + i, m.Col + j])
+
     let private doMultiplicationsSppf
         (init: InitDataSppf<'t, 'nt>)
         (table: SppfParsingTable<'nt>)
         (tasks: (Submatrix * Submatrix * Submatrix) list)
+        (traceAcc: ResizeArray<ValiantSppfTraceStep<'nt>> option)
         : unit =
         if List.isEmpty init.BinaryRules then
             ()
         else
             for (mTarget, m1, m2) in tasks do
+                let beforeSnapshot = extractSlice table mTarget
+
                 let leftSlice = extractSlice table m1
                 let rightSlice = extractSlice table m2
 
                 let product = mxmSetSppf init.BinaryRules leftSlice rightSlice
                 writeSliceUnionSppf table mTarget product
 
-    let rec private completeSppf (init: InitDataSppf<'t, 'nt>) (table: SppfParsingTable<'nt>) (m: Submatrix) : unit =
+                match traceAcc with
+                | Some steps ->
+                    let afterSnapshot = extractSlice table mTarget
+
+                    steps.Add(
+                        { Table = copyFullTableSppf table init.TableSize
+                          Target = mTarget
+                          Multiplied = [ (m1, m2) ]
+                          ChangedCells = diffCellsSppf beforeSnapshot afterSnapshot mTarget }
+                    )
+                | None -> ()
+
+    let rec private completeSppf
+        (init: InitDataSppf<'t, 'nt>)
+        (table: SppfParsingTable<'nt>)
+        (m: Submatrix)
+        (traceAcc: ResizeArray<ValiantSppfTraceStep<'nt>> option)
+        : unit =
         if m.Size = 1 then
             let i = m.Row - m.Size + 1
             let j = m.Col
@@ -615,27 +672,33 @@ module Valiant =
             let r = rightSubmatrix m
             let te = topSubmatrix m
 
-            completeSppf init table b
-            doMultiplicationsSppf init table [ (l, leftGrounded l, b) ]
-            completeSppf init table l
-            doMultiplicationsSppf init table [ (r, b, rightGrounded r) ]
-            completeSppf init table r
-            doMultiplicationsSppf init table [ (te, leftGrounded te, r) ]
-            doMultiplicationsSppf init table [ (te, l, rightGrounded te) ]
-            completeSppf init table te
+            completeSppf init table b traceAcc
+            doMultiplicationsSppf init table [ (l, leftGrounded l, b) ] traceAcc
+            completeSppf init table l traceAcc
+            doMultiplicationsSppf init table [ (r, b, rightGrounded r) ] traceAcc
+            completeSppf init table r traceAcc
+            doMultiplicationsSppf init table [ (te, leftGrounded te, r) ] traceAcc
+            doMultiplicationsSppf init table [ (te, l, rightGrounded te) ] traceAcc
+            completeSppf init table te traceAcc
 
-    and private computeSppf (init: InitDataSppf<'t, 'nt>) (table: SppfParsingTable<'nt>) (i: int) (j: int) : unit =
+    and private computeSppf
+        (init: InitDataSppf<'t, 'nt>)
+        (table: SppfParsingTable<'nt>)
+        (i: int)
+        (j: int)
+        (traceAcc: ResizeArray<ValiantSppfTraceStep<'nt>> option)
+        : unit =
         if j - i >= 4 then
             let mid = (i + j) / 2
-            computeSppf init table i mid
-            computeSppf init table mid j
+            computeSppf init table i mid traceAcc
+            computeSppf init table mid j traceAcc
 
         let a = (i + j) / 2 - 1
         let b = (i + j) / 2
         let size = (j - i) / 2
 
         let m = { Row = a; Col = b; Size = size }
-        completeSppf init table m
+        completeSppf init table m traceAcc
 
     let rec private completeLayerModifiedSppf
         (init: InitDataSppf<'t, 'nt>)
@@ -682,20 +745,20 @@ module Valiant =
               for m in rightSubLayer do
                   yield (m, leftNeighbor m, rightGrounded m) ]
 
-        doMultiplicationsSppf init table firstTasks
+        doMultiplicationsSppf init table firstTasks None
         completeLayerModifiedSppf init table (leftSubLayer @ rightSubLayer)
 
         let secondTasks =
             [ for m in topSubLayer do
                   yield (m, leftGrounded m, rightNeighbor m) ]
 
-        doMultiplicationsSppf init table secondTasks
+        doMultiplicationsSppf init table secondTasks None
 
         let thirdTasks =
             [ for m in topSubLayer do
                   yield (m, leftNeighbor m, rightGrounded m) ]
 
-        doMultiplicationsSppf init table thirdTasks
+        doMultiplicationsSppf init table thirdTasks None
         completeLayerModifiedSppf init table topSubLayer
 
     /// Run Valiant and return an enriched parsing table with SPPF construction data.
@@ -715,7 +778,7 @@ module Valiant =
             let table =
                 Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
 
-            computeSppf init table 0 init.TableSize
+            computeSppf init table 0 init.TableSize None
             snapshot table init.N
 
     /// Run Valiant and return the enriched parsing table with acceptance status.
@@ -737,13 +800,34 @@ module Valiant =
             let table =
                 Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
 
-            computeSppf init table 0 init.TableSize
+            computeSppf init table 0 init.TableSize None
             let finalTable = snapshot table init.N
 
             let accepted =
                 Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
+
+    /// Run Valiant with SPPF data and return the sequence of trace steps.
+    let parseWithSppfTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : ValiantSppfTraceStep<'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
+
+        if tokensArr.Length = 0 then
+            []
+        else
+            let init = initValiantSppf cnf tokensArr
+
+            let table =
+                Matrix.create init.TableSize init.TableSize (fun i j -> init.Table.[i, j])
+
+            let steps = ResizeArray<ValiantSppfTraceStep<'nt>>()
+            computeSppf init table 0 init.TableSize (Some steps)
+            List.ofSeq steps
 
     /// Run modified Valiant and return an enriched parsing table with SPPF construction data.
     let parseModifiedWithSppfInfo
@@ -791,3 +875,38 @@ module Valiant =
                 Set.exists (fun (nt, _, _) -> nt = cnf.Start) finalTable.[0, Matrix.cols finalTable - 1]
 
             (finalTable, accepted)
+
+    /// Run modified Valiant with SPPF data and return the sequence of trace steps.
+    let parseModifiedWithSppfTrace
+        (freshNonterminal: int -> 'nt)
+        (g: Grammar<'t, 'nt>)
+        (terminals: Terminal<'t> list)
+        : ModifiedValiantSppfTraceStep<'nt> list =
+        let cnf = Grammar.toCnf freshNonterminal g
+        let tokensArr = terminals |> List.map (fun (Terminal t) -> t) |> Array.ofList
+
+        if tokensArr.Length = 0 then
+            []
+        else
+            let init = initValiantSppf cnf tokensArr
+            let tableSize = init.TableSize
+            let table = Matrix.create tableSize tableSize (fun i j -> init.Table.[i, j])
+            let n = init.N
+
+            let maxLayer = int (System.Math.Log(float tableSize, 2.0))
+            let mutable steps = []
+
+            for layer in 1..maxLayer do
+                let layerSubmatrices = constructLayer layer tableSize
+
+                if not (List.isEmpty layerSubmatrices) then
+                    steps <- LayerForwardSppf(snapshot table n, 1 <<< layer, layerSubmatrices) :: steps
+
+                    completeLayerModifiedSppf init table layerSubmatrices
+
+                    steps <- LayerBackwardSppf(snapshot table n, 1 <<< layer, layerSubmatrices, []) :: steps
+
+            if List.isEmpty steps then
+                steps <- LayerBackwardSppf(snapshot table n, 1, [], []) :: steps
+
+            List.rev steps

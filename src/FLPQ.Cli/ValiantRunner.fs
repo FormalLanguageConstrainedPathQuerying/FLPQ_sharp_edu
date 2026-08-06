@@ -12,7 +12,9 @@ module ValiantRunner =
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
 
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
-        let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokenList
+
+        let trace =
+            Valiant.parseWithSppfTrace Grammar.freshStringNonterminal grammar tokenList
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "input.tex"))
@@ -35,7 +37,7 @@ module ValiantRunner =
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
 
-            let tex = ValiantTeX.stepToTeX string step
+            let tex = ValiantTeX.sppfStepToTeX string step
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         if not (List.isEmpty tokenList) then
@@ -56,7 +58,7 @@ module ValiantRunner =
         let tokenList = Tokenizer.tokenizeTerminals inputTokens
 
         let trace =
-            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar tokenList
+            Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar tokenList
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "input.tex"))
@@ -79,7 +81,7 @@ module ValiantRunner =
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
 
-            let tex = ValiantTeX.modifiedStepToTeX string step
+            let tex = ValiantTeX.sppfModifiedStepToTeX string step
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         if not (List.isEmpty tokenList) then

@@ -17,3 +17,23 @@ module CykTeX =
     /// Convert a CYK working table to TeX.
     let tableToTeX (nonterminalPrinter: 'nt -> string) (table: ParsingTable<'nt>) : string =
         tableToTeXStyled nonterminalPrinter table []
+
+    /// Convert a CYK SPPF working table to TeX with highlighted cells.
+    let sppfTableToTeXStyled
+        (nonterminalPrinter: 'nt -> string)
+        (table: SppfParsingTable<'nt>)
+        (highlights: Matrix.Highlight list)
+        : string =
+        MatrixTeX.toTeXStyled
+            true
+            true
+            (ParsingTableTeX.sppfEntryCellToTeX nonterminalPrinter)
+            table
+            highlights
+            []
+            None
+            None
+
+    /// Convert a CYK SPPF working table to TeX.
+    let sppfTableToTeX (nonterminalPrinter: 'nt -> string) (table: SppfParsingTable<'nt>) : string =
+        sppfTableToTeXStyled nonterminalPrinter table []
