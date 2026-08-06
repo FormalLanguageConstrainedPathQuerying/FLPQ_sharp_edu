@@ -41,8 +41,7 @@ let ``LL step visualization includes input position marker`` () =
 
 [<Fact>]
 let ``LL step visualization stack has bottom on left`` () =
-    let g =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.SingleAB "twoRule").Grammar
 
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"

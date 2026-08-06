@@ -11,7 +11,7 @@ module FactTests =
     [<Fact>]
     let ``parseGrammar parses single rule`` () =
         let text =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aSbS_no_eps").Text
+            (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "singleRuleNoEps").Text
 
         let g = Grammar.parseGrammar text
 
@@ -22,7 +22,8 @@ module FactTests =
 
     [<Fact>]
     let ``parseGrammar parses multiple rules`` () =
-        let text = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar2").Text
+        let text =
+            (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousWithConcat").Text
 
         let g = Grammar.parseGrammar text
 
@@ -32,7 +33,7 @@ module FactTests =
     [<Fact>]
     let ``parseGrammar parses eps as Epsilon right-hand side`` () =
         let text =
-            (LanguageRegistry.findGrammar LanguageRegistry.EpsilonOnly "grammarEps").Text
+            (LanguageRegistry.findGrammar LanguageRegistry.EpsilonOnly "singleRule").Text
 
         let g = Grammar.parseGrammar text
 
@@ -57,7 +58,7 @@ module FactTests =
     [<Fact>]
     let ``parseGrammar classifies terminals and nonterminals`` () =
         let text =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aBcD").Text
+            (LanguageRegistry.findGrammar LanguageRegistry.TestInfraGrammars "mixedTerminalsNonterminals").Text
 
         let g = Grammar.parseGrammar text
 
@@ -82,8 +83,7 @@ module FactTests =
 
     [<Fact>]
     let ``parseGrammar start nonterminal is from first rule`` () =
-        let text =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_A_a__S_b").Text
+        let text = (LanguageRegistry.findGrammar LanguageRegistry.SingleB "startFromA").Text
 
         let g = Grammar.parseGrammar text
         Assert.Equal(Nonterminal "A", g.Start)
@@ -94,7 +94,7 @@ module FactTests =
 
     [<Fact>]
     let ``parseGrammar parses grammar from task 6 example 1`` () =
-        let text = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Text
+        let text = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Text
 
         let g = Grammar.parseGrammar text
 
@@ -126,7 +126,7 @@ module FactTests =
 
     [<Fact>]
     let ``parseGrammar handles rule with single symbol`` () =
-        let text = (LanguageRegistry.findGrammar LanguageRegistry.SingleA "grammarS2a").Text
+        let text = (LanguageRegistry.findGrammar LanguageRegistry.SingleA "singleRule").Text
         let g = Grammar.parseGrammar text
 
         Assert.Equal(1, Rhs.length g.Rules.Head.Rhs)
@@ -172,7 +172,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf preserves grammar that is already in CNF`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_AB_BC_C").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.TestInfraGrammars "cnfAdjacent").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -181,7 +181,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf handles epsilon production`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aS_eps").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.AStar "rightRecursiveWithEps").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -190,7 +190,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf handles unit productions`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_A_B_a").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.SingleA "shortUnitChain").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -199,7 +199,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf handles long right-hand sides`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_abc").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.FourTerm "singleRule").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -208,7 +208,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf handles terminals in mixed rules`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_AaBb").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.MixedPairs "mixedRule").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -252,7 +252,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf result contains only CNF rules`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ABCDE").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.TestInfraGrammars "multiNontermWithEps").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -269,7 +269,7 @@ module CnfTests =
     [<Fact>]
     let ``toCnf handles grammar with unit chain`` () =
         let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_long_chain").Grammar
+            (LanguageRegistry.findGrammar LanguageRegistry.SingleA "longUnitChain").Grammar
 
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
 
@@ -316,9 +316,9 @@ module PropertyCnfTests =
         let grammars =
             [ LanguageRegistry.Dyck1.Grammars.[0].Grammar
               LanguageRegistry.APlus.Grammars.[0].Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_A_B_a").Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_abc").Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_AaBb").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.SingleA "shortUnitChain").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.FourTerm "singleRule").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.MixedPairs "mixedRule").Grammar
               LanguageRegistry.EpsilonOnly.Grammars.[0].Grammar
               LanguageRegistry.APlus.Grammars.[1].Grammar ]
 
@@ -402,8 +402,7 @@ module ExtendedGrammarTests =
 
     [<Fact>]
     let ``originalStart returns S from simple grammar`` () =
-        let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_x_aA").Grammar
+        let g = (LanguageRegistry.findGrammar LanguageRegistry.AX "startNotFirst").Grammar
 
         let freshStart = Nonterminal "S'"
         let eg = ExtendedGrammar.create freshStart g

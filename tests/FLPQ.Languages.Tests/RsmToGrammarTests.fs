@@ -8,7 +8,10 @@ open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
 let private dyck1 = LanguageRegistry.Dyck1
-let private grammar1 = dyck1.Grammars |> List.find (fun g -> g.Name = "grammar1")
+
+let private grammar1 =
+    dyck1.Grammars |> List.find (fun g -> g.Name = "ambiguousEps")
+
 let private grammar1Grammar = grammar1.Grammar
 let private grammar1Accept = dyck1.AcceptStrings
 let private grammar1Reject = dyck1.RejectStrings
@@ -82,7 +85,7 @@ module ConversionTests =
 
     [<Fact>]
     let ``Round-trip: EBNF Dyck matches BNF Dyck`` () =
-        let dyckEbnf = dyck1.Grammars |> List.find (fun g -> g.Name = "grammar_dyck_ebnf")
+        let dyckEbnf = dyck1.Grammars |> List.find (fun g -> g.Name = "ebnfStar")
         let roundtrip = RsmToGrammar.convert dyckEbnf.Rsm
 
         for s in grammar1Accept do
@@ -94,7 +97,7 @@ module ConversionTests =
     [<Fact>]
     let ``Round-trip for expression grammar`` () =
         let opExpr = LanguageRegistry.OpExpr
-        let g = LanguageRegistry.findGrammar opExpr "grammarOpExpr"
+        let g = LanguageRegistry.findGrammar opExpr "rightAssoc"
         let roundtrip = RsmToGrammar.convert g.Rsm
 
         for s in opExpr.AcceptStrings @ opExpr.RejectStrings do

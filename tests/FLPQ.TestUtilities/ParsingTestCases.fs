@@ -27,6 +27,7 @@ module AcceptanceCases =
         LanguageRegistry.allLanguages
         |> List.collect (fun lang ->
             lang.Grammars
+            |> List.filter (fun g -> not g.Properties.DoesNotCoverFullLanguage)
             |> List.collect (fun g ->
                 let acceptCases =
                     lang.AcceptStrings

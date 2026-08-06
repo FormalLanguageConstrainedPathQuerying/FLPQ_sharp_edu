@@ -292,7 +292,7 @@ module TestHelpers =
         (lang: Language)
         : (string * Terminal<string> list) list =
         lang.Grammars
-        |> List.filter (fun g -> not g.Properties.IsRsmDerived)
+        |> List.filter (fun g -> not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage)
         |> List.collect (fun g ->
             lang.AcceptStrings
             |> List.choose (fun input ->
@@ -308,7 +308,7 @@ module TestHelpers =
         (lang: Language)
         : (string * Terminal<string> list) list =
         lang.Grammars
-        |> List.filter (fun g -> not g.Properties.IsRsmDerived)
+        |> List.filter (fun g -> not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage)
         |> List.collect (fun g ->
             lang.RejectStrings
             |> List.choose (fun input ->

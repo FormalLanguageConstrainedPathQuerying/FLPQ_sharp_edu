@@ -14,7 +14,8 @@ let private templatePath =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``CYK table TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.APlus "grammar3").Grammar
+    let g =
+        (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
@@ -26,7 +27,8 @@ let ``CYK table TeX compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``CYK all steps TeX compile with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.APlus "grammar3").Grammar
+    let g =
+        (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
         Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
@@ -38,7 +40,7 @@ let ``CYK all steps TeX compile with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LL step input TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let table = LLParser.buildTable g 1
     let tokens = Tokenizer.tokenizeTerminals "a b"
 
@@ -52,7 +54,9 @@ let ``LL step input TeX compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LR step input TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.APlus "grammar3").Grammar
+    let g =
+        (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
+
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
@@ -67,7 +71,8 @@ let ``LR step input TeX compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``Valiant trace TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.APlus "grammar3").Grammar
+    let g =
+        (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
         Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a")
@@ -84,7 +89,8 @@ let ``Valiant trace TeX compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``Modified Valiant trace TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.APlus "grammar3").Grammar
+    let g =
+        (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
         Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
@@ -123,7 +129,7 @@ let private tabularTemplatePath =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LL table TeX compiles with lualatex for grammar1`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let firstMap = FirstFollow.firstK g 1
     let followMap = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
@@ -150,7 +156,7 @@ let ``LL table TeX compiles with lualatex for grammar1`` () =
 [<Trait("Category", "TeX")>]
 let ``LL table TeX for multi-nonterminal grammar has correct rows`` () =
     let g =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aT_bE_c").Grammar
+        (LanguageRegistry.findGrammar LanguageRegistry.TestInfraGrammars "mutualRecursion").Grammar
 
     let firstMap = FirstFollow.firstK g 1
     let followMap = FirstFollow.followK g 1
@@ -172,7 +178,7 @@ let ``LL table TeX for multi-nonterminal grammar has correct rows`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``SLR(1) table TeX compiles for grammar1`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
@@ -189,7 +195,7 @@ let ``SLR(1) table TeX compiles for grammar1`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LR(0) table TeX shows shift-reduce conflicts`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildLR0Table aug Grammar.eoiSymbol
@@ -203,7 +209,7 @@ let ``LR(0) table TeX shows shift-reduce conflicts`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``CLR(1) table TeX compiles for grammar1`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildCLR1Table aug
@@ -232,7 +238,7 @@ let ``SLR(1) table TeX for grammar7 has goto columns`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``LL table TeX compiles with lualatex`` () =
-    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "grammar1").Grammar
+    let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let first = FirstFollow.firstK g 1
     let follow = FirstFollow.followK g 1
     let table = LLParser.buildTable g 1
@@ -424,8 +430,7 @@ let ``Derivation tree dot compiles with graphviz`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL merged summary TeX compiles with lualatex`` () =
-    let rsm =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_a_eps").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.AOrEps "ebnfAlt").Rsm
 
     let freshStart = Nonterminal "S'"
     let input = [ "a" ]
@@ -537,8 +542,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``RNGLR merged summary TeX compiles with lualatex`` () =
-    let rsm =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm
 
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]
@@ -658,7 +662,7 @@ let ``GSS tikz compiles with lualatex`` () =
         |> List.tryFind File.Exists
         |> Option.defaultWith (fun () -> failwith "Could not locate tex_tikz_template.tex (GSS tikz)")
 
-    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "grammar_aSb_eps").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
     let input = [ "a"; "a"; "b"; "b" ]
     let graph = GLL.stringToGraph input
     let freshStart = Nonterminal "S'"
@@ -708,7 +712,7 @@ let ``RSM tikz compiles with lualatex`` () =
         |> List.tryFind File.Exists
         |> Option.defaultWith (fun () -> failwith "Could not locate tex_tikz_template.tex (RSM tikz)")
 
-    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "grammar_aSb_eps").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
     let freshStart = Nonterminal "S'"
     let ersm = ExtendedRSM.create freshStart rsm
     let tikz = RsmTikz.extendedRsmToTikz string string ersm None
@@ -725,7 +729,7 @@ let ``SPPF tikz compiles with lualatex`` () =
         |> List.tryFind File.Exists
         |> Option.defaultWith (fun () -> failwith "Could not locate tex_tikz_template.tex (SPPF tikz)")
 
-    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "grammar_aSb_eps").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
     let input = [ "a"; "a"; "b"; "b" ]
     let graph = GLL.stringToGraph input
     let freshStart = Nonterminal "S'"
@@ -740,8 +744,7 @@ let ``SPPF tikz compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
-    let rsm =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm
 
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]
@@ -852,8 +855,7 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
-    let rsm =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm
 
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]

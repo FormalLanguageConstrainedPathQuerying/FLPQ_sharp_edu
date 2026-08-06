@@ -64,8 +64,7 @@ module FactTests =
 
     [<Fact>]
     let ``firstKOfString concatenates correctly`` () =
-        let g =
-            (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
+        let g = (LanguageRegistry.findGrammar LanguageRegistry.SingleAB "twoRule").Grammar
 
         let first = FirstFollow.firstK g 2
 
@@ -133,9 +132,9 @@ module PropertyTests =
         let grammars =
             [ LanguageRegistry.Dyck1.Grammars.[0].Grammar
               LanguageRegistry.APlus.Grammars.[0].Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_aB_b").Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_SS_a_b").Grammar
-              (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_EEaddT").Grammar ]
+              (LanguageRegistry.findGrammar LanguageRegistry.SingleAB "twoRule").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.ABPlus "ambiguousConcat").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.ArithExpr "simplified").Grammar ]
 
         grammars
         |> List.forall (fun g ->

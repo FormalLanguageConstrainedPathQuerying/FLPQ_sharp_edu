@@ -135,7 +135,7 @@ module GllRightNullable =
 module GllReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
-        let g = epsilonOnly.Grammars |> List.find (fun g -> g.Name = "grammarCascade")
+        let g = epsilonOnly.Grammars |> List.find (fun g -> g.Name = "viaCascade")
         Assert.True(accepts g.Rsm [])
 
 module GllEpsilonGrammars =

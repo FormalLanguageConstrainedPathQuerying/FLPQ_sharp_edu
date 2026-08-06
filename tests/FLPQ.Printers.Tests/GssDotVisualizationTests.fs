@@ -54,13 +54,13 @@ let private verifyGssDots (dots: string list) =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a a with input a a`` () =
-    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm [ "a"; "a" ]
+    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm [ "a"; "a" ]
     |> verifyGssDots
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``GSS DOT invariants hold for S->a S b|eps with input a a b b`` () =
-    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.ANBN "grammar_aSb_eps").Rsm [ "a"; "a"; "b"; "b" ]
+    renderGssDots (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm [ "a"; "a"; "b"; "b" ]
     |> verifyGssDots
 
 [<Fact>]

@@ -964,6 +964,23 @@
  243. Add tikz rendering for BasicSPPF.
       1.   Use ` \graph` with `layered layout`. (look at automata tikz layout for example)
       2.   Use tikz as default for CYK and Valiant BasicSPPF visualization. Use existing CLI arg to switch to dot.
- 244. Inprove GLL rendering
+ 246. Refactor LanguageRegistry: semantic naming, distribute MiscTestGrammars, improve isEbnfText.
+     1.   Rename all grammars from numbered (`grammar1`, `grammar3`, ...) to semantic names (`dyckAmbiguousEps`, `aPlusRightRecursive`, ...).
+     2.   Distribute MiscTestGrammars entries to existing languages (SingleA, SingleAB, AStar, Dyck1, ArithExpr) or promote to new full-featured languages (DoubleA, AOrEps, ABPlus, FourTerm, MixedPairs, AX, SingleB).
+     3.   Keep 5 pure infrastructure grammars (parseGrammar/tocnf tests) in a dedicated `TestInfraGrammars` language.
+     4.   Improve `isEbnfText`: use the existing EBNF parser's Regexp AST — parse text, walk each rule's AST; if ANY rule contains `RAlt` or `RStar` → true EBNF; if ALL rules are pure concatenation (RTerm, RNonterm, RSeq, REps only) → plain CFG. Ban `+`, `*`, `?`, `|`, `(`, `)` as terminal names.
+     5.   Update all test call sites for renamed grammar references.
+     6.   Run all tests — zero regressions.
+
+245. [done] Fix all Language Registry Violations from @tasks/code_review.md Section 7.
+     1.   Add missing grammars to LanguageRegistry: ClassicArithExpr (with +/*/(/) operators as terminals), ANB-like grammars, chain/cascade grammars, and any other edge-case grammars used in test files but not yet in the registry.
+     2.   Fix 7.1 (RV1-RV4): Replace hardcoded Grammar.parseGrammar calls in non-printer test files (GrammarTests.fs, FirstFollowTests.fs, StressTests.fs, PathIndexTeXTests.fs) with LanguageRegistry references.
+     3.   Fix 7.2 (RV5-RV16): Replace hardcoded Grammar.parseGrammar calls in printer/golden test files (TexCompilationTests.fs, AutomatonVisualizationTests.fs, LLVisualizerTests.fs, LRVisualizerTests.fs, LRStepsGoldenTests.fs, LRTableTeXGoldenTests.fs, GrammarTeXGoldenTests.fs, LLStepsGoldenTests.fs, LLTableTeXGoldenTests.fs, ValiantTraceGoldenTests.fs, CykSummaryGoldenTests.fs, DerivationTreeVisualizationTests.fs) with LanguageRegistry references.
+     4.   Fix 7.3-7.4 (RV17-RV23): Replace hardcoded RsmBuilder.buildRSMFromText calls in test files with LanguageRegistry references. For files testing the builder itself (EbnfParserTests.fs, RSMTests.fs, RsmToGrammarTests.fs), add representative grammars to the registry and reference them.
+     5.   Fix 7.5 (RV24-RV26): Remove TestHelpers.grammarToRsm and TestHelpers.grammarToEbnfText. Replace all ~29 call sites of grammarToRsm with direct g.Rsm access. Keep LanguageRegistry.grammarToEbnfText (private) and buildRegexRsm.
+     6.   Fix 7.6 (RV27): Replace data/*.bnf file references in CLI tests with temp files created from LanguageRegistry Text entries. Remove the bnf files or ensure they're generated on-demand.
+     7.   Run all tests — all must pass with zero regressions.
+
+244. Inprove GLL rendering
       1.   Use adjustbox from package adjustbox to scale tikz figures. ```\begin{adjustbox}{max width=\textwidth}\begin{tikzpicture} ... \end{tikzpicture}\end{adjustbox}```
       2.   `v0 [label={[font=\tiny, anchor=north west, xshift=-1.01mm, yshift=1.01mm]north west:1} ,as={(0,0)}];`

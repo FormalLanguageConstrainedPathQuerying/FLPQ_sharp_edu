@@ -18,24 +18,24 @@ let private twoTrack = LanguageRegistry.TwoTrackDyck
 let private ll2Test = LanguageRegistry.LL2Test
 let private ll3Test = LanguageRegistry.LL3Test
 
-let private grammar1 = (g dyck1 "grammar1").Grammar
-let private augGrammar1 = (g dyck1 "grammar1").AugmentedGrammar
+let private grammar1 = (g dyck1 "ambiguousEps").Grammar
+let private augGrammar1 = (g dyck1 "ambiguousEps").AugmentedGrammar
 let private grammar1Accept = dyck1.AcceptStrings
 let private grammar1Reject = dyck1.RejectStrings
 
-let private grammar3 = (g aplus "grammar3").Grammar
-let private grammar8 = (g expr "grammar8").Grammar
+let private grammar3 = (g aplus "rightRecursive").Grammar
+let private grammar8 = (g expr "rightAssoc").Grammar
 
-let private grammar9 = (g twoTrack "grammar9").Grammar
+let private grammar9 = (g twoTrack "variantA").Grammar
 let private grammar9Accept = twoTrack.AcceptStrings
 let private grammar9Reject = twoTrack.RejectStrings
 
-let private grammar10 = (g twoTrack "grammar10").Grammar
+let private grammar10 = (g twoTrack "variantB").Grammar
 let private grammar10Accept = grammar9Accept
 let private grammar10Reject = grammar9Reject
 
-let private ll2Grammar = (g ll2Test "ll2Grammar").Grammar
-let private ll3Grammar = (g ll3Test "ll3Grammar").Grammar
+let private ll2Grammar = (g ll2Test "k2").Grammar
+let private ll3Grammar = (g ll3Test "k3").Grammar
 
 
 module FactTests =

@@ -17,8 +17,7 @@ type private RnglrVizData =
       LrTables: string list }
 
 let private renderViz (input: string list) : RnglrVizData =
-    let rsm =
-        (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_ebnf_aa").Rsm
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm
 
     let freshStart = Nonterminal "S'"
     let graph = GLL.stringToGraph input

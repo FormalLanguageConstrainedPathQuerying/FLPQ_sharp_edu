@@ -17,16 +17,16 @@ let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 let private twoTrack = LanguageRegistry.TwoTrackDyck
 
-let private grammar1 = (g dyck1 "grammar1").Grammar
-let private grammar2 = (g dyck1 "grammar2").Grammar
-let private grammar3 = (g aplus "grammar3").Grammar
-let private grammar4 = (g aplus "grammar4").Grammar
-let private grammar5 = (g aplus "grammar5").Grammar
-let private grammar6 = (g expr "grammar6").Grammar
-let private grammar7 = (g expr "grammar7").Grammar
-let private grammar8 = (g expr "grammar8").Grammar
-let private grammar9 = (g twoTrack "grammar9").Grammar
-let private grammar10 = (g twoTrack "grammar10").Grammar
+let private grammar1 = (g dyck1 "ambiguousEps").Grammar
+let private grammar2 = (g dyck1 "ambiguousWithConcat").Grammar
+let private grammar3 = (g aplus "rightRecursive").Grammar
+let private grammar4 = (g aplus "leftRecursive").Grammar
+let private grammar5 = (g aplus "ambiguousBinaryTernary").Grammar
+let private grammar6 = (g expr "ambiguous").Grammar
+let private grammar7 = (g expr "leftAssoc").Grammar
+let private grammar8 = (g expr "rightAssoc").Grammar
+let private grammar9 = (g twoTrack "variantA").Grammar
+let private grammar10 = (g twoTrack "variantB").Grammar
 
 module Grammar1Tests =
 

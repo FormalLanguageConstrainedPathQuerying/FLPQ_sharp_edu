@@ -23,7 +23,7 @@ module TestGrammarFiles =
         writeTempFile LanguageRegistry.ANBN.Grammars.[0].Text
 
     let exampleGrammarChain () =
-        writeTempFile (LanguageRegistry.findGrammar LanguageRegistry.MiscTestGrammars "grammar_N_A_a").Text
+        writeTempFile (LanguageRegistry.findGrammar LanguageRegistry.SingleA "viaIntermediate").Text
 
     let exampleGrammarSimple () =
         writeTempFile LanguageRegistry.SingleAB.Grammars.[0].Text

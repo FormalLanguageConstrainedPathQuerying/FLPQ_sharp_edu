@@ -14,12 +14,12 @@ let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 
-let private grammar1 = (g dyck1 "grammar1").Grammar
-let private grammar2 = (g dyck1 "grammar2").Grammar
-let private grammar3 = (g aplus "grammar3").Grammar
-let private grammar6 = (g expr "grammar6").Grammar
-let private grammar7 = (g expr "grammar7").Grammar
-let private grammar8 = (g expr "grammar8").Grammar
+let private grammar1 = (g dyck1 "ambiguousEps").Grammar
+let private grammar2 = (g dyck1 "ambiguousWithConcat").Grammar
+let private grammar3 = (g aplus "rightRecursive").Grammar
+let private grammar6 = (g expr "ambiguous").Grammar
+let private grammar7 = (g expr "leftAssoc").Grammar
+let private grammar8 = (g expr "rightAssoc").Grammar
 
 let private dyckAB = LanguageRegistry.Dyck1.AcceptStrings[1]
 let private aplusAA = LanguageRegistry.APlus.AcceptStrings[1]

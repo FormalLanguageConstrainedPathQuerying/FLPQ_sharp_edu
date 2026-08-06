@@ -16,21 +16,21 @@ let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 let private twoTrack = LanguageRegistry.TwoTrackDyck
 
-let private grammar1 = (g dyck1 "grammar1").Grammar
-let private augGrammar1 = (g dyck1 "grammar1").AugmentedGrammar
+let private grammar1 = (g dyck1 "ambiguousEps").Grammar
+let private augGrammar1 = (g dyck1 "ambiguousEps").AugmentedGrammar
 let private grammar1Accept = dyck1.AcceptStrings
 let private grammar1Reject = dyck1.RejectStrings
 
-let private augGrammar2 = (g dyck1 "grammar2").AugmentedGrammar
+let private augGrammar2 = (g dyck1 "ambiguousWithConcat").AugmentedGrammar
 
-let private grammar3 = (g aplus "grammar3").Grammar
-let private augGrammar3 = (g aplus "grammar3").AugmentedGrammar
+let private grammar3 = (g aplus "rightRecursive").Grammar
+let private augGrammar3 = (g aplus "rightRecursive").AugmentedGrammar
 let private grammar3Accept = aplus.AcceptStrings
 let private grammar3Reject = aplus.RejectStrings
 
-let private augGrammar6 = (g expr "grammar6").AugmentedGrammar
-let private augGrammar7 = (g expr "grammar7").AugmentedGrammar
-let private augGrammar8 = (g expr "grammar8").AugmentedGrammar
+let private augGrammar6 = (g expr "ambiguous").AugmentedGrammar
+let private augGrammar7 = (g expr "leftAssoc").AugmentedGrammar
+let private augGrammar8 = (g expr "rightAssoc").AugmentedGrammar
 
 let private exprAccept = expr.AcceptStrings
 let private exprReject = expr.RejectStrings
