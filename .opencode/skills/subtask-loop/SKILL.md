@@ -189,11 +189,11 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
 After ALL subtasks are committed, run the hard gate:
 
 ```bash
-python3 tools/hard_gate.py > tmp/hard-gate-stderr.txt 2>&1 &
+python3 tools/hard_gate.py &
 echo $! > tmp/hard-gate.pid
 ```
 
-See the `quality-gates` skill for the full async polling procedure. The gate runs in background and writes progress to `tmp/hard-gate.txt`. Poll every 5 minutes: `grep "STATUS:" tmp/hard-gate.txt`. Only `PASS` and `BLOCKED` are terminal states — `IN_PROGRESS` means keep polling. If non-zero exit code — for ANY reason — STOP. Do not merge. Do not mark the task as done. Read the output file only to identify what to fix. Re-run until exit code 0, then proceed to merge.
+See the `quality-gates` skill for the full async polling procedure. The gate writes to `tmp/hard-gate.txt` — read that file directly. Poll every 5 minutes: `grep "STATUS:" tmp/hard-gate.txt`. Only `PASS` and `BLOCKED` are terminal states — `IN_PROGRESS` means keep polling. If non-zero exit code — for ANY reason — STOP. Do not merge. Do not mark the task as done. Read the output file only to identify what to fix. Re-run until exit code 0, then proceed to merge.
 
 ## Marking Complete
 

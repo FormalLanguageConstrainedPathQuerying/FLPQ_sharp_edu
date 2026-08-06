@@ -13,9 +13,18 @@ The following Python scripts in `tools/` automate quality gate execution. **Alwa
 
 See `tools/README.md` for the full tool list and output conventions. See `docs/developer/guides/tools.md` for per-tool details (steps, thresholds, output format examples).
 
-## Tool Output Capture
+### Two kinds of tools
 
-**Mandatory**: every invocation of `dotnet build`, `dotnet test`, `dotnet-fsharplint lint`, `dotnet dotnet-coverage`, or similar expensive CLI tools MUST redirect all output (stdout + stderr) to a file in `tmp/`.
+| Kind | Examples | How to read output |
+|------|----------|--------------------|
+| **Python tool scripts** | `tools/quality_check.py`, `tools/hard_gate.py` | Scripts write to a **fixed output file** (e.g., `tmp/quality-check.txt`, `tmp/hard-gate.txt`). **Do NOT redirect** these scripts. Launch them without `> tmp/... 2>&1` and read the designated file directly with the Read or Grep tools. |
+| **Raw CLI tools** | `dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage` | These write to stdout/stderr. **Redirect all output** to a file in `tmp/` before reading. |
+
+The fixed output file is the single source of truth — never read a redirect when the script writes to its own file.
+
+## Raw CLI Tool Output Capture
+
+For raw CLI tools (`dotnet build`, `dotnet test`, `dotnet-fsharplint lint`, `dotnet dotnet-coverage`), redirect all output (stdout + stderr) to a file in `tmp/`.
 
 **NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on tool output. Write raw output to `tmp/` first, then use the Grep or Read tools to analyze the captured file.
 
@@ -50,10 +59,6 @@ Before running any expensive CLI tool, you MUST:
 
 **Timed-out output is valid.** Even if a tool times out or produces partial output, check the output file first. Do NOT re-run with a longer timeout unless source files changed AND the captured content is insufficient for decision-making.
 
-### Output capture check
-
-Every command below MUST use `> tmp/<file> 2>&1` redirection. Commands with pipes (`|`) or inline filtering are forbidden.
-
 ## Commit Gate
 
 Run before every commit. Both steps must pass.
@@ -70,7 +75,13 @@ Then stage any formatted files (`git add`), then run the gate:
 python3 tools/quality_check.py
 ```
 
-Then read and analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
+The script writes to `tmp/quality-check.txt`. Read that file directly:
+
+```bash
+grep "STATUS" tmp/quality-check.txt
+```
+
+If STATUS: BLOCKED — read the detailed log in the same file, fix all problems, and re-run. **Do NOT redirect** the script's stdout — the file it writes is the single source of truth.
 
 ## Task Verification
 
@@ -105,17 +116,17 @@ tail -20 tmp/hard-gate.txt   # current detailed output
 ### Starting the Gate
 
 ```bash
-python3 tools/hard_gate.py > tmp/hard-gate-stderr.txt 2>&1 &
+python3 tools/hard_gate.py &
 echo $! > tmp/hard-gate.pid
 ```
 
-The gate runs in background and writes progress incrementally to `tmp/hard-gate.txt` after each step.
+The gate writes progress incrementally to `tmp/hard-gate.txt` after each step. **Do NOT redirect** stdout/stderr — the script manages its own file I/O. Read `tmp/hard-gate.txt` directly for all status information. If the Python process crashes, a traceback may appear on stderr in your terminal; that is the only reason to check the terminal output.
 
 ### Polling Status
 
 **Poll interval: every 5 minutes.** Set a timer — do not poll more frequently as the gate file may not be updated between flushes.
 
-Run all three checks together:
+All three checks below read from `tmp/hard-gate.txt` (the gate's output file) or the process table. The gate data lives in this file; there is no other source.
 
 ```bash
 # 1. Gate status — terminal state?
