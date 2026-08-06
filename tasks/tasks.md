@@ -948,6 +948,22 @@
       1.   Reuse existing functions for automata to tikz visualization.
       2.   Use tikz visualization as default for GLL (steps and summary). Reuse existing CLI flag to switch to dot. 
       3.   Use tikz visualization as default for RNGLR (steps and summary). Reuse existing CLI flag to switch to dot.
- 239. Improve GLL Tikz GSS visualization (preserve DOT viaualization "as is")
+ 239. [done] Improve GLL Tikz GSS visualization (preserve DOT viaualization "as is")
       1.   Use R-based notation for ranges on edges. Like ranges in descriptor table
       2.   Use rounded rectangle shape for vertices.
+ 240. Fix toCNF function. 
+      1.   To CNF conversion must include gramar cleanup (as last step of transformations): non-generating and unreachable nonterminals must be removed. Note: order of removing is important. Wrong order leads to incorrect result. Add these two cleanup subcteps. Simple test is grammar S -> a; S -> S S; S -> S S S. Currently it contains N_2 -> a rule in CNF where N_2 is unreachable.
+      2.   Add tests. Add two functions: one checks that all nonterminals in grammar reachable from start nonterminal, one checks that each nonterminal in grammar can produce terminal or empty string. both applicable for grammar in BNF. Tests: for all grammars in language registry convert grammar to CNF and use cretaed functions to check that there are no non-generating and unreachable nonterminalsin result. 
+ 241. Improve CYK and Valiant (+ modified) table rendering. Render each nonempty cell as a set of tuples of form (nonterm, split_point, prod_id).
+ 242. Improve BasicSPPF creation and visualization (rendering). 
+      1.   SPPF must be built only for start nonterminal in respective cell (if string accepted). Not for all nonterminals from all cells.
+      2.   Do not mark edges with `derives` and numbers.
+      3.   Production node store not left and right positins, but split point. Render it with respective lable of form `split_point, prod_id`
+      4.   In rendering: for nontermonal node label use same form as in nonterminal node lable in rsm sppf rendering: `nonterm [from,to]`
+      
+ 243. Add tikz rendering for BasicSPPF.
+      1.   Use ` \graph` with `layered layout`. (look at automata tikz layout for example)
+      2.   Use tikz as default for CYK and Valiant BasicSPPF visualization. Use existing CLI arg to switch to dot.
+ 244. Inprove GLL rendering
+      1.   Use adjustbox from package adjustbox to scale tikz figures. ```\begin{adjustbox}{max width=\textwidth}\begin{tikzpicture} ... \end{tikzpicture}\end{adjustbox}```
+      2.   `v0 [label={[font=\tiny, anchor=north west, xshift=-1.01mm, yshift=1.01mm]north west:1} ,as={(0,0)}];`
