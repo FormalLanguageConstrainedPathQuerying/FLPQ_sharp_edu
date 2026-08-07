@@ -702,7 +702,19 @@ module Valiant =
                 let rightSlice = extractSlice table m2
 
                 let product = mxmSetSppf init.BinaryRules leftSlice rightSlice
-                writeSliceUnionSppf table mTarget product
+
+                let shift = m1.Col - 1
+
+                let adjustedProduct =
+                    Matrix.map
+                        (fun cell ->
+                            cell
+                            |> Set.map (fun entry ->
+                                { entry with
+                                    SplitPoint = shift + entry.SplitPoint }))
+                        product
+
+                writeSliceUnionSppf table mTarget adjustedProduct
 
                 match traceAcc with
                 | Some steps ->

@@ -1,63 +1,56 @@
-# Global Plan: CNF Cleanup, Table Rendering, BasicSPPF (Tasks 240, 241, 242)
+# Global Plan: Valiant SPPF Fixes and Complete Invariants (Tasks 248, 249, 250)
 
 ## Tasks
 
 | ID | Title | Summary |
 |----|-------|---------|
-| 240 | Fix toCNF function | Add non-generating + unreachable nonterminal cleanup; add test functions and registry-wide tests |
-| 241 | Improve CYK and Valiant table rendering | Render nonempty cells as `(nonterm, split_point, prod_id)` tuples |
-| 242 | Improve BasicSPPF creation and visualization | Build only from start NT cell; remove edge labels; production stores split point; NT label format |
+| 248 | Fix Valiant SPPF SplitPoint | Fix `mxmSetSppf` to use absolute SplitPoint = `m1.Col + k` instead of local `k`. Verifies SPPF tables byte-identical CYK vs Valiant. |
+| 249 | Fix BasicSppf Production node reuse | Replace `getOrCreate(Production(...))` with direct allocation. Each Production node is context-dependent (parent cell determines children). |
+| 250 | Complete invariant checks | Add `allCompatibleGrammars`, restore full invariant checks (tree leaves, byte-identical tables, child count = RHS length, structural SPPF equivalence). |
 
 ## Dependencies
 
-- **240 is independent** — touches only `Grammar.fs` (toCNF + new cleanup helpers) and grammar tests.
-- **241 depends on 240** only weakly — if 240 adds unreachable nonterminals cleanup, CNF tables may shrink, but SPPF table rendering is independent of cleanup logic. Tasks can proceed independently.
-- **242 depends on 241** only weakly — 241 changes table rendering format; 242 changes SPPF construction from the same SPPF table. They touch different aspects of the same data but can be done independently.
+- **248 is independent** — pure algorithmic fix in Valiant.fs
+- **249 is independent** — pure fix in BasicSppf.fs  
+- **250 depends on both 248 and 249** — invariant checks that require correctness from prior fixes
 
 ## Execution Order
 
-1. **Task 240** — simplest, self-contained, establishes test infrastructure for cleanup checks
-2. **Task 241** — medium, adds trace types + rendering changes for CYK/Valiant
-3. **Task 242** — medium, restructures SPPF node/edge types and rendering
-
-All three are largely independent. Order chosen for incremental risk: fix core algorithm first (240), then improve visualization bottom-up (241 → 242).
+1. **Task 248** — Fix the fundamental data bug (SplitPoint convention mismatch)
+2. **Task 249** — Fix the SPPF construction bug (Production node sharing)
+3. **Task 250** — Complete invariant checks that verify correctness of both fixes
 
 ## Overlapping Files
 
-| File | 240 | 241 | 242 |
+| File | 248 | 249 | 250 |
 |------|-----|-----|-----|
-| `Grammar.fs` | +removeNonGenerating, +removeUnreachable | — | — |
-| `Cyk.fs` | — | +SppfCykTraceStep, +parseWithSppfTrace | — |
-| `Valiant.fs` | — | +SppfValiantTraceStep, +parseWithSppfTrace | — |
-| `ParsingTable.fs` | — | — (reuses SppfParsingTable) | — |
-| `CykTeX.fs` | — | +sppfTableToTeXStyled (uses sppfEntryCellToTeX) | — |
-| `ValiantTeX.fs` | — | +sppfStepToTeX, +sppfModifiedStepToTeX | — |
-| `CykRunner.fs` | — | use sppfTrace instead of trace for rendering | — |
-| `ValiantRunner.fs` | — | use sppfTrace for rendering | — |
-| `BasicSppf.fs` | — | — | fromParsingTable (start NT only); change Prod type |
-| `BasicSppfDot.fs` | — | — | new labels, no edge labels |
-| `CykTests.fs` / `ValiantTests.fs` | — | test new trace functions | update fromParsingTable tests |
-| `SppfPropertyTests.fs` | — | — | update SPPF construction tests |
-| `BasicSppfDotTests.fs` | — | — | update golden tests |
-| `GrammarTests.fs` or new test file | +cleanup tests | — | — |
+| `Valiant.fs` | +leftColOffset param to mxmSetSppf, update doMultiplicationsSppf | — | — |
+| `BasicSppf.fs` | — | direct alloc for Production nodes | — |
+| `LanguageRegistry.fs` | — | — | +allCompatibleGrammars |
+| `TestHelpers.fs` | — | — | extend checkCykValiantEquivalence |
+| `CrossParserEquivalenceTests.fs` | — | — | update checkLanguages to use allCompatibleGrammars |
 
 ## Reuse Analysis
 
-### Task 240
-- `Grammar.nonterminalsOf` — existing, used to enumerate all nonterminals
-- `Grammar.terminalsOf` — existing
-- `Grammar.computeNullable` — existing, can be reused for computing generating set
-- No new external deps needed
+### Task 248
+- `Matrix.mxmi` — existing, already provides `(i, k, j)` indices
+- `Submatrix` type — existing, provides `.Col` offset
+- `doMultiplicationsSppf` — existing, has access to `m1.Col`
 
-### Task 241
-- `ParsingTableTeX.sppfEntryCellToTeX` — **already exists** at `ParsingTableTeX.fs:35`, renders `(nt, k, prodIdx)` tuples. Task 241 just switches CYK/Valiant rendering from `ntCellToTeX` to `sppfEntryCellToTeX`.
-- `SppfParsingTable<'nt>` — **already exists** at `ParsingTable.fs:17`
-- `Cyk.parseWithSppfInfo` — **already exists**, returns `SppfParsingTable`
-- `Valiant.parseWithSppfInfo` — **already exists**
-- Need new SPPF-aware trace collection in CYK and Valiant
+### Task 249
+- `fromParsingTable` — existing, local `getOrCreate` function
+- `BasicSppfNodeInfo.Production` — existing DU case
 
-### Task 242
-- `BasicSppf.fromParsingTable` — **already exists**, needs modification
-- `BasicSppfDot.toDot` — **already exists**, needs modification
-- `BasicSppfNodeInfo`, `BasicSppfEdgeLabel`, `BasicSPPF` — **already exist**
-- Tree extraction functions rely on edge labels — need update when labels are removed
+### Task 250
+- `LanguageRegistry.allLanguages` — existing
+- `AnnotatedGrammar.Properties` — existing, has `IsRsmDerived`, `DoesNotCoverFullLanguage`
+- `TestHelpers.isCykValiantCompatible` — existing filter
+- `TestHelpers.checkCykValiantEquivalence` — existing, needs extension
+- `BasicSppf.validateProductionChildren` — existing
+- `Scc.countNonTrivialScc` — existing
+
+## Risk Assessment
+
+- **Task 248**: High correctness risk — changes multiplication logic. Mitigated by existing table comparison tests.
+- **Task 249**: Medium risk — changes SPPF structure. Mitigated by tree yield tests.
+- **Task 250**: Low risk — mostly adds verification checks; fixes may be needed if invariants fail.
