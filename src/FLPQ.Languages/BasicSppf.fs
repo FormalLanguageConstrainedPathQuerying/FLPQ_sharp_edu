@@ -77,31 +77,28 @@ module BasicSppf =
                         vertices.Add(info)
                         idx
 
-                let childNtInCell (row: int) (col: int) (targetNt: Nonterminal<'nt>) : Nonterminal<'nt> option =
-                    if row <= col && row >= 0 && col < n then
-                        table.[row, col]
-                        |> Set.filter (fun entry -> entry.Nt = targetNt)
-                        |> Set.toList
-                        |> List.tryHead
-                        |> Option.map (fun entry -> entry.Nt)
-                    else
-                        None
+                let processed = HashSet<(int * int) * Nonterminal<'nt>>()
 
-                let processedCells = HashSet<int * int>()
+                let rec processNonterminalCell (i: int) (j: int) (targetNt: Nonterminal<'nt>) : unit =
+                    let key = ((i, j), targetNt)
 
-                let rec processCell (i: int) (j: int) : unit =
-                    if processedCells.Contains(i, j) then
+                    if processed.Contains(key) then
                         ()
                     else
-                        processedCells.Add(i, j) |> ignore
+                        processed.Add(key) |> ignore
 
-                        let entries = table.[i, j]
+                        let entries = table.[i, j] |> Set.filter (fun entry -> entry.Nt = targetNt)
 
                         for entry in entries do
                             let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, i, j + 1))
 
+                            let splitPoint =
+                                match Rhs.toNonEpsilonList cnf.Rules.[entry.ProdIdx].Rhs with
+                                | [ Symbol.N _; Symbol.N _ ] -> entry.SplitPoint + 1
+                                | _ -> entry.SplitPoint
+
                             let prodNode = vertices.Count
-                            vertices.Add(BasicSppfNodeInfo.Production(entry.ProdIdx, entry.SplitPoint))
+                            vertices.Add(BasicSppfNodeInfo.Production(entry.ProdIdx, splitPoint))
 
                             edges.Add(ntNode, prodNode)
 
@@ -116,25 +113,23 @@ module BasicSppf =
 
                                 edges.Add(prodNode, termNode)
                             | [ Symbol.N leftNt; Symbol.N rightNt ] ->
-                                match childNtInCell i entry.SplitPoint leftNt with
-                                | Some _ ->
+                                if table.[i, entry.SplitPoint] |> Set.exists (fun e -> e.Nt = leftNt) then
+                                    processNonterminalCell i entry.SplitPoint leftNt
+
                                     let leftNode =
                                         getOrCreate (BasicSppfNodeInfo.Nonterminal(leftNt, i, entry.SplitPoint + 1))
 
                                     edges.Add(prodNode, leftNode)
-                                    processCell i entry.SplitPoint
-                                | None -> ()
 
-                                match childNtInCell (entry.SplitPoint + 1) j rightNt with
-                                | Some _ ->
+                                if table.[entry.SplitPoint + 1, j] |> Set.exists (fun e -> e.Nt = rightNt) then
+                                    processNonterminalCell (entry.SplitPoint + 1) j rightNt
+
                                     let rightNode =
                                         getOrCreate (
                                             BasicSppfNodeInfo.Nonterminal(rightNt, entry.SplitPoint + 1, j + 1)
                                         )
 
                                     edges.Add(prodNode, rightNode)
-                                    processCell (entry.SplitPoint + 1) j
-                                | None -> ()
                             | _ -> ()
 
                 let mutable rootIdx = -1
@@ -142,7 +137,7 @@ module BasicSppf =
                 for entry in startEntries do
                     let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, 0, n))
                     rootIdx <- ntNode
-                    processCell 0 (n - 1)
+                    processNonterminalCell 0 (n - 1) cnf.Start
 
                 if rootIdx < 0 then
                     fromEdges [] [] 0
@@ -422,3 +417,82 @@ module BasicSppf =
                                     go ca cb)
 
             go a.RootIndex b.RootIndex
+
+    let private leftPos (info: BasicSppfNodeInfo<'t, 'nt>) : int =
+        match info with
+        | BasicSppfNodeInfo.Terminal(_, l, _) -> l
+        | BasicSppfNodeInfo.Nonterminal(_, l, _) -> l
+        | BasicSppfNodeInfo.Epsilon p -> p
+        | BasicSppfNodeInfo.Production _ -> failwith "Production in leftPos"
+
+    let private rightPos (info: BasicSppfNodeInfo<'t, 'nt>) : int =
+        match info with
+        | BasicSppfNodeInfo.Terminal(_, _, r) -> r
+        | BasicSppfNodeInfo.Nonterminal(_, _, r) -> r
+        | BasicSppfNodeInfo.Epsilon p -> p
+        | BasicSppfNodeInfo.Production _ -> failwith "Production in rightPos"
+
+    let validateProductionSplitConsistency (sppf: BasicSPPF<'t, 'nt>) : Result<unit, string list> =
+        let n = Graph.vertexCount sppf.Graph
+        let errors = ResizeArray<string>()
+
+        for v in 0 .. n - 1 do
+            match Graph.getVertex v sppf.Graph with
+            | BasicSppfNodeInfo.Production(_, splitPoint) ->
+
+                let children =
+                    [ for w in 0 .. n - 1 do
+                          if sppf.Graph.Edges.[v, w] then
+                              yield w ]
+
+                match children with
+                | [ c1; c2 ] ->
+                    let info1 = Graph.getVertex c1 sppf.Graph
+                    let info2 = Graph.getVertex c2 sppf.Graph
+
+                    let leftChild, rightChild =
+                        if leftPos info1 <= leftPos info2 then
+                            (info1, info2)
+                        else
+                            (info2, info1)
+
+                    if rightPos leftChild <> splitPoint then
+                        errors.Add(
+                            $"Production v={v} split={splitPoint}: left child {leftChild} rightPos={rightPos leftChild}"
+                        )
+
+                    if leftPos rightChild <> splitPoint then
+                        errors.Add(
+                            $"Production v={v} split={splitPoint}: right child {rightChild} leftPos={leftPos rightChild}"
+                        )
+                | _ -> ()
+            | _ -> ()
+
+        if errors.Count = 0 then Ok() else Error(List.ofSeq errors)
+
+    let validateSingleRoot
+        (sppf: BasicSPPF<'t, 'nt>)
+        (startNt: Nonterminal<'nt>)
+        (inputLen: int)
+        : Result<unit, string list> =
+        let n = Graph.vertexCount sppf.Graph
+        let incomingCounts = Array.create n 0
+
+        for i in 0 .. n - 1 do
+            for j in 0 .. n - 1 do
+                if sppf.Graph.Edges.[i, j] then
+                    incomingCounts.[j] <- incomingCounts.[j] + 1
+
+        let noIncoming =
+            [ for v in 0 .. n - 1 do
+                  if incomingCounts.[v] = 0 then
+                      yield v ]
+
+        match noIncoming with
+        | [ rootIdx ] ->
+            match Graph.getVertex rootIdx sppf.Graph with
+            | BasicSppfNodeInfo.Nonterminal(nt, 0, rightPosVal) when nt = startNt && rightPosVal = inputLen -> Ok()
+            | info ->
+                Error
+                    [ $"Single root vertex {rootIdx} has info {info}, expected Nonterminal({startNt}, 0, {inputLen})" ]
+        | roots -> Error [ $"Expected 1 vertex without incoming edges, found {List.length roots}: {roots}" ]

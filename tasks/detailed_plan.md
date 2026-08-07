@@ -1,39 +1,44 @@
-# Task 250: Complete Invariant Checks - Detailed Plan
+# Detailed Plan for Task 251
 
-## S1: Add LanguageRegistry.allCompatibleGrammars
+## Task
 
-**Code:** `src/FLPQ.Languages/LanguageRegistry.fs`
-**Tests:** None (S3 uses it)
+Add more SPPF invariant checking to `checkCykValiantEquivalence`:
+1. Single root invariant: only one vertex without incoming edges, labelled with start nonterminal, leftPos=0, rightPos=input length
+2. SplitPoint consistency: for any Production vertex with two children, splitPoint = lCH.RightPos = rCH.LeftPos
+
+## Subtasks
+
+### S1: Add invariant functions to BasicSppf module
+
+**Code:** `src/FLPQ.Languages/BasicSppf.fs` — add `validateSingleRoot` and `validateProductionSplitConsistency`
+**Tests:** Existing tests cover via `checkCykValiantEquivalence` call in `CrossParserEquivalenceTests.fs`
+**Docs:** None — internal invariant functions don't change public API
+
+**Spec:**
+- Add `validateSingleRoot : BasicSPPF<'t,'nt> -> Nonterminal<'nt> -> int -> Result<unit, string list>` 
+  - Parameters: sppf, expected start nonterminal, input length n
+  - Count vertices with zero incoming edges in the graph
+  - Must be exactly 1
+  - That vertex must be a Nonterminal node with leftPos=0, rightPos=n, and the given start nonterminal
+- Add `validateProductionSplitConsistency : BasicSPPF<'t,'nt> -> Result<unit, string list>`
+  - For each Production vertex with exactly 2 outgoing edges (children):
+    - Get both children's node info
+    - Compute leftPos/rightPos for each child type: Terminal(l,r) → (l,r), Nonterminal(_,l,r) → (l,r), Epsilon(p) → (p,p)
+    - Identify left child (child with smaller leftPos) and right child
+    - Verify production.splitPoint = leftChild.rightPos AND production.splitPoint = rightChild.leftPos
+
+### S2: Call new validators in checkCykValiantEquivalence
+
+**Code:** `tests/FLPQ.TestUtilities/TestHelpers.fs` — add calls to new validators
+**Tests:** Existing tests cover
 **Docs:** None
 
 **Spec:**
-- Add `allCompatibleGrammars : AnnotatedGrammar list` to LanguageRegistry module
-- Filters `allLanguages |> List.collect (_.Grammars) |> List.filter isCykValiantCompatible`
-- `isCykValiantCompatible g = not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage`
+- After existing SPPF invariants in `checkCykValiantEquivalence`, call `validateSingleRoot` and `validateProductionSplitConsistency` for all three SPPFs (CYK, Valiant, Modified Valiant)
+- Use `failwithf` on errors
 
-## S2: Extend checkCykValiantEquivalence with full invariants
-
-**Code:** `tests/FLPQ.TestUtilities/TestHelpers.fs`
-**Tests:** Implicitly tested by CrossParserEquivalenceTests
-**Docs:** None
+### S3: Run all tests
 
 **Spec:**
-- Replace SPPF nonterminal-only comparison with full cell-by-cell equality:
-  `cykSppfTable.[i,j] = valSppfTable.[i,j] = modSppfTable.[i,j]` (including SplitPoint/ProdIdx)
-- For accepted strings:
-  1. Build BasicSPPF from each SPPF table via `fromParsingTable`
-  2. Extract derivation tree via `extractDerivationTree`
-  3. Verify `DerivationTree.leaves` = input string (for each algorithm)
-  4. Verify `validateProductionChildren sppf cnf` passes
-  5. Verify all three SPPFs have same number of SCCs
-- Guard: skip SPPF checks when not accepted or n=0
-
-## S3: Update checkLanguages to use allCompatibleGrammars
-
-**Code:** `tests/FLPQ.Languages.Tests/CrossParserEquivalenceTests.fs`
-**Tests:** Self-contained
-**Docs:** None
-
-**Spec:**
-- Replace `lang.Grammars |> List.filter TestHelpers.isCykValiantCompatible` with `LanguageRegistry.allCompatibleGrammars` in the `checkLanguages` helper
-- Since `allCompatibleGrammars` already aggregates compatible grammars from all languages, the `langs` parameter becomes less necessary but keep for grouping by language-specific string generators
+- Run `dotnet test` to verify all tests pass
+- Ensure zero regressions

@@ -433,3 +433,30 @@ module TestHelpers =
 
             if not (BasicSppf.traverseAndCompare valSppf modSppf) then
                 failwithf "SPPF structural mismatch: Valiant vs Modified Valiant"
+
+            let startNt = cnf.Start
+            let inputLen = input.Length
+
+            match BasicSppf.validateSingleRoot cykSppf startNt inputLen with
+            | Error errors -> failwithf "CYK validateSingleRoot: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateSingleRoot valSppf startNt inputLen with
+            | Error errors -> failwithf "Valiant validateSingleRoot: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateSingleRoot modSppf startNt inputLen with
+            | Error errors -> failwithf "Modified Valiant validateSingleRoot: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateProductionSplitConsistency cykSppf with
+            | Error errors -> failwithf "CYK validateProductionSplitConsistency: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateProductionSplitConsistency valSppf with
+            | Error errors -> failwithf "Valiant validateProductionSplitConsistency: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateProductionSplitConsistency modSppf with
+            | Error errors -> failwithf "Modified Valiant validateProductionSplitConsistency: %A" errors
+            | Ok() -> ()
