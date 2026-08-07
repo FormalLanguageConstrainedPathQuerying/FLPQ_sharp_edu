@@ -369,9 +369,62 @@ module TestHelpers =
 
         for i in 0 .. sn - 1 do
             for j in 0 .. sn - 1 do
-                let cykNts = cykSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
-                let valNts = valSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
-                let modNts = modSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
+                if
+                    cykSppfTable.[i, j] <> valSppfTable.[i, j]
+                    || valSppfTable.[i, j] <> modSppfTable.[i, j]
+                then
+                    failwithf
+                        "SPPF table mismatch at (%d,%d): CYK=%A Valiant=%A Mod=%A"
+                        i
+                        j
+                        cykSppfTable.[i, j]
+                        valSppfTable.[i, j]
+                        modSppfTable.[i, j]
 
-                if cykNts <> valNts || valNts <> modNts then
-                    failwithf "SPPF nonterminal mismatch at (%d,%d): CYK=%A Valiant=%A Mod=%A" i j cykNts valNts modNts
+        if cykSppfAcc && sn > 0 then
+            let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
+
+            let cykSppf = BasicSppf.fromParsingTable cnf cykSppfTable
+            let valSppf = BasicSppf.fromParsingTable cnf valSppfTable
+            let modSppf = BasicSppf.fromParsingTable cnf modSppfTable
+
+            let cykTree = BasicSppf.extractDerivationTree cykSppf
+            let valTree = BasicSppf.extractDerivationTree valSppf
+            let modTree = BasicSppf.extractDerivationTree modSppf
+
+            let cykLeaves =
+                DerivationTree.leaves cykTree |> List.map (fun (t: string) -> Terminal t)
+
+            let valLeaves =
+                DerivationTree.leaves valTree |> List.map (fun (t: string) -> Terminal t)
+
+            let modLeaves =
+                DerivationTree.leaves modTree |> List.map (fun (t: string) -> Terminal t)
+
+            if cykLeaves <> input then
+                failwithf "CYK tree leaves %A <> input %A" cykLeaves input
+
+            if valLeaves <> input then
+                failwithf "Valiant tree leaves %A <> input %A" valLeaves input
+
+            if modLeaves <> input then
+                failwithf "Modified Valiant tree leaves %A <> input %A" modLeaves input
+
+            match BasicSppf.validateProductionChildren cykSppf cnf with
+            | Error errors -> failwithf "CYK validateProductionChildren: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateProductionChildren valSppf cnf with
+            | Error errors -> failwithf "Valiant validateProductionChildren: %A" errors
+            | Ok() -> ()
+
+            match BasicSppf.validateProductionChildren modSppf cnf with
+            | Error errors -> failwithf "Modified Valiant validateProductionChildren: %A" errors
+            | Ok() -> ()
+
+            let cykScc = BasicSppf.countScc cykSppf
+            let valScc = BasicSppf.countScc valSppf
+            let modScc = BasicSppf.countScc modSppf
+
+            if cykScc <> valScc || valScc <> modScc then
+                failwithf "SPPF SCC count mismatch: CYK=%d Valiant=%d Mod=%d" cykScc valScc modScc

@@ -217,7 +217,7 @@ module VsDfa =
 module CykVsValiantVsModifiedValiant =
 
     module private Helpers =
-        let checkLanguages (langs: Language list) (arbType: System.Type) (tokenize: string -> Terminal<string> list) =
+        let checkLanguages (arbType: System.Type) (tokenize: string -> Terminal<string> list) =
             let config = Config.QuickThrowOnFailure.WithMaxTest(100).WithArbitrary([ arbType ])
 
             Check.One(
@@ -225,11 +225,8 @@ module CykVsValiantVsModifiedValiant =
                 fun (s: string) ->
                     let input = tokenize s
 
-                    langs
-                    |> List.iter (fun lang ->
-                        lang.Grammars
-                        |> List.filter TestHelpers.isCykValiantCompatible
-                        |> List.iter (fun g -> TestHelpers.checkCykValiantEquivalence g.Grammar input))
+                    LanguageRegistry.allCompatibleGrammars
+                    |> List.iter (fun g -> TestHelpers.checkCykValiantEquivalence g.Grammar input)
             )
 
         let singleCharTokenize (s: string) =
@@ -239,60 +236,28 @@ module CykVsValiantVsModifiedValiant =
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on AB-string languages`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.Dyck1
-              LanguageRegistry.AltAB
-              LanguageRegistry.ANB
-              LanguageRegistry.ANBN
-              LanguageRegistry.AStarBStar
-              LanguageRegistry.SingleA
-              LanguageRegistry.SingleAB
-              LanguageRegistry.EpsilonOnly ]
-            typeof<GenToArbitrary.AbString>
-            Helpers.singleCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.AbString> Helpers.singleCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on A-string languages`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.APlus; LanguageRegistry.AStar ]
-            typeof<GenToArbitrary.AString>
-            Helpers.singleCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.AString> Helpers.singleCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on expression language`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.ArithExpr ]
-            typeof<GenToArbitrary.ExprString>
-            Helpers.multiCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.ExprString> Helpers.multiCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on operator expression language`` () =
-        Helpers.checkLanguages [ LanguageRegistry.OpExpr ] typeof<GenToArbitrary.OpExprString> Helpers.multiCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.OpExprString> Helpers.multiCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on multi-symbol languages`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.TwoTrackDyck; LanguageRegistry.DualDyck ]
-            typeof<GenToArbitrary.AbcdxyString>
-            Helpers.singleCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.AbcdxyString> Helpers.singleCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on PolyAlphabet languages`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.LL2Test; LanguageRegistry.LL3Test ]
-            typeof<GenToArbitrary.PolyAlphabetString>
-            Helpers.singleCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.PolyAlphabetString> Helpers.singleCharTokenize
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on constrained languages`` () =
-        Helpers.checkLanguages
-            [ LanguageRegistry.DoubleA
-              LanguageRegistry.AOrEps
-              LanguageRegistry.ABPlus
-              LanguageRegistry.FourTerm
-              LanguageRegistry.MixedPairs
-              LanguageRegistry.AX
-              LanguageRegistry.SingleB
-              LanguageRegistry.TestInfraGrammars ]
-            typeof<GenToArbitrary.AbString>
-            Helpers.singleCharTokenize
+        Helpers.checkLanguages typeof<GenToArbitrary.AbString> Helpers.singleCharTokenize
