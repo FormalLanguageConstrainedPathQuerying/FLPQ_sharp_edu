@@ -262,6 +262,38 @@ module BasicSppf =
                     | _ -> List.head children
             }
 
+    let validateProductionChildren (sppf: BasicSPPF<'t, 'nt>) (cnf: Grammar<'t, 'nt>) : Result<unit, string list> =
+        let n = Graph.vertexCount sppf.Graph
+        let errors = ResizeArray<string>()
+
+        for v in 0 .. n - 1 do
+            match Graph.getVertex v sppf.Graph with
+            | BasicSppfNodeInfo.Production(ruleIndex, splitPoint) ->
+                let childCount =
+                    [ 0 .. n - 1 ] |> List.filter (fun w -> sppf.Graph.Edges.[v, w]) |> List.length
+
+                if childCount < 1 || childCount > 2 then
+                    errors.Add(
+                        $"Production node v={v} ruleIdx={ruleIndex} split={splitPoint}: "
+                        + $"has {childCount} children, expected 1 or 2"
+                    )
+                elif ruleIndex < 0 || ruleIndex >= List.length cnf.Rules then
+                    errors.Add(
+                        $"Production node v={v}: ruleIndex={ruleIndex} out of range (0..{List.length cnf.Rules - 1})"
+                    )
+                else
+                    let rule = cnf.Rules.[ruleIndex]
+                    let rhsLen = Rhs.toNonEpsilonList rule.Rhs |> List.length
+
+                    if childCount <> rhsLen then
+                        errors.Add(
+                            $"Production node v={v} ruleIdx={ruleIndex} ({rule.Lhs} -> {rule.Rhs}): "
+                            + $"has {childCount} children, RHS length is {rhsLen}"
+                        )
+            | _ -> ()
+
+        if errors.Count = 0 then Ok() else Error(List.ofSeq errors)
+
     let countScc (sppf: BasicSPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0

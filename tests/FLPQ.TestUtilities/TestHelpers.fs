@@ -316,3 +316,62 @@ module TestHelpers =
                     Some(g.Name, input)
                 else
                     None))
+
+    let isCykValiantCompatible (g: AnnotatedGrammar) : bool =
+        not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage
+
+    let checkCykValiantEquivalence (g: Grammar<string, string>) (input: Terminal<string> list) : unit =
+        let cykTable, cykAcc = Cyk.parseWithTable Grammar.freshStringNonterminal g input
+        let valTable, valAcc = Valiant.parseWithTable Grammar.freshStringNonterminal g input
+
+        let modTable, modAcc =
+            Valiant.parseModifiedWithTable Grammar.freshStringNonterminal g input
+
+        if cykAcc <> valAcc || valAcc <> modAcc then
+            failwithf "Acceptance mismatch: CYK=%b Valiant=%b ModValiant=%b" cykAcc valAcc modAcc
+
+        let n = Matrix.rows cykTable
+
+        for i in 0 .. n - 1 do
+            for j in 0 .. n - 1 do
+                if cykTable.[i, j] <> valTable.[i, j] || valTable.[i, j] <> modTable.[i, j] then
+                    failwithf
+                        "Table mismatch at (%d,%d): CYK=%A Valiant=%A Mod=%A"
+                        i
+                        j
+                        cykTable.[i, j]
+                        valTable.[i, j]
+                        modTable.[i, j]
+
+        let cykSppfTable, cykSppfAcc =
+            Cyk.parseWithSppfTable Grammar.freshStringNonterminal g input
+
+        let valSppfTable, valSppfAcc =
+            Valiant.parseWithSppfTable Grammar.freshStringNonterminal g input
+
+        let modSppfTable, modSppfAcc =
+            Valiant.parseModifiedWithSppfTable Grammar.freshStringNonterminal g input
+
+        if cykSppfAcc <> valSppfAcc || valSppfAcc <> modSppfAcc then
+            failwithf "SPPF acceptance mismatch: CYK=%b Valiant=%b ModValiant=%b" cykSppfAcc valSppfAcc modSppfAcc
+
+        if cykAcc <> cykSppfAcc || valAcc <> valSppfAcc || modAcc <> modSppfAcc then
+            failwithf
+                "Acceptance vs SPPF acceptance mismatch: CYK=%b/%b Valiant=%b/%b Mod=%b/%b"
+                cykAcc
+                cykSppfAcc
+                valAcc
+                valSppfAcc
+                modAcc
+                modSppfAcc
+
+        let sn = Matrix.rows cykSppfTable
+
+        for i in 0 .. sn - 1 do
+            for j in 0 .. sn - 1 do
+                let cykNts = cykSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
+                let valNts = valSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
+                let modNts = modSppfTable.[i, j] |> Set.map (fun e -> e.Nt)
+
+                if cykNts <> valNts || valNts <> modNts then
+                    failwithf "SPPF nonterminal mismatch at (%d,%d): CYK=%A Valiant=%A Mod=%A" i j cykNts valNts modNts

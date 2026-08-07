@@ -113,13 +113,17 @@ module LanguageRegistry =
                 None
 
     let private mkEntry (name: string) (text: string) (props: GrammarProperties) (notes: string) : AnnotatedGrammar =
-        let grammar, rsm, isRsmDerived =
-            match parseGrammarSafe text with
-            | Some(g, r) -> (g, r, false)
+        let parseResult = parseGrammarSafe text
+
+        let grammar, rsm =
+            match parseResult with
+            | Some(g, r) -> (g, r)
             | None ->
-                let rsm = RsmBuilder.buildRSMFromText text
-                let grammar = RsmToGrammar.convert rsm
-                (grammar, rsm, true)
+                let r = RsmBuilder.buildRSMFromText text
+                let g = RsmToGrammar.convert r
+                (g, r)
+
+        let isRsmDerived = Option.isNone parseResult
 
         let augmented = augmentStringGrammar grammar
 

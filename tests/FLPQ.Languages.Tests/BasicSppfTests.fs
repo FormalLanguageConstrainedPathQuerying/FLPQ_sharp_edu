@@ -115,3 +115,57 @@ let ``leaf nonterminal returns leaf`` () =
     match tree with
     | Leaf(Symbol.N(Nonterminal nt)) -> Assert.Equal("S", nt)
     | _ -> Assert.Fail("Expected Leaf with Nonterminal")
+
+[<Fact>]
+let ``validateProductionChildren passes for SPPF from CYK`` () =
+    let grammar = Grammar.parseGrammar "S -> a b"
+
+    let input = [ Terminal "a"; Terminal "b" ]
+
+    let table, accepted =
+        Cyk.parseWithSppfTable Grammar.freshStringNonterminal grammar input
+
+    Assert.True(accepted)
+
+    let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+    let sppf = BasicSppf.fromParsingTable cnf table
+
+    match validateProductionChildren sppf cnf with
+    | Ok() -> ()
+    | Error errors -> Assert.Fail(String.concat "\n" errors)
+
+[<Fact>]
+let ``validateProductionChildren passes for SPPF from Valiant`` () =
+    let grammar = Grammar.parseGrammar "S -> a b"
+
+    let input = [ Terminal "a"; Terminal "b" ]
+
+    let table, accepted =
+        Valiant.parseWithSppfTable Grammar.freshStringNonterminal grammar input
+
+    Assert.True(accepted)
+
+    let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+    let sppf = BasicSppf.fromParsingTable cnf table
+
+    match validateProductionChildren sppf cnf with
+    | Ok() -> ()
+    | Error errors -> Assert.Fail(String.concat "\n" errors)
+
+[<Fact>]
+let ``validateProductionChildren passes for SPPF from Modified Valiant`` () =
+    let grammar = Grammar.parseGrammar "S -> a b"
+
+    let input = [ Terminal "a"; Terminal "b" ]
+
+    let table, accepted =
+        Valiant.parseModifiedWithSppfTable Grammar.freshStringNonterminal grammar input
+
+    Assert.True(accepted)
+
+    let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+    let sppf = BasicSppf.fromParsingTable cnf table
+
+    match validateProductionChildren sppf cnf with
+    | Ok() -> ()
+    | Error errors -> Assert.Fail(String.concat "\n" errors)
