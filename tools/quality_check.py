@@ -62,11 +62,11 @@ def main() -> None:
     # --- Final status ---
     if "BLOCKED" in statuses:
         lines.append("")
-        lines.append("STATUS: BLOCKED")
+        lines.append("COMMIT_GATE: BLOCKED")
         exit_code = 1
     else:
         lines.append("")
-        lines.append("STATUS: PASS")
+        lines.append("COMMIT_GATE: PASS")
         exit_code = 0
 
     lines.append("")

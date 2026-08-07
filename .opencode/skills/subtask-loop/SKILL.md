@@ -79,7 +79,11 @@ Stage any formatted files (`git add`). Then run the quality check tool:
 python3 tools/quality_check.py
 ```
 
-This runs format check + build without timeout. Read and deeply analyze `tmp/quality-check.txt`. If STATUS: BLOCKED — fix all problems and re-run.
+This runs format check + build without timeout. Read and deeply analyze `tmp/quality-check.txt`. If `COMMIT_GATE: BLOCKED` — fix all problems and re-run.
+
+> **WARNING**: `quality_check.py` runs format + build ONLY. It is NOT the hard gate.
+> Its `COMMIT_GATE: PASS` output does NOT authorize merge. Only `hard_gate.py` output
+> (`STATUS: PASS`) authorizes merge. Confusing the two will skip tests, coverage, and lint.
 
 **Hard gate — do not proceed to step 5 unless this passes.**
 

@@ -29,6 +29,16 @@ The following Python scripts in `tools/` automate quality gate execution. **Alwa
 
 See `tools/README.md` for the full tool list and output conventions. See `docs/developer/guides/tools.md` for per-tool details (steps, thresholds, output format examples).
 
+## Gate Types
+
+| Script | Steps | Output Label | Use |
+|--------|-------|-------------|-----|
+| `tools/quality_check.py` | Format → Build | `COMMIT_GATE: PASS` | Pre-commit (subtask step 4) |
+| `tools/hard_gate.py` | Format → Build → Tests (per-project) → Coverage → Lint (per-project) | `STATUS: PASS` | Pre-merge (task completion) |
+
+**Never merge on `COMMIT_GATE: PASS`.** The label is intentionally distinct from `STATUS: PASS`
+to prevent confusion. Confusing the two means skipping tests, coverage, and lint.
+
 ### Two kinds of tools
 
 | Kind | Examples | How to read output |
@@ -94,10 +104,10 @@ python3 tools/quality_check.py
 The script writes to `tmp/quality-check.txt`. Read that file directly:
 
 ```bash
-grep "STATUS" tmp/quality-check.txt
+grep "COMMIT_GATE" tmp/quality-check.txt
 ```
 
-If STATUS: BLOCKED — read the detailed log in the same file, fix all problems, and re-run. **Do NOT redirect** the script's stdout — the file it writes is the single source of truth.
+If `COMMIT_GATE: BLOCKED` — read the detailed log in the same file, fix all problems, and re-run. **Do NOT redirect** the script's stdout — the file it writes is the single source of truth.
 
 ## Task Verification
 
