@@ -1,14 +1,12 @@
-# Task 248: Fix Valiant SPPF SplitPoint - Detailed Plan
+# Task 249: Fix BasicSppf.fromParsingTable Production Node Reuse - Detailed Plan
 
-## S1: Fix mxmSetSppf to use absolute SplitPoint
+## S1: Replace getOrCreate for Production nodes with direct allocation
 
-**Code:** `src/FLPQ.Languages/Valiant.fs` — modify `mxmSetSppf` and `doMultiplicationsSppf`
-**Tests:** None (verified by existing `checkCykValiantEquivalence` tests)
+**Code:** `src/FLPQ.Languages/BasicSppf.fs` — modify `processCell` in `fromParsingTable`
+**Tests:** None (verified by existing BasicSppf tests and tree yield tests)
 **Docs:** None
 
 **Spec:**
-- `mxmSetSppf` currently sets `SplitPoint = k` where `k` is the local inner-dimension index from `Matrix.mxmi`
-- The left submatrix slice is extracted from global table starting at column `m1.Col`
-- Fix: add `leftColOffset: int` parameter to `mxmSetSppf`, use `SplitPoint = leftColOffset + k`
-- Update call site in `doMultiplicationsSppf`: pass `m1.Col` as the offset
-- After fix, Valiant SPPF tables must be byte-identical to CYK SPPF tables
+- In `fromParsingTable`, replace `getOrCreate(Production(...))` with direct vertex allocation
+- Production nodes are context-dependent (parent cell determines children), so sharing is incorrect
+- Nonterminal and Terminal nodes keep `getOrCreate` deduplication (correct for these)

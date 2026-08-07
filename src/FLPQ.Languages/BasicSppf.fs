@@ -100,8 +100,8 @@ module BasicSppf =
                         for entry in entries do
                             let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, i, j + 1))
 
-                            let prodNode =
-                                getOrCreate (BasicSppfNodeInfo.Production(entry.ProdIdx, entry.SplitPoint))
+                            let prodNode = vertices.Count
+                            vertices.Add(BasicSppfNodeInfo.Production(entry.ProdIdx, entry.SplitPoint))
 
                             edges.Add(ntNode, prodNode)
 
