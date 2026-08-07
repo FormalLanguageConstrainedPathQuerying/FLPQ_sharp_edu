@@ -974,10 +974,19 @@
      5.   Fix 7.5 (RV24-RV26): Remove TestHelpers.grammarToRsm and TestHelpers.grammarToEbnfText. Replace all ~29 call sites of grammarToRsm with direct g.Rsm access. Keep LanguageRegistry.grammarToEbnfText (private) and buildRegexRsm.
      6.   Fix 7.6 (RV27): Replace data/*.bnf file references in CLI tests with temp files created from LanguageRegistry Text entries. Remove the bnf files or ensure they're generated on-demand.
      7.   Run all tests — all must pass with zero regressions.
- 246. [done] Refactor LanguageRegistry: semantic naming, distribute MiscTestGrammars, improve isEbnfText.
+246. [done] Refactor LanguageRegistry: semantic naming, distribute MiscTestGrammars, improve isEbnfText.
      1.   Rename all grammars from numbered (`grammar1`, `grammar3`, ...) to semantic names (`dyckAmbiguousEps`, `aPlusRightRecursive`, ...).
      2.   Distribute MiscTestGrammars entries to existing languages (SingleA, SingleAB, AStar, Dyck1, ArithExpr) or promote to new full-featured languages (DoubleA, AOrEps, ABPlus, FourTerm, MixedPairs, AX, SingleB).
      3.   Keep 5 pure infrastructure grammars (parseGrammar/tocnf tests) in a dedicated `TestInfraGrammars` language.
      4.   Improve `isEbnfText`: use the existing EBNF parser's Regexp AST — parse text, walk each rule's AST; if ANY rule contains `RAlt` or `RStar` → true EBNF; if ALL rules are pure concatenation (RTerm, RNonterm, RSeq, REps only) → plain CFG. Ban `+`, `*`, `?`, `|`, `(`, `)` as terminal names.
      5.   Update all test call sites for renamed grammar references.
      6.   Run all tests — zero regressions.
+247. Improve CYK and Valiant tests
+     1.   For CYK vs Valiant and vs Modified Valiant use the same scheme as for GLL vs RNGLR: for all grammars in language registry for arbitrary string these algorithms myst acceps and rejects simultatiously.
+     2.   Create common functions to collect all grammars in registry. Use it in all respective points.
+     3.   Create common helpers if necessary.
+     4.   Use the same sceme as for GLL and RNGLR: create common function that checks set of invariant
+          1.   If string accepted that leafs of tree extracted from the basic sppf is an input string
+          2.   Final table for CYK, Valinat and modified Valiant exactly the same for all accepted and rejected strings.
+          3.   In basic SPPF for all three algorithms any Production node has one or two childs. Moreover, for any production node with `ruleIndex` = k, length of RHS of production k is exactly a number of childs.
+          4.   For the same string SPPF-s from these three algorithms structurally equivalent.
