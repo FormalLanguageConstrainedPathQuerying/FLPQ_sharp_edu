@@ -65,7 +65,7 @@ Supplementary materials for the book on formal language constrained path queryin
       `git diff --stat HEAD..dev` shows what was modified
     - Report status to the user: "S1-S3 committed, S4 pending, ..."
 6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings
- 7. Run the hard gate — see `quality-gates` skill for the correct async invocation (DO NOT run `python3 tools/hard_gate.py` synchronously — it will hang). The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
+ 7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
 8. Mark the task `[done]` in `tasks.md`. The `[done]` tag means COMPLETE:
    every subtask committed, every requirement met, every test passing, zero
    known failures or unresolved limitations. Never mark a task `[done]` if
@@ -107,3 +107,9 @@ Operational procedures are in standalone skills. Load the relevant skill for eac
 | Persist user guidance from blocked tasks back into task descriptions | `user-guidance-transfer` |
 | Debugging (print traces, test hangs, seq laziness) | `debugging` |
 | Reusing (no duplicates, one source of truth, reuse checklist) | `reusing` |
+
+### When `skill()` Fails
+
+If the `skill` tool returns "not found" but the skill file exists on disk, read the file directly:
+`.opencode/skills/<name>/SKILL.md`. This can happen when the tool roster is out of sync with
+the filesystem (known gap: `debugging`).

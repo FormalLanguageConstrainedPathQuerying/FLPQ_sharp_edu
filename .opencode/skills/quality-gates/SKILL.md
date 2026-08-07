@@ -140,7 +140,7 @@ tail -20 tmp/hard-gate.txt   # current detailed output
 ### Starting the Gate
 
 ```bash
-python3 tools/hard_gate.py &
+nohup python3 tools/hard_gate.py > /dev/null 2>&1 &
 echo $! > tmp/hard-gate.pid
 ```
 

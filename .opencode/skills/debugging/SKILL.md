@@ -1,5 +1,8 @@
 # Skill: debugging
 
+> **Note:** If `skill("debugging")` returns "not found", read this file directly with the
+> Read tool. The skill file exists on disk but may not be registered in the tool roster.
+
 ## Debugging with Print Trace
 
 When code hangs, times out, or produces wrong results, add trace markers to isolate the stuck step.
