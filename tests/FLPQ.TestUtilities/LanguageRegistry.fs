@@ -1515,12 +1515,8 @@ module LanguageRegistry =
           SingleB
           TestInfraGrammars ]
 
-    /// All grammars compatible with CYK/Valiant equivalence checks.
-    /// Filters out RSM-derived grammars and those that do not cover the full language.
-    let allCompatibleGrammars: AnnotatedGrammar list =
-        allLanguages
-        |> List.collect _.Grammars
-        |> List.filter (fun g -> not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage)
+    /// All grammars from all languages (no filtering).
+    let allGrammars: AnnotatedGrammar list = allLanguages |> List.collect _.Grammars
 
     /// Look up a grammar by name within a language.
     let findGrammar (lang: Language) (name: string) : AnnotatedGrammar =

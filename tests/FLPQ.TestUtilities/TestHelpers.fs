@@ -317,8 +317,7 @@ module TestHelpers =
                 else
                     None))
 
-    let isCykValiantCompatible (g: AnnotatedGrammar) : bool =
-        not g.Properties.IsRsmDerived && not g.Properties.DoesNotCoverFullLanguage
+
 
     let checkCykValiantEquivalence (g: Grammar<string, string>) (input: Terminal<string> list) : unit =
         let cykTable, cykAcc = Cyk.parseWithTable Grammar.freshStringNonterminal g input
@@ -428,3 +427,9 @@ module TestHelpers =
 
             if cykScc <> valScc || valScc <> modScc then
                 failwithf "SPPF SCC count mismatch: CYK=%d Valiant=%d Mod=%d" cykScc valScc modScc
+
+            if not (BasicSppf.traverseAndCompare cykSppf valSppf) then
+                failwithf "SPPF structural mismatch: CYK vs Valiant"
+
+            if not (BasicSppf.traverseAndCompare valSppf modSppf) then
+                failwithf "SPPF structural mismatch: Valiant vs Modified Valiant"

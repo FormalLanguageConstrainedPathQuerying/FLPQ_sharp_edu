@@ -377,3 +377,48 @@ module BasicSppf =
                 strongconnect v
 
         sccCount
+
+    let traverseAndCompare (a: BasicSPPF<'t, 'nt>) (b: BasicSPPF<'t, 'nt>) : bool =
+        let n = Graph.vertexCount a.Graph
+
+        if n <> Graph.vertexCount b.Graph then
+            false
+        else
+            let visited = HashSet<int * int>()
+
+            let rec go (va: int) (vb: int) : bool =
+                if visited.Contains(va, vb) then
+                    true
+                else
+                    visited.Add(va, vb) |> ignore
+
+                    let infoA = Graph.getVertex va a.Graph
+                    let infoB = Graph.getVertex vb b.Graph
+
+                    if infoA <> infoB then
+                        false
+                    else
+                        let childrenA =
+                            [ for w in 0 .. n - 1 do
+                                  if a.Graph.Edges.[va, w] then
+                                      yield w ]
+
+                        let childrenB =
+                            [ for w in 0 .. n - 1 do
+                                  if b.Graph.Edges.[vb, w] then
+                                      yield w ]
+
+                        if childrenA.Length <> childrenB.Length then
+                            false
+                        else
+                            let sortedA = childrenA |> List.sortBy (fun w -> Graph.getVertex w a.Graph)
+                            let sortedB = childrenB |> List.sortBy (fun w -> Graph.getVertex w b.Graph)
+
+                            (sortedA, sortedB)
+                            ||> List.forall2 (fun ca cb ->
+                                if Graph.getVertex ca a.Graph <> Graph.getVertex cb b.Graph then
+                                    false
+                                else
+                                    go ca cb)
+
+            go a.RootIndex b.RootIndex
