@@ -1009,14 +1009,7 @@
 
      **Downstream impact:** `BasicSppf.fromParsingTable` (`BasicSppf.fs:119-136`) uses `entry.SplitPoint` to split the cell range `[i,j]` into child sub-ranges: `childNtInCell i entry.SplitPoint leftNt` and `childNtInCell (entry.SplitPoint + 1) j rightNt`. With wrong SplitPoints, these lookups target wrong table cells, find no matching nonterminals, and leave Production nodes with missing children.
 
-     **Fix:** In `doMultiplicationsSppf` (`Valiant.fs:686-717`), after `mxmSetSppf` produces the product matrix, adjust each entry's SplitPoint by adding `m1.Col` (the left submatrix's global column). This makes `SplitPoint = m1.Col + k = global absolute split position`, matching CYK's convention. For top-level (m1.Col=0), the adjustment is a no-op. For nested submatrices (m1.Col>0), it adds the correct offset. Implementation: iterate the product matrix in-place:
-     ```
-     for i in 0 .. mTarget.Size - 1 do
-         for j in 0 .. mTarget.Size - 1 do
-             product.[i, j] <- product.[i, j] |> Set.map (fun entry ->
-                 { entry with SplitPoint = m1.Col + entry.SplitPoint })
-     ```
-     **Verification:** After fix, Valiant SPPF tables must be byte-identical to CYK SPPF tables for ALL inputs (verified by `SppfPropertyTests.TableEquivalenceFactTests`). All 492 existing tests must pass. Golden files may need regeneration if any SPPF table rendering tests are affected.
+     **Verification:** After fix, Valiant SPPF tables must be byte-identical to CYK SPPF tables for ALL inputs: add respective invariant checking into CYK vs Valiant tests. For all acceppted and rejected strings tables must be identical. All 492 existing tests must pass. Golden files may need regeneration if any SPPF table rendering tests are affected.
 
 249. Fix BasicSppf.fromParsingTable Production node reuse.
 
@@ -1029,10 +1022,7 @@
      **Example:** For grammar with terminal rule `N -> a` (ProdIdx=0), this rule appears at positions 0 and 1 in a 2-char input "aa". Both produce entries with `ProdIdx=0` but different SplitPoints (0 and 1). At position 0: `Production(0, 0)` is created. At position 1: `Production(0, 1)` is created. These have different SplitPoints so `getOrCreate` creates distinct nodes. Now, when binary rules combine these, `Production(0, 0)` might be referenced from different parent cells — sharing accumulates spurious children.
 
      **Fix:** Replace `getOrCreate(Production(...))` with direct vertex allocation per occurrence:
-     ```
-     let prodNode = vertices.Count
-     vertices.Add(BasicSppfNodeInfo.Production(entry.ProdIdx, entry.SplitPoint))
-     ```
+    
      Nonterminal and Terminal nodes keep their `getOrCreate` deduplication — sharing is correct for these (same Nonterminal at same position IS the same node). Production nodes are context-dependent (their parent Nonterminal determines which child cells are visited).
 
      **Verification:** After fix + task 248, `extractDerivationTree` must produce correct tree leaves (tree yield = input string), and `validateProductionChildren` must pass for all three algorithms (CYK, Valiant, Modified Valiant). The `BasicSppfTests` must all pass.
@@ -1049,12 +1039,7 @@
         1. **Tree leaves match input:** For accepted strings, build BasicSPPF from each of the three SPPF tables via `fromParsingTable`, extract a derivation tree via `extractDerivationTree`, verify `DerivationTree.leaves` equals the input string (as string list). Verify for all three algorithms separately — each must produce a correct tree.
         2. **SPPF tables byte-identical (including SplitPoint):** Replace the current nonterminal-only comparison with full cell-by-cell equality: `cykSppfTable.[i,j] = valSppfTable.[i,j] = modSppfTable.[i,j]`. After task 248, this MUST hold — SplitPoint values are now identical.
         3. **Production children count = RHS length:** For each of the three SPPFs, call `BasicSppf.validateProductionChildren sppf cnf`. Verifies that every Production node has 1-2 children, and child count equals the RHS length of the referenced production rule (`cnf.Rules.[ruleIndex]`).
-        4. **SPPF graphs structurally equivalent:** Build BasicSPPF from each table. Verify graph isomorphism:
-           - Same vertex count
-           - Same vertex label multiset: count occurrences of each `BasicSppfNodeInfo` variant (Terminal, Nonterminal, Epsilon, Production) with position/name data
-           - Same edge count
-           - Same SCC count (`BasicSppf.countNonTrivialScc`) — a coarser structural property that must also match
-           - Note: full graph isomorphism (vertex-level edge-preserving bijection) is NP-hard in general; the combination of vertex count + label multiset + edge count + SCC count is a practical structural equivalence check for SPPF graphs built from identical tables
+        4. **SPPF graphs structurally equivalent:** Build BasicSPPF from each table. Verify graph identical by synchronious traversing from root.
         5. **Guard for empty/rejected input:** Skip SPPF checks when `not accepted || n == 0`.
 
      3. Update the `checkLanguages` helper in `CrossParserEquivalenceTests.CykVsValiantVsModifiedValiant` to use `LanguageRegistry.allCompatibleGrammars` instead of inline `lang.Grammars |> List.filter`.
