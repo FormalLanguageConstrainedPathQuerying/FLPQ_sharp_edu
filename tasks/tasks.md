@@ -991,7 +991,7 @@
           3.   In basic SPPF for all three algorithms any Production node has one or two childs. Moreover, for any production node with `ruleIndex` = k, length of RHS of production k is exactly a number of childs.
            4.   For the same string SPPF-s from these three algorithms structurally equivalent.
 
-248. Fix Valiant SPPF SplitPoint to match CYK absolute-position convention.
+248. [done] Fix Valiant SPPF SplitPoint to match CYK absolute-position convention.
 
      **Analysis:** CYK stores `SplitPoint` as the **absolute** position of the split within the original input string. For cell `[i,j]` representing substring from position `i` to `j`, the split point `k` is a global index where `i ≤ k < j`: left child covers `[i,k]`, right child covers `[k+1,j]` (`Cyk.fs:232,249`).
 
@@ -1011,7 +1011,7 @@
 
      **Verification:** After fix, Valiant SPPF tables must be byte-identical to CYK SPPF tables for ALL inputs: add respective invariant checking into CYK vs Valiant tests. For all acceppted and rejected strings tables must be identical. All 492 existing tests must pass. Golden files may need regeneration if any SPPF table rendering tests are affected.
 
-249. Fix BasicSppf.fromParsingTable Production node reuse.
+249. [done] Fix BasicSppf.fromParsingTable Production node reuse.
 
      **Analysis:** `fromParsingTable` (`BasicSppf.fs:103-104`) uses `getOrCreate` to allocate a Production node:
      ```
@@ -1027,7 +1027,7 @@
 
      **Verification:** After fix + task 248, `extractDerivationTree` must produce correct tree leaves (tree yield = input string), and `validateProductionChildren` must pass for all three algorithms (CYK, Valiant, Modified Valiant). The `BasicSppfTests` must all pass.
 
-250. Complete invariant checks and structural SPPF equivalence for CYK/Valiant/Modified Valiant.
+250. [done] Complete invariant checks and structural SPPF equivalence for CYK/Valiant/Modified Valiant.
 
      **Prerequisites:** Tasks 248 and 249.
 
@@ -1047,3 +1047,6 @@
      4. Run all tests — zero regressions. All 7 cross-parser test groups must pass with the restored invariants.
 
      5. If any invariant fails for a specific algorithm, that algorithm has a residual bug — fix it before marking the task done.
+  251. Add more SPPF invariant checking to `checkCykValiantEquivalence`
+       1.   There is only one vertex without incoming edges in SPPF. This vertex is labelled with start nonterminal, leftPos in 0, and right pos is input length
+       2.   For any Production vertex with two child lCH and rCH, splitPoint of the vertex is equal to lCH.RightPos, and splitPoint of the vertex is equal to rCH.LeftPos  
