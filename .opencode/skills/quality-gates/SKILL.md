@@ -19,7 +19,17 @@ echo $! > tmp/hard-gate.pid
 ```
 
 The script writes its own output file (`tmp/hard-gate.txt`). Do **NOT** redirect (`>`, `2>&1`). Do **NOT** run synchronously.
-Poll with: `grep "STATUS:" tmp/hard-gate.txt`
+
+**NEVER use any of these** — they discard the crash traceback that the script writes to stderr:
+
+- `nohup python3 tools/hard_gate.py > /dev/null 2>&1 &` — silences crash diagnostics
+- `bash -c 'python3 tools/hard_gate.py' &>/dev/null &` — same problem
+- Any wrapper or redirect that discards stderr
+
+The script writes progress incrementally to `tmp/hard-gate.txt` after each step and includes
+its PID in the summary header. If the process crashes, it writes a `--- CRASH TRACEBACK ---` section
+to the same file and a copy of the traceback to stderr. **Crashes are self-diagnosing** — read the
+output file, not the terminal. Poll with: `grep "STATUS:" tmp/hard-gate.txt`
 
 Every quality gate MUST pass before a commit or merge. A single failing test, lint warning, or coverage drop is a blocker. Zero means absolute zero. Non-zero exit code from any gate tool means STOP — no exceptions, no partial passes.
 
@@ -143,18 +153,15 @@ tail -20 tmp/hard-gate.txt   # current detailed output
 
 - [ ] `&` appended to the command to launch in background
 - [ ] PID written to `tmp/hard-gate.pid`
-- [ ] No `>`, `>>`, or `2>&1` redirect — script writes its own output file
+- [ ] No `>`, `>>`, `2>&1`, `nohup`, or `bash -c` wrapper — script writes its own output file and needs stderr for crash traceback
 - [ ] Poll interval: 5 minutes minimum (do not poll more frequently)
 - [ ] Source files committed and working tree clean
 
 ### Starting the Gate
 
-```bash
-nohup python3 tools/hard_gate.py > /dev/null 2>&1 &
-echo $! > tmp/hard-gate.pid
-```
+Use the invocation from the **Invocation** section above (no `nohup`, no redirect).
 
-The gate writes progress incrementally to `tmp/hard-gate.txt` after each step. **Do NOT redirect** stdout/stderr — the script manages its own file I/O. Read `tmp/hard-gate.txt` directly for all status information. If the Python process crashes, a traceback may appear on stderr in your terminal; that is the only reason to check the terminal output.
+The output file (`tmp/hard-gate.txt`) is the single source of truth. Its summary header includes the gate PID — use it to identify the process without relying solely on `tmp/hard-gate.pid`. If the gate process dies, the file will show either a `--- CRASH TRACEBACK ---` section or the last step's timestamp in its detailed log.
 
 ### Polling Status
 
@@ -187,7 +194,10 @@ Check the three outputs from above together:
 2. **Timestamps** (in detailed log via `tail -20`): compare the last timestamp with `ps etime`. If the current step started recently relative to the gate's total run time, it's expected.
 3. **Process health** (`ps`): if the process is alive and has a reasonable `etime`, keep polling.
 
-**If the process is gone but STATUS shows IN_PROGRESS** — the gate crashed before writing its final status. Read `tail -20 tmp/hard-gate.txt` to identify the last completed step. Fix the problem at that step and re-run from the start.
+**If the process is gone but STATUS shows IN_PROGRESS** — the gate crashed before writing its final status.
+The output file contains a `--- CRASH TRACEBACK ---` section with the full Python traceback.
+Read the last 30 lines: `tail -30 tmp/hard-gate.txt`. The traceback pinpoints the failing line;
+the detailed log above it shows which step was running. Fix the problem and re-run from the start.
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
 

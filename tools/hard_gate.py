@@ -16,6 +16,8 @@ import os
 import re
 import subprocess
 import sys
+import time
+import traceback
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
@@ -96,8 +98,13 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
     try:
         tree = ET.parse("tmp/coverage.cobertura")
         root = tree.getroot()
-    except Exception as e:
-        per_project_lines.append(f"  ERROR parsing coverage data: {e}")
+    except ET.ParseError as e:
+        per_project_lines.append(f"  ERROR: corrupt coverage data ({e})")
+        try:
+            size = os.path.getsize("tmp/coverage.cobertura")
+            per_project_lines.append(f"  coverage.cobertura size: {size} bytes")
+        except Exception:
+            pass
         return per_project_lines, ["PARSE_ERROR"], False
 
     total_covered = 0
@@ -249,6 +256,7 @@ def main() -> None:
 
     lines: list[str] = []
     lines.append("HARD GATE SUMMARY")
+    lines.append(f"PID: {os.getpid()}  Started: {datetime.now().strftime('%H:%M:%S')}")
     lines.append("")
     detailed_logs: list[str] = []
     overall_pass = True
@@ -269,6 +277,7 @@ def main() -> None:
 
     # --- Step 1: Format ---
     detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 1 (Format) started")
+    flush_log(lines, detailed_logs)
     fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
     detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas . --check) ---")
     detailed_logs.append(fmt_stdout.strip() if fmt_stdout else "(no output)")
@@ -285,6 +294,7 @@ def main() -> None:
 
     # --- Step 2: Build ---
     detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 2 (Build) started")
+    flush_log(lines, detailed_logs)
     build_rc, build_stdout, build_stderr = run_cmd(
         ["dotnet", "build", SOLUTION, "-c", "Debug"]
     )
@@ -309,6 +319,7 @@ def main() -> None:
     # --- Step 3: Tests (per project) ---
     test_start_step = current_step + 1
     detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 3 (Tests) started")
+    flush_log(lines, detailed_logs)
     test_all_ok = run_tests_per_project(
         lines, detailed_logs, next_step, total_steps, test_start_step
     )
@@ -319,6 +330,7 @@ def main() -> None:
 
     # --- Step 4: Coverage Gate ---
     detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 4 (Coverage) started")
+    flush_log(lines, detailed_logs)
     cov_lines, _under_threshold, cov_ok = run_coverage_gate()
     detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
     for cl in cov_lines:
@@ -338,6 +350,7 @@ def main() -> None:
     # --- Step 5: Lint on changed projects ---
     detailed_logs.append("--- STEP 5: LINT (on changed projects) ---")
     detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 5 (Lint) started")
+    flush_log(lines, detailed_logs)
 
     if not changed_projects:
         lines.append("Lint: SKIP (no changed .fs files)")
@@ -413,4 +426,15 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        crash = traceback.format_exc()
+        try:
+            with open(OUTPUT_FILE, "a") as f:
+                f.write(f"\n--- CRASH TRACEBACK ---\n{crash}\nSTATUS: BLOCKED\n")
+        except Exception:
+            pass
+        sys.stderr.write(f"Hard gate crashed:\n{crash}")
+        sys.stderr.flush()
+        sys.exit(1)
