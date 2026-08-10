@@ -91,17 +91,17 @@ module MatrixTeX =
             if useRectangleColor then
                 blocks
                 |> List.map (fun b ->
-                    let rowStart = b.StartRow + dataRowOffset + 1
+                    let rowStart = b.StartRow + 1
                     let rowEnd = rowStart + b.RowCount - 1
-                    let colStart = b.StartCol + dataColOffset + 1
+                    let colStart = b.StartCol + 1
                     let colEnd = colStart + b.ColCount - 1
 
                     sprintf
                         @"\rectanglecolor{%s}{%d-%d}{%d-%d}"
                         (blockFillColor b.Label)
                         rowStart
-                        rowEnd
                         colStart
+                        rowEnd
                         colEnd)
             else
                 []
