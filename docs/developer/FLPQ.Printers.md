@@ -33,6 +33,7 @@
 | [GrammarTeX](grammar-tex.md) | TeX rendering for grammar rules |
 | [DerivationTreeDot](derivation-tree-dot.md) | Dot rendering for derivation trees |
 | [AutomatonDot / AutomatonTikz / LRAutomatonTikz](automaton-viz.md) | Dot and Tikz rendering for finite automata; specialized Tikz renderer for LR automata |
+| [BasicSppfDot / BasicSppfTikz](basic-sppf-viz.md) | Dot and Tikz rendering for basic (Rekers-style) SPPF |
 | [InputGraphDot](input-graph-dot.md) | Dot rendering for the GLL input graph with input position highlighting |
 | [InputGraphDot](input-graph-dot.md) | Dot rendering for the GLL input graph with input position highlighting |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |

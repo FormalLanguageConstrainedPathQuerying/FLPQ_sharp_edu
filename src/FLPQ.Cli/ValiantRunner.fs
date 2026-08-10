@@ -6,7 +6,7 @@ open FLPQ.Printers
 
 module ValiantRunner =
 
-    let runValiant (grammarFile: string) (inputFile: string) (outputDir: string) =
+    let runValiant (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -45,12 +45,17 @@ module ValiantRunner =
                 Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
 
             let sppf = BasicSppf.fromParsingTable cnf sppfTable
-            let dot = BasicSppfDot.toDot id id sppf
-            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+
+            if useDot then
+                let dot = BasicSppfDot.toDot id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+            else
+                let tikz = BasicSppfTikz.toTikz id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) tikz
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 
-    let runValiantModified (grammarFile: string) (inputFile: string) (outputDir: string) =
+    let runValiantModified (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -89,7 +94,12 @@ module ValiantRunner =
                 Valiant.parseModifiedWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
 
             let sppf = BasicSppf.fromParsingTable cnf sppfTable
-            let dot = BasicSppfDot.toDot id id sppf
-            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+
+            if useDot then
+                let dot = BasicSppfDot.toDot id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+            else
+                let tikz = BasicSppfTikz.toTikz id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) tikz
 
         printfn "Modified Valiant trace: %d steps written to %s" trace.Length outputDir

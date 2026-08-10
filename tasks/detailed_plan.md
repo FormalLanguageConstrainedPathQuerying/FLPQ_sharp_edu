@@ -1,44 +1,40 @@
-# Detailed Plan for Task 251
+## Task 243: Add tikz rendering for BasicSPPF
 
-## Task
+### S1: Create BasicSppfTikz module
 
-Add more SPPF invariant checking to `checkCykValiantEquivalence`:
-1. Single root invariant: only one vertex without incoming edges, labelled with start nonterminal, leftPos=0, rightPos=input length
-2. SplitPoint consistency: for any Production vertex with two children, splitPoint = lCH.RightPos = rCH.LeftPos
-
-## Subtasks
-
-### S1: Add invariant functions to BasicSppf module
-
-**Code:** `src/FLPQ.Languages/BasicSppf.fs` — add `validateSingleRoot` and `validateProductionSplitConsistency`
-**Tests:** Existing tests cover via `checkCykValiantEquivalence` call in `CrossParserEquivalenceTests.fs`
-**Docs:** None — internal invariant functions don't change public API
+**Code:** New file `src/FLPQ.Printers/BasicSppfTikz.fs`. Update `src/FLPQ.Printers/FLPQ.Printers.fsproj` to add after `BasicSppfDot.fs`.
+**Tests:** Basic golden tests: create simple BasicSPPF, verify tikz compiles with lualatex.
+**Docs:** None.
 
 **Spec:**
-- Add `validateSingleRoot : BasicSPPF<'t,'nt> -> Nonterminal<'nt> -> int -> Result<unit, string list>` 
-  - Parameters: sppf, expected start nonterminal, input length n
-  - Count vertices with zero incoming edges in the graph
-  - Must be exactly 1
-  - That vertex must be a Nonterminal node with leftPos=0, rightPos=n, and the given start nonterminal
-- Add `validateProductionSplitConsistency : BasicSPPF<'t,'nt> -> Result<unit, string list>`
-  - For each Production vertex with exactly 2 outgoing edges (children):
-    - Get both children's node info
-    - Compute leftPos/rightPos for each child type: Terminal(l,r) → (l,r), Nonterminal(_,l,r) → (l,r), Epsilon(p) → (p,p)
-    - Identify left child (child with smaller leftPos) and right child
-    - Verify production.splitPoint = leftChild.rightPos AND production.splitPoint = rightChild.leftPos
+- Module `BasicSppfTikz` in namespace `FLPQ.Printers`
+- Function `toTikz : terminalPrinter -> nonterminalPrinter -> BasicSPPF<'t,'nt> -> string`
+- Use `\graph [layered layout, nodes={draw}, grow'=down, level sep=1.5cm, sibling sep=1.0cm]` (same as SppfTikz)
+- Node shapes: Terminal→circle, Nonterminal→rectangle, Epsilon→circle, Production→oval
+- Reuse `AutomatonTikz.escapeLatex` and `AutomatonTikz.tikzFooter`
+- Root node: `fill=green!30`
+- Edges are unlabeled (same as BasicSppfDot)
 
-### S2: Call new validators in checkCykValiantEquivalence
+### S2: Wire useDot into CYK/Valiant runners
 
-**Code:** `tests/FLPQ.TestUtilities/TestHelpers.fs` — add calls to new validators
-**Tests:** Existing tests cover
-**Docs:** None
+**Code:** `src/FLPQ.Cli/CykRunner.fs`, `src/FLPQ.Cli/ValiantRunner.fs`, `src/FLPQ.Cli/Program.fs`
+**Tests:** Existing CLI tests + golden tests from S1.
+**Docs:** None.
 
 **Spec:**
-- After existing SPPF invariants in `checkCykValiantEquivalence`, call `validateSingleRoot` and `validateProductionSplitConsistency` for all three SPPFs (CYK, Valiant, Modified Valiant)
-- Use `failwithf` on errors
+- Add `useDot: bool` parameter to `CykRunner.runCyk`, `ValiantRunner.runValiant`, `ValiantRunner.runValiantModified`
+- When `not useDot` (default): write `sppf.tikz.tex` using `BasicSppfTikz.toTikz` (do NOT write `sppf.dot`)
+- When `useDot`: write `sppf.dot` using `BasicSppfDot.toDot`
+- Update `Program.fs` to pass `useDot` to CYK/Valiant/ValiantModified
 
-### S3: Run all tests
+### S3: Update Summary for BasicSPPF TikZ
+
+**Code:** `src/FLPQ.Printers/SummaryTeX.fs`
+**Tests:** None (existing golden summary tests cover this).
+**Docs:** None.
 
 **Spec:**
-- Run `dotnet test` to verify all tests pass
-- Ensure zero regressions
+- Modify `sppfDotSection` to `sppfSection` accepting `useTikz: bool`
+- When `useTikz`: read `sppf.tikz.tex`, use `wrapTikzCenter`
+- When not `useTikz`: read `sppf.dot`, use `includePdf` (existing behavior)
+- Update call site in `buildContent` to pass `useTikz`

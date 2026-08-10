@@ -22,6 +22,7 @@
     <Compile Include="AutomatonTikz.fs" />
     <Compile Include="LRAutomatonTikz.fs" />
     <Compile Include="SppfTikz.fs" />
+    <Compile Include="BasicSppfTikz.fs" />
     <Compile Include="RsmTikz.fs" />
     <Compile Include="GssTikz.fs" />
     <Compile Include="InputGraphTikz.fs" />

@@ -364,14 +364,28 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
-    /// Builds the SPPF DOT section if the file exists.
-    let sppfDotSection (vizDir: string) : string list =
-        match readIfExists (Path.Combine(vizDir, "sppf.dot")) with
-        | Some _ ->
-            [ section "SPPF (Shared Packed Parse Forest)"
-              includePdf "dot_pdfs/sppf.pdf"
-              "" ]
-        | None -> []
+    /// Builds the SPPF section using TikZ if available, falling back to DOT PDF.
+    let sppfSection (vizDir: string) (useTikz: bool) : string list =
+        let tikzPath = Path.Combine(vizDir, "sppf.tikz.tex")
+        let dotPath = Path.Combine(vizDir, "sppf.dot")
+
+        if useTikz then
+            match readIfExists tikzPath with
+            | Some tikz -> [ section "SPPF (Shared Packed Parse Forest)"; wrapTikzCenter tikz; "" ]
+            | None ->
+                match readIfExists dotPath with
+                | Some _ ->
+                    [ section "SPPF (Shared Packed Parse Forest)"
+                      includePdf "dot_pdfs/sppf.pdf"
+                      "" ]
+                | None -> []
+        else
+            match readIfExists dotPath with
+            | Some _ ->
+                [ section "SPPF (Shared Packed Parse Forest)"
+                  includePdf "dot_pdfs/sppf.pdf"
+                  "" ]
+            | None -> []
 
     /// Builds the complete summary content as a list of LaTeX lines.
     /// Combines the header section with all step sections into a single document.
@@ -422,4 +436,4 @@ module SummaryTeX =
                     stackStepSection stepDir stepNum stepName |> List.toArray)
             |> Array.toList
 
-        prefix @ headerLines @ stepLines @ (sppfDotSection vizDir)
+        prefix @ headerLines @ stepLines @ (sppfSection vizDir useTikz)

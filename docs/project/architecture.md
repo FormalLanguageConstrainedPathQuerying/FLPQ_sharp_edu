@@ -42,6 +42,8 @@ FLPQ.slnx
 │   │   ├── TeXRenderer.fs          # Shared TeX rendering for parser stacks/input
 │   │   ├── DerivationTreeDot.fs    # Dot rendering for derivation trees
 │   │   ├── InputGraphDot.fs        # Dot rendering for input graph
+│   │   ├── BasicSppfDot.fs         # DOT rendering for basic (Rekers-style) SPPF
+│   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
 │   │   ├── AutomatonDot.fs         # Dot rendering for finite automata
 │   │   ├── CykTeX.fs               # TeX rendering for CYK tables
 │   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps

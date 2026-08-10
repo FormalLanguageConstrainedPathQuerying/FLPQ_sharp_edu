@@ -11,7 +11,7 @@ let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false
     outDir
 
 [<Fact>]
@@ -53,4 +53,21 @@ let ``runCyk produces step directories with table.tex`` () =
         Assert.True(File.Exists tableTex, sprintf "table.tex missing in %s" stepDir)
         Assert.True(FileInfo(tableTex).Length > 0L)
 
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runCyk produces sppf.tikz.tex by default`` () =
+    let outDir = runRunner ()
+    let sppfTikz = Path.Combine(outDir, "sppf.tikz.tex")
+    Assert.True(File.Exists sppfTikz, "sppf.tikz.tex missing")
+    Assert.True(FileInfo(sppfTikz).Length > 0L)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runCyk with useDot=true produces sppf.dot`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true
+    let sppfDot = Path.Combine(outDir, "sppf.dot")
+    Assert.True(File.Exists sppfDot, "sppf.dot missing")
+    Assert.True(FileInfo(sppfDot).Length > 0L)
     Directory.Delete(outDir, true)

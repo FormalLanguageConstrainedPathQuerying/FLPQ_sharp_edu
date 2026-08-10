@@ -6,7 +6,7 @@ open FLPQ.Printers
 
 module CykRunner =
 
-    let runCyk (grammarFile: string) (inputFile: string) (outputDir: string) =
+    let runCyk (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -42,7 +42,12 @@ module CykRunner =
                 Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar tokenList
 
             let sppf = BasicSppf.fromParsingTable cnf sppfTable
-            let dot = BasicSppfDot.toDot id id sppf
-            Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+
+            if useDot then
+                let dot = BasicSppfDot.toDot id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) dot
+            else
+                let tikz = BasicSppfTikz.toTikz id id sppf
+                Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) tikz
 
         printfn "CYK trace: %d steps written to %s" trace.Length outputDir

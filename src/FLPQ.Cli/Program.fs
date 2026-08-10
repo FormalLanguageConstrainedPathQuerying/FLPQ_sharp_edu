@@ -22,9 +22,9 @@ module Program =
             Helpers.cleanOutputDir output
 
             match algorithm with
-            | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output
-            | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output
-            | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output
+            | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot
+            | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot
+            | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot
             | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k
             | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
