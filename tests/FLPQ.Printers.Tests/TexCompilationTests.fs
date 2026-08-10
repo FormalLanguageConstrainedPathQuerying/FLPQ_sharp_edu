@@ -27,10 +27,10 @@ let ``CYK table TeX compiles with lualatex`` () =
         (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
-        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
+        Cyk.parseWithSppfTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     let step = trace.[0]
-    let tex = CykTeX.tableToTeX string step.Table
+    let tex = CykTeX.sppfTableToTeX string step.Table
     Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -40,10 +40,10 @@ let ``CYK all steps TeX compile with lualatex`` () =
         (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
-        Cyk.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
+        Cyk.parseWithSppfTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     for step in trace do
-        let tex = CykTeX.tableToTeX string step.Table
+        let tex = CykTeX.sppfTableToTeX string step.Table
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
 
 [<Fact>]
@@ -84,7 +84,7 @@ let ``Valiant trace TeX compiles with lualatex`` () =
         (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
-        Valiant.parseWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a")
+        Valiant.parseWithSppfTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a a a")
 
     Assert.NotEmpty(trace)
 
@@ -102,15 +102,12 @@ let ``Modified Valiant trace TeX compiles with lualatex`` () =
         (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
 
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
+        Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal g (Tokenizer.tokenizeTerminals "a a")
 
     Assert.NotEmpty(trace)
 
-    let cellPrinter (s: Set<Nonterminal<string>>) =
-        if Set.isEmpty s then @"\cdot" else string s
-
     for step in trace do
-        let tex = ValiantTeX.modifiedStepToTeX string step
+        let tex = ValiantTeX.sppfModifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(compileTex tex)
 
@@ -120,15 +117,15 @@ let ``Modified Valiant trace TeX with expression grammar compiles`` () =
     let grammar6 = LanguageRegistry.ArithExpr.Grammars.[0].Grammar
 
     let trace =
-        Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar6 (Tokenizer.tokenizeTerminals "x add x")
+        Valiant.parseModifiedWithSppfTrace
+            Grammar.freshStringNonterminal
+            grammar6
+            (Tokenizer.tokenizeTerminals "x add x")
 
     Assert.NotEmpty(trace)
 
-    let cellPrinter (s: Set<Nonterminal<string>>) =
-        if Set.isEmpty s then @"\cdot" else string s
-
     for step in trace do
-        let tex = ValiantTeX.modifiedStepToTeX string step
+        let tex = ValiantTeX.sppfModifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
         Assert.True(compileTex tex)
 

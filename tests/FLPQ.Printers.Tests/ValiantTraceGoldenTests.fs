@@ -21,9 +21,9 @@ type ``Valiant trace TeX golden tests``() =
         let grammar = LanguageRegistry.Dyck1.Grammars.[0].Grammar
         let tokens = Tokenizer.tokenizeTerminals "a b a b"
 
-        let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar tokens
+        let trace = Valiant.parseWithSppfTrace Grammar.freshStringNonterminal grammar tokens
 
-        let steps = trace |> List.map (ValiantTeX.stepToTeX string)
+        let steps = trace |> List.map (ValiantTeX.sppfStepToTeX string)
 
         let combined = combineSteps steps
 
@@ -35,9 +35,9 @@ type ``Valiant trace TeX golden tests``() =
         let tokens = Tokenizer.tokenizeTerminals "a b"
 
         let trace =
-            Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar tokens
+            Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar tokens
 
-        let steps = trace |> List.map (ValiantTeX.modifiedStepToTeX string)
+        let steps = trace |> List.map (ValiantTeX.sppfModifiedStepToTeX string)
 
         let combined = combineSteps steps
 

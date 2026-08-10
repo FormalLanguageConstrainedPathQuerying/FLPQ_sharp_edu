@@ -15,7 +15,7 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
     let grammar = Grammar.parseGrammar grammarStr
     let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
     let tokens = Tokenizer.tokenizeTerminals input
-    let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar tokens
+    let trace = Cyk.parseWithSppfTrace Grammar.freshStringNonterminal grammar tokens
 
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
@@ -38,9 +38,9 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
 
             let tex =
                 if step.Highlights.IsEmpty then
-                    CykTeX.tableToTeX string step.Table
+                    CykTeX.sppfTableToTeX string step.Table
                 else
-                    CykTeX.tableToTeXStyled string step.Table step.Highlights
+                    CykTeX.sppfTableToTeXStyled string step.Table step.Highlights
 
             File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
 

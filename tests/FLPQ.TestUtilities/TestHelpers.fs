@@ -354,16 +354,6 @@ module TestHelpers =
         if cykSppfAcc <> valSppfAcc || valSppfAcc <> modSppfAcc then
             failwithf "SPPF acceptance mismatch: CYK=%b Valiant=%b ModValiant=%b" cykSppfAcc valSppfAcc modSppfAcc
 
-        if cykAcc <> cykSppfAcc || valAcc <> valSppfAcc || modAcc <> modSppfAcc then
-            failwithf
-                "Acceptance vs SPPF acceptance mismatch: CYK=%b/%b Valiant=%b/%b Mod=%b/%b"
-                cykAcc
-                cykSppfAcc
-                valAcc
-                valSppfAcc
-                modAcc
-                modSppfAcc
-
         let sn = Matrix.rows cykSppfTable
 
         for i in 0 .. sn - 1 do

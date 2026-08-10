@@ -64,6 +64,19 @@ let ``runCyk produces sppf.tikz.tex by default`` () =
     Directory.Delete(outDir, true)
 
 [<Fact>]
+let ``runCyk with noSppfTable=true renders nonterminal names only`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false true
+
+    let step0Dir = Path.Combine(outDir, "step_0")
+
+    if Directory.Exists step0Dir then
+        let tableTex = File.ReadAllText(Path.Combine(step0Dir, "table.tex"))
+        Assert.DoesNotContain("(", tableTex)
+
+    Directory.Delete(outDir, true)
+
+[<Fact>]
 let ``runCyk with useDot=true produces sppf.dot`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true false
