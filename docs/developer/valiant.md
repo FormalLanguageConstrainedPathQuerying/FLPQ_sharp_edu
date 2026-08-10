@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli
 **Book reference:** Section sec:Valiant
 
-> **Abstract:** Implements Valiant's parsing algorithm for context-free grammars in Chomsky Normal Form. Uses set-based matrix operations and recursive submatrix decomposition to achieve subcubic complexity. Each cell is a `Set<Nonterminal<'nt>>` — same representation as CYK. Matrix multiplication uses a set-based semiring: addition is set union, multiplication computes nonterminals derivable via binary rules.
+> **Abstract:** Implements Valiant's parsing algorithm for context-free grammars in Chomsky Normal Form. Uses set-based matrix operations and recursive submatrix decomposition to achieve subcubic complexity. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and production index). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the internal SPPF table.
 
 ## Contents
 
@@ -194,7 +194,8 @@ Returns both the enriched modified SPPF table and acceptance status.
 
 | Decision | Rationale |
 |----------|-----------|
-| Set-based matrices (no Boolean decomposition) | Simpler: each cell holds `Set<Nonterminal<'nt>>` directly. No `decompose`/`recompose` conversion |
+| Set-based matrices (no Boolean decomposition) | Simpler: each cell holds `Set<SppfParsingEntry<'nt>>` directly. No `decompose`/`recompose` conversion |
+| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production index). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
 | Multiplication-only trace steps | Trace records only `doMultiplications` results (target + operand submatrices + changed cells), omitting decomposition transitions and size-1 terminal steps |
 | Terminal rules pre-filled in `initValiant` | Ensures all diagonal cells have data before layer processing starts |
 | `bottomSubmatrix` uses higher row indices | "Closest to diagonal" means row index closer to column index |
@@ -202,7 +203,6 @@ Returns both the enriched modified SPPF table and acceptance status.
 | Recursive `complete` with `and compute` | F# `let rec ... and ...` for mutually recursive functions |
 | V-shaped layers of disjoint submatrices | Enables batched parallel multiplications as described in the book |
 | `mxmi` with closure over binary rules | Indexed multiplication captures split point `k` for SPPF entry construction; grammar captured by closure |
-| Separate SPPF-aware `completeSppf`/`computeSppf` | Different cell type (`SppfParsingTable` vs `ParsingTable`) requires parallel implementations |
 
 ## Book Reference
 
