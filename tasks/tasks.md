@@ -960,9 +960,9 @@
       2.   Do not mark edges with `derives` and numbers.
       3.   Production node store not left and right positins, but split point. Render it with respective lable of form `split_point, prod_id`
       4.   In rendering: for nontermonal node label use same form as in nonterminal node lable in rsm sppf rendering: `nonterm [from,to]`
-243. Add tikz rendering for BasicSPPF.
+243. [done] Add tikz rendering for BasicSPPF.
       1.   Use ` \graph` with `layered layout`. (look at automata tikz layout for example)
-      2.   Use tikz as default for CYK and Valiant BasicSPPF visualization. Use existing CLI arg to switch to dot.
+      2.   Use tikz as default for CYK and Valiant (+modified) BasicSPPF visualization. Use existing CLI arg to switch to dot.
 244. Inprove GLL rendering
       1.   Use adjustbox from package adjustbox to scale tikz figures. ```\begin{adjustbox}{max width=\textwidth}\begin{tikzpicture} ... \end{tikzpicture}\end{adjustbox}```
       2.   `v0 [label={[font=\tiny, anchor=north west, xshift=-1.01mm, yshift=1.01mm]north west:1} ,as={(0,0)}];`
@@ -1047,6 +1047,35 @@
      4. Run all tests — zero regressions. All 7 cross-parser test groups must pass with the restored invariants.
 
      5. If any invariant fails for a specific algorithm, that algorithm has a residual bug — fix it before marking the task done.
-  251. Add more SPPF invariant checking to `checkCykValiantEquivalence`
+  251. [done] Add more SPPF invariant checking to `checkCykValiantEquivalence`
        1.   There is only one vertex without incoming edges in SPPF. This vertex is labelled with start nonterminal, leftPos in 0, and right pos is input length
        2.   For any Production vertex with two child lCH and rCH, splitPoint of the vertex is equal to lCH.RightPos, and splitPoint of the vertex is equal to rCH.LeftPos  
+  252. Improve Valinat (and modified Valiant) table rendering.
+       1.   Use \rectanglecolor instead of \Block to higlight submatrices
+       2.   Wrap matrix with `\begin{adjustbox}{max width=\textwidth}...\end{adjustbox}`
+       3.   Use `$` instead of `\[` and `\]` inside adjustbox
+       4.   Complete example:
+       ```
+        \begin{center}
+          \begin{adjustbox}{max width=\textwidth}
+          $
+          \begin{pNiceMatrix}[color-inside,first-row,code-for-first-row = \arabic{jCol},first-col,code-for-first-col = \arabic{iRow}]
+          \CodeBefore
+          \rectanglecolor{blue!20}{1-3}{2-4}
+          \rectanglecolor{red!10}{1-5}{2-6}
+          \rectanglecolor{green!20}{3-5}{4-6}
+          \Body
+          &  &  &  &  &  &  &  &  \\
+          & \cdot & \{(S, 0, 1)\} & \{(N_1, 0, 0), (S, 0, 2)\} & \{(N_1, 0, 0), (N_1, 1, 0), (S, 0, 2), (S, 0, 3), (S, 1, 2)\} & {\cellcolor{yellow}{\{(N_1, 1, 0), (N_1, 2, 0), (S, 1, 2), (S, 1, 3), (S, 2, 2)\}}} & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \{(S, 1, 1)\} & \{(N_1, 1, 0), (S, 1, 2)\} & \cellcolor{yellow}{\{(N_1, 1, 0), (N_1, 2, 0), (S, 1, 2), (S, 1, 3), (S, 2, 2)\}} & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \{(S, 2, 1)\} & {\{(N_1, 2, 0), (S, 2, 2)\}} & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \cdot & \{(S, 3, 1)\} & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+          & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+          \end{pNiceMatrix}
+          $
+          \end{adjustbox}
+        \end{center}
+       ```
