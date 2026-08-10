@@ -39,6 +39,9 @@ PER_PROJECT_THRESHOLD = 85.0
 TOTAL_THRESHOLD = 90.0
 
 
+def _now() -> str:
+    return datetime.now().strftime("%H:%M:%S")
+
 def flush_log(lines: list[str], detailed_logs: list[str], status: str = "IN_PROGRESS") -> None:
     output = lines.copy()
     output.append("")
@@ -204,6 +207,12 @@ def run_tests_per_project(
         cov_file = f"tmp/coverage_{pkg_name}.cobertura"
         cov_files.append(cov_file)
 
+        s = next_step()
+        starting_line = f"[{_now()}] Step {s}/{total_steps} {pkg_name}: starting..."
+        lines.append(starting_line)
+        detailed_logs.append(starting_line)
+        flush_log(lines, detailed_logs)
+
         test_rc, test_stdout, test_stderr = run_cmd(
             [
                 "dotnet",
@@ -223,12 +232,11 @@ def run_tests_per_project(
         test_output = test_stdout + test_stderr
         failed, skipped = parse_test_output(test_output)
 
-        s = next_step()
         if test_rc != 0 or failed > 0 or skipped > 0:
             all_ok = False
-            result_line = f"  Step {s}/{total_steps} {pkg_name}: FAILED ({failed} failed, {skipped} skipped)"
+            result_line = f"[{_now()}] Step {s}/{total_steps} {pkg_name}: FAILED ({failed} failed, {skipped} skipped)"
         else:
-            result_line = f"  Step {s}/{total_steps} {pkg_name}: OK (0 failed, 0 skipped)"
+            result_line = f"[{_now()}] Step {s}/{total_steps} {pkg_name}: OK (0 failed, 0 skipped)"
 
         lines.append(result_line)
         detailed_logs.append(result_line)
@@ -285,9 +293,9 @@ def main() -> None:
         detailed_logs.append(fmt_stderr.strip())
     s = next_step()
     if fmt_rc == 0:
-        lines.append(f"Step {s}/{total_steps} (Format): OK")
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Format): OK")
     else:
-        lines.append(f"Step {s}/{total_steps} (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Format): BLOCKED (files need formatting, exit code {fmt_rc})")
         overall_pass = False
 
     flush_log(lines, detailed_logs)
@@ -305,9 +313,9 @@ def main() -> None:
     build_ok = build_rc == 0 and "Build succeeded" in build_output
     s = next_step()
     if build_ok:
-        lines.append(f"Step {s}/{total_steps} (Build): OK (Build succeeded)")
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Build): OK (Build succeeded)")
     else:
-        lines.append(f"Step {s}/{total_steps} (Build): FAILED")
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Build): FAILED")
         overall_pass = False
 
     flush_log(lines, detailed_logs)
@@ -336,7 +344,7 @@ def main() -> None:
     for cl in cov_lines:
         detailed_logs.append(cl)
     s = next_step()
-    lines.append(f"Step {s}/{total_steps} (Coverage):")
+    lines.append(f"[{_now()}] Step {s}/{total_steps} (Coverage):")
     for cl in cov_lines:
         lines.append(cl)
     if cov_ok:
@@ -353,12 +361,12 @@ def main() -> None:
     flush_log(lines, detailed_logs)
 
     if not changed_projects:
-        lines.append("Lint: SKIP (no changed .fs files)")
+        lines.append(f"[{_now()}] Lint: SKIP (no changed .fs files)")
         detailed_logs.append("(no changed .fs files — lint skipped)")
     else:
         lint_start = current_step + 1
         lint_end = current_step + len(changed_projects)
-        lines.append(f"Step {lint_start}-{lint_end}/{total_steps} (Lint):")
+        lines.append(f"[{_now()}] Step {lint_start}-{lint_end}/{total_steps} (Lint):")
         lint_all_ok = True
 
         lint_env = os.environ.copy()
@@ -390,23 +398,23 @@ def main() -> None:
                 lint_all_ok = False
                 overall_pass = False
                 if "ERROR running fsharplint" in lint_output:
-                    lint_line = f"  Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log"
+                    lint_line = f"[{_now()}] Step {s}/{total_steps} {proj}: TOOL FAILED — see detailed log"
                 else:
                     summary_match = re.search(r"Summary:\s*(\d+)\s+warnings?", lint_output)
                     warn_count = int(summary_match.group(1)) if summary_match else 0
                     if warn_count > 0:
-                        lint_line = f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
+                        lint_line = f"[{_now()}] Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
                     else:
-                        lint_line = f"  Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})"
+                        lint_line = f"[{_now()}] Step {s}/{total_steps} {proj}: TOOL FAILED (exit code {lint_rc})"
             else:
                 warning_match = re.search(r"(\d+) warnings?", lint_output)
                 warn_count = int(warning_match.group(1)) if warning_match else 0
                 if warn_count > 0:
                     lint_all_ok = False
                     overall_pass = False
-                    lint_line = f"  Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
+                    lint_line = f"[{_now()}] Step {s}/{total_steps} {proj}: {warn_count} warnings — BLOCKED"
                 else:
-                    lint_line = f"  Step {s}/{total_steps} {proj}: 0 warnings — PASS"
+                    lint_line = f"[{_now()}] Step {s}/{total_steps} {proj}: 0 warnings — PASS"
 
             lines.append(lint_line)
             detailed_logs.append(lint_line)

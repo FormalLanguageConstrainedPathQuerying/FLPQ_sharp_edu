@@ -7,24 +7,31 @@ description: Use when running quality checks: format check, lint, build, test (w
 
 ## Invocation (Critical — Read Before Any Command)
 
-**`hard_gate.py` takes tens of minutes. It must run asynchronously in the background.**
+**`hard_gate.py` takes tens of minutes. It must detach from the shell process group to survive shell tool timeouts.**
 
 ```
 # WRONG — hangs the shell indefinitely:
 python3 tools/hard_gate.py
 
-# RIGHT — launches in background, writes progress to tmp/hard-gate.txt:
+# WRONG — shell kills child when tool times out (120s), even with &:
 python3 tools/hard_gate.py &
+
+# RIGHT — nohup detaches the process from the shell's process group.
+# Redirect to a named file (NOT /dev/null) to preserve crash tracebacks.
+# The main gate output is written internally to tmp/hard-gate.txt.
+nohup python3 tools/hard_gate.py > tmp/hard-gate-stderr.txt 2>&1 &
 echo $! > tmp/hard-gate.pid
 ```
 
-The script writes its own output file (`tmp/hard-gate.txt`). Do **NOT** redirect (`>`, `2>&1`). Do **NOT** run synchronously.
+**Output destinations:**
 
-**NEVER use any of these** — they discard the crash traceback that the script writes to stderr:
+| What | Where | Notes |
+|------|-------|-------|
+| Progress, step results, final STATUS | `tmp/hard-gate.txt` | The single source of truth. Written internally by the script. Read with `grep`, `head`, `tail`. |
+| Crash traceback | `tmp/hard-gate-stderr.txt` | Python writes `traceback.format_exc()` to `sys.stderr`; `nohup` captures it here. Also appended to `tmp/hard-gate.txt` by the script. |
+| `dotnet build / test` raw output | `tmp/hard-gate.txt` detailed log section | Captured by the script's `run_cmd` and written internally. |
 
-- `nohup python3 tools/hard_gate.py > /dev/null 2>&1 &` — silences crash diagnostics
-- `bash -c 'python3 tools/hard_gate.py' &>/dev/null &` — same problem
-- Any wrapper or redirect that discards stderr
+**The redirected file does NOT contain the gate output.** It is a crash-traceback safety net. The gate output is in `tmp/hard-gate.txt`. Never use `/dev/null` as the redirect target — that loses crash diagnostics.
 
 The script writes progress incrementally to `tmp/hard-gate.txt` after each step and includes
 its PID in the summary header. If the process crashes, it writes a `--- CRASH TRACEBACK ---` section
@@ -53,7 +60,7 @@ to prevent confusion. Confusing the two means skipping tests, coverage, and lint
 
 | Kind | Examples | How to read output |
 |------|----------|--------------------|
-| **Python tool scripts** | `tools/quality_check.py`, `tools/hard_gate.py` | Scripts write to a **fixed output file** (e.g., `tmp/quality-check.txt`, `tmp/hard-gate.txt`). **Do NOT redirect** these scripts. Launch them without `> tmp/... 2>&1` and read the designated file directly with the Read or Grep tools. |
+| **Python tool scripts** | `tools/quality_check.py`, `tools/hard_gate.py` | Scripts write to a **fixed output file** (e.g., `tmp/quality-check.txt`, `tmp/hard-gate.txt`). For `hard_gate.py`, redirect stdout/stderr to `tmp/hard-gate-stderr.txt` — the main log is in the fixed file, not stdout. Read the fixed file directly with the Read or Grep tools. |
 | **Raw CLI tools** | `dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage` | These write to stdout/stderr. **Redirect all output** to a file in `tmp/` before reading. |
 
 The fixed output file is the single source of truth — never read a redirect when the script writes to its own file.
@@ -153,15 +160,15 @@ tail -20 tmp/hard-gate.txt   # current detailed output
 
 - [ ] `&` appended to the command to launch in background
 - [ ] PID written to `tmp/hard-gate.pid`
-- [ ] No `>`, `>>`, `2>&1`, `nohup`, or `bash -c` wrapper — script writes its own output file and needs stderr for crash traceback
+- [ ] Stdout/stderr redirected to `tmp/hard-gate-stderr.txt` (NOT `/dev/null`). This prevents the shell tool from killing the background process on timeout. The main gate log is in `tmp/hard-gate.txt`.
 - [ ] Poll interval: 5 minutes minimum (do not poll more frequently)
 - [ ] Source files committed and working tree clean
 
 ### Starting the Gate
 
-Use the invocation from the **Invocation** section above (no `nohup`, no redirect).
+Use the invocation from the **Invocation** section above. Redirect to a named file (NOT `/dev/null`); the main log is in `tmp/hard-gate.txt`.
 
-The output file (`tmp/hard-gate.txt`) is the single source of truth. Its summary header includes the gate PID — use it to identify the process without relying solely on `tmp/hard-gate.pid`. If the gate process dies, the file will show either a `--- CRASH TRACEBACK ---` section or the last step's timestamp in its detailed log.
+The output file (`tmp/hard-gate.txt`) is the single source of truth. Its summary header includes the gate PID — use it to identify the process without relying solely on `tmp/hard-gate.pid`. If the gate process dies, the file will show either a `--- CRASH TRACEBACK ---` section or the last step's timestamp in its detailed log. Check `tmp/hard-gate-stderr.txt` for additional crash output.
 
 ### Polling Status
 
@@ -196,8 +203,9 @@ Check the three outputs from above together:
 
 **If the process is gone but STATUS shows IN_PROGRESS** — the gate crashed before writing its final status.
 The output file contains a `--- CRASH TRACEBACK ---` section with the full Python traceback.
-Read the last 30 lines: `tail -30 tmp/hard-gate.txt`. The traceback pinpoints the failing line;
-the detailed log above it shows which step was running. Fix the problem and re-run from the start.
+Read the last 30 lines of `tmp/hard-gate.txt`: `tail -30 tmp/hard-gate.txt`. The traceback pinpoints the failing line;
+the detailed log above it shows which step was running. Also check `tmp/hard-gate-stderr.txt` for
+additional crash output written to stderr. Fix the problem and re-run from the start.
 
 **Never interpret `IN_PROGRESS` as a pass or failure.** Only `PASS` and `BLOCKED` are terminal states.
 
