@@ -10,7 +10,7 @@ open Xunit
 open GoldenHelpers
 
 let private templatePath =
-    Path.Combine(System.AppContext.BaseDirectory, "tex_template.tex")
+    Path.Combine(System.AppContext.BaseDirectory, "tex_adjustbox_template.tex")
 
 let private combineSteps (steps: string list) : string = steps |> String.concat "\n\n"
 

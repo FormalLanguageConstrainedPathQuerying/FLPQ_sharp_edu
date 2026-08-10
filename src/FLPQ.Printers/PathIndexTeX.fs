@@ -37,7 +37,17 @@ module PathIndexTeX =
             $"%d{state},%d{vertex}"
 
         let matrix =
-            MatrixTeX.toTeXStyled false false cp pathIndex.Matrix [] [] (Some labelPrinter) (Some labelPrinter)
+            MatrixTeX.toTeXStyled
+                false
+                false
+                cp
+                pathIndex.Matrix
+                []
+                []
+                (Some labelPrinter)
+                (Some labelPrinter)
+                false
+                false
 
         matrix
 
@@ -65,6 +75,16 @@ module PathIndexTeX =
                   Matrix.Label = Matrix.CurrentCell })
 
         let matrix =
-            MatrixTeX.toTeXStyled false false cp pathIndex.Matrix highlights [] (Some labelPrinter) (Some labelPrinter)
+            MatrixTeX.toTeXStyled
+                false
+                false
+                cp
+                pathIndex.Matrix
+                highlights
+                []
+                (Some labelPrinter)
+                (Some labelPrinter)
+                false
+                false
 
         matrix

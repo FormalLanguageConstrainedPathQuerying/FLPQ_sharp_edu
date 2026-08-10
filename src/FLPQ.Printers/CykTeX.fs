@@ -12,7 +12,17 @@ module CykTeX =
         (table: ParsingTable<'nt>)
         (highlights: Matrix.Highlight list)
         : string =
-        MatrixTeX.toTeXStyled true true (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table highlights [] None None
+        MatrixTeX.toTeXStyled
+            true
+            true
+            (ParsingTableTeX.ntCellToTeX nonterminalPrinter)
+            table
+            highlights
+            []
+            None
+            None
+            false
+            false
 
     /// Convert a CYK working table to TeX.
     let tableToTeX (nonterminalPrinter: 'nt -> string) (table: ParsingTable<'nt>) : string =
@@ -33,6 +43,8 @@ module CykTeX =
             []
             None
             None
+            false
+            false
 
     /// Convert a CYK SPPF working table to TeX.
     let sppfTableToTeX (nonterminalPrinter: 'nt -> string) (table: SppfParsingTable<'nt>) : string =

@@ -1,19 +1,34 @@
 \documentclass{article}
 \usepackage{nicematrix}
+\usepackage{adjustbox}
 \usepackage{graphicx}
 \usepackage[active,tightpage]{preview}
 \begin{document}
 \begin{preview}
-\[
+\begin{adjustbox}{max width=\textwidth}
+$
 \begin{pNiceMatrix}
-\{N_4\} & \Block[draw=red,fill=red!20]{2-1}{\cdot} \\
+\CodeBefore
+\rectanglecolor{red!20}{1-2}{2-2}
+\Body
+\{N_4\} & \cdot \\
 \cdot & \{N_1, N_2, N_5\} \\
 \end{pNiceMatrix}
+$
+\end{adjustbox}
 
+
+\begin{adjustbox}{max width=\textwidth}
+$
 \begin{pNiceMatrix}
-\{N_4\} & \Block[draw=red,fill=red!20]{2-1}{\{N_3, S\}} \\
+\CodeBefore
+\rectanglecolor{red!20}{1-2}{2-2}
+\Body
+\{N_4\} & \{N_3, S\} \\
 \cdot & \{N_1, N_2, N_5\} \\
 \end{pNiceMatrix}
-\]
+$
+\end{adjustbox}
+
 \end{preview}
 \end{document}

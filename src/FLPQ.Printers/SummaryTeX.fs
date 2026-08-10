@@ -205,12 +205,12 @@ module SummaryTeX =
         grammar @ algoLines
 
     /// Builds the content lines for a single table-based algorithm step.
-    let tableStepSection (stepDir: string) (stepNum: int) : string list =
+    let tableStepSection (stepDir: string) (stepNum: int) (wrap: string -> string) : string list =
         let header = [ section (sprintf "Step %d" stepNum) ]
 
         let tableLines =
             match readIfExists (Path.Combine(stepDir, "table.tex")) with
-            | Some tex -> [ wrapMath tex; "" ]
+            | Some tex -> [ wrap tex; "" ]
             | None -> []
 
         header @ tableLines
@@ -425,7 +425,12 @@ module SummaryTeX =
                     if m.Success then Int32.Parse(m.Groups.[1].Value) else 0
 
                 if isTableBased then
-                    tableStepSection stepDir stepNum |> List.toArray
+                    let wrap =
+                        match readIfExists (Path.Combine(stepDir, "table.tex")) with
+                        | Some tex when tex.Contains(@"\begin{adjustbox}") -> wrapCenter
+                        | _ -> wrapMath
+
+                    tableStepSection stepDir stepNum wrap |> List.toArray
                 elif isGll then
                     gllStepSection stepDir stepNum gllStepTemplate gllStepTikzTemplate useTikz
                     |> List.toArray

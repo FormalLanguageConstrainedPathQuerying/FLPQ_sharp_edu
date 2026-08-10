@@ -11,6 +11,15 @@ open FLPQ.TestUtilities
 let private templatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_template.tex")
 
+let private adjustboxTemplatePath =
+    Path.Combine(System.AppContext.BaseDirectory, "tex_adjustbox_template.tex")
+
+let private compileTex (tex: string) : bool =
+    if tex.Contains(@"\begin{adjustbox}") then
+        ExternalTools.compileTexStringWithTemplate adjustboxTemplatePath tex
+    else
+        ExternalTools.compileTexStringWithTemplate templatePath tex
+
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``CYK table TeX compiles with lualatex`` () =
@@ -84,7 +93,7 @@ let ``Valiant trace TeX compiles with lualatex`` () =
             MatrixTeX.toTeX false false (fun s -> if Set.isEmpty s then @"\cdot" else string s) step.Table
 
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+        Assert.True(compileTex tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -103,7 +112,7 @@ let ``Modified Valiant trace TeX compiles with lualatex`` () =
     for step in trace do
         let tex = ValiantTeX.modifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+        Assert.True(compileTex tex)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -121,7 +130,7 @@ let ``Modified Valiant trace TeX with expression grammar compiles`` () =
     for step in trace do
         let tex = ValiantTeX.modifiedStepToTeX string step
         Assert.Contains(@"\begin{pNiceMatrix}", tex)
-        Assert.True(ExternalTools.compileTexStringWithTemplate templatePath tex)
+        Assert.True(compileTex tex)
 
 let private tabularTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_tabular_template.tex")

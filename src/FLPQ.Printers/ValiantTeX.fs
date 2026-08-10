@@ -75,6 +75,8 @@ module ValiantTeX =
             (targetBlock @ multipliedBlocks)
             None
             None
+            true
+            true
 
     let modifiedStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ModifiedValiantTraceStep<'nt>) : string =
         match step with
@@ -107,7 +109,17 @@ module ValiantTeX =
                         None)
                 |> List.choose id
 
-            MatrixTeX.toTeXStyled false false (ParsingTableTeX.ntCellToTeX nonterminalPrinter) table [] blocks None None
+            MatrixTeX.toTeXStyled
+                false
+                false
+                (ParsingTableTeX.ntCellToTeX nonterminalPrinter)
+                table
+                []
+                blocks
+                None
+                None
+                true
+                true
 
         | Valiant.LayerBackward(table, _layerSize, submatrices, changedCells) ->
             let n = Matrix.rows table
@@ -159,6 +171,8 @@ module ValiantTeX =
                 blocks
                 None
                 None
+                true
+                true
 
     let sppfStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantSppfTraceStep<'nt>) : string =
         let highlights =
@@ -230,6 +244,8 @@ module ValiantTeX =
             (targetBlock @ multipliedBlocks)
             None
             None
+            true
+            true
 
     let sppfModifiedStepToTeX
         (nonterminalPrinter: 'nt -> string)
@@ -274,6 +290,8 @@ module ValiantTeX =
                 blocks
                 None
                 None
+                true
+                true
 
         | Valiant.LayerBackwardSppf(table, _layerSize, submatrices, changedCells) ->
             let n = Matrix.rows table
@@ -325,3 +343,5 @@ module ValiantTeX =
                 blocks
                 None
                 None
+                true
+                true

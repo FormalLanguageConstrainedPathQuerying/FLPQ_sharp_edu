@@ -1,7 +1,5 @@
 # Detailed Plan: Task 252 — Improve Valiant Table Rendering
 
-**Status: COMPLETE** (commit `3eb45a7`)
-
 ## Task Description
 Improve Valiant (and modified Valiant) table rendering:
 1. Use `\rectanglecolor` instead of `\Block` to highlight submatrices

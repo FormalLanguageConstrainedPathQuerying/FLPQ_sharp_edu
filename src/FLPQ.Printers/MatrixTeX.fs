@@ -24,6 +24,8 @@ module MatrixTeX =
         (blocks: Matrix.SubmatrixBlock list)
         (rowLabelPrinter: (int -> string) option)
         (colLabelPrinter: (int -> string) option)
+        (useRectangleColor: bool)
+        (useAdjustbox: bool)
         : string =
         let pniceOptions = ResizeArray<string>()
 
@@ -67,60 +69,110 @@ module MatrixTeX =
                   Color = "yellow" })
             |> Set.ofList
 
-        let blockColor idx =
-            let colors =
-                [ "red"
-                  "blue"
-                  "green"
-                  "orange"
-                  "purple"
-                  "brown"
-                  "cyan"
-                  "magenta"
-                  "teal"
-                  "olive" ]
+        let blockFillColor (label: Matrix.SubmatrixBlockLabel) =
+            match label with
+            | Matrix.CurrentStepSubmatrix -> "red!10"
+            | Matrix.Submatrix idx ->
+                let colors =
+                    [ "red"
+                      "blue"
+                      "green"
+                      "orange"
+                      "purple"
+                      "brown"
+                      "cyan"
+                      "magenta"
+                      "teal"
+                      "olive" ]
 
-            colors.[idx % colors.Length]
+                sprintf "%s!20" colors.[idx % colors.Length]
 
-        let blockFillColor idx = sprintf "%s!20" (blockColor idx)
+        let rectangleColors =
+            if useRectangleColor then
+                blocks
+                |> List.map (fun b ->
+                    let rowStart = b.StartRow + dataRowOffset + 1
+                    let rowEnd = rowStart + b.RowCount - 1
+                    let colStart = b.StartCol + dataColOffset + 1
+                    let colEnd = colStart + b.ColCount - 1
+
+                    sprintf
+                        @"\rectanglecolor{%s}{%d-%d}{%d-%d}"
+                        (blockFillColor b.Label)
+                        rowStart
+                        rowEnd
+                        colStart
+                        colEnd)
+            else
+                []
 
         let blockMap =
-            blocks
-            |> List.map (fun b ->
-                let r = b.StartRow + dataRowOffset
-                let c = b.StartCol + dataColOffset
+            if useRectangleColor then
+                Map.empty
+            else
+                blocks
+                |> List.map (fun b ->
+                    let r = b.StartRow + dataRowOffset
+                    let c = b.StartCol + dataColOffset
 
-                let opts = ResizeArray<string>()
+                    let blockColor idx =
+                        let colors =
+                            [ "red"
+                              "blue"
+                              "green"
+                              "orange"
+                              "purple"
+                              "brown"
+                              "cyan"
+                              "magenta"
+                              "teal"
+                              "olive" ]
 
-                match b.Label with
-                | Matrix.CurrentStepSubmatrix ->
-                    opts.Add("draw=red")
-                    opts.Add("fill=red!10")
-                | Matrix.Submatrix idx ->
-                    opts.Add(sprintf "draw=%s" (blockColor idx))
-                    opts.Add(sprintf "fill=%s" (blockFillColor idx))
+                        colors.[idx % colors.Length]
 
-                let blockOptions =
-                    if opts.Count = 0 then
-                        ""
-                    else
-                        "[" + String.concat "," opts + "]"
+                    let opts = ResizeArray<string>()
 
-                (r, c),
-                { Options = blockOptions
-                  RowCount = b.RowCount
-                  ColCount = b.ColCount })
-            |> List.groupBy fst
-            |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
-            |> Map.ofList
+                    match b.Label with
+                    | Matrix.CurrentStepSubmatrix ->
+                        opts.Add("draw=red")
+                        opts.Add("fill=red!10")
+                    | Matrix.Submatrix idx ->
+                        opts.Add(sprintf "draw=%s" (blockColor idx))
+                        opts.Add(sprintf "fill=%s!20" (blockColor idx))
+
+                    let blockOptions =
+                        if opts.Count = 0 then
+                            ""
+                        else
+                            "[" + String.concat "," opts + "]"
+
+                    (r, c),
+                    { Options = blockOptions
+                      RowCount = b.RowCount
+                      ColCount = b.ColCount })
+                |> List.groupBy fst
+                |> List.map (fun (pos, cmds) -> pos, cmds |> List.head |> snd)
+                |> Map.ofList
 
         let sb = System.Text.StringBuilder()
 
-        if totalCols > 10 then
+        if not useRectangleColor && totalCols > 10 then
             sb.Append(sprintf @"\setcounter{MaxMatrixCols}{%d}" totalCols).AppendLine()
             |> ignore
 
+        if useAdjustbox then
+            sb.AppendLine(@"\begin{adjustbox}{max width=\textwidth}").Append("$").AppendLine()
+            |> ignore
+
         sb.Append(sprintf @"\begin{pNiceMatrix}%s" options).AppendLine() |> ignore
+
+        if useRectangleColor && not (List.isEmpty rectangleColors) then
+            sb.AppendLine(@"\CodeBefore") |> ignore
+
+            for rc in rectangleColors do
+                sb.AppendLine(rc) |> ignore
+
+            sb.AppendLine(@"\Body") |> ignore
 
         for row in 0 .. totalRows - 1 do
             let cells =
@@ -168,7 +220,12 @@ module MatrixTeX =
                 sb.Append(line).AppendLine() |> ignore
 
         sb.Append(@"\end{pNiceMatrix}") |> ignore
+
+        if useAdjustbox then
+            sb.AppendLine().Append("$").AppendLine().AppendLine(@"\end{adjustbox}")
+            |> ignore
+
         sb.ToString()
 
     let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (matrix: Matrix<'a>) : string =
-        toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] [] None None
+        toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] [] None None false false
