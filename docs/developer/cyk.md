@@ -8,7 +8,7 @@
 **Used by:** Valiant
 **Book reference:** Chapter 7, Section sec:CYK
 
-> **Abstract:** Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. Uses a set-based triangular parsing table where cell (i,j) stores the set of nonterminals deriving substring w[i..j]. Provides table visualization via TeX output. Shares the `ParsingTable<'nt>` type with the Valiant algorithm.
+> **Abstract:** Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and production index). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the internal SPPF table.
 
 ## Contents
 
@@ -90,12 +90,11 @@ Runs CYK and returns both the enriched parsing table and the acceptance status. 
 | Decision | Rationale |
 |----------|-----------|
 | Grammar auto-converted to CNF inside `parse` | Caller doesn't need to manually convert; simplifies API |
-| Cells use `Set<Nonterminal<'nt>>` | Common type shared with Valiant; immutable F# Set for purity |
+| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production index). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
+| Cells use `Set<SppfParsingEntry<'nt>>` internally | Enables SPPF construction without re-running the algorithm; non-SPPF callers get only nonterminals via conversion |
 | Empty cells use empty Set | Simpler than `Option`; empty set naturally represents "no nonterminals" |
 | Terminals passed as `Terminal<'t> list` | Consistent with Valiant; no Symbol conversion needed |
 | `parseWithTrace` returns one matrix per diagonal | Enables step-by-step visualization of the algorithm's progress |
-| `parseWithSppfInfo` stores `(nt, k, prodIdx)` tuples | Enables SPPF reconstruction without re-running the algorithm; `k` is the split point for binary rules, terminal position for terminal rules |
-| Rule indices based on CNF grammar ordering | Natural ordering from `List.indexed`; deterministic and reproducible |
 
 ## Book Reference
 
