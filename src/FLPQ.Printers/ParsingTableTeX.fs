@@ -31,6 +31,13 @@ module ParsingTableTeX =
     /// Render a boolean as TeX: 1 for true, \cdot for false.
     let boolToTeX (b: bool) : string = if b then "1" else @"\cdot"
 
+    /// Render a set of SPPF parsing entries as a set of nonterminal names only.
+    let sppfEntryAsNtCellToTeX (nonterminalPrinter: 'nt -> string) (entries: Set<SppfParsingEntry<'nt>>) : string =
+        entries
+        |> Seq.map (fun entry -> entry.Nt)
+        |> Set.ofSeq
+        |> ntCellToTeX nonterminalPrinter
+
     /// Render a set of SPPF parsing entries as TeX tuples.
     let sppfEntryCellToTeX (nonterminalPrinter: 'nt -> string) (entries: Set<SppfParsingEntry<'nt>>) : string =
         setToTeX

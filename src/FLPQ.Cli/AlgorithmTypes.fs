@@ -35,6 +35,7 @@ module AlgorithmTypes =
         | [<AltCommandLine("-k")>] Lookahead of int
         | [<AltCommandLine("-s")>] Summary
         | [<AltCommandLine("--use-dot")>] UseDot
+        | [<AltCommandLine("--no-sppf-table")>] NoSppfTable
 
         interface IArgParserTemplate with
             member this.Usage =
@@ -46,3 +47,5 @@ module AlgorithmTypes =
                 | Lookahead _ -> "Lookahead k for LL parser (default: 1)"
                 | Summary -> "Generate merged TeX summary file"
                 | UseDot -> "Use Graphviz dot for graph rendering instead of TikZ (default: TikZ)"
+                | NoSppfTable ->
+                    "Render table cells as sets of nonterminals without SPPF split points and production indices"

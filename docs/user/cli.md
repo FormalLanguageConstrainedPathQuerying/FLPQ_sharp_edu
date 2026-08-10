@@ -24,6 +24,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
 | `--use-dot` | Use Graphviz dot for LR automaton rendering (default: Tikz) | off |
+| `--no-sppf-table` | Render CYK/Valiant table cells as sets of nonterminal names without SPPF split points and production indices | off |
 
 ## Output structure
 

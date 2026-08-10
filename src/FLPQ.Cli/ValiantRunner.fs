@@ -6,7 +6,7 @@ open FLPQ.Printers
 
 module ValiantRunner =
 
-    let runValiant (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
+    let runValiant (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) (noSppfTable: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -37,7 +37,12 @@ module ValiantRunner =
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
 
-            let tex = ValiantTeX.sppfStepToTeX string step
+            let tex =
+                if noSppfTable then
+                    ValiantTeX.sppfStepToTeXAsNt string step
+                else
+                    ValiantTeX.sppfStepToTeX string step
+
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         if not (List.isEmpty tokenList) then
@@ -55,7 +60,13 @@ module ValiantRunner =
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 
-    let runValiantModified (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
+    let runValiantModified
+        (grammarFile: string)
+        (inputFile: string)
+        (outputDir: string)
+        (useDot: bool)
+        (noSppfTable: bool)
+        =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -86,7 +97,12 @@ module ValiantRunner =
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
             Directory.CreateDirectory stepDir |> ignore
 
-            let tex = ValiantTeX.sppfModifiedStepToTeX string step
+            let tex =
+                if noSppfTable then
+                    ValiantTeX.sppfModifiedStepToTeXAsNt string step
+                else
+                    ValiantTeX.sppfModifiedStepToTeX string step
+
             Helpers.writeOutputFile (Path.Combine(stepDir, "table.tex")) tex
 
         if not (List.isEmpty tokenList) then

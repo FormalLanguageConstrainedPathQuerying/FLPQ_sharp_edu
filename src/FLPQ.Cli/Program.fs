@@ -18,13 +18,14 @@ module Program =
             let k = results.GetResult(AlgorithmTypes.Lookahead, defaultValue = 1)
             let summary = results.Contains AlgorithmTypes.Summary
             let useDot = results.Contains AlgorithmTypes.UseDot
+            let noSppfTable = results.Contains AlgorithmTypes.NoSppfTable
 
             Helpers.cleanOutputDir output
 
             match algorithm with
-            | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot
-            | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot
-            | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot
+            | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot noSppfTable
+            | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot noSppfTable
+            | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot noSppfTable
             | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k
             | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot

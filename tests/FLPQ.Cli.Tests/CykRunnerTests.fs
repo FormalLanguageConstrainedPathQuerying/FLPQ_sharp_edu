@@ -11,7 +11,7 @@ let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false false
     outDir
 
 [<Fact>]
@@ -66,7 +66,7 @@ let ``runCyk produces sppf.tikz.tex by default`` () =
 [<Fact>]
 let ``runCyk with useDot=true produces sppf.dot`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true
+    CykRunner.runCyk (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true false
     let sppfDot = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists sppfDot, "sppf.dot missing")
     Assert.True(FileInfo(sppfDot).Length > 0L)

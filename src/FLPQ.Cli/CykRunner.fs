@@ -6,7 +6,7 @@ open FLPQ.Printers
 
 module CykRunner =
 
-    let runCyk (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
+    let runCyk (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) (noSppfTable: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
@@ -30,7 +30,12 @@ module CykRunner =
             Directory.CreateDirectory stepDir |> ignore
 
             let tex =
-                if step.Highlights.IsEmpty then
+                if noSppfTable then
+                    if step.Highlights.IsEmpty then
+                        CykTeX.sppfTableToTeXAsNt string step.Table
+                    else
+                        CykTeX.sppfTableToTeXStyledAsNt string step.Table step.Highlights
+                else if step.Highlights.IsEmpty then
                     CykTeX.sppfTableToTeX string step.Table
                 else
                     CykTeX.sppfTableToTeXStyled string step.Table step.Highlights

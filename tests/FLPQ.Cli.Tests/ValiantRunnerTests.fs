@@ -11,7 +11,7 @@ let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiant (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false
+    ValiantRunner.runValiant (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false false
     outDir
 
 [<Fact>]
@@ -66,7 +66,7 @@ let ``runValiant produces sppf.tikz.tex by default`` () =
 [<Fact>]
 let ``runValiant with useDot=true produces sppf.dot`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiant (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true
+    ValiantRunner.runValiant (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true false
     let sppfDot = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists sppfDot, "sppf.dot missing")
     Assert.True(FileInfo(sppfDot).Length > 0L)
@@ -74,7 +74,7 @@ let ``runValiant with useDot=true produces sppf.dot`` () =
 
 let private runModifiedRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiantModified (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false
+    ValiantRunner.runValiantModified (TestGrammarFiles.exampleGrammar ()) exampleInput outDir false false
     outDir
 
 [<Fact>]
@@ -129,7 +129,7 @@ let ``runValiantModified produces sppf.tikz.tex by default`` () =
 [<Fact>]
 let ``runValiantModified with useDot=true produces sppf.dot`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    ValiantRunner.runValiantModified (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true
+    ValiantRunner.runValiantModified (TestGrammarFiles.exampleGrammar ()) exampleInput outDir true false
     let sppfDot = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists sppfDot, "sppf.dot missing")
     Assert.True(FileInfo(sppfDot).Length > 0L)
