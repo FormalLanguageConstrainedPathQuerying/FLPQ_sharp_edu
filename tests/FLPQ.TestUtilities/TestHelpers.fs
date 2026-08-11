@@ -354,7 +354,50 @@ module TestHelpers =
         if cykSppfAcc <> valSppfAcc || valSppfAcc <> modSppfAcc then
             failwithf "SPPF acceptance mismatch: CYK=%b Valiant=%b ModValiant=%b" cykSppfAcc valSppfAcc modSppfAcc
 
+        if cykAcc <> cykSppfAcc || valAcc <> valSppfAcc || modAcc <> modSppfAcc then
+            failwithf
+                "Acceptance vs SPPF acceptance mismatch: CYK=%b/%b Valiant=%b/%b Mod=%b/%b"
+                cykAcc
+                cykSppfAcc
+                valAcc
+                valSppfAcc
+                modAcc
+                modSppfAcc
+
+        let extractNtTable (sppf: SppfParsingTable<string>) : ParsingTable<string> =
+            Matrix.create (Matrix.rows sppf) (Matrix.cols sppf) (fun i j -> sppf.[i, j] |> Set.map (fun e -> e.Nt))
+
+        let cykNtFromSppf = extractNtTable cykSppfTable
+        let valNtFromSppf = extractNtTable valSppfTable
+        let modNtFromSppf = extractNtTable modSppfTable
+
         let sn = Matrix.rows cykSppfTable
+
+        for i in 0 .. sn - 1 do
+            for j in 0 .. sn - 1 do
+                if cykNtFromSppf.[i, j] <> cykTable.[i, j] then
+                    failwithf
+                        "CYK NT-from-SPPF table mismatch at (%d,%d): %A vs %A"
+                        i
+                        j
+                        cykNtFromSppf.[i, j]
+                        cykTable.[i, j]
+
+                if valNtFromSppf.[i, j] <> valTable.[i, j] then
+                    failwithf
+                        "Valiant NT-from-SPPF table mismatch at (%d,%d): %A vs %A"
+                        i
+                        j
+                        valNtFromSppf.[i, j]
+                        valTable.[i, j]
+
+                if modNtFromSppf.[i, j] <> modTable.[i, j] then
+                    failwithf
+                        "Modified Valiant NT-from-SPPF table mismatch at (%d,%d): %A vs %A"
+                        i
+                        j
+                        modNtFromSppf.[i, j]
+                        modTable.[i, j]
 
         for i in 0 .. sn - 1 do
             for j in 0 .. sn - 1 do
