@@ -381,14 +381,11 @@ module TestHelpers =
             let valTree = BasicSppf.extractDerivationTree valSppf
             let modTree = BasicSppf.extractDerivationTree modSppf
 
-            let cykLeaves =
-                DerivationTree.leaves cykTree |> List.map (fun (t: string) -> Terminal t)
+            let cykLeaves = DerivationTree.leaves cykTree |> List.map Terminal
 
-            let valLeaves =
-                DerivationTree.leaves valTree |> List.map (fun (t: string) -> Terminal t)
+            let valLeaves = DerivationTree.leaves valTree |> List.map Terminal
 
-            let modLeaves =
-                DerivationTree.leaves modTree |> List.map (fun (t: string) -> Terminal t)
+            let modLeaves = DerivationTree.leaves modTree |> List.map Terminal
 
             if cykLeaves <> input then
                 failwithf "CYK tree leaves %A <> input %A" cykLeaves input
@@ -419,10 +416,10 @@ module TestHelpers =
                 failwithf "SPPF SCC count mismatch: CYK=%d Valiant=%d Mod=%d" cykScc valScc modScc
 
             if not (BasicSppf.traverseAndCompare cykSppf valSppf) then
-                failwithf "SPPF structural mismatch: CYK vs Valiant"
+                failwith "SPPF structural mismatch: CYK vs Valiant"
 
             if not (BasicSppf.traverseAndCompare valSppf modSppf) then
-                failwithf "SPPF structural mismatch: Valiant vs Modified Valiant"
+                failwith "SPPF structural mismatch: Valiant vs Modified Valiant"
 
             let startNt = cnf.Start
             let inputLen = input.Length

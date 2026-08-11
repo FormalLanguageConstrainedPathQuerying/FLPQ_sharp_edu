@@ -96,12 +96,14 @@ module Summary =
                         { LrAutomatonPdf = None
                           LrAutomatonTikz = Some tikzContent
                           RsmSppfPdfs = [] }
-                    elif File.Exists autoDot then
-                        { LrAutomatonPdf = Some "dot_pdfs/lr_automaton.pdf"
-                          LrAutomatonTikz = None
-                          RsmSppfPdfs = [] }
                     else
-                        { LrAutomatonPdf = None
+                        let autoPdf =
+                            if File.Exists autoDot then
+                                Some "dot_pdfs/lr_automaton.pdf"
+                            else
+                                None
+
+                        { LrAutomatonPdf = autoPdf
                           LrAutomatonTikz = None
                           RsmSppfPdfs = [] }
                 | AlgorithmTypes.GLL ->
