@@ -7,7 +7,7 @@
 **Depends on:** Grammar, SymbolTeX
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Renders a `Grammar<'t,'nt>` as a TeX `align*` environment. Each production rule is displayed on its own line with `\rightarrow`. Symbols within the RHS are separated by `\ ` (thin space). Supports numbered (`grammarToTeXWithNumbers`) and unnumbered (`grammarToTeX`) output. Depends on `SymbolTeX.toLaTeX` for individual symbol rendering.
+> **Abstract:** Renders a `Grammar<'t,'nt>` as a TeX environment. Each production rule is displayed on its own line with `\rightarrow`. Symbols within the RHS are separated by `\ ` (thin space). Unnumbered output (`grammarToTeX`) uses `align*`; numbered output (`grammarToTeXWithNumbers`) uses `alignat*{3}` with 1-based numbers and a double `&&` between the LHS and arrow columns. Depends on `SymbolTeX.toLaTeX` for individual symbol rendering.
 
 ## Contents
 
@@ -33,7 +33,7 @@ Renders the grammar without production numbers.
 ```fsharp
 val grammarToTeXWithNumbers: Grammar<'t, 'nt> -> string
 ```
-Renders the grammar with 0-based production numbers in brackets (e.g., `[0]`, `[1]`).
+Renders the grammar with 1-based production numbers in the form `N)`.
 
 ## Output Format
 
@@ -46,14 +46,16 @@ S &\rightarrow \varepsilon
 
 With numbers:
 ```tex
-\begin{align*}
-[0] S &\rightarrow a\ S\ b\ S \\
-[1] S &\rightarrow \varepsilon
-\end{align*}
+\begin{alignat*}{3}
+1) \ & S &&\rightarrow a\ S\ b\ S \\
+2) \ & S &&\rightarrow \varepsilon
+\end{alignat*}
 ```
 
-- Environment: `\begin{align*} ... \end{align*}`
-- Each rule: `lhs &\rightarrow rhs \\`
+- Unnumbered environment: `\begin{align*} ... \end{align*}`
+- Numbered environment: `\begin{alignat*}{3} ... \end{alignat*}`
+- Unnumbered rule: `lhs &\rightarrow rhs \\`
+- Numbered rule: `N) \ & lhs &&\rightarrow rhs \\` (thin space `\ ` after the number, double `&&` between the LHS and arrow columns)
 - RHS symbols joined with `\ ` (thin space)
 - Epsilon renders as `\varepsilon`
 
@@ -61,7 +63,10 @@ With numbers:
 
 | Decision | Rationale |
 |----------|-----------|
-| `align*` environment | Standard LaTeX math alignment; each rule on its own line |
+| `align*` environment (unnumbered) | Standard LaTeX math alignment; each rule on its own line |
+| `alignat*{3}` environment (numbered) | Three-column alignment (number, LHS, RHS) with precise spacing control |
+| 1-based `N)` numbering with `\ ` thin space | Matches the book's grammar rendering convention |
+| Double `&&` between LHS and arrow | Separates the LHS column from the RHS column in `alignat*` |
 | Start nonterminal first | Consistent with the book's convention |
 | `\ ` (thin space) between RHS symbols | Visual separation without adding extra notation |
 | No production numbers by default | Clean output for inline display; numbers available when needed |
