@@ -1,5 +1,22 @@
 # Code Review Report
 
+## Task 253 Review (2026-09-01)
+
+Scope: `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Cli/*`, `src/FLPQ.Printers/{ParsingTableTeX,CykTeX,ValiantTeX}.fs`, and CYK/Valiant tests. Covers SPPF unification (with/without SPPF) and the `--no-sppf-table` rendering flag.
+
+**Resolved this task:**
+- **D6** — Valiant `complete`/`compute` duplicated for two type variants. Now a single SPPF computation path; the non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`, `parseModified*`) are thin wrappers over it (`Cyk.fs:211-242`, `Valiant.fs:601-658`).
+- **A5** (partially) — `Valiant.fs` reduced from ~912 to 658 lines by removing the duplicated non-SPPF computation path.
+
+**New tests added this task (test-coverage restore):**
+- `CykTests.WrapperEquivalenceTests` — property test verifying `Cyk.parseWithTrace` equals the nonterminal projection of `parseWithSppfTrace`, with identical highlights.
+- `ValiantTests.TraceWrapperEquivalenceTests` — property tests for `Valiant.parseWithTrace` and `Valiant.parseModifiedWithTrace` (previously untested wrappers), verifying table projection plus preserved `Target`/`Multiplied`/`ChangedCells`/layer fields.
+- `TestHelpers.checkCykValiantEquivalence` — restored explicit SPPF-vs-non-SPPF acceptance and table equivalence checks (wrapper-conversion oracle).
+
+**No blocking findings** in the reviewed changes. The non-SPPF rendering functions (`CykTeX.tableToTeX`, `ValiantTeX.stepToTeX`/`modifiedStepToTeX`) remain as book-reference public API, no longer called by the CLI, which now renders via `sppfTableToTeX*`/`sppfStepToTeX*` (including the `--no-sppf-table` `*AsNt` variants).
+
+---
+
 ## Scope
 
 Reviewed all 62 `.fs` source files (`src/`) and 49 `.fs` test files (`tests/`).
