@@ -308,3 +308,35 @@ module CykSppfTests =
         let tree = BasicSppf.extractDerivationTree sppf
         let leaves = DerivationTree.leaves tree
         Assert.Equal<string>([ "a"; "b" ], leaves)
+
+module WrapperEquivalenceTests =
+
+    /// After SPPF unification, the non-SPPF public API (`parseWithTrace`) is a wrapper
+    /// over the SPPF path. These properties verify the wrapper conversion is correct:
+    /// each non-SPPF trace step must carry exactly the nonterminal projection of the
+    /// corresponding SPPF trace step, with identical highlights.
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``parseWithTrace steps equal SPPF trace nonterminal projections`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            let trace = Cyk.parseWithTrace Grammar.freshStringNonterminal grammar input
+            let sppfTrace = Cyk.parseWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+            trace.Length = sppfTrace.Length
+            && List.forall2
+                (fun (ntStep: Cyk.CykTraceStep<string>) (sppfStep: Cyk.CykSppfTraceStep<string>) ->
+                    let n = Matrix.rows sppfStep.Table
+
+                    let tablesMatch =
+                        [ for i in 0 .. n - 1 do
+                              for j in 0 .. n - 1 do
+                                  yield (sppfStep.Table.[i, j] |> Set.map (fun e -> e.Nt)) = ntStep.Table.[i, j] ]
+                        |> List.forall id
+
+                    ntStep.Highlights = sppfStep.Highlights && tablesMatch)
+                trace
+                sppfTrace

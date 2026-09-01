@@ -675,3 +675,73 @@ module ValiantSppfTests =
         let tree = BasicSppf.extractDerivationTree sppf
         let leaves = DerivationTree.leaves tree
         Assert.Equal<string>([ "a"; "b" ], leaves)
+
+
+module TraceWrapperEquivalenceTests =
+
+    let private tablesMatch (ntTable: ParsingTable<string>) (sppfTable: SppfParsingTable<string>) : bool =
+        let n = Matrix.rows sppfTable
+
+        [ for i in 0 .. n - 1 do
+              for j in 0 .. n - 1 do
+                  yield ntTable.[i, j] = (sppfTable.[i, j] |> Set.map (fun e -> e.Nt)) ]
+        |> List.forall id
+
+    /// After SPPF unification, the non-SPPF trace API is a wrapper over the SPPF path.
+    /// These properties verify the wrapper conversion: each non-SPPF trace step must carry
+    /// exactly the nonterminal projection of the corresponding SPPF trace step, with the
+    /// structural fields (target, multiplied submatrices, changed cells, layers) preserved.
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``parseWithTrace steps equal SPPF trace nonterminal projections`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            let trace = Valiant.parseWithTrace Grammar.freshStringNonterminal grammar input
+
+            let sppfTrace =
+                Valiant.parseWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+            trace.Length = sppfTrace.Length
+            && List.forall2
+                (fun (ntStep: Valiant.ValiantTraceStep<string>) (sppfStep: Valiant.ValiantSppfTraceStep<string>) ->
+                    ntStep.Target = sppfStep.Target
+                    && ntStep.Multiplied = sppfStep.Multiplied
+                    && ntStep.ChangedCells = sppfStep.ChangedCells
+                    && tablesMatch ntStep.Table sppfStep.Table)
+                trace
+                sppfTrace
+
+        [<Property>]
+        let ``parseModifiedWithTrace steps equal SPPF trace nonterminal projections`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            let trace =
+                Valiant.parseModifiedWithTrace Grammar.freshStringNonterminal grammar input
+
+            let sppfTrace =
+                Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+            trace.Length = sppfTrace.Length
+            && List.forall2
+                (fun
+                    (ntStep: Valiant.ModifiedValiantTraceStep<string>)
+                    (sppfStep: Valiant.ModifiedValiantSppfTraceStep<string>) ->
+                    match ntStep, sppfStep with
+                    | Valiant.LayerForward(ntTable, layerSize, submatrices),
+                      Valiant.LayerForwardSppf(sppfTable, sppfLayerSize, sppfSubmatrices) ->
+                        layerSize = sppfLayerSize
+                        && submatrices = sppfSubmatrices
+                        && tablesMatch ntTable sppfTable
+                    | Valiant.LayerBackward(ntTable, layerSize, submatrices, changedCells),
+                      Valiant.LayerBackwardSppf(sppfTable, sppfLayerSize, sppfSubmatrices, sppfChangedCells) ->
+                        layerSize = sppfLayerSize
+                        && submatrices = sppfSubmatrices
+                        && changedCells = sppfChangedCells
+                        && tablesMatch ntTable sppfTable
+                    | _ -> false)
+                trace
+                sppfTrace
