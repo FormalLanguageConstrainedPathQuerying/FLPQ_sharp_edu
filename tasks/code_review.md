@@ -1,5 +1,20 @@
 # Code Review Report
 
+## Task 254 Review (2026-09-01)
+
+Scope: `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Printers.Tests/GoldenData/grammar{1,7,9}_{bnf,cnf}_numbered.tex`, `docs/developer/grammar-tex.md`. Changes `grammarToTeXWithNumbers` from `align*` with `[idx]` prefixes to `alignat*{3}` with 1-based `N)` numbers.
+
+**Findings: none.** Review of the change against the constraint sources:
+
+- §13 (no duplication) — the LHS/RHS content computation shared by both numbered and unnumbered paths was extracted into `renderRuleContent` (`GrammarTeX.fs:10-25`), so the two render branches do not copy the RHS-mapping logic.
+- §6 (XML doc comments) — `grammarToTeX` and `grammarToTeXWithNumbers` retain doc comments; the numbered function's comment now states `alignat*` / 1-based.
+- §7 (genericity) — still generic over `'t`/`'nt`; no `string` hardcoding introduced.
+- §9 (separation) — rendering remains in `FLPQ.Printers`; no algorithm or I/O logic added.
+- §19 (test coverage) — both render branches are exercised: `grammarToTeX` by CLI/summary tests, `grammarToTeXWithNumbers` by the 6 `GrammarTeXGoldenTests` numbered cases (all passing).
+- §20 (documentation) — `grammar-tex.md` abstract, Output Format, and Design Decisions updated to match the new output.
+
+---
+
 ## Task 253 Review (2026-09-01)
 
 Scope: `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Cli/*`, `src/FLPQ.Printers/{ParsingTableTeX,CykTeX,ValiantTeX}.fs`, and CYK/Valiant tests. Covers SPPF unification (with/without SPPF) and the `--no-sppf-table` rendering flag.
