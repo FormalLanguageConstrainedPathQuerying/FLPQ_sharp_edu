@@ -1047,10 +1047,10 @@
      4. Run all tests — zero regressions. All 7 cross-parser test groups must pass with the restored invariants.
 
      5. If any invariant fails for a specific algorithm, that algorithm has a residual bug — fix it before marking the task done.
-  251. [done] Add more SPPF invariant checking to `checkCykValiantEquivalence`
+251. [done] Add more SPPF invariant checking to `checkCykValiantEquivalence`
        1.   There is only one vertex without incoming edges in SPPF. This vertex is labelled with start nonterminal, leftPos in 0, and right pos is input length
        2.   For any Production vertex with two child lCH and rCH, splitPoint of the vertex is equal to lCH.RightPos, and splitPoint of the vertex is equal to rCH.LeftPos  
-  252. Improve Valinat (and modified Valiant) table rendering.
+252. [done] Improve Valinat (and modified Valiant) table rendering.
        1.   Use \rectanglecolor instead of \Block to higlight submatrices
        2.   Wrap matrix with `\begin{adjustbox}{max width=\textwidth}...\end{adjustbox}`
        3.   Use `$` instead of `\[` and `\]` inside adjustbox
@@ -1079,3 +1079,21 @@
           \end{adjustbox}
         \end{center}
        ```
+253. [done] Improve CYK and Valiant (+ modified) and its visualization
+     1.   Unify with appf and without sppf versions: table always with data to built SPPF. No separsted version that does not compute data for SPPF.
+     2.   Add visualization flag `-no-sppf-table` that for CYK, Valinat, Modified Valinat render tables without data for SPPF: each cell is a set of nonterminals, not set of triples. So, data for SPPF must be computed always, but render only if required. 
+     3.   Design tests carefully. Add necessary tests. Do not miss tests thet checks property wothout SPPF. Migrate and itegrate them.
+254. Render grammars with production numbers. Use alignat* environment. Use double-& between second and third columns. Add space after number. Example:
+```
+\begin{alignat*}{3}
+1) \ & N_2 &&\rightarrow \varepsilon  \\
+2) \ & N_2 &&\rightarrow N_3\ N_1     \\
+3) \ & N_2 &&\rightarrow S\ S         \\
+4) \ & N_3 &&\rightarrow a            \\
+5) \ & N_4 &&\rightarrow b            \\
+6) \ & N_1 &&\rightarrow S\ N_4       \\
+7) \ & N_1 &&\rightarrow b            \\
+8) \ & S &&\rightarrow N_3\ N_1       \\
+9) \ & S &&\rightarrow S\ S           \\
+\end{alignat*}
+```
