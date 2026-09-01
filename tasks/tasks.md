@@ -1083,7 +1083,7 @@
      1.   Unify with appf and without sppf versions: table always with data to built SPPF. No separsted version that does not compute data for SPPF.
      2.   Add visualization flag `-no-sppf-table` that for CYK, Valinat, Modified Valinat render tables without data for SPPF: each cell is a set of nonterminals, not set of triples. So, data for SPPF must be computed always, but render only if required. 
      3.   Design tests carefully. Add necessary tests. Do not miss tests thet checks property wothout SPPF. Migrate and itegrate them.
-254. Render grammars with production numbers. Use alignat* environment. Use double-& between second and third columns. Add space after number. Example:
+254. [done] Render grammars with production numbers. Use alignat* environment. Use double-& between second and third columns. Add space after number. Example:
 ```
 \begin{alignat*}{3}
 1) \ & N_2 &&\rightarrow \varepsilon  \\
