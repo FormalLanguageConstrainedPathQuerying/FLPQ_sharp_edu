@@ -57,6 +57,15 @@ Fantomas (0 diffs required) checks: formatting consistency only. It does not val
 
 The build and test suite ensure code compiles and tests pass. They do not enforce conventions, detect duplication, or validate architecture.
 
+## Manual Review Checklist
+
+Beyond the constraint sources above, also check:
+
+- Signature consistency — parallel or variant functions expose the same parameter order and types
+- Logic in the right place — no helper in `tests/` that compensates for a bug in `src/`; fix the source instead
+- No generalizable logic left in place — abstract and move up reusable logic instead of duplicating it
+- Tests assert appropriate properties — a test verifies a real property of the result, not merely "non-empty" or "no crash"
+
 ## Fix Protocol
 
 1. **Detect** all problems in one review pass across the entire repo
