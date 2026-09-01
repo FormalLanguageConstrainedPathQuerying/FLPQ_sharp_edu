@@ -7,6 +7,23 @@ open FLPQ.Languages
 /// TeX rendering for grammar rules.
 module GrammarTeX =
 
+    let private renderRuleContent
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (rule: Rule<'t, 'nt>)
+        : string * string =
+        let lhs = SymbolTeX.nonterminalContent nonterminalPrinter rule.Lhs
+
+        let rhs =
+            match rule.Rhs with
+            | EpsilonRhs -> @"\varepsilon"
+            | Symbols nel ->
+                NonEmptyList.toList nel
+                |> List.map (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter)
+                |> String.concat "\\ "
+
+        lhs, rhs
+
     let private renderGrammar
         (showNumbers: bool)
         (terminalPrinter: 't -> string)
@@ -20,25 +37,27 @@ module GrammarTeX =
             startRules @ otherRules
 
         let sb = StringBuilder()
-        sb.AppendLine(@"\begin{align*}") |> ignore
 
-        for idx in 0 .. orderedRules.Length - 1 do
-            let rule = orderedRules.[idx]
-            let lhs = SymbolTeX.nonterminalContent nonterminalPrinter rule.Lhs
+        if showNumbers then
+            sb.AppendLine(@"\begin{alignat*}{3}") |> ignore
 
-            let rhs =
-                match rule.Rhs with
-                | EpsilonRhs -> @"\varepsilon"
-                | Symbols nel ->
-                    NonEmptyList.toList nel
-                    |> List.map (SymbolTeX.toLaTeX terminalPrinter nonterminalPrinter)
-                    |> String.concat "\\ "
+            for idx in 0 .. orderedRules.Length - 1 do
+                let lhs, rhs =
+                    renderRuleContent terminalPrinter nonterminalPrinter orderedRules.[idx]
 
-            let prefix = if showNumbers then sprintf "[%d] " idx else ""
+                sb.AppendLine(sprintf "%d) \\ & %s &&\\rightarrow %s \\\\" (idx + 1) lhs rhs)
+                |> ignore
 
-            sb.AppendLine(sprintf @"%s%s &\rightarrow %s \\" prefix lhs rhs) |> ignore
+            sb.Append(@"\end{alignat*}") |> ignore
+        else
+            sb.AppendLine(@"\begin{align*}") |> ignore
 
-        sb.Append(@"\end{align*}") |> ignore
+            for rule in orderedRules do
+                let lhs, rhs = renderRuleContent terminalPrinter nonterminalPrinter rule
+                sb.AppendLine(sprintf @"%s &\rightarrow %s \\" lhs rhs) |> ignore
+
+            sb.Append(@"\end{align*}") |> ignore
+
         sb.ToString()
 
     /// Render a grammar as a TeX align* environment.
@@ -51,7 +70,7 @@ module GrammarTeX =
         : string =
         renderGrammar false terminalPrinter nonterminalPrinter grammar
 
-    /// Render a grammar as a TeX align* environment with production numbers (0-based).
+    /// Render a grammar as a TeX alignat* environment with 1-based production numbers.
     let grammarToTeXWithNumbers
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
