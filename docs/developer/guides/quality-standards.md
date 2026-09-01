@@ -3,7 +3,7 @@
 **Tags:** guide, quality, lint, format, coverage, tests, ci, gates
 **Kind:** guide
 
-> **Abstract:** Defines the project's non-negotiable quality gates: zero lint warnings, zero formatting differences, build with zero errors, all tests pass with zero skipped, equivalence tests for all algorithm variants, line coverage > 80%. A quality gate failure is a blocker — do not commit, do not merge, do not weaken tests. For execution procedures (commands, output capture), see the `quality-gates` and `dotnet-tooling` skills.
+> **Abstract:** Defines the project's non-negotiable quality gates: zero lint warnings, zero formatting differences, build with zero errors, all tests pass with zero skipped, equivalence tests for all algorithm variants, and the line-coverage threshold enforced by `tools/hard_gate.py`. A quality gate failure is a blocker — do not commit, do not merge, do not weaken tests. For execution procedures (commands, output capture), see the `quality-gates` and `dotnet-tooling` skills.
 
 ## Contents
 
@@ -55,11 +55,11 @@ Every algorithm variant must include property-based equivalence tests proving it
 
 **Why**: Variants are alternative algorithms for the same problem. Without equivalence tests, a variant could produce different results and no one would know. Property-based tests generate random inputs and verify both implementations agree, giving statistical confidence in correctness.
 
-### Line coverage > 80%
+### Line coverage
 
-Total FLPQ source line coverage must exceed 80%. Coverage is measured across all `FLPQ.*` source packages (excluding `*.Tests`). Drop below 80% is a blocker, same as a failing test.
+Total line coverage across all `FLPQ.*` source packages (excluding `*.Tests`) must meet the threshold enforced by the hard gate. The threshold is defined in, and checked by, the tool — run `python3 tools/hard_gate.py` to measure and verify coverage; there is no separate coverage number documented here.
 
-**Why**: 80% coverage is the established threshold for confidence that the tested code path exercises the implementation thoroughly. Coverage below 80% means significant portions of the codebase are untested — a reader who traces an algorithm through the code may encounter untested branches that produce incorrect results.
+**Why**: A single tool is the source of truth for the coverage threshold, so the metric cannot drift out of sync with its enforcement.
 
 ## What happens when a gate fails
 

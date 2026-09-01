@@ -5,7 +5,7 @@ Sequence:
   1. Format: dotnet fantomas . --check
   2. Build: dotnet build FLPQ.slnx -c Debug
   3. Tests: dotnet test per project with per-project coverage collection, then merge
-  4. Coverage gate: per-project >= 75% line, total >= 80% line
+  4. Coverage gate: per-project >= 85% line, total >= 90% line
   5. Lint: dotnet-fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
