@@ -1,124 +1,74 @@
-# Task 255: Fix productions numbering for CYK and Valiant
+# Task 256: Use math mode for node labels in BasicSPPF (CYK/Valiant) Tikz rendering
 
 ## Scope
 
-`SppfParsingEntry<'nt>` stores a `ProdIdx` field that is interpreted in two
-incompatible ways:
+`BasicSppfTikz.toTikz` renders BasicSPPF nodes for CYK and Valiant. Currently all
+node labels are built with raw strings and then passed through
+`AutomatonTikz.escapeLatex`, which escapes `$`, `_`, `{`, `}` into literal text.
+As a result:
 
-- **Rendering** (`GrammarTeX.grammarToTeXWithNumbers`) orders the grammar's rules
-  start-nonterminal-first and numbers them **1-based** (`1) S -> ...`, `2) ...`).
-- **Table cells / SPPF** (`Cyk`, `Valiant`, `BasicSppf`) store the **0-based**
-  index into the grammar's rule list in its original (unordered) order.
+- A nonterminal `N_1` (CNF naming from `Grammar.freshStringNonterminal`) renders as
+  literal `N\_1`, not as $N_1$ (math subscript).
+- A terminal `a` at positions `(l, r)` renders as literal `a\_\{l,r\}`, not as
+  $a_{l,r}$ (math subscript).
 
-For grammar `S -> a | S S | S S S`, CNF is `S -> a; S -> S S; S -> N1; N1 -> S S`.
-The last production renders as number `4`, but the table cell shows `(N1, 0, 0)`
-(production number `0`). The same mismatch appears in the SPPF.
-
-Task 255 makes the production number a single canonical value: a **1-based**
-number in the **start-nonterminal-first** ordering used by the CNF renderer, and
-introduces a number→production map created once and reused everywhere.
+Task 256 changes **only** the Tikz renderer (`BasicSppfTikz`) so nonterminal names
+and terminals use LaTeX math mode. The DOT renderer (`BasicSppfDot`) is **not**
+changed.
 
 ## Reuse Analysis
 
-- **Existing `GrammarTeX.grammarToTeXWithNumbers` ordering logic** (start rules
-  first, then rest) — extracted into a shared `Grammar.numberedRules` function so
-  renderer and algorithms share one source of truth (Q5: extract shared helper).
-- **Existing `Cyk.findTerminalRulesWithProdIdx` / `findBinaryProductionsWithProdIdx`** —
-  change input from `Rule list` (0-based `List.indexed`) to `(int * Rule) list`
-  (1-based numbers). Structure otherwise unchanged.
-- **Existing `Valiant.terminalRulesFromGrammar` / `binaryRulesFromGrammar`** —
-  same change: iterate `Grammar.numberedRules` instead of `List.indexed cnf.Rules`.
-- **Existing `BasicSppf.fromParsingTable` / `validateProductionChildren`** —
-  replace `cnf.Rules.[idx]` array indexing with a `Map<int, Rule>` lookup built
-  once from `Grammar.productionNumberMap`.
-- **Existing golden-test infrastructure** (`GoldenHelpers.verifyGolden`,
-  `CREATE_GOLDEN_FILES=1`) — reused to regenerate the 4 affected reference files.
-- **`ParsingTableTeX.sppfEntryCellToTeX`**, **`BasicSppfDot`**, **`BasicSppfTikz`** —
-  unchanged: they only display the `ProdIdx` value, which is now 1-based.
+- `AutomatonTikz.escapeLatex` — kept for the `Epsilon` and `Production` labels,
+  which are not part of this task (behavior unchanged).
+- `AutomatonTikz` / `LRAutomatonTikz` already insert `$\begin{aligned}...\end{aligned}$`
+  content into `as={...}` **without** escaping (see `LRAutomatonTikz.stateContentToTikzAs`
+  and `AutomatonTikz.nodeOptions`). Math mode inside `as={...}` is an established
+  pattern in this codebase — BasicSppfTikz follows the same convention.
+- The `tex_tikz_template.tex` used by compilation tests already loads `amsmath`,
+  so `$...$` math renders correctly.
 
 ---
 
-### S1: Add canonical production numbering to `Grammar` module
+### S1: Use math mode for nonterminal and terminal labels in BasicSppfTikz + update tests
 
-**Code:** `src/FLPQ.Languages/Grammar.fs` — add `Grammar.numberedRules` and
-          `Grammar.productionNumberMap` (reused by GrammarTeX, Cyk, Valiant, BasicSppf)
-**Tests:** `tests/FLPQ.Languages.Tests/GrammarTests.fs` — new `[<Fact>]` tests for
-          start-first ordering and 1-based numbering (grammar with start rules
-          interleaved among other rules, and a grammar whose start appears last)
-**Docs:** `docs/developer/grammar.md` — document the two new functions
+**Code:** `src/FLPQ.Printers/BasicSppfTikz.fs` — change the label construction for
+          `BasicSppfNodeInfo.Terminal` and `BasicSppfNodeInfo.Nonterminal` to use
+          math mode, and stop escaping those two labels
+**Tests:** `tests/FLPQ.Printers.Tests/BasicSppfDotTests.fs` — update the tikz
+          assertions to expect math-mode labels
+**Docs:** none (rendering-only change; the convention is documented in S2)
 
 **Spec:**
-- Add `numberedRules (g: Grammar<'t,'nt>) : (int * Rule<'t,'nt>) list`:
-  partition `g.Rules` into start rules and the rest, concatenate
-  (`startRules @ otherRules`), mapi to `(i + 1, rule)` (1-based).
-- Add `productionNumberMap (g: Grammar<'t,'nt>) : Map<int, Rule<'t,'nt>>` =
-  `numberedRules g |> Map.ofList`.
-- XML doc comments on both, describing the canonical ordering and 1-based numbering.
-- Equivalence: no existing behavior changes; both functions are additive.
+- `Terminal(Terminal t, l, r)` label becomes `$<name>_{l,r}$`, e.g. `$a_{0,1}$`.
+- `Nonterminal(Nonterminal nt, l, r)` label becomes `$<name>$ [l,r]`, e.g. `$N_1$ [0,2]`.
+  Only the *name* is math-mode; the `[l,r]` span stays as literal text (per task:
+  "math mode for nonterminal names").
+- These two labels must NOT be passed through `AutomatonTikz.escapeLatex` (math mode
+  requires literal `$`, `_`, `{`, `}`).
+- `Epsilon` and `Production` labels keep their current escaping (unchanged behavior).
+- `BasicSppfDot.toDot` remains untouched.
+- Update `BasicSppfDotTests.fs` tikz assertions:
+  - `Assert.Contains("S [0,2]", tikz)` → `Assert.Contains("$S$ [0,2]", tikz)`.
+  - Add assertions for the math-mode terminal label (e.g. `$a_{0,1}$`) so the
+    convention is pinned by a test.
 
 **Status:** [done]
 
 ---
 
-### S2: Reuse `Grammar.numberedRules` in `GrammarTeX`
+### S2: Document the BasicSPPF visualization and the math-mode convention
 
-**Code:** `src/FLPQ.Printers/GrammarTeX.fs` — replace the local `orderedRules`
-          computation with `Grammar.numberedRules`, use the number directly instead
-          of `idx + 1`
-**Tests:** none (output must be byte-identical — verified by existing
-          `GrammarTeXGoldenTests` and `CykSummaryGoldenTests`)
-**Docs:** `docs/developer/grammar-tex.md` — note the shared source of truth
-
-**Spec:**
-- `renderGrammar` (numbered branch) iterates `Grammar.numberedRules grammar`,
-  using the `number` from each pair in place of `idx + 1`.
-- Unnumbered branch keeps its own ordering (same logic; can also iterate the
-  numbered list and discard the number).
-- Equivalence: `grammarToTeXWithNumbers` output is byte-identical to before
-  (all `GrammarTeXGoldenTests` pass unchanged).
-
-**Status:** [done]
-
----
-
-### S3: Switch CYK, Valiant, BasicSppf to 1-based canonical production numbers
-
-**Code:**
-- `src/FLPQ.Languages/Cyk.fs` — `findTerminalRulesWithProdIdx` /
-  `findBinaryProductionsWithProdIdx` accept `(int * Rule<'t,'nt>) list`; call sites
-  pass `Grammar.numberedRules cnf`; `ProdIdx` values become 1-based.
-- `src/FLPQ.Languages/Valiant.fs` — `terminalRulesFromGrammar` /
-  `binaryRulesFromGrammar` iterate `Grammar.numberedRules cnf`; `ProdIdx` values
-  become 1-based.
-- `src/FLPQ.Languages/BasicSppf.fs` — `fromParsingTable` builds
-  `Grammar.productionNumberMap cnf` once and looks up rules by number;
-  `validateProductionChildren` uses the map (and `Map.tryFind` for range checks).
-
-**Tests:**
-- `tests/FLPQ.Languages.Tests/CykTests.fs` — update the aplus test to look up the
-  rule via `Grammar.productionNumberMap` instead of `cnf.Rules.[entry.ProdIdx]`.
-- Regenerate golden reference files (the `ProdIdx` tuple component changes):
-  `cyk_grammar1_aababb_summary.tex`, `cyk_grammar7_xplusx_summary.tex`,
-  `valiant_grammar1_abab.tex`, `valiant_modified_grammar1_ab.tex`.
-
-**Docs:**
-- `docs/developer/cyk.md` — `productionIndex` is now 1-based, canonical order.
-- `docs/developer/valiant.md` — same.
-- `docs/developer/sppf-parsing-table.md` — update the tuple field description and
-  the "0-based index" wording; add a design-decision row for the canonical
-  number→production map.
+**Code:** none
+**Tests:** none
+**Docs:** Create `docs/developer/basic-sppf-viz.md` (referenced from
+        `docs/developer/FLPQ.Printers.md:36` but currently missing) describing
+        `BasicSppfDot` and `BasicSppfTikz`, including the math-mode label
+        convention for the Tikz renderer
 
 **Spec:**
-- `ProdIdx` stored in `SppfParsingEntry` is the 1-based production number in the
-  start-nonterminal-first order (identical to `grammarToTeXWithNumbers`).
-- CYK and Valiant (standard + modified) must produce identical `ProdIdx` values
-  for the same rule (cross-algorithm SPPF equivalence preserved).
-- `BasicSppf` reconstructs the rule via the number→production map, so
-  `fromParsingTable` / `validateProductionChildren` / `extractDerivationTree`
-  remain correct.
-- Equivalence: acceptance results and extracted tree yields are unchanged;
-  CYK ≡ Valiant ≡ modified-Valiant SPPF byte-identity still holds (property tests).
-- Example (grammar `S -> a | S S | S S S`): cell for `N1 -> S S` now shows
-  `(N1, 0, 4)` instead of `(N1, 0, 0)`, matching CNF rendering number `4`.
+- `kind: visualization` following the canonical template (metadata, abstract, TOC).
+- Document `BasicSppfDot.toDot` and `BasicSppfTikz.toTikz` signatures and output.
+- Record the design decision: Tikz uses math mode (`$N_1$`, `$a_{l,r}$`) for
+  nonterminal/terminal labels; DOT uses plain text labels (no math mode).
 
 **Status:** [done]

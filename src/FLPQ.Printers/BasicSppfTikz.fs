@@ -24,19 +24,17 @@ module BasicSppfTikz =
 
             let label =
                 match info with
-                | BasicSppfNodeInfo.Terminal(Terminal t, l, r) -> sprintf "%s_{%d,%d}" (terminalPrinter t) l r
+                | BasicSppfNodeInfo.Terminal(Terminal t, l, r) -> sprintf "$%s_{%d,%d}$" (terminalPrinter t) l r
                 | BasicSppfNodeInfo.Nonterminal(Nonterminal nt, l, r) ->
-                    sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r
-                | BasicSppfNodeInfo.Epsilon p -> sprintf "\\varepsilon_{%d}" p
+                    sprintf "$%s$ [%d,%d]" (nonterminalPrinter nt) l r
+                | BasicSppfNodeInfo.Epsilon p -> AutomatonTikz.escapeLatex (sprintf "\\varepsilon_{%d}" p)
                 | BasicSppfNodeInfo.Production(ruleIdx, k) -> sprintf "%d, %d" k ruleIdx
-
-            let escapedLabel = AutomatonTikz.escapeLatex label
 
             let opts =
                 if i = sppf.RootIndex then
-                    sprintf "as={%s}, fill=green!30" escapedLabel
+                    sprintf "as={%s}, fill=green!30" label
                 else
-                    sprintf "as={%s}" escapedLabel
+                    sprintf "as={%s}" label
 
             sb.AppendLine(sprintf "    n%d [%s];" i opts) |> ignore
 

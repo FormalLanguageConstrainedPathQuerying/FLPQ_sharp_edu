@@ -1,5 +1,23 @@
 # Code Review Report
 
+## Task 256 Review (2026-09-02)
+
+Scope: `src/FLPQ.Printers/BasicSppfTikz.fs`, `tests/FLPQ.Printers.Tests/BasicSppfDotTests.fs`, `docs/developer/basic-sppf-viz.md` (new), `docs/main.md`. Changes `BasicSppfTikz.toTikz` to render nonterminal names and terminal labels in LaTeX math mode (`$N_1$`, `$a_{l,r}$`); DOT renderer untouched.
+
+**Findings against the constraint sources:**
+
+- §6 (XML doc comments) — `toTikz` retains its `///` doc comment; no new public API introduced.
+- §7 (genericity) — `toTikz` stays generic over `'t`/`'nt`; no `string` hardcoding.
+- §9 (separation) — rendering change confined to `FLPQ.Printers`; no algorithm or I/O logic touched.
+- §13 (no duplication) — math-mode label construction is inline in the existing single `match`; no logic copied.
+- §19 (test coverage) — `simple SPPF tikz compiles` now asserts the math-mode labels (`$S$ [0,2]`, `$a_{0,1}$`, `$b_{1,2}$`) and still compiles with lualatex; DOT assertions unchanged.
+- §20 (documentation) — created `basic-sppf-viz.md` (referenced from `FLPQ.Printers.md` but previously missing) documenting both renderers and the math-mode convention; added navigation link in `docs/main.md`.
+- §21 (book traceability) — `def:basicSPPF` reference preserved in the source.
+
+**No blocking findings.** Epsilon/production labels are intentionally left as plain (unchanged) rendering — the task scopes math mode to nonterminal names and terminals only.
+
+---
+
 ## Task 255 Review (2026-09-02)
 
 Scope: `src/FLPQ.Languages/{Grammar,Cyk,Valiant,BasicSppf}.fs`, `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Languages.Tests/{GrammarTests,CykTests}.fs`, `tests/FLPQ.Printers.Tests/GoldenData/{cyk_grammar7_xplusx,valiant_grammar1_abab,valiant_modified_grammar1_ab}*.tex`, and `docs/developer/{grammar,grammar-tex,cyk,valiant,sppf-parsing-table}.md`. Makes `SppfParsingEntry.ProdIdx` a 1-based canonical production number (start-nonterminal-first order) shared by CNF rendering, CYK/Valiant table cells, and Basic SPPF via a number→production map.
