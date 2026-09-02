@@ -428,3 +428,59 @@ module ExtendedGrammarTests =
         let originalRules = ext.Rules |> List.skip 1
         Assert.Equal(g.Rules.Length, originalRules.Length)
         Assert.StrictEqual(g.Rules, originalRules)
+
+
+module NumberingTests =
+
+    let private rule (lhs: string) (rhs: Symbol<string, string> list) : Rule<string, string> =
+        { Lhs = Nonterminal lhs
+          Rhs = Symbols(NonEmptyList.ofList rhs) }
+
+    let private interleavedGrammar: Grammar<string, string> =
+        { Start = Nonterminal "S"
+          Rules =
+            [ rule "A" [ Symbol.T(Terminal "x") ]
+              rule "S" [ Symbol.N(Nonterminal "A") ]
+              rule "S" [ Symbol.T(Terminal "y") ]
+              rule "B" [ Symbol.N(Nonterminal "S") ] ] }
+
+    [<Fact>]
+    let ``numberedRules puts start rules first with 1-based numbers`` () =
+        let numbered = Grammar.numberedRules interleavedGrammar
+
+        Assert.Equal(4, List.length numbered)
+        Assert.Equal(1, numbered.[0] |> fst)
+        Assert.Equal(Nonterminal "S", (numbered.[0] |> snd).Lhs)
+        Assert.Equal(2, numbered.[1] |> fst)
+        Assert.Equal(Nonterminal "S", (numbered.[1] |> snd).Lhs)
+        Assert.Equal(3, numbered.[2] |> fst)
+        Assert.Equal(Nonterminal "A", (numbered.[2] |> snd).Lhs)
+        Assert.Equal(4, numbered.[3] |> fst)
+        Assert.Equal(Nonterminal "B", (numbered.[3] |> snd).Lhs)
+
+    [<Fact>]
+    let ``numberedRules preserves every rule exactly once`` () =
+        let numbered = Grammar.numberedRules interleavedGrammar
+        let numberedRulesOnly = numbered |> List.map snd |> List.sort
+        let originalRulesSorted = interleavedGrammar.Rules |> List.sort
+
+        Assert.StrictEqual(originalRulesSorted, numberedRulesOnly)
+
+    [<Fact>]
+    let ``productionNumberMap matches numberedRules`` () =
+        let map = Grammar.productionNumberMap interleavedGrammar
+
+        for (number, rule) in Grammar.numberedRules interleavedGrammar do
+            Assert.Equal(rule, Map.find number map)
+
+    [<Fact>]
+    let ``productionNumberMap lookups match CNF renderer numbering`` () =
+        let grammar = Grammar.parseGrammar "S -> a | S S | S S S"
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
+        let map = Grammar.productionNumberMap cnf
+
+        let numbered = Grammar.numberedRules cnf
+        Assert.Equal(List.length cnf.Rules, List.length numbered)
+
+        for (number, rule) in numbered do
+            Assert.Equal(rule, Map.find number map)

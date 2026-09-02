@@ -205,7 +205,8 @@ module CykSppfTests =
             Assert.Equal(0, entry.SplitPoint)
 
             let rule =
-                (Grammar.toCnf Grammar.freshStringNonterminal grammar3).Rules.[entry.ProdIdx]
+                Grammar.productionNumberMap (Grammar.toCnf Grammar.freshStringNonterminal grammar3)
+                |> Map.find entry.ProdIdx
 
             let isTerminalRule =
                 match rule.Rhs with
@@ -215,7 +216,7 @@ module CykSppfTests =
                     | _ -> false
                 | _ -> false
 
-            Assert.True(isTerminalRule, sprintf "Rule at index %d should be a terminal rule for 'a'" entry.ProdIdx)
+            Assert.True(isTerminalRule, sprintf "Rule at number %d should be a terminal rule for 'a'" entry.ProdIdx)
 
     [<Fact>]
     let ``enriched table for dyck grammar with input 'ab' has correct structure`` () =

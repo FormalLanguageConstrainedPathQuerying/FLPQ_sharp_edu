@@ -8,7 +8,7 @@
 **Used by:** Valiant
 **Book reference:** Chapter 7, Section sec:CYK
 
-> **Abstract:** Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and production index). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the internal SPPF table.
+> **Abstract:** Implements the Cocke-Younger-Kasami (CYK) parsing algorithm for context-free grammars in Chomsky Normal Form. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and 1-based production number). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the internal SPPF table.
 
 ## Contents
 
@@ -77,7 +77,7 @@ Runs CYK and returns the sequence of working table states, one per diagonal. The
 ```fsharp
 val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
 ```
-Runs CYK and returns an enriched parsing table where each cell stores `(nonterminal, splitPoint, productionIndex)` tuples. The `splitPoint` encodes the decomposition point (`k`) for binary rules or the terminal position for terminal rules; `productionIndex` is the 0-based index of the CNF grammar rule. This table provides all data needed for BasicSPPF construction (see `BasicSppf.fromParsingTable`).
+Runs CYK and returns an enriched parsing table where each cell stores `(nonterminal, splitPoint, productionNumber)` tuples. The `splitPoint` encodes the decomposition point (`k`) for binary rules or the terminal position for terminal rules; `productionNumber` is the 1-based production number of the CNF grammar rule in the canonical start-nonterminal-first order (matching `grammarToTeXWithNumbers`). This table provides all data needed for BasicSPPF construction (see `BasicSppf.fromParsingTable`).
 
 ### `parseWithSppfTable`
 ```fsharp
@@ -90,7 +90,7 @@ Runs CYK and returns both the enriched parsing table and the acceptance status. 
 | Decision | Rationale |
 |----------|-----------|
 | Grammar auto-converted to CNF inside `parse` | Caller doesn't need to manually convert; simplifies API |
-| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production index). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
+| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production number). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
 | Cells use `Set<SppfParsingEntry<'nt>>` internally | Enables SPPF construction without re-running the algorithm; non-SPPF callers get only nonterminals via conversion |
 | Empty cells use empty Set | Simpler than `Option`; empty set naturally represents "no nonterminals" |
 | Terminals passed as `Terminal<'t> list` | Consistent with Valiant; no Symbol conversion needed |

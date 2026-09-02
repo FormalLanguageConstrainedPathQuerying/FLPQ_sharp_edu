@@ -107,6 +107,18 @@ val toCnf: g:Grammar<string, string> -> Grammar<string, string>
 ```
 Transform a CFG into Chomsky Normal Form (described above).
 
+### `numberedRules`
+```fsharp
+val numberedRules: g:Grammar<'t, 'nt> -> (int * Rule<'t, 'nt>) list
+```
+Returns the grammar's productions with canonical 1-based production numbers: start nonterminal's rules first, followed by the remaining rules in their original order. This is the single source of truth for production numbers used by CNF rendering (`GrammarTeX`), CYK/Valiant table cells, and Basic SPPF construction.
+
+### `productionNumberMap`
+```fsharp
+val productionNumberMap: g:Grammar<'t, 'nt> -> Map<int, Rule<'t, 'nt>>
+```
+Map from a 1-based production number (as produced by `numberedRules`) to the corresponding production rule. Built once and reused for O(1) lookup during SPPF construction and validation.
+
 ## BNF File Format
 
 A `.bnf` file contains one production rule per line:
@@ -152,6 +164,7 @@ An augmented grammar with fresh start `S'`. The extended grammar has `S' -> S` a
 | Fixed-point computation for nullable/unit pairs | Standard Hopcroft-Ullman approach; guaranteed termination on finite grammars |
 | New start symbol always introduced in CNF | Simplifies epsilon handling; ensures start doesn't appear on any RHS |
 | `ExtendedGrammar` as wrapper type | Preserves original-extended relationship; eliminates need for parallel variables in runners |
+| Canonical 1-based production numbering | `numberedRules`/`productionNumberMap` keep the production number used by rendering, table cells, and SPPF consistent (start rules first, 1-based) |
 
 ## Book Reference
 

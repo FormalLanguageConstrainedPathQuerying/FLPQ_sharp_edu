@@ -142,6 +142,19 @@ module Grammar =
     let isEpsilonAccepted (cnf: Grammar<'t, 'nt>) : bool =
         cnf.Rules |> List.exists (fun r -> r.Lhs = cnf.Start && Rhs.isEpsilon r.Rhs)
 
+    /// Return the grammar's productions with canonical 1-based production numbers.
+    /// Rules of the start nonterminal come first, followed by the remaining rules in
+    /// their original order. This is the single source of truth for production numbers
+    /// used by CNF rendering (GrammarTeX), CYK/Valiant table cells, and Basic SPPF construction.
+    let numberedRules (g: Grammar<'t, 'nt>) : (int * Rule<'t, 'nt>) list =
+        let startRules, otherRules = g.Rules |> List.partition (fun r -> r.Lhs = g.Start)
+
+        startRules @ otherRules |> List.mapi (fun i rule -> (i + 1, rule))
+
+    /// Map from a 1-based production number (as produced by `numberedRules`)
+    /// to the corresponding production rule. Built once and reused for O(1) lookup.
+    let productionNumberMap (g: Grammar<'t, 'nt>) : Map<int, Rule<'t, 'nt>> = numberedRules g |> Map.ofList
+
     let private computeNullable (rules: Rule<'t, 'nt> list) : Set<Nonterminal<'nt>> =
         let rec loop (current: Set<Nonterminal<'nt>>) =
             let newNullable =

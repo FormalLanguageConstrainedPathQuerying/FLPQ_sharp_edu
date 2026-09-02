@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli
 **Book reference:** Section sec:Valiant
 
-> **Abstract:** Implements Valiant's parsing algorithm for context-free grammars in Chomsky Normal Form. Uses set-based matrix operations and recursive submatrix decomposition to achieve subcubic complexity. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and production index). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the internal SPPF table.
+> **Abstract:** Implements Valiant's parsing algorithm for context-free grammars in Chomsky Normal Form. Uses set-based matrix operations and recursive submatrix decomposition to achieve subcubic complexity. All computation uses enriched SPPF entries (`SppfParsingEntry<'nt>` storing nonterminal, split point, and 1-based production number). The non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the internal SPPF table.
 
 ## Contents
 
@@ -170,7 +170,7 @@ Run the modified Valiant algorithm with step-by-step tracing. Each step captures
 ```fsharp
 val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
 ```
-Runs standard Valiant and returns an enriched parsing table with `(nonterminal, splitPoint, productionIndex)` entries for BasicSPPF construction. Uses `mxmi` for indexed matrix multiplication, capturing the split point `k` in each entry.
+Runs standard Valiant and returns an enriched parsing table with `(nonterminal, splitPoint, productionNumber)` entries for BasicSPPF construction. Uses `mxmi` for indexed matrix multiplication, capturing the split point `k` in each entry.
 
 ### `parseWithSppfTable`
 ```fsharp
@@ -195,7 +195,7 @@ Returns both the enriched modified SPPF table and acceptance status.
 | Decision | Rationale |
 |----------|-----------|
 | Set-based matrices (no Boolean decomposition) | Simpler: each cell holds `Set<SppfParsingEntry<'nt>>` directly. No `decompose`/`recompose` conversion |
-| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production index). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
+| Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production number). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
 | Multiplication-only trace steps | Trace records only `doMultiplications` results (target + operand submatrices + changed cells), omitting decomposition transitions and size-1 terminal steps |
 | Terminal rules pre-filled in `initValiant` | Ensures all diagonal cells have data before layer processing starts |
 | `bottomSubmatrix` uses higher row indices | "Closest to diagonal" means row index closer to column index |

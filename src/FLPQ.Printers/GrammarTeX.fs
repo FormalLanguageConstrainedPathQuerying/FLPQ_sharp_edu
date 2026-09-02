@@ -30,29 +30,22 @@ module GrammarTeX =
         (nonterminalPrinter: 'nt -> string)
         (grammar: Grammar<'t, 'nt>)
         : string =
-        let orderedRules =
-            let startRules, otherRules =
-                grammar.Rules |> List.partition (fun r -> r.Lhs = grammar.Start)
-
-            startRules @ otherRules
-
         let sb = StringBuilder()
 
         if showNumbers then
             sb.AppendLine(@"\begin{alignat*}{3}") |> ignore
 
-            for idx in 0 .. orderedRules.Length - 1 do
-                let lhs, rhs =
-                    renderRuleContent terminalPrinter nonterminalPrinter orderedRules.[idx]
+            for number, rule in Grammar.numberedRules grammar do
+                let lhs, rhs = renderRuleContent terminalPrinter nonterminalPrinter rule
 
-                sb.AppendLine(sprintf "%d) \\ & %s &&\\rightarrow %s \\\\" (idx + 1) lhs rhs)
+                sb.AppendLine(sprintf "%d) \\ & %s &&\\rightarrow %s \\\\" number lhs rhs)
                 |> ignore
 
             sb.Append(@"\end{alignat*}") |> ignore
         else
             sb.AppendLine(@"\begin{align*}") |> ignore
 
-            for rule in orderedRules do
+            for _, rule in Grammar.numberedRules grammar do
                 let lhs, rhs = renderRuleContent terminalPrinter nonterminalPrinter rule
                 sb.AppendLine(sprintf @"%s &\rightarrow %s \\" lhs rhs) |> ignore
 

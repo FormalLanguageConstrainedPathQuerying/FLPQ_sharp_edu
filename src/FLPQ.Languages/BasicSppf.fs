@@ -67,6 +67,7 @@ module BasicSppf =
                 let nodeMap = Dictionary<BasicSppfNodeInfo<'t, 'nt>, int>()
                 let vertices = ResizeArray<BasicSppfNodeInfo<'t, 'nt>>()
                 let edges = ResizeArray<int * int>()
+                let ruleMap = Grammar.productionNumberMap cnf
 
                 let getOrCreate (info: BasicSppfNodeInfo<'t, 'nt>) : int =
                     match nodeMap.TryGetValue(info) with
@@ -92,8 +93,10 @@ module BasicSppf =
                         for entry in entries do
                             let ntNode = getOrCreate (BasicSppfNodeInfo.Nonterminal(entry.Nt, i, j + 1))
 
+                            let rule = Map.find entry.ProdIdx ruleMap
+
                             let splitPoint =
-                                match Rhs.toNonEpsilonList cnf.Rules.[entry.ProdIdx].Rhs with
+                                match Rhs.toNonEpsilonList rule.Rhs with
                                 | [ Symbol.N _; Symbol.N _ ] -> entry.SplitPoint + 1
                                 | _ -> entry.SplitPoint
 
@@ -101,8 +104,6 @@ module BasicSppf =
                             vertices.Add(BasicSppfNodeInfo.Production(entry.ProdIdx, splitPoint))
 
                             edges.Add(ntNode, prodNode)
-
-                            let rule = cnf.Rules.[entry.ProdIdx]
 
                             match Rhs.toNonEpsilonList rule.Rhs with
                             | [ Symbol.T(Terminal t) ] ->
@@ -260,6 +261,7 @@ module BasicSppf =
     let validateProductionChildren (sppf: BasicSPPF<'t, 'nt>) (cnf: Grammar<'t, 'nt>) : Result<unit, string list> =
         let n = Graph.vertexCount sppf.Graph
         let errors = ResizeArray<string>()
+        let ruleMap = Grammar.productionNumberMap cnf
 
         for v in 0 .. n - 1 do
             match Graph.getVertex v sppf.Graph with
@@ -272,19 +274,20 @@ module BasicSppf =
                         $"Production node v={v} ruleIdx={ruleIndex} split={splitPoint}: "
                         + $"has {childCount} children, expected 1 or 2"
                     )
-                elif ruleIndex < 0 || ruleIndex >= List.length cnf.Rules then
-                    errors.Add(
-                        $"Production node v={v}: ruleIndex={ruleIndex} out of range (0..{List.length cnf.Rules - 1})"
-                    )
                 else
-                    let rule = cnf.Rules.[ruleIndex]
-                    let rhsLen = Rhs.toNonEpsilonList rule.Rhs |> List.length
-
-                    if childCount <> rhsLen then
+                    match Map.tryFind ruleIndex ruleMap with
+                    | None ->
                         errors.Add(
-                            $"Production node v={v} ruleIdx={ruleIndex} ({rule.Lhs} -> {rule.Rhs}): "
-                            + $"has {childCount} children, RHS length is {rhsLen}"
+                            $"Production node v={v}: ruleIndex={ruleIndex} not found (valid numbers are 1..{List.length cnf.Rules})"
                         )
+                    | Some rule ->
+                        let rhsLen = Rhs.toNonEpsilonList rule.Rhs |> List.length
+
+                        if childCount <> rhsLen then
+                            errors.Add(
+                                $"Production node v={v} ruleIdx={ruleIndex} ({rule.Lhs} -> {rule.Rhs}): "
+                                + $"has {childCount} children, RHS length is {rhsLen}"
+                            )
             | _ -> ()
 
         if errors.Count = 0 then Ok() else Error(List.ofSeq errors)

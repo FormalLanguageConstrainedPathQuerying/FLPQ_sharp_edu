@@ -1,5 +1,26 @@
 # Code Review Report
 
+## Task 255 Review (2026-09-02)
+
+Scope: `src/FLPQ.Languages/{Grammar,Cyk,Valiant,BasicSppf}.fs`, `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Languages.Tests/{GrammarTests,CykTests}.fs`, `tests/FLPQ.Printers.Tests/GoldenData/{cyk_grammar7_xplusx,valiant_grammar1_abab,valiant_modified_grammar1_ab}*.tex`, and `docs/developer/{grammar,grammar-tex,cyk,valiant,sppf-parsing-table}.md`. Makes `SppfParsingEntry.ProdIdx` a 1-based canonical production number (start-nonterminal-first order) shared by CNF rendering, CYK/Valiant table cells, and Basic SPPF via a number→production map.
+
+**Resolved this task:**
+- §22 (clarity) — the initial CYK change recomputed `Grammar.numberedRules cnf` inside the diagonal and span loops; hoisted to a single `let numbered` per run in `cykSppfCore` and `parseWithSppfTrace`.
+
+**Findings against the constraint sources:**
+- §13 (no duplication) — the start-first reordering + 1-based numbering was extracted into `Grammar.numberedRules`/`productionNumberMap`; `GrammarTeX.renderGrammar` now consumes `Grammar.numberedRules` instead of its own local reordering.
+- §6 (XML doc comments) — both new functions carry `///` comments describing ordering and 1-based semantics.
+- §7 (genericity) — `numberedRules`/`productionNumberMap` are generic over `'t`/`'nt`; no `string` hardcoding.
+- §9 (separation) — numbering lives in `FLPQ.Languages`; rendering stays in `FLPQ.Printers`; no TeX/IO added to algorithm modules.
+- §12 (compile-time safety) — `BasicSppf.fromParsingTable` uses `Map.find` (valid by construction); `validateProductionChildren` uses `Map.tryFind` for defensive validation of arbitrary SPPF data.
+- §19 (test coverage) — `NumberingTests` covers ordering, rule completeness, map consistency, and CNF-renderer agreement; the CYK aplus test was updated to the map lookup.
+- §20 (documentation) — `grammar.md`, `grammar-tex.md`, `cyk.md`, `valiant.md`, `sppf-parsing-table.md` updated to the 1-based `productionNumber` semantics.
+- §23 (naming) — the record field `ProdIdx` retains its historical name although it now holds a 1-based number; documented in `sppf-parsing-table.md` as "1-based canonical productionNumber". Non-blocking.
+
+**No blocking findings.** Cross-algorithm equivalence (CYK ≡ Valiant ≡ modified Valiant SPPF) is preserved by the shared numbering, confirmed by the existing `SppfPropertyTests` / `TestHelpers.checkCykValiantEquivalence` passing.
+
+---
+
 ## Task 254 Review (2026-09-01)
 
 Scope: `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Printers.Tests/GoldenData/grammar{1,7,9}_{bnf,cnf}_numbered.tex`, `docs/developer/grammar-tex.md`. Changes `grammarToTeXWithNumbers` from `align*` with `[idx]` prefixes to `alignat*{3}` with 1-based `N)` numbers.

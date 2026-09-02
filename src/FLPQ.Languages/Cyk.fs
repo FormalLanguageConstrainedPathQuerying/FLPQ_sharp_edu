@@ -18,38 +18,36 @@ module Cyk =
           Highlights: Matrix.Highlight list }
 
     let private findTerminalRulesWithProdIdx
-        (rules: Rule<'t, 'nt> list)
+        (numberedRules: (int * Rule<'t, 'nt>) list)
         (t: Terminal<'t>)
         : (Nonterminal<'nt> * int) list =
-        rules
-        |> List.indexed
-        |> List.choose (fun (idx, rule) ->
+        numberedRules
+        |> List.choose (fun (number, rule) ->
             match rule.Rhs with
             | Symbols nel when NonEmptyList.length nel = 1 ->
                 match NonEmptyList.head nel with
-                | Symbol.T t' when t' = t -> Some(rule.Lhs, idx)
+                | Symbol.T t' when t' = t -> Some(rule.Lhs, number)
                 | _ -> None
             | _ -> None)
 
     let private findBinaryProductionsWithProdIdx
-        (rules: Rule<'t, 'nt> list)
+        (numberedRules: (int * Rule<'t, 'nt>) list)
         (left: Nonterminal<'nt>)
         (right: Nonterminal<'nt>)
         : (Nonterminal<'nt> * int) list =
-        rules
-        |> List.indexed
-        |> List.choose (fun (idx, rule) ->
+        numberedRules
+        |> List.choose (fun (number, rule) ->
             match rule.Rhs with
             | Symbols nel when NonEmptyList.length nel = 2 ->
                 let syms = NonEmptyList.toList nel
 
                 match syms.[0], syms.[1] with
-                | Symbol.N l, Symbol.N r when l = left && r = right -> Some(rule.Lhs, idx)
+                | Symbol.N l, Symbol.N r when l = left && r = right -> Some(rule.Lhs, number)
                 | _ -> None
             | _ -> None)
 
     let private computeCellSppf
-        (rules: Rule<'t, 'nt> list)
+        (numberedRules: (int * Rule<'t, 'nt>) list)
         (table: SppfParsingTable<'nt>)
         (i: int)
         (j: int)
@@ -66,7 +64,7 @@ module Cyk =
                 |> Seq.collect (fun leftEntry ->
                     rightSet
                     |> Seq.collect (fun rightEntry ->
-                        findBinaryProductionsWithProdIdx rules leftEntry.Nt rightEntry.Nt
+                        findBinaryProductionsWithProdIdx numberedRules leftEntry.Nt rightEntry.Nt
                         |> List.map (fun (lhs, prodIdx) ->
                             { Nt = lhs
                               SplitPoint = k
@@ -77,9 +75,10 @@ module Cyk =
     let private cykSppfCore (cnf: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : SppfParsingTable<'nt> =
         let n = terminals.Length
         let table = Matrix.init n n Set.empty
+        let numbered = Grammar.numberedRules cnf
 
         for i in 0 .. n - 1 do
-            let producing = findTerminalRulesWithProdIdx cnf.Rules terminals.[i]
+            let producing = findTerminalRulesWithProdIdx numbered terminals.[i]
 
             if not (List.isEmpty producing) then
                 let entries =
@@ -95,7 +94,7 @@ module Cyk =
         for len in 2..n do
             for i in 0 .. n - len do
                 let j = i + len - 1
-                let accumulated = computeCellSppf cnf.Rules table i j
+                let accumulated = computeCellSppf numbered table i j
 
                 if not (Set.isEmpty accumulated) then
                     table.[i, j] <- accumulated
@@ -155,9 +154,10 @@ module Cyk =
         else
             let n = terminals.Length
             let table = Matrix.init n n Set.empty
+            let numbered = Grammar.numberedRules cnf
 
             for i in 0 .. n - 1 do
-                let producing = findTerminalRulesWithProdIdx cnf.Rules terminals.[i]
+                let producing = findTerminalRulesWithProdIdx numbered terminals.[i]
 
                 if not (List.isEmpty producing) then
                     let entries =
@@ -187,7 +187,7 @@ module Cyk =
             for len in 2..n do
                 for i in 0 .. n - len do
                     let j = i + len - 1
-                    let accumulated = computeCellSppf cnf.Rules table i j
+                    let accumulated = computeCellSppf numbered table i j
 
                     if not (Set.isEmpty accumulated) then
                         table.[i, j] <- accumulated

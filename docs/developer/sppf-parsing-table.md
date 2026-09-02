@@ -7,7 +7,7 @@
 **Depends on:** Matrix, Grammar
 **Used by:** Cyk, Valiant
 
-> **Abstract:** Defines enriched parsing table types for BasicSPPF construction. `SppfParsingEntry<'nt>` stores `(nonterminal, splitPoint, productionIndex)` tuples enabling SPPF reconstruction from CYK/Valiant parse tables. `SppfParsingTable<'nt>` wraps an `N×N` matrix of entry sets. Also contains `ParsingTable<'nt>` (set-based for acceptance only) and `LRAction<'a>` (LR/RNGLR table actions).
+> **Abstract:** Defines enriched parsing table types for BasicSPPF construction. `SppfParsingEntry<'nt>` stores `(nonterminal, splitPoint, productionNumber)` tuples enabling SPPF reconstruction from CYK/Valiant parse tables. `SppfParsingTable<'nt>` wraps an `N×N` matrix of entry sets. Also contains `ParsingTable<'nt>` (set-based for acceptance only) and `LRAction<'a>` (LR/RNGLR table actions).
 
 ## Contents
 
@@ -27,14 +27,14 @@ The standard parsing table used by CYK and Valiant for boolean acceptance checki
 
 ### SppfParsingTable
 
-An enriched parsing table for BasicSPPF reconstruction. Each cell `(i, j)` stores a set of `(nonterminal, splitPoint, productionIndex)` tuples where:
+An enriched parsing table for BasicSPPF reconstruction. Each cell `(i, j)` stores a set of `(nonterminal, splitPoint, productionNumber)` tuples where:
 - `nonterminal` — the nonterminal deriving `w[i..j]`
 - `splitPoint` — for terminal rules: position of the terminal character (equal to i); for binary rules: the index `k` where the left child spans `[i, k]` and the right child spans `[k+1, j]`
-- `productionIndex` — 0-based index of the CNF grammar rule that produced this derivation
+- `productionNumber` — 1-based production number of the CNF grammar rule that produced this derivation, in the canonical start-nonterminal-first order (see `Grammar.numberedRules`)
 
 **Invariant:** For every entry at cell `(i, j)`:
-- If rule at `productionIndex` is terminal `A → a`: `splitPoint = i`, and position `i` in input is `a`
-- If rule at `productionIndex` is binary `A → B C`: cell `(i, splitPoint)` contains a nonterminal for `B`, and cell `(splitPoint+1, j)` contains a nonterminal for `C`
+- If rule at `productionNumber` is terminal `A → a`: `splitPoint = i`, and position `i` in input is `a`
+- If rule at `productionNumber` is binary `A → B C`: cell `(i, splitPoint)` contains a nonterminal for `B`, and cell `(splitPoint+1, j)` contains a nonterminal for `C`
 
 ## Type Definitions
 
@@ -44,7 +44,7 @@ An enriched parsing table for BasicSPPF reconstruction. Each cell `(i, j)` store
 type SppfParsingEntry<'nt when 'nt: comparison> = Nonterminal<'nt> * int * int
 ```
 
-Tuple of `(nonterminal, splitPoint, productionIndex)`. Represents a single derivation step that can be used to reconstruct the parse forest.
+Tuple of `(nonterminal, splitPoint, productionNumber)`. Represents a single derivation step that can be used to reconstruct the parse forest.
 
 ### SppfParsingTable<'nt>
 
@@ -59,9 +59,10 @@ Matrix where cell `(i, j)` stores all possible ways to derive `w[i..j]` using th
 | Decision | Rationale |
 |----------|-----------|
 | Tuple over record for SppfParsingEntry | Minimizes allocations in hot loops; fields are self-evident from naming convention |
-| Separate types for ParsingTable and SppfParsingTable | ParsingTable is Set<Nonterminal<'nt>> for acceptance-only use; SppfParsingTable adds splitPoint and productionIndex for SPPF construction |
+| Separate types for ParsingTable and SppfParsingTable | ParsingTable is Set<Nonterminal<'nt>> for acceptance-only use; SppfParsingTable adds splitPoint and productionNumber for SPPF construction |
 | splitPoint semantics for terminal rules | Set to position i (terminal position) for uniform access pattern: child is always `Terminal(a, splitPoint, splitPoint+1)` |
-| productionIndex stored directly | Enables O(1) lookup of the CNF rule during SPPF construction without searching the grammar |
+| productionNumber stored directly | Enables O(1) lookup of the CNF rule during SPPF construction without searching the grammar |
+| 1-based canonical productionNumber | Matches `Grammar.numberedRules`/`grammarToTeXWithNumbers` numbering (start rules first, 1-based), so table cells, SPPF and rendered grammar agree on the same number; `Grammar.productionNumberMap` maps it back to the rule |
 | Type defined in ParsingTable.fs | Both ParsingTable and SppfParsingTable serve the same purpose (storing algorithm intermediate results); `LRAction` co-located as another parsing-table type |
 
 ## Book Reference

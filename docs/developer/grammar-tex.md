@@ -67,7 +67,7 @@ With numbers:
 | `alignat*{3}` environment (numbered) | Three-column alignment (number, LHS, RHS) with precise spacing control |
 | 1-based `N)` numbering with `\ ` thin space | Matches the book's grammar rendering convention |
 | Double `&&` between LHS and arrow | Separates the LHS column from the RHS column in `alignat*` |
-| Start nonterminal first | Consistent with the book's convention |
+| Start nonterminal first | Consistent with the book's convention; ordering and 1-based numbers come from `Grammar.numberedRules`, the single source of truth shared with CYK/Valiant table cells and Basic SPPF |
 | `\ ` (thin space) between RHS symbols | Visual separation without adding extra notation |
 | No production numbers by default | Clean output for inline display; numbers available when needed |
 | Relies on `SymbolTeX.toLaTeX` | Centralizes symbol rendering in one module |

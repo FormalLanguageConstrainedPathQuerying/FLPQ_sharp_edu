@@ -119,22 +119,20 @@ module Valiant =
         Matrix.create n n (fun ri rj -> table.[ri, rj + 1])
 
     let private terminalRulesFromGrammar (cnf: Grammar<'t, 'nt>) : Map<'t, (Nonterminal<'nt> * int) list> =
-        cnf.Rules
-        |> List.indexed
-        |> List.choose (fun (idx, r) ->
+        Grammar.numberedRules cnf
+        |> List.choose (fun (number, r) ->
             match Rhs.toNonEpsilonList r.Rhs with
-            | [ Symbol.T(Terminal t) ] -> Some(t, (r.Lhs, idx))
+            | [ Symbol.T(Terminal t) ] -> Some(t, (r.Lhs, number))
             | _ -> None)
         |> List.groupBy fst
         |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
         |> Map.ofList
 
     let private binaryRulesFromGrammar (cnf: Grammar<'t, 'nt>) : (Nonterminal<'nt> * BinaryPair<'nt> * int) list =
-        cnf.Rules
-        |> List.indexed
-        |> List.choose (fun (idx, r) ->
+        Grammar.numberedRules cnf
+        |> List.choose (fun (number, r) ->
             match Rhs.toNonEpsilonList r.Rhs with
-            | [ Symbol.N left; Symbol.N right ] -> Some(r.Lhs, { Left = left; Right = right }, idx)
+            | [ Symbol.N left; Symbol.N right ] -> Some(r.Lhs, { Left = left; Right = right }, number)
             | _ -> None)
 
     let private initValiant (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitData<'t, 'nt> =
