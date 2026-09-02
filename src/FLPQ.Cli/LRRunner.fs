@@ -65,7 +65,7 @@ module LRRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string (ExtendedGrammar.originalGrammar extGram))
+            (GrammarTeX.grammarToTeXWithNumbers string string (ExtendedGrammar.originalGrammar extGram))
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "lr_table.tex"))

@@ -29,36 +29,36 @@
 
 \subsection*{Original Grammar}
 \begin{center}
-\begin{align*}
-E &\rightarrow E\ add\ T \\
-E &\rightarrow T \\
-T &\rightarrow T\ mult\ F \\
-T &\rightarrow F \\
-F &\rightarrow lbr\ E\ rbr \\
-F &\rightarrow x \\
-\end{align*}
+\begin{alignat*}{3}
+1) \ & E &&\rightarrow E\ add\ T \\
+2) \ & E &&\rightarrow T \\
+3) \ & T &&\rightarrow T\ mult\ F \\
+4) \ & T &&\rightarrow F \\
+5) \ & F &&\rightarrow lbr\ E\ rbr \\
+6) \ & F &&\rightarrow x \\
+\end{alignat*}
 \end{center}
 
 \subsection*{CNF Grammar (passed to algorithm)}
 \begin{center}
-\begin{align*}
-E &\rightarrow E\ N_1 \\
-E &\rightarrow N_5\ N_3 \\
-E &\rightarrow x \\
-E &\rightarrow T\ N_2 \\
-N_4 &\rightarrow add \\
-N_5 &\rightarrow lbr \\
-N_6 &\rightarrow mult \\
-N_7 &\rightarrow rbr \\
-F &\rightarrow N_5\ N_3 \\
-F &\rightarrow x \\
-N_1 &\rightarrow N_4\ T \\
-N_2 &\rightarrow N_6\ F \\
-N_3 &\rightarrow E\ N_7 \\
-T &\rightarrow N_5\ N_3 \\
-T &\rightarrow x \\
-T &\rightarrow T\ N_2 \\
-\end{align*}
+\begin{alignat*}{3}
+1) \ & E &&\rightarrow E\ N_1 \\
+2) \ & E &&\rightarrow N_5\ N_3 \\
+3) \ & E &&\rightarrow x \\
+4) \ & E &&\rightarrow T\ N_2 \\
+5) \ & N_4 &&\rightarrow add \\
+6) \ & N_5 &&\rightarrow lbr \\
+7) \ & N_6 &&\rightarrow mult \\
+8) \ & N_7 &&\rightarrow rbr \\
+9) \ & F &&\rightarrow N_5\ N_3 \\
+10) \ & F &&\rightarrow x \\
+11) \ & N_1 &&\rightarrow N_4\ T \\
+12) \ & N_2 &&\rightarrow N_6\ F \\
+13) \ & N_3 &&\rightarrow E\ N_7 \\
+14) \ & T &&\rightarrow N_5\ N_3 \\
+15) \ & T &&\rightarrow x \\
+16) \ & T &&\rightarrow T\ N_2 \\
+\end{alignat*}
 \end{center}
 
 \subsection*{Input String}

@@ -18,7 +18,7 @@ module LLRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string grammar)
+            (GrammarTeX.grammarToTeXWithNumbers string string grammar)
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "ll_table.tex"))

@@ -27,11 +27,11 @@ module GllRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
+            (GrammarTeX.grammarToTeXWithNumbers string string (RsmToGrammar.convert rsm))
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_ebnf.tex"))
-            (GrammarTeX.grammarToTeX string string (RsmToGrammar.convert rsm))
+            (GrammarTeX.grammarToTeXWithNumbers string string (RsmToGrammar.convert rsm))
 
         if useDot then
             Helpers.writeOutputFile (Path.Combine(outputDir, "input.dot")) (InputGraphDot.toDot string inputGraph None)

@@ -27,9 +27,12 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
             TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokens -1
         )
 
-        File.WriteAllText(Path.Combine(tmpDir, "grammar_original.tex"), GrammarTeX.grammarToTeX string string grammar)
+        File.WriteAllText(
+            Path.Combine(tmpDir, "grammar_original.tex"),
+            GrammarTeX.grammarToTeXWithNumbers string string grammar
+        )
 
-        File.WriteAllText(Path.Combine(tmpDir, "grammar_cnf.tex"), GrammarTeX.grammarToTeX string string cnf)
+        File.WriteAllText(Path.Combine(tmpDir, "grammar_cnf.tex"), GrammarTeX.grammarToTeXWithNumbers string string cnf)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]

@@ -22,9 +22,11 @@ module ValiantRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string grammar)
+            (GrammarTeX.grammarToTeXWithNumbers string string grammar)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX string string cnf)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_cnf.tex"))
+            (GrammarTeX.grammarToTeXWithNumbers string string cnf)
 
         if trace.Length > 0 then
             let initialStepDir = Path.Combine(outputDir, "step_0")
@@ -82,9 +84,11 @@ module ValiantRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string grammar)
+            (GrammarTeX.grammarToTeXWithNumbers string string grammar)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX string string cnf)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_cnf.tex"))
+            (GrammarTeX.grammarToTeXWithNumbers string string cnf)
 
         if trace.Length > 0 then
             let initialStepDir = Path.Combine(outputDir, "step_0")

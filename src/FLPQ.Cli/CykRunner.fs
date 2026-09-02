@@ -20,9 +20,11 @@ module CykRunner =
 
         Helpers.writeOutputFile
             (Path.Combine(outputDir, "grammar_original.tex"))
-            (GrammarTeX.grammarToTeX string string grammar)
+            (GrammarTeX.grammarToTeXWithNumbers string string grammar)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "grammar_cnf.tex")) (GrammarTeX.grammarToTeX string string cnf)
+        Helpers.writeOutputFile
+            (Path.Combine(outputDir, "grammar_cnf.tex"))
+            (GrammarTeX.grammarToTeXWithNumbers string string cnf)
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
