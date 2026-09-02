@@ -1097,3 +1097,4 @@
 9) \ & S &&\rightarrow S\ S           \\
 \end{alignat*}
 ```
+255. [done] Fix productions numbering for CYK and Valiant. Numbers of productions in CNF grammar rendering must by synchronized with productions numbers used in SPPF and in respective tuples in matrix cells. For now we have a problem. For example, for grammar S -> a | S S | S S S, CNF is S -> a; S -> S S ; S -> S -> N1 ; N1 ->  S S . Last production has number 4. But in cells we see (N1,0,0) that means we use production with number 0. The same in SPPF. I propose to use 1-based numbering as in CNF rendering. To prevent such problens we can create number-to-production map once and use it wherever it necessary.
