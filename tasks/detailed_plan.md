@@ -1,74 +1,44 @@
-# Task 256: Use math mode for node labels in BasicSPPF (CYK/Valiant) Tikz rendering
-
-## Scope
-
-`BasicSppfTikz.toTikz` renders BasicSPPF nodes for CYK and Valiant. Currently all
-node labels are built with raw strings and then passed through
-`AutomatonTikz.escapeLatex`, which escapes `$`, `_`, `{`, `}` into literal text.
-As a result:
-
-- A nonterminal `N_1` (CNF naming from `Grammar.freshStringNonterminal`) renders as
-  literal `N\_1`, not as $N_1$ (math subscript).
-- A terminal `a` at positions `(l, r)` renders as literal `a\_\{l,r\}`, not as
-  $a_{l,r}$ (math subscript).
-
-Task 256 changes **only** the Tikz renderer (`BasicSppfTikz`) so nonterminal names
-and terminals use LaTeX math mode. The DOT renderer (`BasicSppfDot`) is **not**
-changed.
+# Task 257: Fix modified Valiant visualization (power-of-two grid, layered trace)
 
 ## Reuse Analysis
 
-- `AutomatonTikz.escapeLatex` — kept for the `Epsilon` and `Production` labels,
-  which are not part of this task (behavior unchanged).
-- `AutomatonTikz` / `LRAutomatonTikz` already insert `$\begin{aligned}...\end{aligned}$`
-  content into `as={...}` **without** escaping (see `LRAutomatonTikz.stateContentToTikzAs`
-  and `AutomatonTikz.nodeOptions`). Math mode inside `as={...}` is an established
-  pattern in this codebase — BasicSppfTikz follows the same convention.
-- The `tex_tikz_template.tex` used by compilation tests already loads `amsmath`,
-  so `$...$` math renders correctly.
+- Reuse `copyFullTable` (`Valiant.fs:211`) for full padded trace tables (classical Valiant already uses it at `Valiant.fs:270`).
+- Reuse the "new entries appeared" predicate already used by `diffCells` (`Valiant.fs:214-227`) for the new full-table diff helper `diffWholeTable`.
+- Reuse `constructLayer` for layers `1..maxLayer`; init blocks are the diagonal terminal cells (`i, i+1` for `i < n`).
+- Reuse `Matrix.CurrentStepSubmatrix` label (→ `red!10`) for the single light-red layer blocks; reuse `Matrix.CurrentCell` (→ yellow) for changed cells. No changes to `Matrix.fs` or `MatrixTeX.fs`.
+- Reuse golden-test infrastructure (`GoldenHelpers.verifyGolden`, `CREATE_GOLDEN_FILES=1`).
 
 ---
 
-### S1: Use math mode for nonterminal and terminal labels in BasicSppfTikz + update tests
+### S1: Restructure modified Valiant trace + fix rendering + regenerate golden
 
-**Code:** `src/FLPQ.Printers/BasicSppfTikz.fs` — change the label construction for
-          `BasicSppfNodeInfo.Terminal` and `BasicSppfNodeInfo.Nonterminal` to use
-          math mode, and stop escaping those two labels
-**Tests:** `tests/FLPQ.Printers.Tests/BasicSppfDotTests.fs` — update the tikz
-          assertions to expect math-mode labels
-**Docs:** none (rendering-only change; the convention is documented in S2)
+**Code:** `src/FLPQ.Languages/Valiant.fs` (`parseModifiedWithSppfTrace`, new `diffWholeTable` helper), `src/FLPQ.Printers/ValiantTeX.fs` (`sppfModifiedStepToTeX`, `sppfModifiedStepToTeXAsNt`)
+**Tests:** regenerate `tests/FLPQ.Printers.Tests/GoldenData/valiant_modified_grammar1_ab.tex` (existing `ValiantTraceGoldenTests.fs` golden)
+**Docs:** `docs/developer/valiant.md` (trace step structure + color scheme)
 
 **Spec:**
-- `Terminal(Terminal t, l, r)` label becomes `$<name>_{l,r}$`, e.g. `$a_{0,1}$`.
-- `Nonterminal(Nonterminal nt, l, r)` label becomes `$<name>$ [l,r]`, e.g. `$N_1$ [0,2]`.
-  Only the *name* is math-mode; the `[l,r]` span stays as literal text (per task:
-  "math mode for nonterminal names").
-- These two labels must NOT be passed through `AutomatonTikz.escapeLatex` (math mode
-  requires literal `$`, `_`, `{`, `}`).
-- `Epsilon` and `Production` labels keep their current escaping (unchanged behavior).
-- `BasicSppfDot.toDot` remains untouched.
-- Update `BasicSppfDotTests.fs` tikz assertions:
-  - `Assert.Contains("S [0,2]", tikz)` → `Assert.Contains("$S$ [0,2]", tikz)`.
-  - Add assertions for the math-mode terminal label (e.g. `$a_{0,1}$`) so the
-    convention is pinned by a test.
-
-**Status:** [done]
+- `Valiant.fs`:
+  - Add `let private diffWholeTable (before: SppfParsingTable<'nt>) (after: SppfParsingTable<'nt>) (tableSize: int) : (int * int) list` returning global `(i,j)` where `Set.difference after.[i,j] before.[i,j]` is non-empty.
+  - Rewrite `parseModifiedWithSppfTrace` (lines 565-597):
+    - After `initValiant`, emit an init step: `LayerForwardSppf(copyFullTable table tableSize, 1, [for i in 0..n-1 -> {Row=i; Col=i+1; Size=1}])`.
+    - Loop `layer in 1..maxLayer`; for each non-empty `constructLayer layer tableSize`: snapshot `before = copyFullTable table tableSize`, run `completeLayerModified init table layerSubmatrices`, compute `changed = diffWholeTable before table tableSize`, emit `LayerBackwardSppf(copyFullTable table tableSize, 1 <<< layer, layerSubmatrices, changed)`.
+    - Replace all `snapshot table n` in the trace path with `copyFullTable table tableSize`.
+    - Do NOT change `parseModifiedWithSppfInfo`/`parseModifiedWithSppfTable` (they keep `snapshot table n`).
+- `ValiantTeX.fs` (`sppfModifiedStepToTeX` 81-178, `sppfModifiedStepToTeXAsNt` 253-350):
+  - Remove column shift: `startCol = m.Col - 1` → `m.Col`; `endCol = m.Col + m.Size - 2` → `m.Col + m.Size - 1`.
+  - Layer blocks: `Label = Matrix.CurrentStepSubmatrix` (single light-red `red!10`) instead of `Matrix.Submatrix idx`; drop the `mapi` index.
+  - LayerBackward highlight: `cj = j - 1` → `cj = j`.
+- Regenerate golden `valiant_modified_grammar1_ab.tex` (now: init step + layer-1 step on a `4×4` grid, `red!10` blocks + yellow changed cells).
 
 ---
 
-### S2: Document the BasicSPPF visualization and the math-mode convention
+### S2: Add regression property tests for modified Valiant trace structure
 
-**Code:** none
-**Tests:** none
-**Docs:** Create `docs/developer/basic-sppf-viz.md` (referenced from
-        `docs/developer/FLPQ.Printers.md:36` but currently missing) describing
-        `BasicSppfDot` and `BasicSppfTikz`, including the math-mode label
-        convention for the Tikz renderer
+**Code:** (none — tests only)
+**Tests:** `tests/FLPQ.Languages.Tests/ValiantTests.fs` — new module `ModifiedValiantTraceStructureTests`
+**Docs:** none (behavior documented in S1)
 
 **Spec:**
-- `kind: visualization` following the canonical template (metadata, abstract, TOC).
-- Document `BasicSppfDot.toDot` and `BasicSppfTikz.toTikz` signatures and output.
-- Record the design decision: Tikz uses math mode (`$N_1$`, `$a_{l,r}$`) for
-  nonterminal/terminal labels; DOT uses plain text labels (no math mode).
-
-**Status:** [done]
+- Property test (`[<Property>]`, reuse `GenToArbitrary.AbString` / Dyck1 grammar): for a non-empty input, every modified Valiant SPPF trace step table is power-of-two aligned — `Matrix.rows = Matrix.cols = nextPowerOfTwo(n+1)` — and equals the classical Valiant trace table dimension for the same input.
+- Property test: the trace step sequence has exactly one step per layer — first step is `LayerForwardSppf` with `layerSize = 1` and 1×1 diagonal blocks (`Row = Col - 1`, `Size = 1`); subsequent steps are `LayerBackwardSppf` with `layerSize = 2, 4, …` and no duplicate layer size.
+- Property test: for a non-trivial input (length ≥ 2), at least one `LayerBackwardSppf` step has non-empty `ChangedCells`.

@@ -101,7 +101,7 @@ type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
     | LayerForward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
     | LayerBackward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list * changedCells: (int * int) list
 ```
-DU representing trace steps for the modified Valiant algorithm. `LayerForward` records before processing a V-layer. `LayerBackward` records after processing with changed cell coordinates.
+DU representing trace steps for the modified Valiant algorithm. `LayerForward` records the initialization state (1×1 diagonal terminal blocks). `LayerBackward` records the state after completing one V-layer, with the layer's blocks and the changed cell coordinates. Each trace table is the full power-of-two padded `tableSize × tableSize` grid (same as standard Valiant).
 
 ## Submatrix Operations
 
@@ -164,7 +164,7 @@ Run the modified Valiant algorithm and return both the parsing table and accepta
 ```fsharp
 val parseModifiedWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ModifiedValiantTraceStep<'nt> list
 ```
-Run the modified Valiant algorithm with step-by-step tracing. Each step captures the table state before/after processing one V-layer.
+Run the modified Valiant algorithm with step-by-step tracing. Emits one initialization step (1×1 diagonal terminal blocks, layer size 2^0) followed by one step per V-layer (2×2, 4×4, … blocks), each rendered on the full power-of-two padded table. Layer blocks are highlighted in a single light red (`red!10`); changed cells are highlighted in yellow, matching CYK.
 
 ### `parseWithSppfInfo`
 ```fsharp
@@ -203,6 +203,8 @@ Returns both the enriched modified SPPF table and acceptance status.
 | Recursive `complete` with `and compute` | F# `let rec ... and ...` for mutually recursive functions |
 | V-shaped layers of disjoint submatrices | Enables batched parallel multiplications as described in the book |
 | `mxmi` with closure over binary rules | Indexed multiplication captures split point `k` for SPPF entry construction; grammar captured by closure |
+| Modified Valiant trace: init step + one step per layer | Matches the book's V-layer structure: layer 0 is the 1×1 diagonal (terminals), layer `l` uses `2^l` blocks. No repeated block size between steps |
+| Modified Valiant trace colors | Layer blocks are a single light red (`red!10` via `CurrentStepSubmatrix`); changed cells are yellow (`CurrentCell`), the same as CYK |
 
 ## Book Reference
 

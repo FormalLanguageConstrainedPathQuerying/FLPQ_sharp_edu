@@ -78,104 +78,67 @@ module ValiantTeX =
             true
             true
 
+    let private sppfModifiedStepToTeXWith
+        (cellPrinter: Set<SppfParsingEntry<'nt>> -> string)
+        (step: Valiant.ModifiedValiantSppfTraceStep<'nt>)
+        : string =
+        let table, submatrices =
+            match step with
+            | Valiant.LayerForwardSppf(table, _, submatrices) -> table, submatrices
+            | Valiant.LayerBackwardSppf(table, _, submatrices, _) -> table, submatrices
+
+        let changedCells =
+            match step with
+            | Valiant.LayerForwardSppf _ -> []
+            | Valiant.LayerBackwardSppf(_, _, _, changedCells) -> changedCells
+
+        let n = Matrix.rows table
+
+        let blocks =
+            submatrices
+            |> List.map (fun m ->
+                let startRow = m.Row - m.Size + 1
+                let endRow = m.Row
+                let startCol = m.Col
+                let endCol = m.Col + m.Size - 1
+
+                let clippedStartRow = max 0 startRow
+                let clippedEndRow = min (n - 1) endRow
+                let clippedStartCol = max 0 startCol
+                let clippedEndCol = min (n - 1) endCol
+
+                if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
+                    let block: Matrix.SubmatrixBlock =
+                        { StartRow = clippedStartRow
+                          StartCol = clippedStartCol
+                          RowCount = clippedEndRow - clippedStartRow + 1
+                          ColCount = clippedEndCol - clippedStartCol + 1
+                          Label = Matrix.CurrentStepSubmatrix }
+
+                    Some block
+                else
+                    None)
+            |> List.choose id
+
+        let highlights =
+            [ for (i, j) in changedCells do
+                  let ci = i
+                  let cj = j
+
+                  if ci >= 0 && ci < n && cj >= 0 && cj < n then
+                      yield
+                          ({ Row = ci
+                             Col = cj
+                             Label = Matrix.CurrentCell }
+                          : Matrix.Highlight) ]
+
+        MatrixTeX.toTeXStyled false false cellPrinter table highlights blocks None None true true
+
     let sppfModifiedStepToTeX
         (nonterminalPrinter: 'nt -> string)
         (step: Valiant.ModifiedValiantSppfTraceStep<'nt>)
         : string =
-        match step with
-        | Valiant.LayerForwardSppf(table, _layerSize, submatrices) ->
-            let n = Matrix.rows table
-
-            let blocks =
-                submatrices
-                |> List.mapi (fun idx m ->
-                    let startRow = m.Row - m.Size + 1
-                    let endRow = m.Row
-                    let startCol = m.Col - 1
-                    let endCol = m.Col + m.Size - 2
-
-                    let clippedStartRow = max 0 startRow
-                    let clippedEndRow = min (n - 1) endRow
-                    let clippedStartCol = max 0 startCol
-                    let clippedEndCol = min (n - 1) endCol
-
-                    if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
-                        let block: Matrix.SubmatrixBlock =
-                            { StartRow = clippedStartRow
-                              StartCol = clippedStartCol
-                              RowCount = clippedEndRow - clippedStartRow + 1
-                              ColCount = clippedEndCol - clippedStartCol + 1
-                              Label = Matrix.Submatrix idx }
-
-                        Some block
-                    else
-                        None)
-                |> List.choose id
-
-            MatrixTeX.toTeXStyled
-                false
-                false
-                (ParsingTableTeX.sppfEntryCellToTeX nonterminalPrinter)
-                table
-                []
-                blocks
-                None
-                None
-                true
-                true
-
-        | Valiant.LayerBackwardSppf(table, _layerSize, submatrices, changedCells) ->
-            let n = Matrix.rows table
-
-            let blocks =
-                submatrices
-                |> List.mapi (fun idx m ->
-                    let startRow = m.Row - m.Size + 1
-                    let endRow = m.Row
-                    let startCol = m.Col - 1
-                    let endCol = m.Col + m.Size - 2
-
-                    let clippedStartRow = max 0 startRow
-                    let clippedEndRow = min (n - 1) endRow
-                    let clippedStartCol = max 0 startCol
-                    let clippedEndCol = min (n - 1) endCol
-
-                    if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
-                        let block: Matrix.SubmatrixBlock =
-                            { StartRow = clippedStartRow
-                              StartCol = clippedStartCol
-                              RowCount = clippedEndRow - clippedStartRow + 1
-                              ColCount = clippedEndCol - clippedStartCol + 1
-                              Label = Matrix.Submatrix idx }
-
-                        Some block
-                    else
-                        None)
-                |> List.choose id
-
-            let highlights =
-                [ for (i, j) in changedCells do
-                      let ci = i
-                      let cj = j - 1
-
-                      if ci >= 0 && ci < n && cj >= 0 && cj < n then
-                          yield
-                              ({ Row = ci
-                                 Col = cj
-                                 Label = Matrix.CurrentCell }
-                              : Matrix.Highlight) ]
-
-            MatrixTeX.toTeXStyled
-                false
-                false
-                (ParsingTableTeX.sppfEntryCellToTeX nonterminalPrinter)
-                table
-                highlights
-                blocks
-                None
-                None
-                true
-                true
+        sppfModifiedStepToTeXWith (ParsingTableTeX.sppfEntryCellToTeX nonterminalPrinter) step
 
     let sppfStepToTeXAsNt (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantSppfTraceStep<'nt>) : string =
         let highlights =
@@ -254,97 +217,4 @@ module ValiantTeX =
         (nonterminalPrinter: 'nt -> string)
         (step: Valiant.ModifiedValiantSppfTraceStep<'nt>)
         : string =
-        match step with
-        | Valiant.LayerForwardSppf(table, _layerSize, submatrices) ->
-            let n = Matrix.rows table
-
-            let blocks =
-                submatrices
-                |> List.mapi (fun idx m ->
-                    let startRow = m.Row - m.Size + 1
-                    let endRow = m.Row
-                    let startCol = m.Col - 1
-                    let endCol = m.Col + m.Size - 2
-
-                    let clippedStartRow = max 0 startRow
-                    let clippedEndRow = min (n - 1) endRow
-                    let clippedStartCol = max 0 startCol
-                    let clippedEndCol = min (n - 1) endCol
-
-                    if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
-                        let block: Matrix.SubmatrixBlock =
-                            { StartRow = clippedStartRow
-                              StartCol = clippedStartCol
-                              RowCount = clippedEndRow - clippedStartRow + 1
-                              ColCount = clippedEndCol - clippedStartCol + 1
-                              Label = Matrix.Submatrix idx }
-
-                        Some block
-                    else
-                        None)
-                |> List.choose id
-
-            MatrixTeX.toTeXStyled
-                false
-                false
-                (ParsingTableTeX.sppfEntryAsNtCellToTeX nonterminalPrinter)
-                table
-                []
-                blocks
-                None
-                None
-                true
-                true
-
-        | Valiant.LayerBackwardSppf(table, _layerSize, submatrices, changedCells) ->
-            let n = Matrix.rows table
-
-            let blocks =
-                submatrices
-                |> List.mapi (fun idx m ->
-                    let startRow = m.Row - m.Size + 1
-                    let endRow = m.Row
-                    let startCol = m.Col - 1
-                    let endCol = m.Col + m.Size - 2
-
-                    let clippedStartRow = max 0 startRow
-                    let clippedEndRow = min (n - 1) endRow
-                    let clippedStartCol = max 0 startCol
-                    let clippedEndCol = min (n - 1) endCol
-
-                    if clippedStartRow <= clippedEndRow && clippedStartCol <= clippedEndCol then
-                        let block: Matrix.SubmatrixBlock =
-                            { StartRow = clippedStartRow
-                              StartCol = clippedStartCol
-                              RowCount = clippedEndRow - clippedStartRow + 1
-                              ColCount = clippedEndCol - clippedStartCol + 1
-                              Label = Matrix.Submatrix idx }
-
-                        Some block
-                    else
-                        None)
-                |> List.choose id
-
-            let highlights =
-                [ for (i, j) in changedCells do
-                      let ci = i
-                      let cj = j - 1
-
-                      if ci >= 0 && ci < n && cj >= 0 && cj < n then
-                          yield
-                              ({ Row = ci
-                                 Col = cj
-                                 Label = Matrix.CurrentCell }
-                              : Matrix.Highlight) ]
-
-            MatrixTeX.toTeXStyled
-                false
-                false
-                (ParsingTableTeX.sppfEntryAsNtCellToTeX nonterminalPrinter)
-                table
-                highlights
-                blocks
-                None
-                None
-                true
-                true
+        sppfModifiedStepToTeXWith (ParsingTableTeX.sppfEntryAsNtCellToTeX nonterminalPrinter) step

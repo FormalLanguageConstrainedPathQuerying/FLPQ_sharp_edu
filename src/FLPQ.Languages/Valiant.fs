@@ -211,6 +211,9 @@ module Valiant =
     let private copyFullTable (table: SppfParsingTable<'nt>) (tableSize: int) : SppfParsingTable<'nt> =
         Matrix.create tableSize tableSize (fun i j -> table.[i, j])
 
+    let private hasNewEntries (oldSet: Set<SppfParsingEntry<'nt>>) (newSet: Set<SppfParsingEntry<'nt>>) : bool =
+        Set.difference newSet oldSet |> (not << Set.isEmpty)
+
     let private diffCells
         (before: Matrix<Set<SppfParsingEntry<'nt>>>)
         (after: Matrix<Set<SppfParsingEntry<'nt>>>)
@@ -220,11 +223,18 @@ module Valiant =
 
         [ for i in 0 .. size - 1 do
               for j in 0 .. size - 1 do
-                  let oldSet = before.[i, j]
-                  let newSet = after.[i, j]
-
-                  if Set.difference newSet oldSet |> (not << Set.isEmpty) then
+                  if hasNewEntries before.[i, j] after.[i, j] then
                       yield (m.Row - m.Size + 1 + i, m.Col + j) ]
+
+    let private diffWholeTable
+        (before: SppfParsingTable<'nt>)
+        (after: SppfParsingTable<'nt>)
+        (tableSize: int)
+        : (int * int) list =
+        [ for i in 0 .. tableSize - 1 do
+              for j in 0 .. tableSize - 1 do
+                  if hasNewEntries before.[i, j] after.[i, j] then
+                      yield (i, j) ]
 
     let private extractSlice (table: SppfParsingTable<'nt>) (m: Submatrix) : Matrix<Set<SppfParsingEntry<'nt>>> =
         Matrix.create m.Size m.Size (fun i j -> table.[m.Row - m.Size + 1 + i, m.Col + j])
@@ -578,21 +588,28 @@ module Valiant =
             let table = Matrix.create tableSize tableSize (fun i j -> init.Table.[i, j])
             let n = init.N
 
+            let initBlocks =
+                [ for i in 0 .. n - 1 do
+                      { Row = i; Col = i + 1; Size = 1 } ]
+
+            let mutable steps =
+                [ LayerForwardSppf(copyFullTable table tableSize, 1, initBlocks) ]
+
             let maxLayer = int (System.Math.Log(float tableSize, 2.0))
-            let mutable steps = []
 
             for layer in 1..maxLayer do
                 let layerSubmatrices = constructLayer layer tableSize
 
                 if not (List.isEmpty layerSubmatrices) then
-                    steps <- LayerForwardSppf(snapshot table n, 1 <<< layer, layerSubmatrices) :: steps
+                    let before = copyFullTable table tableSize
 
                     completeLayerModified init table layerSubmatrices
 
-                    steps <- LayerBackwardSppf(snapshot table n, 1 <<< layer, layerSubmatrices, []) :: steps
+                    let changed = diffWholeTable before table tableSize
 
-            if List.isEmpty steps then
-                steps <- LayerBackwardSppf(snapshot table n, 1, [], []) :: steps
+                    steps <-
+                        LayerBackwardSppf(copyFullTable table tableSize, 1 <<< layer, layerSubmatrices, changed)
+                        :: steps
 
             List.rev steps
 

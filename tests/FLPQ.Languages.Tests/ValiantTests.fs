@@ -745,3 +745,136 @@ module TraceWrapperEquivalenceTests =
                     | _ -> false)
                 trace
                 sppfTrace
+
+module ModifiedValiantTraceStructureTests =
+
+    let private nextPowerOfTwo (n: int) : int =
+        let mutable p = 1
+
+        while p < n do
+            p <- p * 2
+
+        p
+
+    let private tableOf (step: Valiant.ModifiedValiantSppfTraceStep<string>) =
+        match step with
+        | Valiant.LayerForwardSppf(table, _, _) -> table
+        | Valiant.LayerBackwardSppf(table, _, _, _) -> table
+
+    [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
+    module Properties =
+
+        [<Property>]
+        let ``modified Valiant trace tables are power-of-two aligned like classical Valiant`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            if input.IsEmpty then
+                Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+                |> List.isEmpty
+            else
+                let expected = nextPowerOfTwo (input.Length + 1)
+
+                let modified =
+                    Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+                let classical =
+                    Valiant.parseWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+                let modifiedAligned =
+                    modified
+                    |> List.forall (fun step ->
+                        let t = tableOf step
+                        Matrix.rows t = expected && Matrix.cols t = expected)
+
+                let classicalAligned =
+                    classical
+                    |> List.forall (fun step -> Matrix.rows step.Table = expected && Matrix.cols step.Table = expected)
+
+                modifiedAligned && classicalAligned
+
+        [<Property>]
+        let ``modified Valiant trace has init step then one step per layer`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            if input.IsEmpty then
+                Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+                |> List.isEmpty
+            else
+                let n = input.Length
+
+                let trace =
+                    Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+                match trace with
+                | [] -> false
+                | init :: rest ->
+                    match init with
+                    | Valiant.LayerBackwardSppf _ -> false
+                    | Valiant.LayerForwardSppf(_, layerSize, submatrices) ->
+                        let initBlocksAreDiagonal =
+                            submatrices.Length = n
+                            && (submatrices |> List.forall (fun m -> m.Size = 1 && m.Col = m.Row + 1))
+                            && (submatrices |> List.map (fun m -> m.Row) |> List.sort = [ 0 .. n - 1 ])
+
+                        let restIsBackward =
+                            rest
+                            |> List.forall (fun step ->
+                                match step with
+                                | Valiant.LayerBackwardSppf _ -> true
+                                | _ -> false)
+
+                        let layerSizes =
+                            rest
+                            |> List.map (fun step ->
+                                match step with
+                                | Valiant.LayerBackwardSppf(_, sz, _, _) -> sz
+                                | _ -> 0)
+
+                        let sizesAreDistinctPowersOfTwo =
+                            layerSizes.Length = (layerSizes |> List.distinct).Length
+                            && (layerSizes |> List.forall (fun sz -> sz >= 2 && (sz &&& (sz - 1)) = 0))
+
+                        let increasing =
+                            match layerSizes with
+                            | [] -> true
+                            | first :: _ ->
+                                first = 2 && (layerSizes |> List.pairwise |> List.forall (fun (a, b) -> a < b))
+
+                        layerSize = 1
+                        && initBlocksAreDiagonal
+                        && restIsBackward
+                        && sizesAreDistinctPowersOfTwo
+                        && increasing
+
+        [<Property>]
+        let ``modified Valiant changed cells match final table computed cells`` (s: string) =
+            let grammar = (LanguageRegistry.Dyck1.Grammars[0]).Grammar
+            let input = Tokenizer.tokenizeTerminals s
+
+            if input.IsEmpty then
+                true
+            else
+                let n = input.Length
+
+                let final =
+                    Valiant.parseModifiedWithSppfInfo Grammar.freshStringNonterminal grammar input
+
+                let trace =
+                    Valiant.parseModifiedWithSppfTrace Grammar.freshStringNonterminal grammar input
+
+                let changed =
+                    trace
+                    |> List.collect (fun step ->
+                        match step with
+                        | Valiant.LayerBackwardSppf(_, _, _, changedCells) -> changedCells
+                        | Valiant.LayerForwardSppf _ -> [])
+
+                let expectedChanged =
+                    [ for i in 0 .. n - 1 do
+                          for j in i + 1 .. n - 1 do
+                              if not (Set.isEmpty final.[i, j]) then
+                                  yield (i, j + 1) ]
+
+                Set.ofList changed = Set.ofList expectedChanged

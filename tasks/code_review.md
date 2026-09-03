@@ -1,5 +1,27 @@
 # Code Review Report
 
+## Task 257 Review (2026-09-03)
+
+Scope: `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Printers/ValiantTeX.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs`, `tests/FLPQ.Printers.Tests/GoldenData/valiant_modified_grammar1_ab.tex`, `docs/developer/valiant.md`. Aligns the modified Valiant trace to the full power-of-two padded grid, restructures it into an init step + one step per layer, and fixes layer/changed-cell coloring.
+
+**Resolved this task:**
+- §13 (no duplication) — `diffCells` and the new `diffWholeTable` shared a "new entries appeared" predicate; extracted `hasNewEntries` (`Valiant.fs`).
+- §13 (no duplication) — `sppfModifiedStepToTeX` and `sppfModifiedStepToTeXAsNt` each duplicated the LayerForward/LayerBackward block+highlight rendering (4 near-identical branches); extracted `sppfModifiedStepToTeXWith`, making the two public functions thin wrappers (`ValiantTeX.fs`, −196 lines).
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — no new public API; `sppfModifiedStepToTeXWith` is `private`.
+- §7 (genericity) — all changes stay generic over `'nt`; no `string` hardcoding.
+- §9 (separation) — `Valiant.fs` produces trace data (steps, changed cells); rendering stays in `ValiantTeX.fs`.
+- §14 (language registry) — new tests use `LanguageRegistry.Dyck1` and `GenToArbitrary.AbString`; no inline grammar/string literals.
+- §15/§16 (tests) — three `[<Property>]` tests assert real invariants (power-of-two alignment, init+one-step-per-layer, changed-cells == final-table computed cells), not tautologies.
+- §18 (equivalence) — the alignment property cross-checks modified vs classical Valiant trace dimensions; the changed-cells property cross-checks trace against `parseModifiedWithSppfInfo`.
+- §19 (coverage) — `parseModifiedWithSppfTrace`/`parseModifiedWithSppfInfo` trace paths are now directly exercised by the new tests.
+- §20 (documentation) — `docs/developer/valiant.md` trace description and Design Decisions updated (init step + per-layer steps, `red!10` layer blocks, yellow changed cells).
+
+**No blocking findings.** Final computed tables remain byte-identical to CYK/classical Valiant (verified by `checkCykValiantEquivalence`).
+
+---
+
 ## Task 256 Review (2026-09-02)
 
 Scope: `src/FLPQ.Printers/BasicSppfTikz.fs`, `tests/FLPQ.Printers.Tests/BasicSppfDotTests.fs`, `docs/developer/basic-sppf-viz.md` (new), `docs/main.md`. Changes `BasicSppfTikz.toTikz` to render nonterminal names and terminal labels in LaTeX math mode (`$N_1$`, `$a_{l,r}$`); DOT renderer untouched.
