@@ -1101,3 +1101,10 @@
 256. [done] Use math mode for node lables in SPPF for CYK and Valiant. For tikz rendering only. Not for DOT.
      1.   Use math mode for nonterminal names: `$N_1$`
      2.   Use math mode for terminals: `$a_{2,3}$`
+257. [done] Fix modified Valiant visualization: align grid to power of two and restructure trace steps by layer.
+     1.   Modified Valiant trace must render on a full `tableSize × tableSize` grid (`tableSize = nextPowerOfTwo(n+1)`), exactly like classical Valiant. Replace `snapshot table n` with `copyFullTable table tableSize` in the trace path only; final computed tables (`parseModifiedWithSppfInfo/Table`) stay `snapshot table n` and must remain byte-identical to classical Valiant and CYK.
+     2.   Trace steps must be: one initialization step showing 1×1 diagonal blocks (terminal cells `(i,i+1)` for `i < n`), then one step per layer with 2×2, 4×4, … blocks — no repeated block size.
+     3.   Layer blocks highlighted with a single light-red color (reuse `Matrix.CurrentStepSubmatrix` → red!10), not the multi-color `Submatrix idx` palette.
+     4.   Changed cells per layer highlighted in yellow (reuse `Matrix.CurrentCell`), same as CYK. Populate `changedCells` via a full-table diff of the layer's before/after states.
+     5.   Remove the `-1` column shift in `sppfModifiedStepToTeX`/`sppfModifiedStepToTeXAsNt` (blocks and highlights) so submatrices map to their true global cells on the full grid.
+     6.   Regenerate the modified Valiant trace golden file and add regression tests: power-of-two alignment, one-step-per-layer with correct layer sizes, and non-empty changed cells.
