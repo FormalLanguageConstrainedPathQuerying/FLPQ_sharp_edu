@@ -98,6 +98,7 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 - The specific variant name (e.g., "SLR(1)") is included in the merged summary via `AlgorithmTypes.displayName`.
 - LR automaton is rendered as Tikz by default (standalone document compiled to PDF). The `--use-dot` flag switches to Graphviz dot.
 - TeX step files contain only visualization code (no document headers).
+- Tikz output uses `graphdrawing` (`\graph [layered layout, ...]`). When embedding the generated snippets into another document, that document must load `\usetikzlibrary{graphs,graphdrawing}` and `\usegdlibrary{layered}` and be compiled with `lualatex`.
 - Grammar file reading reuses `Grammar.parseGrammarFromFile`.
 - Summary uses `landscape` layout to accommodate wide matrices without overflow.
 - `lualatex` is run twice for correct table-of-contents and cross-references.
