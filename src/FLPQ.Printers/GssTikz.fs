@@ -11,6 +11,7 @@ module GssTikz =
     /// Renders a GSS as a TikZ tikzpicture from vertex and edge sets.
     /// highlightedVertices get filled with yellow!20, highlightedEdges are red.
     /// The currentVertex (if specified) gets fill=lightblue!20.
+    /// storedPopVertices get filled with orange!30 (stored pops handling triggered).
     let toTikzFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -18,6 +19,7 @@ module GssTikz =
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (storedPopVertices: Set<int>)
         (currentVertex: int option)
         (shape: string)
         (skipEscaping: bool)
@@ -41,11 +43,15 @@ module GssTikz =
                 | Some cv -> cv = vidx
                 | None -> false
 
+            let isStoredPop = Set.contains vidx storedPopVertices
+
             let isHighlighted = Set.contains vidx highlightedVertices
 
             let opts =
                 if isCurrent then
                     sprintf "as={%s}, fill=lightblue!20" label
+                elif isStoredPop then
+                    sprintf "as={%s}, fill=orange!30" label
                 elif isHighlighted then
                     sprintf "as={%s}, fill=yellow!20" label
                 else

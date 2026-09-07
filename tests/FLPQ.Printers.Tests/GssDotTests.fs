@@ -103,3 +103,44 @@ let ``GSS current vertex gets lightblue fill`` () =
     let info = ExternalTools.compileDotStringToInfo dot
     Assert.Equal(3, info.NodeCount)
     Assert.Equal(2, info.EdgeCount)
+
+[<Fact>]
+let ``toDotFromSets stored-pop vertex gets orange fill`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 2; 5 ])
+            (set [ (0, 2); (5, 7) ])
+            (set [ 5 ])
+            Set.empty
+            (set [ 2 ])
+            (Some 0)
+
+    Assert.Contains("fillcolor=orange", dot)
+    Assert.Contains("fillcolor=lightblue", dot)
+    Assert.Contains("fillcolor=lightyellow", dot)
+
+    let info = ExternalTools.compileDotStringToInfo dot
+    // vertex 2 is the stored-pop vertex -> orange
+    let orangeNodes =
+        info.NodeFillColors |> List.filter (fun c -> c.Contains "orange") |> List.length
+
+    Assert.Equal(1, orangeNodes)
+
+[<Fact>]
+let ``toDotFromSets current vertex takes priority over stored-pop`` () =
+    // Vertex 0 is both current and a stored-pop vertex; it must render lightblue, not orange.
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            (set [ 0 ])
+            (Some 0)
+
+    Assert.Contains("fillcolor=lightblue", dot)
+    Assert.DoesNotContain("fillcolor=orange", dot)

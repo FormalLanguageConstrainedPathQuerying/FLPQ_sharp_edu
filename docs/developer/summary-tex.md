@@ -22,6 +22,7 @@ The SummaryTeX module assembles per-algorithm visualization artifacts into one m
 - Algorithm header (original grammar, CNF grammar, input string)
 - LL/LR parsing table and automaton (for LL/LR algorithms)
 - Per-step sections (tables for CYK/Valiant, stack+tree PDFs for LL/LR)
+- Color legend (for GLL/RNGLR) — a tabular mapping of each highlight color to its meaning. The GLL legend includes an `orange!30` row for "Stored pops handling triggered at GSS vertex" (see [GLL module](gll.md)).
 
 ## Function Signatures
 

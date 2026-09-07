@@ -197,6 +197,42 @@ let ``runGll non-init step input DOT has current vertex highlighted`` () =
 
     cleanup outDir
 
+/// Grammar where nonterminal A is called at position 0 by two different callers, the second
+/// only after A has already been popped — this triggers stored-pops handling at (A_start, 0).
+let private reentryGrammar = "S -> A | B\nA -> a\nB -> C\nC -> A"
+
+[<Fact>]
+let ``runGll stored-pops step highlights GSS vertex orange (dot mode)`` () =
+    let outDir = runGllRunner reentryGrammar "a"
+
+    let mutable foundOrange = false
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success && int stepNum.Groups.[1].Value > 0 then
+            let gssDot = Path.Combine(stepDir, "gss.dot")
+
+            if File.Exists gssDot then
+                let content = File.ReadAllText gssDot
+                foundOrange <- foundOrange || content.Contains("fillcolor=orange")
+
+    Assert.True(foundOrange, "Expected at least one non-init step to highlight a stored-pops GSS vertex orange")
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll stored-pops step 0 has no orange highlight (dot mode)`` () =
+    let outDir = runGllRunner reentryGrammar "a"
+    let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
+
+    if File.Exists gssDot then
+        let content = File.ReadAllText gssDot
+        Assert.DoesNotContain("fillcolor=orange", content)
+
+    cleanup outDir
+
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``runGll input DOT compiles with graphviz`` () =
@@ -226,6 +262,27 @@ let private runGllRunnerTikz (grammarText: string) (inputText: string) : string 
     File.WriteAllText(inputFile, inputText)
     GllRunner.runGll grammarFile inputFile outDir false
     outDir
+
+[<Fact>]
+let ``runGll stored-pops step highlights GSS vertex orange (tikz mode)`` () =
+    let outDir = runGllRunnerTikz reentryGrammar "a"
+
+    let mutable foundOrange = false
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success && int stepNum.Groups.[1].Value > 0 then
+            let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
+
+            if File.Exists gssTikz then
+                let content = File.ReadAllText gssTikz
+                foundOrange <- foundOrange || content.Contains("fill=orange!30")
+
+    Assert.True(foundOrange, "Expected at least one non-init step to highlight a stored-pops GSS vertex orange")
+
+    cleanup outDir
 
 [<Fact>]
 let ``runGll tikz mode produces input.tikz.tex`` () =

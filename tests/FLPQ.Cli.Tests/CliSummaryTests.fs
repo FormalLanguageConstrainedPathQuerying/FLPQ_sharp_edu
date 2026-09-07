@@ -97,6 +97,17 @@ let ``GLL summary produces merged TeX`` () =
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
+let ``GLL summary color legend includes stored-pops orange row`` () =
+    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    let texPath = Path.Combine(outDir, "results", "gll", "gll_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    Assert.Contains("Stored pops handling triggered at GSS vertex", content)
+    Assert.Contains(@"\colorbox{orange!30}", content)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
 let ``RNGLR summary produces merged TeX`` () =
     let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
     assertMergedTexExists outDir "RNGLR"

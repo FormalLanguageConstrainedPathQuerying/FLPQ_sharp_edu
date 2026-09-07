@@ -213,4 +213,6 @@ type GLLParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         NewDescriptors: Set<Descriptor>
         /// All descriptors passed to tryEnqueue during this step (including those already handled).
         AttemptedDescriptors: Set<Descriptor>
+        /// GSS vertices (indices) at which stored-pops handling triggered during this step.
+        StoredPopVertices: Set<int>
     }

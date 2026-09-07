@@ -67,6 +67,7 @@ module GLL =
                 -> Set<Descriptor>
                 -> Set<Descriptor>
                 -> Set<Descriptor>
+                -> Set<int>
                 -> unit)
         : PathIndex<'t, 'nt> =
         let rsm = ersm.ExtendedRsm
@@ -106,6 +107,7 @@ module GLL =
         let handledNonEmpty = HashSet<int * int * int>()
 
         let changedCells = ref Set.empty<int * int>
+        let storedPopVertices = ref Set.empty<int>
         let mutable attemptedInStep = Set.empty<Descriptor>
 
         let addToIndex
@@ -165,6 +167,7 @@ module GLL =
             Set.empty
             initAttempted
             initNewDescriptors
+            storedPopVertices.Value
 
         attemptedInStep <- Set.empty<Descriptor>
 
@@ -213,6 +216,9 @@ module GLL =
                           MatchedRange = desc.MatchedRange }
 
                     let storedPops = GSS.addEdge gss gssTarget s0 edgeInfo
+
+                    if not (Set.isEmpty storedPops) then
+                        storedPopVertices := Set.add gssTarget !storedPopVertices
 
                     for storedPop in storedPops do
                         match storedPop with
@@ -416,9 +422,11 @@ module GLL =
                 handledSnapshot
                 stepAttempted
                 stepNewDescriptors
+                storedPopVertices.Value
 
             handledSnapshot <- handled |> Set.ofSeq
             changedCells.Value <- Set.empty<int * int>
+            storedPopVertices.Value <- Set.empty<int>
             attemptedInStep <- Set.empty<Descriptor>
 
         pathIndex
@@ -432,7 +440,7 @@ module GLL =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ -> ())
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ _ -> ())
 
     /// Builds the path index and collects step-by-step snapshots of the GLL execution.
     /// Each step captures: descriptors queue, active GSS state, path index snapshot, changed cells, and input position.
@@ -458,6 +466,7 @@ module GLL =
             (handledSnapshot: Set<Descriptor>)
             (attemptedDescriptors: Set<Descriptor>)
             (newDescriptors: Set<Descriptor>)
+            (storedPopVertices: Set<int>)
             =
             let activeVerts =
                 match currentGssIdx with
@@ -480,7 +489,8 @@ module GLL =
                   CurrentDescriptor = currentDescriptor
                   HandledDescriptors = handledSnapshot
                   NewDescriptors = newDescriptors
-                  AttemptedDescriptors = attemptedDescriptors }
+                  AttemptedDescriptors = attemptedDescriptors
+                  StoredPopVertices = storedPopVertices }
             )
 
             prevVertices <- activeVerts

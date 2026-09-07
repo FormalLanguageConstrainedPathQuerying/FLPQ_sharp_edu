@@ -165,6 +165,7 @@ module GllStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
+                step.StoredPopVertices
                 step.CurrentGssIdx
 
         let gssTikz =
@@ -183,6 +184,7 @@ module GllStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
+                step.StoredPopVertices
                 step.CurrentGssIdx
                 "rectangle, rounded corners"
                 true
@@ -243,6 +245,7 @@ module GllStepVisualizer =
                 step.ActiveGssEdges
                 Set.empty
                 Set.empty
+                Set.empty
                 None
 
         let gssTikz =
@@ -259,6 +262,7 @@ module GllStepVisualizer =
                     sprintf "$%s$" (rangeToTeX s1 v1 s2 v2))
                 step.ActiveGssVertices
                 step.ActiveGssEdges
+                Set.empty
                 Set.empty
                 Set.empty
                 None

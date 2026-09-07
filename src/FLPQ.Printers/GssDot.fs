@@ -93,6 +93,7 @@ module GssDot =
 
     /// Renders GSS from vertex and edge sets directly (without full GSS struct).
     /// Used for step visualization where only active elements are known.
+    /// storedPopVertices get filled with orange (stored pops handling triggered at these vertices).
     let toDotFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -100,6 +101,7 @@ module GssDot =
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (storedPopVertices: Set<int>)
         (currentVertex: int option)
         : string =
         let sb = StringBuilder()
@@ -119,6 +121,8 @@ module GssDot =
                 | Some cv -> cv = vidx
                 | None -> false
 
+            let isStoredPop = Set.contains vidx storedPopVertices
+
             let isHighlighted = Set.contains vidx highlightedVertices
 
             let parts =
@@ -127,6 +131,11 @@ module GssDot =
                       "shape=ellipse"
                       "style=filled"
                       "fillcolor=lightblue" ]
+                elif isStoredPop then
+                    [ sprintf "label=\"%s\"" label
+                      "shape=ellipse"
+                      "style=filled"
+                      "fillcolor=orange" ]
                 elif isHighlighted then
                     [ sprintf "label=\"%s\"" label
                       "shape=ellipse"

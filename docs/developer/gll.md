@@ -27,7 +27,7 @@ Core GLL algorithm (listing `lst:gll_rsm_cfpq`):
 
 2. **Main loop** (queue-based with handled set):
    - **Terminal transitions**: Match RSM terminal transitions with graph edges, add PTerminal and PIntermediate entries, extend matched range.
-   - **Nonterminal transitions (calls)**: Push GSS edge with return address and current range, handle storedPops, create descriptor for called block's start state.
+   - **Nonterminal transitions (calls)**: Push GSS edge with return address and current range, handle storedPops, create descriptor for called block's start state. When `GSS.addEdge` returns a non-empty set of previously-recognized ranges (a new caller re-enters an already-completed callee vertex), the callee GSS vertex is recorded in the step's `StoredPopVertices` set for visualization highlighting.
    - **Final state (return)**: Pop GSS, save recognized range, add PNonterminal and PIntermediate entries, create continuation descriptors.
 
 3. **Acceptance**: Check if the path index contains a path from the extended RSM start state at start vertex to the final state at the end vertex.
@@ -71,6 +71,20 @@ Descriptor (struct):
 ```
 The worklist queue element. Implements custom equality and hashing for handled-set deduplication.
 
+#### GLLParsingStep (step snapshot)
+Located in `src/FLPQ.Languages/GllTypes.fs`. A per-step snapshot collected by
+`GLL.buildPathIndexWithSteps` for step-by-step visualization. Besides the descriptors queue,
+active/new GSS vertices and edges, path index matrix, changed cells, current descriptor, and
+descriptor accounting, it carries:
+
+```fsharp
+StoredPopVertices: Set<int>
+```
+
+The set of GSS vertex indices at which stored-pops handling triggered during this step (see the
+"Nonterminal transitions" bullet above). Rendered in the GSS visualization with an orange fill so
+the reader can see where a new caller re-entered an already-completed callee.
+
 ### SPPF and PathIndex Types
 
 SPPF types (`SppfNodeInfo`, `SppfEdgeLabel`, `SPPF`) and PathIndex types (`RangeKey`, `RangeDescriptor`, `PathIndexEntry`, `PathIndex`) are defined in separate modules:
@@ -111,6 +125,7 @@ Checks if the path index contains a path from (startGlobalState, startVertex) to
 | Epsilon acceptance for nullable blocks | When start state is final, adds PNonterminal even without parent GSS edges |
 | Grammar to RSM via EBNF | Tests use `RsmBuilder.buildRSMFromText` via EBNF text conversion |
 | PathIndex linear indexing | Uses `idx(state, vertex) = state * vertexCount + vertex` to map (state, vertex) pairs to matrix indices |
+| Stored-pops highlight color is orange | Distinct from the existing GSS palette (lightblue=current, lightyellow/yellow!30=new vertex, red=new edge); shared with RNGLR passing-reductions highlight (task 261) |
 
 ## Book Reference
 

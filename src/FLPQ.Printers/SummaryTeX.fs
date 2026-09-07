@@ -88,6 +88,7 @@ module SummaryTeX =
               colorBox "green!30", "Current input position"
               colorBox "yellow!30", "Newly added GSS vertices"
               coloredEdge "red", "Newly added GSS edges"
+              colorBox "orange!30", "Stored pops handling triggered at GSS vertex"
               colorBox "green!20", "Genuinely new descriptors"
               colorBox "red!20", "Already-handled descriptors attempted again" ]
 
