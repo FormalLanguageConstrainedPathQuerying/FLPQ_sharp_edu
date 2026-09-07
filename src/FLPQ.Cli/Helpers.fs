@@ -67,8 +67,6 @@ module Helpers =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            writeOutputFile (Path.Combine(stepDir, "descriptors_table.tex")) steps.[idx].DescriptorsTable
-            writeOutputFile (Path.Combine(stepDir, "new_descriptors.tex")) steps.[idx].NewDescriptors
             writeOutputFile (Path.Combine(stepDir, "path_index.tex")) steps.[idx].PathIndex
             writeOutputFile (Path.Combine(stepDir, "lr_table.tex")) steps.[idx].LrTable
 

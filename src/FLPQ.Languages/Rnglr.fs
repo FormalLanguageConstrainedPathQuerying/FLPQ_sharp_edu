@@ -45,17 +45,12 @@ module Rnglr =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         (onStep:
-            RnglrDescriptor list[]
-                -> Set<int>
+            Set<int>
                 -> Set<int * int>
                 -> Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
                 -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
                 -> Set<int * int>
                 -> int
-                -> int option
-                -> RnglrDescriptor option
-                -> Set<RnglrDescriptor>
-                -> Set<RnglrDescriptor>
                 -> Set<Terminal<'t>>
                 -> Set<Nonterminal<'nt>>
                 -> Set<Nonterminal<'nt>>
@@ -260,24 +255,26 @@ module Rnglr =
                 preds @ epsPredecessors
             | None -> []
 
-        let pending = Array.init vertexCount (fun _ -> Queue<RnglrDescriptor>())
-
         let mutable stepShiftTerminals = Set.empty<Terminal<'t>>
         let mutable stepReduceNt = Set.empty<Nonterminal<'nt>>
         let mutable levelReductions = Set.empty<Nonterminal<'nt>>
-        let mutable prevInputVertex = -1
 
-        let rec processReduction
+        /// Applies a single reduction: looks up the goto state, adds the GSS edge labeled with
+        /// the reduced nonterminal, and records the epsilon entry for direct epsilon derivations.
+        /// Returns (newEdge, newVertexGotoTarget): newEdge is true when a new GSS edge was added
+        /// (the dedup key was new); newVertexGotoTarget is Some gotoTarget when the GSS vertex
+        /// (gotoTarget, vEnd) did not exist before this call.
+        let processReduction
             (reduceNt: Nonterminal<'nt>)
             (finalRsmState: int)
             (lrStatePre: int)
             (gssIdxPre: int)
             (vPre: int)
             (vEnd: int)
-            (depth: int)
-            : unit =
+            : bool * int option =
             match Map.tryFind (lrStatePre, reduceNt) lrTable.Goto with
             | Some gotoTarget ->
+                let existedBefore = gss.VertexLookup.ContainsKey(gotoTarget, vEnd)
                 let gotoGssIdx = RnglrGSS.getOrCreateVertex gss gotoTarget vEnd
                 let dedupKey = (reduceNt, gssIdxPre)
 
@@ -300,18 +297,15 @@ module Rnglr =
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
                 | false, _ -> ()
 
-                if isNew then
-                    processNode gotoTarget vEnd (depth + 1)
-            | None -> ()
+                let newVertex = if isNew && not existedBefore then Some gotoTarget else None
 
-        and processNode (lrState: int) (v: int) (depth: int) : unit =
-            if depth > 1000 then
-                failwith "Reduction cascade depth exceeded"
+                (isNew, newVertex)
+            | None -> (false, None)
 
-            if v <> prevInputVertex then
-                levelReductions <- Set.empty
-                prevInputVertex <- v
-
+        /// Shift phase for a single GSS vertex (lrState, v): follows every terminal transition
+        /// of the LR table along the input edges from v, creates target vertices at vNext, and
+        /// consumes stored states for passing-reduction continuations.
+        let shiftNode (lrState: int) (v: int) : unit =
             if v < vertexCount - 1 then
                 for (tVal, vNext) in graphEdges.[v] do
                     let shiftKey = (lrState, Symbol.T(Terminal tVal))
@@ -337,23 +331,41 @@ module Rnglr =
                                             Aux = storedEndVertex } ]
 
                                 for pred in extPredecessors do
-                                    processReduction storedNt storedInv pred.LrState pred.GssIdx pred.Vertex vNext depth
+                                    processReduction storedNt storedInv pred.LrState pred.GssIdx pred.Vertex vNext
+                                    |> ignore
                             | None -> ()
-
-                        pending.[vNext].Enqueue
-                            { LrState = targetLrState
-                              Vertex = vNext
-                              GssIdx = targetGssIdx }
                     | _ -> ()
 
-            for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
-                stepReduceNt <- Set.add reduceNt stepReduceNt
-                levelReductions <- Set.add reduceNt levelReductions
-                let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
-                let predecessors = findPredecessors gssIdx reduceNt
+        /// Reduction phase at level v: a full-rescan fixpoint over all reducible GSS vertices at
+        /// position v. Repeats until no new GSS edge is added, so every reduction's product BFS
+        /// runs over the current (growing) GSS. Returns true when a new GSS vertex appeared at v
+        /// — it must be shifted in the next round of the level loop.
+        let reduceAtLevel (v: int) : bool =
+            let mutable newVertexAtV = false
+            let mutable changed = true
 
-                for pred in predecessors do
-                    processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v depth
+            while changed do
+                changed <- false
+
+                for lrState in RnglrGSS.verticesAt gss v do
+                    for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
+                        stepReduceNt <- Set.add reduceNt stepReduceNt
+                        levelReductions <- Set.add reduceNt levelReductions
+                        let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
+                        let predecessors = findPredecessors gssIdx reduceNt
+
+                        for pred in predecessors do
+                            let newEdge, newVertex =
+                                processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v
+
+                            if newEdge then
+                                changed <- true
+
+                            match newVertex with
+                            | Some _ -> newVertexAtV <- true
+                            | None -> ()
+
+            newVertexAtV
 
         let collectActiveGss () : Set<int> * Set<int * int> =
             GraphHelpers.collectActiveGssForDict gss.Edges
@@ -372,55 +384,36 @@ module Rnglr =
 
             symbols
 
-        let pendingSnapshot () =
-            Array.init vertexCount (fun v -> pending.[v] |> List.ofSeq)
-
-        let mutable handledAccum = Set.empty<RnglrDescriptor>
-
         let stepChanged = changedCells.Value
         changedCells.Value <- Set.empty<int * int>
 
-        onStep
-            (pendingSnapshot ())
-            Set.empty
-            Set.empty
-            Map.empty
-            (Matrix.copy pathIndex.Matrix)
-            stepChanged
-            -1
-            None
-            None
-            handledAccum
-            Set.empty
-            Set.empty
-            Set.empty
-            Set.empty
+        onStep Set.empty Set.empty Map.empty (Matrix.copy pathIndex.Matrix) stepChanged -1 Set.empty Set.empty Set.empty
 
-        let initialGssIdx = RnglrGSS.getOrCreateVertex gss 0 0
+        RnglrGSS.getOrCreateVertex gss 0 0 |> ignore
 
-        pending.[0].Enqueue
-            { LrState = 0
-              Vertex = 0
-              GssIdx = initialGssIdx }
-
+        // Level-based driver: each step processes one input position (level) — first shift
+        // every not-yet-shifted GSS vertex at v, then reduce to fixpoint; repeat rounds until
+        // the level stabilizes, then move to the next level.
+        // Book reference: sec:CFPQ_GLR (per-vertex MakeReductions/Push/ApplyPassingReductions
+        // specialized to a single input string), sec:CFPQ_RNGLR.
         for v in 0 .. vertexCount - 1 do
-            let processed = HashSet<RnglrDescriptor>()
-            let handledBefore = handledAccum
+            levelReductions <- Set.empty
+            let shifted = HashSet<int>()
+            let mutable again = true
 
-            while pending.[v].Count > 0 do
-                let desc = pending.[v].Dequeue()
+            while again do
+                again <- false
 
-                if processed.Add(desc) then
-                    handledAccum <- Set.add desc handledAccum
+                for lrState in RnglrGSS.verticesAt gss v do
+                    if shifted.Add(lrState) then
+                        shiftNode lrState v
 
-                    processNode desc.LrState v 0
+                again <- reduceAtLevel v
 
             let activeVerts, activeEdges = collectActiveGss ()
 
             let stepChanged = changedCells.Value
             changedCells.Value <- Set.empty<int * int>
-
-            let attemptedThisStep = handledAccum - handledBefore
 
             let edgeSymbols = collectEdgeSymbols activeVerts
 
@@ -432,31 +425,31 @@ module Rnglr =
             stepReduceNt <- Set.empty
 
             onStep
-                (pendingSnapshot ())
                 activeVerts
                 activeEdges
                 edgeSymbols
                 (Matrix.copy pathIndex.Matrix)
                 stepChanged
                 v
-                None
-                None
-                handledAccum
-                attemptedThisStep
                 capturedShifts
                 capturedReduces
                 capturedLevel
 
         pathIndex, gss.VertexInfo
 
+    /// Core RNGLR algorithm — builds the path index through the level-based driver:
+    /// for each input position, shift all unshifted GSS vertices, then reduce to fixpoint.
+    /// Book reference: sec:CFPQ_RNGLR.
     let buildPathIndex
         (_freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ -> ())
-        |> fst
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ -> ()) |> fst
 
+    /// Same algorithm as buildPathIndex, additionally recording one RnglrParsingStep snapshot
+    /// per level (plus the initial state) for step-by-step visualization.
+    /// Book reference: sec:CFPQ_RNGLR.
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -465,35 +458,26 @@ module Rnglr =
         let steps = ResizeArray<RnglrParsingStep<'t, 'nt>>()
         let mutable prevVertices = Set.empty<int>
         let mutable prevEdges = Set.empty<int * int>
-        let mutable prevAttempted = Set.empty<RnglrDescriptor>
 
         let onStep
-            pendingQueues
             activeVerts
             activeEdges
             edgeSymbols
             piMatrix
             changedCells
             inputVertex
-            currentLrState
-            currentDescriptor
-            handledAccum
-            attemptedThisStep
             shiftTerminals
             reduceNonterminals
             levelReds
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
-            let newDescriptors = Set.difference attemptedThisStep prevAttempted
 
             prevVertices <- activeVerts
             prevEdges <- activeEdges
-            prevAttempted <- Set.union prevAttempted attemptedThisStep
 
             steps.Add(
-                { PendingQueues = pendingQueues
-                  ActiveGssVertices = activeVerts
+                { ActiveGssVertices = activeVerts
                   ActiveGssEdges = activeEdges
                   ActiveGssEdgeSymbols = edgeSymbols
                   NewGssVertices = newVertices
@@ -501,11 +485,6 @@ module Rnglr =
                   PathIndexMatrix = piMatrix
                   ChangedCells = changedCells
                   InputVertex = inputVertex
-                  CurrentLrState = currentLrState
-                  CurrentDescriptor = currentDescriptor
-                  HandledDescriptors = handledAccum
-                  NewDescriptors = newDescriptors
-                  AttemptedDescriptors = attemptedThisStep
                   ActiveShiftTerminals = shiftTerminals
                   ActiveReduceNonterminals = reduceNonterminals
                   LevelReductions = levelReds }

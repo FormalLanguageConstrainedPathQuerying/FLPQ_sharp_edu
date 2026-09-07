@@ -176,7 +176,7 @@ let ``map2i with addition produces same result as map2`` () =
 
 [<Fact>]
 let ``mxmi computes standard integer matrix multiplication`` () =
-    let a = Matrix.create 2 3 (fun i j -> i + j)
+    let a = Matrix.create 2 3 (+)
     let b = Matrix.create 3 2 (fun i j -> i * 10 + j)
 
     let result =
@@ -185,13 +185,13 @@ let ``mxmi computes standard integer matrix multiplication`` () =
     Assert.Equal(2, Matrix.rows result)
     Assert.Equal(2, Matrix.cols result)
     Assert.Equal(0 * 0 + 1 * 10 + 2 * 20, result.[0, 0])
-    Assert.Equal(0 * 1 + 1 * 11 + 2 * 21, result.[0, 1])
+    Assert.Equal(1 * 11 + 2 * 21, result.[0, 1])
     Assert.Equal(1 * 0 + 2 * 10 + 3 * 20, result.[1, 0])
-    Assert.Equal(1 * 1 + 2 * 11 + 3 * 21, result.[1, 1])
+    Assert.Equal(1 + 2 * 11 + 3 * 21, result.[1, 1])
 
 [<Fact>]
 let ``mxmi passes correct indices to op_mult and op_add`` () =
-    let a = Matrix.create 2 3 (fun i j -> i + j)
+    let a = Matrix.create 2 3 (+)
     let b = Matrix.create 3 2 (fun i j -> i * 10 + j)
 
     let multCalls = ResizeArray<int * int * int * int * int>()

@@ -7,75 +7,15 @@ open FLPQ.LinearAlgebra
 
 module RnglrStepVisualizer =
 
+    /// Rendered artifacts of one RNGLR level step: GSS figure (DOT and TikZ), path index,
+    /// input graph (DOT and TikZ), and the highlighted LR table.
     type RnglrVisualizationStep =
-        { DescriptorsTable: string
-          NewDescriptors: string
-          GssDot: string
+        { GssDot: string
           GssTikz: string
           PathIndex: string
           Input: string
           InputTikz: string
           LrTable: string }
-
-    let private rnglrDescriptorToTeX (desc: RnglrDescriptor) : string =
-        sprintf @"(%d, %d, %d)" desc.LrState desc.Vertex desc.GssIdx
-
-    let private descriptorsTableToTeX
-        (currentDescriptor: RnglrDescriptor option)
-        (toHandle: RnglrDescriptor list)
-        (handled: Set<RnglrDescriptor>)
-        : string =
-        let header = @"\text{lrState} & \text{input} & \text{gssIdx} \\ \hline\hline"
-
-        let renderRow (desc: RnglrDescriptor) (isCurrent: bool) : string =
-            if isCurrent then
-                sprintf @"\rowcolor{yellow!20} %d & %d & %d \\" desc.LrState desc.Vertex desc.GssIdx
-            else
-                sprintf @"%d & %d & %d \\" desc.LrState desc.Vertex desc.GssIdx
-
-        let toHandleRows =
-            if List.isEmpty toHandle then
-                [ @"\emptyset & & \\" ]
-            else
-                toHandle
-                |> List.map (fun d ->
-                    let isCurrent =
-                        match currentDescriptor with
-                        | Some cd -> cd.Equals(d)
-                        | None -> false
-
-                    renderRow d isCurrent)
-
-        let handledRows =
-            if Set.isEmpty handled then
-                [ @"\emptyset & & \\" ]
-            else
-                handled |> Set.toList |> List.map (fun d -> renderRow d false)
-
-        let rows = toHandleRows @ [ @"\hline\hline" ] @ handledRows |> String.concat "\n"
-
-        sprintf @"\begin{array}{ccc} %s %s \end{array}" header rows
-
-    let private newDescriptorsToTeX
-        (newDescriptors: Set<RnglrDescriptor>)
-        (attemptedDescriptors: Set<RnglrDescriptor>)
-        : string =
-        if Set.isEmpty attemptedDescriptors then
-            @"\{ \emptyset \}"
-        else
-            let renderEntry (desc: RnglrDescriptor) (isReallyNew: bool) =
-                let tex = rnglrDescriptorToTeX desc
-
-                if isReallyNew then
-                    sprintf @"\colorbox{green!20}{$%s$}" tex
-                else
-                    sprintf @"\colorbox{red!20}{$%s$}" tex
-
-            attemptedDescriptors
-            |> Set.toList
-            |> List.map (fun d -> renderEntry d (Set.contains d newDescriptors))
-            |> String.concat @",\; "
-            |> sprintf @"\{ %s \}"
 
     let private symbolToDotLabel
         (terminalPrinter: 't -> string)
@@ -87,19 +27,16 @@ module RnglrStepVisualizer =
         | Symbol.N(Nonterminal nt) -> nonterminalPrinter nt
         | Symbol.Epsilon -> "ε"
 
+    /// Renders a single RNGLR level step into its visualization artifacts.
     let renderStep
         (terminals: 't -> string)
         (nonterminals: 'nt -> string)
         (lrTable: RnglrTable<'t, 'nt>)
-        (lrStateCount: int)
         (vertexInfo: int -> int * int)
         (step: RnglrParsingStep<'t, 'nt>)
         (pathIndex: PathIndex<'t, 'nt>)
-        (vertexCount: int)
         (inputGraph: Graph<int, Option<'t>>)
         : RnglrVisualizationStep =
-        let currentGssIdx = step.CurrentDescriptor |> Option.map (fun d -> d.GssIdx)
-
         let gssDot =
             GssDot.toDotFromSets
                 (fun idx ->
@@ -118,7 +55,7 @@ module RnglrStepVisualizer =
                 step.NewGssVertices
                 step.NewGssEdges
                 Set.empty
-                currentGssIdx
+                None
 
         let gssTikz =
             GssTikz.toTikzFromSets
@@ -142,7 +79,7 @@ module RnglrStepVisualizer =
                 step.NewGssVertices
                 step.NewGssEdges
                 Set.empty
-                currentGssIdx
+                None
                 "circle"
                 false
 
@@ -159,7 +96,7 @@ module RnglrStepVisualizer =
                 terminals
                 nonterminals
                 lrTable
-                step.CurrentLrState
+                None
                 activeActions
                 step.LevelReductions
 
@@ -168,30 +105,22 @@ module RnglrStepVisualizer =
               StateCount = pathIndex.StateCount
               VertexCount = pathIndex.VertexCount }
 
-        { DescriptorsTable =
-            descriptorsTableToTeX
-                step.CurrentDescriptor
-                (step.PendingQueues |> Array.toList |> List.concat)
-                step.HandledDescriptors
-          NewDescriptors = newDescriptorsToTeX step.NewDescriptors step.AttemptedDescriptors
-          GssDot = gssDot
+        { GssDot = gssDot
           GssTikz = gssTikz
           PathIndex = PathIndexTeX.toTeXWithHighlights terminals nonterminals stepPi step.ChangedCells
           Input = InputGraphDot.toDot terminals inputGraph (Some step.InputVertex)
           InputTikz = InputGraphTikz.toTikz terminals inputGraph (Some step.InputVertex)
           LrTable = lrTable }
 
+    /// Renders every RNGLR level step into its visualization artifacts.
     let renderSteps
         (terminals: 't -> string)
         (nonterminals: 'nt -> string)
         (lrTable: RnglrTable<'t, 'nt>)
-        (lrStateCount: int)
         (vertexInfo: int -> int * int)
         (steps: RnglrParsingStep<'t, 'nt> list)
         (pathIndex: PathIndex<'t, 'nt>)
-        (vertexCount: int)
         (inputGraph: Graph<int, Option<'t>>)
         : RnglrVisualizationStep list =
         steps
-        |> List.map (fun step ->
-            renderStep terminals nonterminals lrTable lrStateCount vertexInfo step pathIndex vertexCount inputGraph)
+        |> List.map (fun step -> renderStep terminals nonterminals lrTable vertexInfo step pathIndex inputGraph)

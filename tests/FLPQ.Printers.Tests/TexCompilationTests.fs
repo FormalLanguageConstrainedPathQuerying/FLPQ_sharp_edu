@@ -553,10 +553,8 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]
     let graph = GLL.stringToGraph input
-    let vertexCount = Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
-    let lrStateCount = Dfa.stateCount lrTable.Automaton
 
     let rnglrResult = Rnglr.buildPathIndexWithSteps freshStart ersm graph
 
@@ -567,7 +565,7 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let vizSteps =
-        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount vertexInfo steps pathIndex vertexCount graph
+        RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex graph
 
     let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
@@ -589,8 +587,6 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     for idx in 0 .. vizSteps.Length - 1 do
         let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
         Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
-        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
         File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
         File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
         File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
@@ -866,10 +862,8 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]
     let graph = GLL.stringToGraph input
-    let vertexCount = FLPQ.GraphAnalysis.Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
-    let lrStateCount = Dfa.stateCount lrTable.Automaton
 
     let rnglrResult2 = Rnglr.buildPathIndexWithSteps freshStart ersm graph
 
@@ -880,7 +874,7 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let vizSteps =
-        RnglrStepVisualizer.renderSteps string string lrTable lrStateCount vertexInfo steps pathIndex vertexCount graph
+        RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex graph
 
     let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
@@ -906,8 +900,6 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     for idx in 0 .. vizSteps.Length - 1 do
         let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
         Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
-        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
         File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
         File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
         File.WriteAllText(Path.Combine(stepDir, "gss.tikz.tex"), vizSteps.[idx].GssTikz)

@@ -107,14 +107,10 @@ module SummaryTeX =
             sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
 
         let rows =
-            [ colorBox "yellow!20", "Current descriptor in descriptors table"
-              colorBox "yellow", "Modified path index cells"
-              colorBox "lightblue!20", "Current GSS node"
+            [ colorBox "yellow", "Modified path index cells"
               colorBox "green!30", "Current input position"
               colorBox "yellow!30", "Newly added GSS vertices"
-              coloredEdge "red", "Newly added GSS edges"
-              colorBox "green!20", "Genuinely new descriptors"
-              colorBox "red!20", "Already-handled descriptors attempted again" ]
+              coloredEdge "red", "Newly added GSS edges" ]
 
         let rowLines =
             rows
@@ -301,6 +297,8 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
+    /// Builds the content lines for a single RNGLR step using the two-column template layout
+    /// (left: GSS figure + LR table; right: input figure + path index).
     let rnglrStepSection
         (stepDir: string)
         (stepNum: int)
@@ -311,16 +309,6 @@ module SummaryTeX =
         let header = section (sprintf "Step %d" stepNum)
 
         let stepName = Path.GetFileName(stepDir)
-
-        let descriptorsTable =
-            match readIfExists (Path.Combine(stepDir, "descriptors_table.tex")) with
-            | Some tex -> tex
-            | None -> ""
-
-        let newDescriptors =
-            match readIfExists (Path.Combine(stepDir, "new_descriptors.tex")) with
-            | Some tex -> tex
-            | None -> ""
 
         let pathIndex =
             match readIfExists (Path.Combine(stepDir, "path_index.tex")) with
@@ -348,20 +336,16 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
                     .Replace("__STEP_GSS_TIKZ__", gssTikz)
                     .Replace("__LR_TABLE__", lrTable)
                     .Replace("__STEP_INPUT_TIKZ__", inputTikz)
                     .Replace("__PATH_INDEX__", pathIndex)
-                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
             else
                 template
-                    .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
                     .Replace("__STEP_GSS_PDF__", gssPdf)
                     .Replace("__LR_TABLE__", lrTable)
                     .Replace("__STEP_INPUT_PDF__", inputPdf)
                     .Replace("__PATH_INDEX__", pathIndex)
-                    .Replace("__NEW_DESCRIPTORS__", newDescriptors)
 
         [ header; filledTemplate; "" ]
 

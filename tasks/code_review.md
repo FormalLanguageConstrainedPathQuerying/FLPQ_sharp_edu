@@ -1,5 +1,31 @@
 # Code Review Report
 
+## Task 260 Review (2026-09-07)
+
+Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `src/FLPQ.Cli/{Helpers,RnglrRunner}.fs`, `data/RNGLR_step{,_tikz}_template.tex`, `tests/FLPQ.Printers.Tests/{RnglrStepVisualizationTests,TexCompilationTests}.fs` + fsproj + GoldenData, `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`, `docs/developer/rnglr.md`. Replaces the descriptor-queue + recursive cascade with the canonical level-based driver (shift, then reduce to fixpoint, per input position), removes `RnglrDescriptor` entirely, and rebuilds the step visualization as a two-column layout.
+
+**Resolved this task:**
+- §6 (XML doc comments) — `Rnglr.buildPathIndex`, `buildPathIndexWithSteps`, `RnglrStepVisualizer.{RnglrVisualizationStep,renderStep,renderSteps}`, and `SummaryTeX.rnglrStepSection` had no `///` comments (pre-existing gap in files touched by this task); added.
+- §21 (book traceability) — the level loop now carries an explicit `sec:CFPQ_GLR` / `sec:CFPQ_RNGLR` reference; public entry points reference `sec:CFPQ_RNGLR`.
+- §23 (signature hygiene) — `renderStep`/`renderSteps` took unused `lrStateCount` and `vertexCount` parameters (pre-existing); removed from the signatures and all four call sites, dropping the dead bindings.
+- Stale build artifact — a gitignored old copy of the three-column `RNGLR_step_template.tex` sat in the test output dir and shadowed `data/`, so the merged-summary lualatex test compiled unfilled `__DESCRIPTORS_TABLE__` placeholders; added `PreserveNewest` Content items for both RNGLR step templates to `FLPQ.Printers.Tests.fsproj` (matching every other template) and deleted the stale file.
+- Pre-existing fsharplint warnings blocking the pre-merge full-solution lint — 4 warnings in `tests/FLPQ.LinearAlgebra.Tests/MatrixTests.fs` mxmi tests (FL0034 lambda-removal x2, FL0065 identity multiplication x2); fixed with `Matrix.create 2 3 (+)` and simplified expected dot products. Full-solution lint now reports `Summary: 0 warnings`.
+
+**Findings against the constraint sources:**
+- §7 (genericity) — driver, types, and visualizer stay generic over `'t`/`'nt`; no `string` hardcoding.
+- §8 (non-empty collections) — `RnglrGSS.verticesAt` returns `int list`; empty is a legitimate snapshot state, so plain `list` is correct.
+- §9 (separation) — `Rnglr.fs` produces step data (`RnglrParsingStep`); all rendering stays in `RnglrStepVisualizer.fs`/`SummaryTeX.fs`.
+- §13 (no duplication) — `shiftNode`/`reduceAtLevel`/`processReduction` share no copied logic; the DOT/TikZ template pair mirrors the established GLL pair pattern.
+- §15/§16 (tests) — remaining RNGLR tests are goldens, lualatex compilation, and property/equivalence tests; no stubs or tautologies. The two descriptor golden tests were deleted with their data in S3.
+- §18 (equivalence) — `CrossParserEquivalenceTests` SCC-count invariants and CYK/GLL/RNGLR acceptance equivalence pass unchanged; PathIndex is byte-identical to the pre-task implementation (full suite green at S1).
+- §19 (coverage) — every changed module keeps its test correspondent (`RnglrTests`, `RnglrStepVisualizationTests`, `TexCompilationTests`, `RnglrRunnerTests`).
+- §20 (documentation) — `docs/developer/rnglr.md` rewritten to the level-based structure: abstract, algorithm (level loop, rounds, passing continuations), `RnglrParsingStep` type, `verticesAt` in the GSS table, corrected `buildPathIndex` signature (`ExtendedRSM`, not the stale `RSM`), acceptance via `PathIndex.isAccepted` (the doc listed a non-existent `Rnglr.isAccepted`), design-decision rows replaced, `sec:CFPQ_GLR` added to book references.
+- §22 (clarity) — no recursion, no depth guard; the driver is a plain level loop with documented phases.
+
+**No blocking findings.** Second full pass over the RNGLR changes found zero new problems; the pre-merge full-solution lint surfaced only the pre-existing MatrixTests warnings above, now fixed.
+
+---
+
 ## Task 257 Review (2026-09-03)
 
 Scope: `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Printers/ValiantTeX.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs`, `tests/FLPQ.Printers.Tests/GoldenData/valiant_modified_grammar1_ab.tex`, `docs/developer/valiant.md`. Aligns the modified Valiant trace to the full power-of-two padded grid, restructures it into an init step + one step per layer, and fixes layer/changed-cell coloring.

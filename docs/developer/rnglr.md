@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli, TestHelpers
 **Book reference:** Section sec:CFPQ_RNGLR (Chapter 6)
 
-> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution using per-vertex `RnglrDescriptor` worklist queues with a recursive shift-then-reduce cascade. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
+> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution with a canonical level-based driver: each step processes one input position (level) — first shift, then all possible reductions to fixpoint — and only then moves to the next level. No descriptor worklists. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
 
 ## Contents
 
@@ -22,27 +22,29 @@
 
 ## Algorithm
 
-The core algorithm is layered: **shift** all terminals at a vertex, then a **fixpoint** loop of reductions until no more new GSS edges or path index entries are produced.
+The core algorithm is a strict left-to-right **level loop** over input positions. Each level (input position `v`) is processed in rounds until it stabilizes: **shift** every not-yet-shifted GSS vertex at `v`, then run reductions to fixpoint. Only after the level produces no new GSS vertex does the driver move to `v + 1`. There are no descriptor worklists and no recursion — this is the book's per-vertex MakeReductions/Push/ApplyPassingReductions scheme (sec:CFPQ_GLR) specialized to a single input string.
 
 ### buildPathIndex
 
-1. **Initialization**: Extend RSM with fresh start `S'`, build LR(0) parsing table, pre-allocate path index matrix (size K_rsm × K_rsm), pre-allocate GSS, build inverted RSM block data (reverse transition maps).
+1. **Initialization**: Extend RSM with fresh start `S'`, build LR(0) parsing table, pre-allocate path index matrix (size K_rsm × K_rsm), create empty GSS, build inverted RSM block data (reverse transition maps). Emit step 0 (initial state: empty GSS, empty path index, `InputVertex = -1`).
 
-2. **Main loop** — vertex-by-vertex, layered shift-then-reduce with fixpoint:
-   - **Shift phase**: For each terminal edge `v --t--> vNext` in the input graph, if current LR state has a Shift action on `t`, create GSS edge and consume stored states for product BFS continuation. Enqueue target for reduction.
-   - **Reduction phase** (fixpoint at each vertex): For each pending `(lrState, vertex)` pair, find items at final states of blocks → reduce via `findPredecessors` (product BFS through inverted RSM block) → apply Goto → create GSS edge. Cascades recursively.
+2. **Level loop** — for each input position `v` from 0 to vertexCount − 1:
+   - **Phase 1 — Shift**: For every LR state with a GSS vertex at `v` that has not been shifted yet this level, follow every terminal edge `v --t--> vNext`: if the LR state has a Shift action on `t`, create the GSS edge and consume stored states for product BFS continuation (passing-reduction continuations across levels).
+   - **Phase 2 — Reduce to fixpoint** (`reduceAtLevel`): full-rescan loop over all GSS vertices at `v` — for each reducible item, `findPredecessors` (product BFS through inverted RSM block) → apply Goto → create GSS edge. Repeats until no new GSS edge is added, so every reduction's product BFS runs over the current (growing) GSS.
+   - **Rounds**: Phase 1 + Phase 2 repeat while a new GSS vertex appeared at `v` during the reduce phase — a goto target must itself be shifted before the level can stabilize.
+   - After stabilization, emit the level's step snapshot (active GSS elements, path index copy, shift/reduce activity accumulated over the whole level).
 
 3. **Product BFS**: Following GSS edges backwards through inverted RSM transitions, adding PTerminal, PNonterminal, and PIntermediate entries to the path index. Reaches block start states to find predecessors.
 
-4. **Acceptance**: Check path index cell `(startGlobalState, 0) → (finalGlobalState, vertexCount - 1)`.
+4. **Acceptance**: Check path index cell `(startGlobalState, 0) → (finalGlobalState, vertexCount - 1)` via `PathIndex.isAccepted`.
 
 ### processReduction
 
-For each predecessor found by product BFS:
+Non-recursive; applies a single reduction for one predecessor found by product BFS:
 1. Look up LR Goto table for `(lrStatePre, reduceNt)` → gotoTarget.
-2. Create GSS edge `(gotoTarget, vEnd) --N(reduceNt)--> gssIdxPre`.
+2. Create GSS edge `(gotoTarget, vEnd) --N(reduceNt)--> gssIdxPre` (deduplicated via `processedGotos`).
 3. PEpsilonNonterminal only when `vPre = vEnd` and `finalRsmState = globalStart` (true epsilon).
-4. Cascade recursively: new GSS vertex may trigger further reductions.
+4. Returns `(newEdge, newVertexGotoTarget)` so the level loop knows whether another reduce pass or another round is needed.
 
 ## Type Definitions
 
@@ -53,12 +55,22 @@ type RnglrItem<'nt> = { BlockNonterminal: Nonterminal<'nt>; RsmState: int }
 ```
 An LR item over an RSM: a position in a specific RSM block's DFA. Unlike grammar-based LR items (production + dot position), RSM items track which block nonterminal and which state within that block.
 
-### RnglrDescriptor (struct)
+### RnglrParsingStep
 ```fsharp
-[<Struct>]
-type RnglrDescriptor = { LrState: int; Vertex: int; GssIdx: int }
+type RnglrParsingStep<'t, 'nt> =
+    { ActiveGssVertices: Set<int>
+      ActiveGssEdges: Set<int * int>
+      ActiveGssEdgeSymbols: Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
+      NewGssVertices: Set<int>
+      NewGssEdges: Set<int * int>
+      PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
+      ChangedCells: Set<int * int>
+      InputVertex: int
+      ActiveShiftTerminals: Set<Terminal<'t>>
+      ActiveReduceNonterminals: Set<Nonterminal<'nt>>
+      LevelReductions: Set<Nonterminal<'nt>> }
 ```
-A descriptor in the RNGLR worklist: a parsing position (LR automaton state, input graph vertex, GSS vertex index). Carries explicit GssIdx reference matching GLL's descriptor structure. Range tracking is handled by the product BFS (storedStates mechanism). Serves as the worklist item in per-vertex pending queues and deduplication sets.
+A level-step snapshot for visualization. One step per input position, captured after the level fully stabilizes (plus step 0 for the initial state). `ActiveShiftTerminals` / `ActiveReduceNonterminals` accumulate over the whole level including all rounds; `LevelReductions` accumulates over the level and resets per level. `NewGssVertices` / `NewGssEdges` are the difference against the previous step's active sets.
 
 ### RnglrTable
 ```fsharp
@@ -93,6 +105,7 @@ The RNGLR Graph-Structured Stack. Vertices are created lazily on-demand with seq
 | `create()` | Returns an empty GSS with no pre-allocated vertices |
 | `getOrCreateVertex gss lrState inputVertex` | Returns existing GSS vertex ID or allocates next sequential ID |
 | `getVertexInfo gss gssIdx` | Returns (lrState, inputVertex) for a GSS vertex |
+| `verticesAt gss inputVertex` | Snapshot of LR states having a GSS vertex at the input position; a list, safe to iterate while new vertices are created |
 | `addEdge gss fromIdx toIdx label` | Adds edge, returns and clears StoredStates[fromIdx] |
 | `getStoredStates gss gssIdx` | Reads StoredStates[gssIdx] without clearing |
 | `setStoredStates gss gssIdx states` | Writes storedStates for a GSS vertex |
@@ -103,16 +116,20 @@ The RNGLR Graph-Structured Stack. Vertices are created lazily on-demand with seq
 ### Rnglr.buildPathIndex
 ```fsharp
 val buildPathIndex:
-    freshStart: Nonterminal<'nt> -> rsm: RSM<'t, 'nt> -> inputGraph: Graph<int, Option<'t>>
+    freshStart: Nonterminal<'nt> -> ersm: ExtendedRSM<'t, 'nt> -> inputGraph: Graph<int, Option<'t>>
     -> PathIndex<'t, 'nt>
 ```
-Core RNGLR algorithm — builds the path index through layered shift-then-reduce with per-vertex fixpoint.
+Core RNGLR algorithm — builds the path index through the level-based driver (shift + reduce fixpoint per input position).
 
-### Rnglr.isAccepted
+### Rnglr.buildPathIndexWithSteps
 ```fsharp
-val isAccepted: pathIndex: PathIndex<'t, 'nt> -> extRsm: RSM<'t, 'nt> -> vertexCount: int -> bool
+val buildPathIndexWithSteps:
+    freshStart: Nonterminal<'nt> -> ersm: ExtendedRSM<'t, 'nt> -> inputGraph: Graph<int, Option<'t>>
+    -> RnglrResult<'t, 'nt>
 ```
-Checks whether the input graph is accepted. Inspects the path index cell `(startGlobalState, 0) → (finalGlobalState, vertexCount - 1)`.
+Same algorithm, additionally recording one `RnglrParsingStep` snapshot per level (plus the initial state) for step-by-step visualization.
+
+Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, which inspects the path index cell `(startGlobalState, 0) → (finalGlobalState, vertexCount - 1)`.
 
 ## Design Decisions
 
@@ -125,16 +142,17 @@ Checks whether the input graph is accepted. Inspects the path index cell `(start
 | StoredStates as Dictionary<int, Set<...>> not fixed array | Matches dynamic GSS vertex creation; no need to pre-allocate for non-existent vertices |
 | GSS vertices created on-demand with sequential IDs | Decouples GSS indexing from PathIndex grid formula; only allocates for actually used vertices |
 | Deduplication of cascades via processedGotos (Dictionary) | Prevents reprocessing same (reduceNt, predecessor) pair at same GSS vertex |
-| Per-vertex fixpoint (not a single global queue) | storedStates deposited by reductions at V may be consumed by shifts of subsequent descriptors at V or by shifts at V+1. Per-vertex queues guarantee all work at V completes before V+1 begins, ensuring storedStates are available when consumed |
-| Recursive cascade via processNode ↔ processReduction | Within a single `processNode` call, shift happens first (creating terminal GSS edges), then reduce traverses the GSS (now including terminal edges). Reduction cascades via recursive `processNode` calls, where each recursive level also follows shift-then-reduce ordering. storedStates set during the reduce phase at V are consumed by shifts of later descriptors at V or when V+1's shift phase runs |
-| Visualization steps are per-input-position | One step captures the cumulative result of processing all descriptors at one input vertex (shift all terminals + reduce fixpoint). Step 0 is the initial empty state. `CurrentDescriptor` and `CurrentLrState` are `None` for position-level steps |
-| RnglrDescriptor struct with explicit GssIdx | 3-field descriptor (LrState, Vertex, GssIdx) matching GLL's structure. GssIdx is explicit via getOrCreateVertex, not derived from formula. Range tracking remains with product BFS storedStates |
-| Depth guard (1000) on processNode | Prevents infinite recursion in pathological grammars with unbounded epsilon-reduction chains |
+| Level-based driver without descriptors | Canonical form of the book's per-vertex scheme: each step is one input position — shift, then reduce to fixpoint — before moving on. No worklist queues, no descriptor bookkeeping; the GSS itself (via `verticesAt`) is the only pending-work representation. storedStates deposited by reductions at V are consumed by shifts at V or V+1 because all work at V completes before V+1 begins |
+| Round loop until the level stabilizes | A reduction's goto target is a new GSS vertex at the same position v that must itself be shifted. Phase 1 (shift unshifted vertices) + Phase 2 (reduce fixpoint) repeat while a new GSS vertex appeared at v; termination follows from the finite LR automaton × finite input positions |
+| Full-rescan reduce fixpoint (not incremental queue) | The GSS grows during a level, so every pass re-scans all vertices at v until no new GSS edge is added. Guarantees each reduction's product BFS runs over the current GSS — completeness without tracking which vertices changed |
+| No recursion in the driver | `processReduction` returns `(newEdge, newVertexGotoTarget)` and the level loop decides what to do next; the old recursive processNode ↔ processReduction cascade (and its 1000 depth guard) is gone |
+| Visualization steps are per-input-position | One step captures the cumulative result of processing one level (all rounds of shift + reduce fixpoint). Step 0 is the initial empty state. Shift/reduce activity sets accumulate over the whole level |
 
 ## Book Reference
 
 - Section sec:CFPQ_RNGLR — RNGLR for CFPQ over RSMs
 - Chapter 6, `03_RecursiveAutomata.tex` — RSM definition
+- Section sec:CFPQ_GLR — GLR-based CFPQ (the per-vertex MakeReductions/Push/ApplyPassingReductions scheme that the level-based driver specializes to a single input string)
 - Section sec:CFPQ_GLL — GLL parsing (counterpart algorithm, shared path index type)
 - `RnglrLR.fs` — LR(0) table construction for RSM items
 

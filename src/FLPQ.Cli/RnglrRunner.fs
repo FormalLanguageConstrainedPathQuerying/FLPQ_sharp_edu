@@ -14,7 +14,6 @@ module RnglrRunner =
 
         let extRsm = ExtendedRSM.create (Nonterminal "S'") rsm
         let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm extRsm)
-        let lrStateCount = Dfa.stateCount lrTable.Automaton
 
         let inputText = Helpers.readFile inputFile
         let inputTokens = Tokenizer.tokenizeTerminals inputText
@@ -62,16 +61,7 @@ module RnglrRunner =
                 (InputGraphTikz.toTikz string inputGraph None)
 
         let vizSteps =
-            RnglrStepVisualizer.renderSteps
-                string
-                string
-                lrTable
-                lrStateCount
-                vertexInfo
-                steps
-                pathIndex
-                vertexCount
-                inputGraph
+            RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex inputGraph
 
         Helpers.writeRnglrStepsVisualization outputDir useDot vizSteps
 

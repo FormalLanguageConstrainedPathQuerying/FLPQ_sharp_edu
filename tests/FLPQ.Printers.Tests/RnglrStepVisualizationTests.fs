@@ -9,9 +9,7 @@ open FLPQ.TestUtilities
 
 [<Struct>]
 type private RnglrVizData =
-    { DescriptorsTables: string list
-      NewDescriptors: string list
-      GssDots: string list
+    { GssDots: string list
       PathIndices: string list
       Inputs: string list
       LrTables: string list }
@@ -21,10 +19,8 @@ let private renderViz (input: string list) : RnglrVizData =
 
     let freshStart = Nonterminal "S'"
     let graph = GLL.stringToGraph input
-    let vertexCount = Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
-    let lrStateCount = Dfa.stateCount lrTable.Automaton
 
     let rnglrResult = Rnglr.buildPathIndexWithSteps freshStart ersm graph
 
@@ -32,33 +28,12 @@ let private renderViz (input: string list) : RnglrVizData =
     let vertexInfo (idx: int) = vertexInfoArr.[idx]
 
     let viz =
-        RnglrStepVisualizer.renderSteps
-            string
-            string
-            lrTable
-            lrStateCount
-            vertexInfo
-            rnglrResult.Steps
-            rnglrResult.PathIndex
-            vertexCount
-            graph
+        RnglrStepVisualizer.renderSteps string string lrTable vertexInfo rnglrResult.Steps rnglrResult.PathIndex graph
 
-    { DescriptorsTables = viz |> List.map (fun s -> s.DescriptorsTable)
-      NewDescriptors = viz |> List.map (fun s -> s.NewDescriptors)
-      GssDots = viz |> List.map (fun s -> s.GssDot)
+    { GssDots = viz |> List.map (fun s -> s.GssDot)
       PathIndices = viz |> List.map (fun s -> s.PathIndex)
       Inputs = viz |> List.map (fun s -> s.Input)
       LrTables = viz |> List.map (fun s -> s.LrTable) }
-
-[<Fact>]
-let ``RNGLR golden for S->a a input a a — descriptors_table step 0`` () =
-    let data = renderViz [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_descriptors_table_step0.tex" data.DescriptorsTables.[0]
-
-[<Fact>]
-let ``RNGLR golden for S->a a input a a — new_descriptors step 0`` () =
-    let data = renderViz [ "a"; "a" ]
-    GoldenHelpers.verifyGolden "rnglr_new_descriptors_step0.tex" data.NewDescriptors.[0]
 
 [<Fact>]
 let ``RNGLR golden for S->a a input a a — gss step 0`` () =

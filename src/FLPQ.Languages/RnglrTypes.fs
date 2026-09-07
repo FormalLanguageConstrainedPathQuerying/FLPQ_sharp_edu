@@ -12,16 +12,6 @@ type RnglrItem<'nt when 'nt: comparison> =
     { BlockNonterminal: Nonterminal<'nt>
       RsmState: int }
 
-/// RNGLR descriptor — a parsing position (LR automaton state, input graph vertex, GSS vertex).
-/// Carries explicit GssIdx reference to the GSS vertex, matching GLL's descriptor structure.
-/// Range tracking is handled by the product BFS (storedStates mechanism), not carried in the descriptor.
-/// Book reference: sec:CFPQ_RNGLR.
-[<Struct>]
-type RnglrDescriptor =
-    { LrState: int
-      Vertex: int
-      GssIdx: int }
-
 /// RNGLR parsing table built from an RSM.
 /// Action maps (automatonState, symbol) to an LR action.
 /// Goto maps (automatonState, nonterminal) to an automaton state.
@@ -76,6 +66,14 @@ module RnglrGSS =
 
     /// Returns the (lrState, inputVertex) pair for a GSS vertex ID.
     let getVertexInfo (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : int * int = gss.VertexInfo.[gssIdx]
+
+    /// Returns a snapshot of the LR states that have a GSS vertex at the given input position.
+    /// The result is a list, safe to iterate while new vertices are being created.
+    let verticesAt (gss: RnglrGSS<'t, 'nt>) (inputVertex: int) : int list =
+        gss.VertexInfo
+        |> Seq.filter (fun (_, v) -> v = inputVertex)
+        |> Seq.map fst
+        |> Seq.toList
 
     /// Adds an edge from source GSS vertex to target GSS vertex.
     /// Returns the storedStates from the source vertex, clearing them.
@@ -135,11 +133,10 @@ module RnglrGSS =
         | false, _ -> []
 
 /// A single step snapshot during RNGLR execution.
-/// Captures per-vertex pending queues, active GSS elements, path index state,
-/// LR automaton position, and descriptor accounting.
+/// One step per input position (level): captures the active GSS elements after the level
+/// stabilizes, the path index state, and the shift/reduce activity accumulated over the level.
 type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { PendingQueues: RnglrDescriptor list[]
-      ActiveGssVertices: Set<int>
+    { ActiveGssVertices: Set<int>
       ActiveGssEdges: Set<int * int>
       ActiveGssEdgeSymbols: Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
       NewGssVertices: Set<int>
@@ -147,11 +144,6 @@ type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
       PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
       ChangedCells: Set<int * int>
       InputVertex: int
-      CurrentLrState: int option
-      CurrentDescriptor: RnglrDescriptor option
-      HandledDescriptors: Set<RnglrDescriptor>
-      NewDescriptors: Set<RnglrDescriptor>
-      AttemptedDescriptors: Set<RnglrDescriptor>
       ActiveShiftTerminals: Set<Terminal<'t>>
       ActiveReduceNonterminals: Set<Nonterminal<'nt>>
       LevelReductions: Set<Nonterminal<'nt>> }
