@@ -54,6 +54,7 @@ module Rnglr =
                 -> Set<Terminal<'t>>
                 -> Set<Nonterminal<'nt>>
                 -> Set<Nonterminal<'nt>>
+                -> Set<int>
                 -> unit)
         : PathIndex<'t, 'nt> * ResizeArray<int * int> =
         let extRsm = ersm.ExtendedRsm
@@ -102,6 +103,10 @@ module Rnglr =
         let processedGotos = Dictionary<int, Set<Nonterminal<'nt> * int>>()
 
         let changedCells = ref Set.empty<int * int>
+
+        // GSS vertices at which passing-reduction handling triggered: a new edge was added
+        // from the vertex and its stored states were non-empty (book: sec:CFPQ_GLR AddEdge).
+        let passingReductionVertices = ref Set.empty<int>
 
         let addToIndex
             (fromState: int)
@@ -287,7 +292,11 @@ module Rnglr =
 
                 if isNew then
                     processedGotos.[gotoGssIdx] <- Set.add dedupKey existing
-                    RnglrGSS.addEdge gss gotoGssIdx gssIdxPre (Symbol.N reduceNt) |> ignore
+
+                    let consumedStates = RnglrGSS.addEdge gss gotoGssIdx gssIdxPre (Symbol.N reduceNt)
+
+                    if not (Set.isEmpty consumedStates) then
+                        passingReductionVertices := Set.add gotoGssIdx !passingReductionVertices
 
                 match invBlockData.TryGetValue(reduceNt) with
                 | true, invData ->
@@ -318,6 +327,9 @@ module Rnglr =
 
                         let consumedStates =
                             RnglrGSS.addEdge gss targetGssIdx shiftGssIdx (Symbol.T(Terminal tVal))
+
+                        if not (Set.isEmpty consumedStates) then
+                            passingReductionVertices := Set.add targetGssIdx !passingReductionVertices
 
                         for (storedNt, storedInv, storedEndState, storedEndVertex) in consumedStates do
                             match Map.tryFind storedNt invBlockData with
@@ -387,7 +399,17 @@ module Rnglr =
         let stepChanged = changedCells.Value
         changedCells.Value <- Set.empty<int * int>
 
-        onStep Set.empty Set.empty Map.empty (Matrix.copy pathIndex.Matrix) stepChanged -1 Set.empty Set.empty Set.empty
+        onStep
+            Set.empty
+            Set.empty
+            Map.empty
+            (Matrix.copy pathIndex.Matrix)
+            stepChanged
+            -1
+            Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
 
         RnglrGSS.getOrCreateVertex gss 0 0 |> ignore
 
@@ -420,9 +442,11 @@ module Rnglr =
             let capturedShifts = stepShiftTerminals
             let capturedReduces = stepReduceNt
             let capturedLevel = levelReductions
+            let capturedPassing = passingReductionVertices.Value
 
             stepShiftTerminals <- Set.empty
             stepReduceNt <- Set.empty
+            passingReductionVertices.Value <- Set.empty<int>
 
             onStep
                 activeVerts
@@ -434,6 +458,7 @@ module Rnglr =
                 capturedShifts
                 capturedReduces
                 capturedLevel
+                capturedPassing
 
         pathIndex, gss.VertexInfo
 
@@ -445,7 +470,7 @@ module Rnglr =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ -> ()) |> fst
+        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ -> ()) |> fst
 
     /// Same algorithm as buildPathIndex, additionally recording one RnglrParsingStep snapshot
     /// per level (plus the initial state) for step-by-step visualization.
@@ -469,6 +494,7 @@ module Rnglr =
             shiftTerminals
             reduceNonterminals
             levelReds
+            passingReductionVertices
             =
             let newVertices = Set.difference activeVerts prevVertices
             let newEdges = Set.difference activeEdges prevEdges
@@ -487,7 +513,8 @@ module Rnglr =
                   InputVertex = inputVertex
                   ActiveShiftTerminals = shiftTerminals
                   ActiveReduceNonterminals = reduceNonterminals
-                  LevelReductions = levelReds }
+                  LevelReductions = levelReds
+                  PassingReductionVertices = passingReductionVertices }
             )
 
         buildPathIndexCore ersm inputGraph onStep

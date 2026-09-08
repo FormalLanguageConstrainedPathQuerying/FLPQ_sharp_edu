@@ -218,6 +218,36 @@ module SppfDotTests =
 
         Assert.NotEmpty(sppf.RootIndices)
 
+module RnglrPassingReductions =
+    let private runWithSteps
+        (rsm: RSM<string, string>)
+        (input: Terminal<string> list)
+        : RnglrParsingStep<string, string> list =
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let freshStart = Nonterminal("S'")
+        let graph = TestHelpers.terminalsToGraph input
+        let ersm = ExtendedRSM.create freshStart rsmFixed
+
+        Rnglr.buildPathIndexWithSteps freshStart ersm graph |> fun r -> r.Steps
+
+    [<Fact>]
+    let ``passing-reduction vertices tracked for S -> a S b | eps | S S`` () =
+        // The concatenation rule S -> S S creates multiple reduction paths at the same
+        // input position; a product BFS deposits stored states at an intermediate GSS
+        // vertex that a later reduction in the same level consumes.
+        let steps = runWithSteps dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
+
+        Assert.True(
+            steps |> List.exists (fun s -> not (Set.isEmpty s.PassingReductionVertices)),
+            "Expected at least one step with non-empty PassingReductionVertices"
+        )
+
+    [<Fact>]
+    let ``passing-reduction vertices empty at initial step`` () =
+        let steps = runWithSteps dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
+        Assert.True(Set.isEmpty steps.[0].PassingReductionVertices)
+
 module RnglrEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =

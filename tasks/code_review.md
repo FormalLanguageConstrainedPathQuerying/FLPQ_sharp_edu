@@ -1,5 +1,28 @@
 # Code Review Report
 
+## Task 261 Review (2026-09-08)
+
+Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `tests/FLPQ.Languages.Tests/RnglrTests.fs`, `tests/FLPQ.Cli.Tests/{CliSummaryTests,RnglrRunnerTests}.fs`, `docs/developer/{rnglr,summary-tex}.md`. Tracks per-step the GSS vertices where passing-reduction handling triggers (a new edge added from a vertex with non-empty stored states — the book's AddEdge trigger, sec:CFPQ_GLR), highlights them orange in DOT/TikZ step visualizations (same color as GLL stored pops, task 259), and adds the color to the RNGLR summary legend.
+
+**Resolved this task:**
+- §14 (language registry) — the S3 runner tests hardcoded the triggering grammar text inline although it is the registry entry `Dyck1/ambiguousWithConcat` (`Grammars.[1]`); now read from `LanguageRegistry.Dyck1.Grammars.[1].Text`, with the scenario input extracted to a documented `passingReductionInput` constant (commit 063803c).
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — new `PassingReductionVertices` field carries a `///` comment; no other new public API.
+- §7 (genericity) — tracking stays generic over `'t`/`'nt`; vertex indices are `int` like every other GSS-index set on the step record.
+- §8 (non-empty collections) — `PassingReductionVertices: Set<int>` is correct: empty is a legitimate state (step 0, levels without triggers).
+- §9 (separation) — `Rnglr.fs` records vertex indices; all orange rendering stays in the printers via the existing `storedPopVertices` parameter of `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` (no renderer changes needed).
+- §13 (no duplication) — the step-directory iteration pattern in the new runner tests mirrors the task 259 GLL stored-pops tests; per-runner-file self-containment is the established convention, no shared helper extracted.
+- §15/§16 (tests) — four new `[<Fact>]` tests assert real properties (orange present in some non-init step's `gss.dot`/`gss.tikz.tex`, absent at step 0, legend row + `\colorbox{orange!30}` in merged TeX); no stubs or tautologies.
+- §19 (coverage) — every changed module keeps its correspondent (`RnglrTests.RnglrPassingReductions`, `CliSummaryTests`, `RnglrRunnerTests`); full suite green: 907 tests, zero regressions; step-0 goldens byte-identical.
+- §20 (documentation) — `docs/developer/rnglr.md`: `RnglrParsingStep` field + explanation, level-loop "Passing-reduction tracking" bullet, design-decision row for the shared orange color; `docs/developer/summary-tex.md`: both legend rows documented.
+- §21 (book traceability) — tracking comment in `Rnglr.fs` cites sec:CFPQ_GLR AddEdge; docs cite sec:CFPQ_GLR.
+- §22 (clarity) — tracking is two `if not (Set.isEmpty consumedStates)` checks at the existing consumption points; no optimization, no behavior change (algorithm output unchanged).
+
+**No blocking findings.** Second full pass found zero new problems; the one finding (registry usage) was fixed and re-verified before this report.
+
+---
+
 ## Task 260 Review (2026-09-07)
 
 Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `src/FLPQ.Cli/{Helpers,RnglrRunner}.fs`, `data/RNGLR_step{,_tikz}_template.tex`, `tests/FLPQ.Printers.Tests/{RnglrStepVisualizationTests,TexCompilationTests}.fs` + fsproj + GoldenData, `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`, `docs/developer/rnglr.md`. Replaces the descriptor-queue + recursive cascade with the canonical level-based driver (shift, then reduce to fixpoint, per input position), removes `RnglrDescriptor` entirely, and rebuilds the step visualization as a two-column layout.

@@ -3,6 +3,7 @@ module RnglrRunnerTests
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.TestUtilities
 
 let private runRnglrRunner (grammarText: string) (inputText: string) : string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -126,4 +127,65 @@ let ``runRnglr tikz mode step 0 produces input.tikz.tex`` () =
     let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+/// Grammar where the concatenation rule S -> S S creates multiple reduction paths at the same
+/// input position; a product BFS deposits stored states at an intermediate GSS vertex that a
+/// later reduction in the same level consumes — this triggers passing-reduction handling.
+let private passingReductionGrammar = LanguageRegistry.Dyck1.Grammars.[1].Text
+
+/// Minimal input that triggers passing-reduction handling (step 3).
+let private passingReductionInput = "a b"
+
+[<Fact>]
+let ``runRnglr passing-reductions step highlights GSS vertex orange (dot mode)`` () =
+    let outDir = runRnglrRunner passingReductionGrammar passingReductionInput
+
+    let mutable foundOrange = false
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success && int stepNum.Groups.[1].Value > 0 then
+            let gssDot = Path.Combine(stepDir, "gss.dot")
+
+            if File.Exists gssDot then
+                let content = File.ReadAllText gssDot
+                foundOrange <- foundOrange || content.Contains("fillcolor=orange")
+
+    Assert.True(foundOrange, "Expected at least one non-init step to highlight a passing-reduction GSS vertex orange")
+
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr passing-reductions step 0 has no orange highlight (dot mode)`` () =
+    let outDir = runRnglrRunner passingReductionGrammar passingReductionInput
+    let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
+
+    if File.Exists gssDot then
+        let content = File.ReadAllText gssDot
+        Assert.DoesNotContain("fillcolor=orange", content)
+
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr passing-reductions step highlights GSS vertex orange (tikz mode)`` () =
+    let outDir = runRnglrRunnerTikz passingReductionGrammar passingReductionInput
+
+    let mutable foundOrange = false
+
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let stepName = System.IO.Path.GetFileName(stepDir)
+        let stepNum = System.Text.RegularExpressions.Regex.Match(stepName, "step_(\d+)")
+
+        if stepNum.Success && int stepNum.Groups.[1].Value > 0 then
+            let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
+
+            if File.Exists gssTikz then
+                let content = File.ReadAllText gssTikz
+                foundOrange <- foundOrange || content.Contains("fill=orange!30")
+
+    Assert.True(foundOrange, "Expected at least one non-init step to highlight a passing-reduction GSS vertex orange")
+
     cleanup outDir

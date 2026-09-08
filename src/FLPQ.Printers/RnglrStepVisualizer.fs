@@ -54,7 +54,7 @@ module RnglrStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
-                Set.empty
+                step.PassingReductionVertices
                 None
 
         let gssTikz =
@@ -78,7 +78,7 @@ module RnglrStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
-                Set.empty
+                step.PassingReductionVertices
                 None
                 "circle"
                 false

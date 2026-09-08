@@ -136,17 +136,22 @@ module RnglrGSS =
 /// One step per input position (level): captures the active GSS elements after the level
 /// stabilizes, the path index state, and the shift/reduce activity accumulated over the level.
 type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
-    { ActiveGssVertices: Set<int>
-      ActiveGssEdges: Set<int * int>
-      ActiveGssEdgeSymbols: Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
-      NewGssVertices: Set<int>
-      NewGssEdges: Set<int * int>
-      PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
-      ChangedCells: Set<int * int>
-      InputVertex: int
-      ActiveShiftTerminals: Set<Terminal<'t>>
-      ActiveReduceNonterminals: Set<Nonterminal<'nt>>
-      LevelReductions: Set<Nonterminal<'nt>> }
+    {
+        ActiveGssVertices: Set<int>
+        ActiveGssEdges: Set<int * int>
+        ActiveGssEdgeSymbols: Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
+        NewGssVertices: Set<int>
+        NewGssEdges: Set<int * int>
+        PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
+        ChangedCells: Set<int * int>
+        InputVertex: int
+        ActiveShiftTerminals: Set<Terminal<'t>>
+        ActiveReduceNonterminals: Set<Nonterminal<'nt>>
+        LevelReductions: Set<Nonterminal<'nt>>
+        /// GSS vertices (indices) at which passing-reduction handling triggered during this step:
+        /// a new GSS edge was added from the vertex and its stored states were non-empty.
+        PassingReductionVertices: Set<int>
+    }
 
 /// Result of RNGLR path index construction with step-by-step visualization data.
 [<Struct>]

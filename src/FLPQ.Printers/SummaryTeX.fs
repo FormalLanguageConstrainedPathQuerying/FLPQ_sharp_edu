@@ -110,7 +110,8 @@ module SummaryTeX =
             [ colorBox "yellow", "Modified path index cells"
               colorBox "green!30", "Current input position"
               colorBox "yellow!30", "Newly added GSS vertices"
-              coloredEdge "red", "Newly added GSS edges" ]
+              coloredEdge "red", "Newly added GSS edges"
+              colorBox "orange!30", "Passing reductions handling triggered at GSS vertex" ]
 
         let rowLines =
             rows

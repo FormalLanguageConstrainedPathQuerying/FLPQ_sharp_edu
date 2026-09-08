@@ -32,7 +32,8 @@ The core algorithm is a strict left-to-right **level loop** over input positions
    - **Phase 1 — Shift**: For every LR state with a GSS vertex at `v` that has not been shifted yet this level, follow every terminal edge `v --t--> vNext`: if the LR state has a Shift action on `t`, create the GSS edge and consume stored states for product BFS continuation (passing-reduction continuations across levels).
    - **Phase 2 — Reduce to fixpoint** (`reduceAtLevel`): full-rescan loop over all GSS vertices at `v` — for each reducible item, `findPredecessors` (product BFS through inverted RSM block) → apply Goto → create GSS edge. Repeats until no new GSS edge is added, so every reduction's product BFS runs over the current (growing) GSS.
    - **Rounds**: Phase 1 + Phase 2 repeat while a new GSS vertex appeared at `v` during the reduce phase — a goto target must itself be shifted before the level can stabilize.
-   - After stabilization, emit the level's step snapshot (active GSS elements, path index copy, shift/reduce activity accumulated over the whole level).
+    - **Passing-reduction tracking**: whenever `addEdge` from a GSS vertex returns non-empty stored states (a new edge consumes the vertex's stored states — the book's ApplyPassingReductions trigger, sec:CFPQ_GLR), the source vertex is recorded in the level's `PassingReductionVertices` set. Both consumption points are tracked: shift continuations and reduction gotos.
+    - After stabilization, emit the level's step snapshot (active GSS elements, path index copy, shift/reduce activity and passing-reduction trigger vertices accumulated over the whole level).
 
 3. **Product BFS**: Following GSS edges backwards through inverted RSM transitions, adding PTerminal, PNonterminal, and PIntermediate entries to the path index. Reaches block start states to find predecessors.
 
@@ -68,9 +69,10 @@ type RnglrParsingStep<'t, 'nt> =
       InputVertex: int
       ActiveShiftTerminals: Set<Terminal<'t>>
       ActiveReduceNonterminals: Set<Nonterminal<'nt>>
-      LevelReductions: Set<Nonterminal<'nt>> }
+      LevelReductions: Set<Nonterminal<'nt>>
+      PassingReductionVertices: Set<int> }
 ```
-A level-step snapshot for visualization. One step per input position, captured after the level fully stabilizes (plus step 0 for the initial state). `ActiveShiftTerminals` / `ActiveReduceNonterminals` accumulate over the whole level including all rounds; `LevelReductions` accumulates over the level and resets per level. `NewGssVertices` / `NewGssEdges` are the difference against the previous step's active sets.
+A level-step snapshot for visualization. One step per input position, captured after the level fully stabilizes (plus step 0 for the initial state). `ActiveShiftTerminals` / `ActiveReduceNonterminals` accumulate over the whole level including all rounds; `LevelReductions` accumulates over the level and resets per level. `NewGssVertices` / `NewGssEdges` are the difference against the previous step's active sets. `PassingReductionVertices` is the set of GSS vertices at which passing-reduction handling triggered during the level: a new GSS edge was added from the vertex while its stored states were non-empty (the book's AddEdge trigger, sec:CFPQ_GLR). It accumulates over the whole level and resets per level; step 0 is always empty.
 
 ### RnglrTable
 ```fsharp
@@ -147,6 +149,7 @@ Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, 
 | Full-rescan reduce fixpoint (not incremental queue) | The GSS grows during a level, so every pass re-scans all vertices at v until no new GSS edge is added. Guarantees each reduction's product BFS runs over the current GSS — completeness without tracking which vertices changed |
 | No recursion in the driver | `processReduction` returns `(newEdge, newVertexGotoTarget)` and the level loop decides what to do next; the old recursive processNode ↔ processReduction cascade (and its 1000 depth guard) is gone |
 | Visualization steps are per-input-position | One step captures the cumulative result of processing one level (all rounds of shift + reduce fixpoint). Step 0 is the initial empty state. Shift/reduce activity sets accumulate over the whole level |
+| Orange highlight for passing-reduction trigger vertices | Reuses the `orange` fill of GLL stored pops (task 259) through the existing `storedPopVertices` parameter of `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` — one color means "stored-state consumption" across both algorithms (task 261). Render priority: current > stored-pop > highlighted > normal |
 
 ## Book Reference
 

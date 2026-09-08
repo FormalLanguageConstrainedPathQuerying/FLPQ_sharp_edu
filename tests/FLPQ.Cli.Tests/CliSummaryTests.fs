@@ -114,6 +114,17 @@ let ``RNGLR summary produces merged TeX`` () =
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
+let ``RNGLR summary color legend includes passing-reductions orange row`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    Assert.Contains("Passing reductions handling triggered at GSS vertex", content)
+    Assert.Contains(@"\colorbox{orange!30}", content)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
 let ``ValiantModified summary produces merged TeX`` () =
     let outDir = runWithSummary "ValiantModified"
     assertMergedTexExists outDir "ValiantModified"
