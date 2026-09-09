@@ -51,7 +51,9 @@ let ``CYK all steps TeX compile with lualatex`` () =
 let ``LL step input TeX compiles with lualatex`` () =
     let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
     let table = LLParser.buildTable g 1
-    let tokens = Tokenizer.tokenizeTerminals "a b"
+    // The LL runner appends the EOI terminal before parsing (LLRunner.runLL);
+    // the test must mirror that, otherwise TeX-special terminals like $ are never exercised.
+    let tokens = Tokenizer.tokenizeTerminals "a b" @ [ Grammar.eoiTerminal ]
 
     let _, steps = LLParser.parseWithSteps g table 1 tokens
     let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
@@ -69,13 +71,43 @@ let ``LR step input TeX compiles with lualatex`` () =
     let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
     let aug = LRAutomaton.augmentGrammar freshStart g
     let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
-    let tokens = Tokenizer.tokenizeTerminals "a a"
+    // The LR runner appends the EOI terminal before parsing (LRRunner.runLR);
+    // the test must mirror that, otherwise TeX-special terminals like $ are never exercised.
+    let tokens = Tokenizer.tokenizeTerminals "a a" @ [ Grammar.eoiTerminal ]
 
     let _, steps = LRParser.parseWithSteps aug table tokens
     let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
 
     for step in vizSteps do
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.Input)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``inputRow with EOI terminal compiles with lualatex`` () =
+    let tokens = [ Terminal "a"; Terminal "b"; Grammar.eoiTerminal ]
+
+    for position in 0 .. tokens.Length do
+        let tex = TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokens position
+
+        Assert.True(
+            ExternalTools.compileTexStringWithTemplate templatePath tex,
+            sprintf "inputRow with EOI terminal did not compile at position %d:\n%s" position tex
+        )
+
+[<Fact>]
+let ``escapeMath escapes TeX special characters for math mode`` () =
+    Assert.Equal(@"\$", TeXRenderer.escapeMath "$")
+    Assert.Equal(@"\&", TeXRenderer.escapeMath "&")
+    Assert.Equal(@"\%", TeXRenderer.escapeMath "%")
+    Assert.Equal(@"\#", TeXRenderer.escapeMath "#")
+    Assert.Equal(@"\_", TeXRenderer.escapeMath "_")
+    Assert.Equal(@"\{", TeXRenderer.escapeMath "{")
+    Assert.Equal(@"\}", TeXRenderer.escapeMath "}")
+    Assert.Equal(@"\textbackslash ", TeXRenderer.escapeMath @"\")
+    Assert.Equal(@"\text{\^{}}", TeXRenderer.escapeMath "^")
+    Assert.Equal("a", TeXRenderer.escapeMath "a")
+    Assert.Equal("S'", TeXRenderer.escapeMath "S'")
+    Assert.Equal(@"\$ \& a", TeXRenderer.escapeMath "$ & a")
 
 let private tikzTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")

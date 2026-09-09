@@ -52,7 +52,8 @@ Unified stack frame: `LRState of state: int` (automaton state) or `LRSymbol of t
 ## Renderer Modules
 
 ### `TeXRenderer`
-- `inputRow: (Symbol<'t,'nt> -> string) -> Symbol<'t,'nt> list -> int -> string` — renders input as one-row pNiceMatrix with current token underlined.
+- `escapeMath: string -> string` — escapes TeX special characters (`\ & % $ # _ { } ^`) for use in math mode.
+- `inputRow: (Terminal<'t> -> string) -> Terminal<'t> list -> int -> string` — renders input as one-row pNiceMatrix with current token underlined. Each token is passed through `escapeMath`, so terminals containing TeX special characters (e.g. the `$` end-of-input marker appended by LL/LR runners) compile correctly in math mode.
 
 ### `DerivationTreeDot`
 - `toDot` — single tree to DOT

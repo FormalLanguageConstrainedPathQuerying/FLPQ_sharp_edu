@@ -1,5 +1,31 @@
 # Code Review Report
 
+## Task 263 Review (2026-09-09)
+
+Scope: `src/FLPQ.Printers/TeXRenderer.fs` (new `escapeMath`, `inputRow` now escapes each cell), `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` (2 new facts, 2 updated facts), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (2 new end-to-end compilation facts, `mergedTexPath` helper), `docs/developer/visualization-types.md`. Fixes LL/LR merged-summary lualatex failures: the `$` end-of-input marker appended by LL/LR runners was emitted raw inside the math-mode `pNiceMatrix` input row.
+
+**Resolved this task:**
+- §13 (no duplication) — `assertMergedTexCompiles` duplicated the merged-TeX path construction and existence check from `assertMergedTexExists`; extracted `mergedTexPath`, `assertMergedTexCompiles` now reuses `assertMergedTexExists` (commit 53292a7).
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — new public `TeXRenderer.escapeMath` carries a `///` comment; `inputRow`'s comment updated to document the escaping behavior.
+- §7 (genericity) — `escapeMath : string -> string` is a string-level operation; `inputRow` stays generic over `'t`.
+- §13 (no duplication) — `escapeMath` (math mode) vs `AutomatonTikz.escapeLatex` (text mode): 7 of 9 replacements coincide, but the two are intentionally different at the math/text boundary (`^` → `\text{\^{}}` in math vs `\^` in text; `~` untouched in math). Extracting a shared core would couple `TeXRenderer` to `AutomatonTikz` and parameterize 8+ call sites for a 9-line helper. Accepted as deliberate per-boundary escapers, consistent with the existing pattern (`DerivationTreeDot.escapeLabel`, `BasicSppfDot.escapeLabel`, `SppfDot.escapeLabel` are separate one-liners per DOT boundary).
+- §14 (language registry) — S2/S3 tests read grammars from `LanguageRegistry` (`Dyck1/ambiguousEps`, `APlus/rightRecursive`) via the existing `TestGrammarFiles`/registry helpers; no inline grammar text. The S1 escaper test uses raw terminal strings (no grammar involved).
+- §15/§16 (tests) — 4 new facts assert real properties: `escapeMath` mapping per special character, `inputRow`+EOI lualatex compilation at every position, and full-pipeline merged-summary compilation for LL and SLR1. Both S2-updated tests and both S3 tests were verified to FAIL against the pre-fix `inputRow` (temporarily reverted) — genuine regression coverage, not tautologies.
+- §19 (coverage) — changed module keeps its correspondent: `TexCompilationTests` (escaper + input-row compilation), `CliSummaryTests` (end-to-end). Full Printers suite green: 169 tests.
+- §20 (documentation) — `visualization-types.md` TeXRenderer section updated (`escapeMath` entry, escaping note; also corrected the `inputRow` signature, previously documented as `Symbol`-based but actually `Terminal`-based).
+- §21 (book traceability) — rendering module: no direct book reference, consistent with the FLPQ.Printers hub convention.
+- §22 (clarity) — escaper is a straight chain of 9 `Replace` calls; no optimization.
+
+**Pre-existing, out of scope (not introduced by this task):**
+- GLL merged summary for input `a b a b a b` fails with `TeX capacity exceeded [number of strings=476553]` — 31 repeated 50×50 path-index matrices exhaust TeX's string pool; still not finished after >10 min with `\maxstrings=1000000`. Separate performance issue, reported to the user.
+- `FLPQ.Printers.md` hub links to 11 module docs that do not exist (`tex-renderer.md`, `symbol-tex.md`, `matrix-tex.md`, …); those modules are documented in other pages (e.g. TeXRenderer in `visualization-types.md`). Pre-existing since the hub table was written; fixing all links is a separate documentation task.
+
+**No blocking findings.** Second full pass found zero new problems; the one finding (test-helper duplication) was fixed and committed before this report.
+
+---
+
 ## Task 262 Review (2026-09-09)
 
 Scope: `src/FLPQ.Printers/DerivationTreeTikz.fs` (new), `src/FLPQ.Printers/{VisualizationTypes,LLStepVisualizer,LRStepVisualizer,SummaryTeX,ExternalTools}.fs`, `src/FLPQ.Cli/{Helpers,LLRunner,LRRunner,Program}.fs`, both fsproj files, `data/tex_{tikz,summary}_template.tex`, tests (`DerivationTreeTikzTests.fs` new, golden/compilation/runner/summary test updates, 4 new `.tikz` goldens), docs (`derivation-tree-viz.md` rewritten, `cli.md`, `summary-tex.md`, `visualization-types.md`, `external-tools.md`, `test-categories.md`, `main.md`, `FLPQ.Printers.md`). Adds TikZ rendering of LL/LR per-step stack-trees via graphdrawing `layered layout` with a native `{ [same layer] ... }` frontier constraint (the equivalent of DOT `{rank=same}`), makes TikZ the default per-step output with `--use-dot` opt-out, and embeds the step pictures inline in TikZ-mode summaries.

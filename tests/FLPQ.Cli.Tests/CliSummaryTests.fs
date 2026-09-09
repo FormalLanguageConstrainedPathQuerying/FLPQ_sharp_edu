@@ -4,6 +4,7 @@ open System.IO
 open Xunit
 open FLPQ.Cli
 open FLPQ.Cli.Tests
+open FLPQ.Printers
 
 let private baseDir = System.AppContext.BaseDirectory
 
@@ -32,14 +33,30 @@ let private runWithSummary (algorithm: string) (useDot: bool) : string =
     Assert.Equal(0, code)
     outDir
 
-let private assertMergedTexExists (outDir: string) (algorithm: string) =
+let private mergedTexPath (outDir: string) (algorithm: string) : string =
     let algoLower = algorithm.ToLower()
+    Path.Combine(outDir, "results", algoLower, sprintf "%s_merged.tex" algoLower)
 
-    let texPath =
-        Path.Combine(outDir, "results", algoLower, sprintf "%s_merged.tex" algoLower)
-
+let private assertMergedTexExists (outDir: string) (algorithm: string) =
+    let texPath = mergedTexPath outDir algorithm
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
     Assert.True(FileInfo(texPath).Length > 0L, sprintf "Merged TeX is empty: %s" texPath)
+
+let private assertMergedTexCompiles (outDir: string) (algorithm: string) =
+    assertMergedTexExists outDir algorithm
+
+    let texPath = mergedTexPath outDir algorithm
+
+    try
+        Assert.True(
+            ExternalTools.compileTexFile texPath (Path.GetDirectoryName texPath),
+            sprintf "Merged TeX failed to compile with lualatex: %s" texPath
+        )
+    finally
+        try
+            Directory.Delete(outDir, true)
+        with _ ->
+            ()
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
@@ -99,6 +116,23 @@ let ``LR(0) summary produces merged TeX`` () =
 let ``CLR(1) summary produces merged TeX`` () =
     let outDir = runWithSummary "CLR1" false
     assertMergedTexExists outDir "CLR1"
+
+// End-to-end regression tests: the full pipeline (runner + summary) must produce a
+// merged TeX that compiles with lualatex. The LL/LR step input rows contain the $
+// end-of-input marker, which broke math-mode compilation until TeXRenderer.inputRow
+// escaped TeX special characters (task 263).
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``LL summary merged TeX compiles with lualatex`` () =
+    let outDir = runWithSummary "LL" false
+    assertMergedTexCompiles outDir "LL"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``SLR(1) summary merged TeX compiles with lualatex`` () =
+    let outDir = runWithSummary "SLR1" false
+    assertMergedTexCompiles outDir "SLR1"
 
 let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputText: string) : string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
