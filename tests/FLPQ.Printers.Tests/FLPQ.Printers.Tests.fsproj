@@ -11,6 +11,7 @@
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
     <Compile Include="DerivationTreeVisualizationTests.fs" />
+    <Compile Include="DerivationTreeTikzTests.fs" />
     <Compile Include="LLVisualizerTests.fs" />
     <Compile Include="LRVisualizerTests.fs" />
     <Compile Include="GrammarTeXGoldenTests.fs" />
@@ -82,6 +83,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="GoldenData\*.dot">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="GoldenData\*.tikz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

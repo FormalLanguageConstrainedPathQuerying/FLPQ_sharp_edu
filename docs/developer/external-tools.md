@@ -42,9 +42,13 @@ val compileDotFileToPdf : dotPath:string -> pdfPath:string -> bool
 ### TeX Compilation
 ```fsharp
 val compileTexStringWithTemplate : templatePath:string -> tex:string -> bool
+val compileTexStringWithTemplateLog : templatePath:string -> tex:string -> bool * string
 val compileTexFile : texPath:string -> outputDir:string -> bool
 val compileTexFileTwice : texPath:string -> outputDir:string -> bool
 ```
+
+`compileTexStringWithTemplateLog` additionally returns the lualatex stdout log, which contains
+`\typeout` lines — used by layout tests to extract node coordinates from Tikz pictures.
 
 ## Strict Error Detection
 

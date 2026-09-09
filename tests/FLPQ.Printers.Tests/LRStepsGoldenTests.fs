@@ -34,3 +34,31 @@ let ``LR steps dot grammar7 x+x`` () =
     let combined = combineStepsDot vizSteps
 
     verifyGolden "lr_grammar7_xplusx.dot" combined
+
+[<Fact>]
+let ``LR steps tikz grammar3 aa`` () =
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
+
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
+    let tokens = Tokenizer.tokenizeTerminals "a a"
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
+    let combined = combineStepsTikz vizSteps
+
+    verifyGolden "lr_grammar3_aa.tikz" combined
+
+[<Fact>]
+let ``LR steps tikz grammar7 x+x`` () =
+    let g = LanguageRegistry.ArithExpr.Grammars.[1].Grammar
+
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
+    let tokens = Tokenizer.tokenizeTerminals "x add x"
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
+    let combined = combineStepsTikz vizSteps
+
+    verifyGolden "lr_grammar7_xplusx.tikz" combined

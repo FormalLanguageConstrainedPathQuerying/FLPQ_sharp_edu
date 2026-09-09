@@ -47,8 +47,30 @@ let ``runLR with LR0 produces lr_automaton.dot in dot mode`` () =
     Directory.Delete(outDir, true)
 
 [<Fact>]
-let ``runLR with LR0 produces step directories with tree_and_stack.dot`` () =
+let ``runLR with LR0 default mode writes tree_and_stack.tikz.tex per step`` () =
     let outDir = runRunner AlgorithmTypes.LR0 false
+
+    let stepDirs =
+        Directory.GetDirectories outDir
+        |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
+
+    Assert.NotEmpty(stepDirs)
+
+    for stepDir in stepDirs do
+        let treeTikz = Path.Combine(stepDir, "tree_and_stack.tikz.tex")
+        Assert.True(File.Exists treeTikz, sprintf "tree_and_stack.tikz.tex missing in %s" stepDir)
+        Assert.True(FileInfo(treeTikz).Length > 0L)
+        Assert.False(File.Exists(Path.Combine(stepDir, "tree_and_stack.dot")))
+
+        let inputTex = Path.Combine(stepDir, "input.tex")
+        Assert.True(File.Exists inputTex, sprintf "input.tex missing in %s" stepDir)
+        Assert.True(FileInfo(inputTex).Length > 0L)
+
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runLR with LR0 useDot mode writes tree_and_stack.dot per step`` () =
+    let outDir = runRunner AlgorithmTypes.LR0 true
 
     let stepDirs =
         Directory.GetDirectories outDir
@@ -60,6 +82,7 @@ let ``runLR with LR0 produces step directories with tree_and_stack.dot`` () =
         let treeDot = Path.Combine(stepDir, "tree_and_stack.dot")
         Assert.True(File.Exists treeDot, sprintf "tree_and_stack.dot missing in %s" stepDir)
         Assert.True(FileInfo(treeDot).Length > 0L)
+        Assert.False(File.Exists(Path.Combine(stepDir, "tree_and_stack.tikz.tex")))
 
         let inputTex = Path.Combine(stepDir, "input.tex")
         Assert.True(File.Exists inputTex, sprintf "input.tex missing in %s" stepDir)

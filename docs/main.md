@@ -71,7 +71,7 @@ What our standards and principles are, and why we chose them.
 - [LL parser module](developer/ll-parser.md)
 - [LR parser module](developer/lr-parser.md)
 - [Automaton visualization: Dot, Tikz, LR automata Tikz](developer/automaton-viz.md)
-- [DerivationTreeDot module](developer/derivation-tree-viz.md)
+- [Derivation tree visualization: Dot, Tikz](developer/derivation-tree-viz.md)
 - [LL and LR steps visualization](developer/visualization-types.md)
 - [GrammarTeX module](developer/grammar-tex.md)
 - [InputGraphDot module](developer/input-graph-dot.md)

@@ -1,0 +1,127 @@
+--- Step 0 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}, rectangle];
+    { [same layer] n1 };
+  };
+\end{tikzpicture}
+
+
+--- Step 1 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}, rectangle];
+    n1 -> n3;
+    n4 [as={$b$}, rectangle];
+    n1 -> n4;
+    n5 [as={$S$}, rectangle];
+    n1 -> n5;
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n3;
+    n3 ->[dashed] n2;
+    { [same layer] n5, n4, n3, n2 };
+  };
+\end{tikzpicture}
+
+
+--- Step 2 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}, rectangle];
+    n1 -> n3;
+    n4 [as={$b$}, rectangle];
+    n1 -> n4;
+    n5 [as={$S$}, rectangle];
+    n1 -> n5;
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n3;
+    { [same layer] n5, n4, n3 };
+  };
+\end{tikzpicture}
+
+
+--- Step 3 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}];
+    n4 [as={$\varepsilon$}, rectangle];
+    n3 -> n4;
+    n1 -> n3;
+    n5 [as={$b$}, rectangle];
+    n1 -> n5;
+    n6 [as={$S$}, rectangle];
+    n1 -> n6;
+    n6 ->[dashed] n5;
+    n5 ->[dashed] n4;
+    { [same layer] n6, n5, n4 };
+  };
+\end{tikzpicture}
+
+
+--- Step 4 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}];
+    n4 [as={$\varepsilon$}, rectangle];
+    n3 -> n4;
+    n1 -> n3;
+    n5 [as={$b$}, rectangle];
+    n1 -> n5;
+    n6 [as={$S$}, rectangle];
+    n1 -> n6;
+    n6 ->[dashed] n5;
+    { [same layer] n6, n5 };
+  };
+\end{tikzpicture}
+
+
+--- Step 5 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}];
+    n4 [as={$\varepsilon$}, rectangle];
+    n3 -> n4;
+    n1 -> n3;
+    n5 [as={$b$}, rectangle];
+    n1 -> n5;
+    n6 [as={$S$}, rectangle];
+    n1 -> n6;
+    { [same layer] n6 };
+  };
+\end{tikzpicture}
+
+
+--- Step 6 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={$S$}];
+    n2 [as={$a$}, rectangle];
+    n1 -> n2;
+    n3 [as={$S$}];
+    n4 [as={$\varepsilon$}, rectangle];
+    n3 -> n4;
+    n1 -> n3;
+    n5 [as={$b$}, rectangle];
+    n1 -> n5;
+    n6 [as={$S$}];
+    n7 [as={$\varepsilon$}, rectangle];
+    n6 -> n7;
+    n1 -> n6;
+    { [same layer] n7 };
+  };
+\end{tikzpicture}

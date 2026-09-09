@@ -21,7 +21,7 @@
 The SummaryTeX module assembles per-algorithm visualization artifacts into one merged TeX document per algorithm. The merged document includes:
 - Algorithm header (original grammar, CNF grammar, input string)
 - LL/LR parsing table and automaton (for LL/LR algorithms)
-- Per-step sections (tables for CYK/Valiant, stack+tree PDFs for LL/LR)
+- Per-step sections (tables for CYK/Valiant; stack+tree picture for LL/LR — inline TikZ in default mode, dot-compiled PDF with `--use-dot`)
 - Color legend (for GLL/RNGLR) — a tabular mapping of each highlight color to its meaning. The GLL legend includes an `orange!30` row for "Stored pops handling triggered at GSS vertex" (see [GLL module](gll.md)); the RNGLR legend includes an `orange!30` row for "Passing reductions handling triggered at GSS vertex" (see [RNGLR module](rnglr.md)).
 
 ## Function Signatures
@@ -39,7 +39,7 @@ val section: string -> string
 ```fsharp
 val headerSection: vizDir:string -> algoKind:string -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 val tableStepSection: stepDir:string -> stepNum:int -> string list
-val stackStepSection: stepDir:string -> stepNum:int -> stepName:string -> string list
+val stackStepSection: stepDir:string -> stepNum:int -> stepName:string -> useTikz:bool -> string list
 val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 ```
 - `algoKind`: `"table"` (CYK/Valiant), `"ll"`, or `"lr"`
@@ -54,6 +54,7 @@ val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:i
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
 | `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
 | `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary |
+| `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier); `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
 
 ## See Also
 

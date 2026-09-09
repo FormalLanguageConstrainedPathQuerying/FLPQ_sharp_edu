@@ -3,11 +3,11 @@
 **Tags:** visualization, parsing, tex, dot, ll, lr, derivation-tree, stack
 **Kind:** visualization
 **Module:** VisualizationTypes
-**Source:** `src/FLPQ.Languages/VisualizationTypes.fs`
+**Source:** `src/FLPQ.Printers/VisualizationTypes.fs`
 **Depends on:** DerivationTree, Grammar
 **Used by:** LLStepVisualizer, LRStepVisualizer, FLPQ.Cli
 
-> **Abstract:** Shared types for LL and LR parser step visualization, plus a shared TeX rendering module. Defines `VisualizationStep` (pre-rendered DOT + TeX output for a single parsing step), `LLParsingStep`/`LRParsingStep` (raw F# data collected during parsing), `LLStackLeaf`/`LRStackFrame` (stack frame representations), and `TeXRenderer` (input row rendering). Follows the data-then-print pattern: parsers collect data, visualizers render it.
+> **Abstract:** Shared types for LL and LR parser step visualization, plus a shared TeX rendering module. Defines `VisualizationStep` (pre-rendered DOT + TikZ + TeX output for a single parsing step), `LLParsingStep`/`LRParsingStep` (raw F# data collected during parsing), `LLStackLeaf`/`LRStackFrame` (stack frame representations), and `TeXRenderer` (input row rendering). Follows the data-then-print pattern: parsers collect data, visualizers render it.
 
 ## Contents
 
@@ -21,7 +21,7 @@
 
 The visualization pipeline separates data collection from rendering:
 1. LL/LR parsers collect raw F# data (`LLParsingStep`/`LRParsingStep`) during `parseWithSteps`.
-2. `LLStepVisualizer`/`LRStepVisualizer` convert data to `VisualizationStep` (DOT + TeX strings).
+2. `LLStepVisualizer`/`LRStepVisualizer` convert data to `VisualizationStep` (DOT + TikZ + TeX strings).
 3. CLI/test code writes the rendered strings to files.
 
 CYK and Valiant similarly produce structured trace data (`CykTraceStep`/`ValiantTraceStep`); TeX conversion happens at call sites.
@@ -29,7 +29,10 @@ CYK and Valiant similarly produce structured trace data (`CykTraceStep`/`Valiant
 ## Data Types
 
 ### `VisualizationStep` (struct)
-Pre-rendered visualization output: `treeAndStack` (combined DOT graph) and `input` (TeX input row).
+Pre-rendered visualization output: `treeAndStack` (combined DOT graph), `treeAndStackTikz`
+(the same combined picture as a TikZ graphdrawing block with a same-layer constraint on the
+stack frontier), and `input` (TeX input row). Both renderings are always computed; the CLI
+writer picks one by mode (`--use-dot`).
 
 ### `StepInput<'t, 'nt>` (struct)
 Input state: `tokens` (all input symbols) and `position` (current index).
@@ -56,6 +59,10 @@ Unified stack frame: `LRState of state: int` (automaton state) or `LRSymbol of t
 - `toDotWithLLStack` — full tree + LL stack chain overlay (dashed edges, same-rank)
 - `toDotWithLRStack` — LR stack chain overlay with LR state frames (gray fill)
 
+### `DerivationTreeTikz`
+- `toTikzWithLLStack` — full tree + LL stack chain overlay (dashed edges, `{ [same layer] ... }`)
+- `toTikzWithLRStack` — LR stack chain overlay with LR state frames (gray fill)
+
 ### `LLStepVisualizer`
 - `renderStep` / `renderSteps` — convert `LLParsingStep` to `VisualizationStep`
 
@@ -78,4 +85,4 @@ Unified stack frame: `LRState of state: int` (automaton state) or `LRSymbol of t
 - [LL parser](ll-parser.md) — produces `LLParsingStep` data
 - [LR parser](lr-parser.md) — produces `LRParsingStep` data
 - [DerivationTree module](derivation-tree.md) — tree types
-- [Derivation tree visualization](derivation-tree-viz.md) — DOT rendering
+- [Derivation tree visualization](derivation-tree-viz.md) — DOT/TikZ rendering

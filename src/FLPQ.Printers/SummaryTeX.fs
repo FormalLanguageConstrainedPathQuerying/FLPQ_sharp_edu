@@ -214,17 +214,25 @@ module SummaryTeX =
         header @ tableLines
 
     /// Builds the content lines for a single stack-based algorithm step (LL or LR).
-    /// Includes the step header, stack-tree PDF, and input state.
-    let stackStepSection (stepDir: string) (stepNum: int) (stepName: string) : string list =
+    /// Includes the step header, the stack-tree picture (inline TikZ in TikZ mode,
+    /// dot-compiled PDF in DOT mode), and the input state.
+    let stackStepSection (stepDir: string) (stepNum: int) (stepName: string) (useTikz: bool) : string list =
         let header = [ section (sprintf "Step %d" stepNum) ]
-        let pdfLine = [ includePdf (sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName); "" ]
+
+        let pictureLines =
+            if useTikz then
+                match readIfExists (Path.Combine(stepDir, "tree_and_stack.tikz.tex")) with
+                | Some tikz -> [ wrapTikzCenter tikz; "" ]
+                | None -> []
+            else
+                [ includePdf (sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName); "" ]
 
         let inputLines =
             match readIfExists (Path.Combine(stepDir, "input.tex")) with
             | Some tex -> [ wrapMath tex; "" ]
             | None -> []
 
-        header @ pdfLine @ inputLines
+        header @ pictureLines @ inputLines
 
     /// Builds the content lines for a single GLL step using the side-by-side template layout.
     let gllStepSection
@@ -424,7 +432,7 @@ module SummaryTeX =
                     rnglrStepSection stepDir stepNum rnglrStepTemplate rnglrStepTikzTemplate useTikz
                     |> List.toArray
                 else
-                    stackStepSection stepDir stepNum stepName |> List.toArray)
+                    stackStepSection stepDir stepNum stepName useTikz |> List.toArray)
             |> Array.toList
 
         prefix @ headerLines @ stepLines @ (sppfSection vizDir useTikz)

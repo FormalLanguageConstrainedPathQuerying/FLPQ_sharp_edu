@@ -75,3 +75,22 @@ let ``LR step visualization includes state frames with sN labels`` () =
     let firstStep = vizSteps.[0]
     Assert.Contains("s0", firstStep.TreeAndStack)
     Assert.Contains("{rank=same", firstStep.TreeAndStack)
+
+[<Fact>]
+let ``LR step visualization includes TikZ stack-tree with same-layer constraint`` () =
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
+
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
+    let tokens = Tokenizer.tokenizeTerminals "a a"
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps symbolPrinter steps
+
+    Assert.NotEmpty(vizSteps)
+
+    for step in vizSteps do
+        Assert.Contains(@"\begin{tikzpicture}", step.TreeAndStackTikz)
+        Assert.Contains("layered layout", step.TreeAndStackTikz)
+
+    Assert.True(vizSteps |> List.exists (fun s -> s.TreeAndStackTikz.Contains("{ [same layer]")))

@@ -47,10 +47,16 @@ let verifyGolden (goldenFileName: string) (actualContent: string) =
                 + "Set CREATE_GOLDEN_FILES=1 to generate it, or copy the expected file manually."
             )
 
-let combineStepsDot (steps: VisualizationStep list) : string =
+let combineSteps (field: VisualizationStep -> string) (steps: VisualizationStep list) : string =
     steps
-    |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i step.TreeAndStack)
+    |> List.mapi (fun i step -> sprintf "--- Step %d ---\n%s" i (field step))
     |> String.concat "\n\n"
+
+let combineStepsDot (steps: VisualizationStep list) : string =
+    combineSteps (fun step -> step.TreeAndStack) steps
+
+let combineStepsTikz (steps: VisualizationStep list) : string =
+    combineSteps (fun step -> step.TreeAndStackTikz) steps
 
 let wrapInTemplate (templatePath: string) (content: string) : string =
     let template = File.ReadAllText templatePath

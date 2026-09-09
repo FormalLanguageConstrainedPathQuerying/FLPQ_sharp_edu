@@ -77,6 +77,41 @@ let ``LR step input TeX compiles with lualatex`` () =
     for step in vizSteps do
         Assert.True(ExternalTools.compileTexStringWithTemplate templatePath step.Input)
 
+let private tikzTemplatePath =
+    Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LL step TikZ stack-trees compile with lualatex`` () =
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
+
+    let table = LLParser.buildTable g 1
+    let tokens = Tokenizer.tokenizeTerminals "a b"
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
+
+    Assert.NotEmpty(vizSteps)
+
+    for step in vizSteps do
+        Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath step.TreeAndStackTikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LR step TikZ stack-trees compile with lualatex`` () =
+    let g = LanguageRegistry.APlus.Grammars.[0].Grammar
+
+    let freshStart = Nonterminal(g.Start |> fun (Nonterminal n) -> n + "'")
+    let aug = LRAutomaton.augmentGrammar freshStart g
+    let table = LRParser.buildSLR1Table aug Grammar.eoiSymbol
+    let tokens = Tokenizer.tokenizeTerminals "a a"
+    let _, steps = LRParser.parseWithSteps aug table tokens
+    let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
+
+    Assert.NotEmpty(vizSteps)
+
+    for step in vizSteps do
+        Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath step.TreeAndStackTikz)
+
 [<Fact>]
 [<Trait("Category", "TeX")>]
 let ``Valiant trace TeX compiles with lualatex`` () =

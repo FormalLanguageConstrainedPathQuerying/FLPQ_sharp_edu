@@ -1,0 +1,75 @@
+--- Step 0 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s0}, rectangle, fill=lightgray];
+    { [same layer] n1 };
+  };
+\end{tikzpicture}
+
+
+--- Step 1 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s1}, rectangle, fill=lightgray];
+    n2 [as={$a$}, rectangle];
+    n3 [as={s0}, rectangle, fill=lightgray];
+    n3 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n3 };
+  };
+\end{tikzpicture}
+
+
+--- Step 2 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s1}, rectangle, fill=lightgray];
+    n2 [as={$a$}, rectangle];
+    n3 [as={s1}, rectangle, fill=lightgray];
+    n4 [as={$a$}, rectangle];
+    n5 [as={s0}, rectangle, fill=lightgray];
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n3;
+    n3 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n3, n4, n5 };
+  };
+\end{tikzpicture}
+
+
+--- Step 3 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s3}, rectangle, fill=lightgray];
+    n2 [as={$S$}];
+    n3 [as={$a$}, rectangle];
+    n2 -> n3;
+    n4 [as={s1}, rectangle, fill=lightgray];
+    n5 [as={$a$}, rectangle];
+    n6 [as={s0}, rectangle, fill=lightgray];
+    n6 ->[dashed] n5;
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n4, n5, n6 };
+  };
+\end{tikzpicture}
+
+
+--- Step 4 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s2}, rectangle, fill=lightgray];
+    n2 [as={$S$}];
+    n3 [as={$a$}, rectangle];
+    n2 -> n3;
+    n4 [as={$S$}];
+    n5 [as={$a$}, rectangle];
+    n4 -> n5;
+    n2 -> n4;
+    n6 [as={s0}, rectangle, fill=lightgray];
+    n6 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n6 };
+  };
+\end{tikzpicture}

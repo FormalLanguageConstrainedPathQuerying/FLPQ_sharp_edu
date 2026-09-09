@@ -1,0 +1,210 @@
+--- Step 0 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s0}, rectangle, fill=lightgray];
+    { [same layer] n1 };
+  };
+\end{tikzpicture}
+
+
+--- Step 1 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s4}, rectangle, fill=lightgray];
+    n2 [as={$x$}, rectangle];
+    n3 [as={s0}, rectangle, fill=lightgray];
+    n3 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n3 };
+  };
+\end{tikzpicture}
+
+
+--- Step 2 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s5}, rectangle, fill=lightgray];
+    n2 [as={$F$}];
+    n3 [as={$x$}, rectangle];
+    n2 -> n3;
+    n4 [as={s0}, rectangle, fill=lightgray];
+    n4 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n4 };
+  };
+\end{tikzpicture}
+
+
+--- Step 3 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s2}, rectangle, fill=lightgray];
+    n2 [as={$T$}];
+    n3 [as={$F$}];
+    n4 [as={$x$}, rectangle];
+    n3 -> n4;
+    n2 -> n3;
+    n5 [as={s0}, rectangle, fill=lightgray];
+    n5 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n5 };
+  };
+\end{tikzpicture}
+
+
+--- Step 4 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s1}, rectangle, fill=lightgray];
+    n2 [as={$E$}];
+    n3 [as={$T$}];
+    n4 [as={$F$}];
+    n5 [as={$x$}, rectangle];
+    n4 -> n5;
+    n3 -> n4;
+    n2 -> n3;
+    n6 [as={s0}, rectangle, fill=lightgray];
+    n6 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n6 };
+  };
+\end{tikzpicture}
+
+
+--- Step 5 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s6}, rectangle, fill=lightgray];
+    n2 [as={$add$}, rectangle];
+    n3 [as={s1}, rectangle, fill=lightgray];
+    n4 [as={$E$}];
+    n5 [as={$T$}];
+    n6 [as={$F$}];
+    n7 [as={$x$}, rectangle];
+    n6 -> n7;
+    n5 -> n6;
+    n4 -> n5;
+    n8 [as={s0}, rectangle, fill=lightgray];
+    n8 ->[dashed] n4;
+    n4 ->[dashed] n3;
+    n3 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n3, n4, n8 };
+  };
+\end{tikzpicture}
+
+
+--- Step 6 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s4}, rectangle, fill=lightgray];
+    n2 [as={$x$}, rectangle];
+    n3 [as={s6}, rectangle, fill=lightgray];
+    n4 [as={$add$}, rectangle];
+    n5 [as={s1}, rectangle, fill=lightgray];
+    n6 [as={$E$}];
+    n7 [as={$T$}];
+    n8 [as={$F$}];
+    n9 [as={$x$}, rectangle];
+    n8 -> n9;
+    n7 -> n8;
+    n6 -> n7;
+    n10 [as={s0}, rectangle, fill=lightgray];
+    n10 ->[dashed] n6;
+    n6 ->[dashed] n5;
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n3;
+    n3 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n3, n4, n5, n6, n10 };
+  };
+\end{tikzpicture}
+
+
+--- Step 7 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s5}, rectangle, fill=lightgray];
+    n2 [as={$F$}];
+    n3 [as={$x$}, rectangle];
+    n2 -> n3;
+    n4 [as={s6}, rectangle, fill=lightgray];
+    n5 [as={$add$}, rectangle];
+    n6 [as={s1}, rectangle, fill=lightgray];
+    n7 [as={$E$}];
+    n8 [as={$T$}];
+    n9 [as={$F$}];
+    n10 [as={$x$}, rectangle];
+    n9 -> n10;
+    n8 -> n9;
+    n7 -> n8;
+    n11 [as={s0}, rectangle, fill=lightgray];
+    n11 ->[dashed] n7;
+    n7 ->[dashed] n6;
+    n6 ->[dashed] n5;
+    n5 ->[dashed] n4;
+    n4 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n4, n5, n6, n7, n11 };
+  };
+\end{tikzpicture}
+
+
+--- Step 8 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s9}, rectangle, fill=lightgray];
+    n2 [as={$T$}];
+    n3 [as={$F$}];
+    n4 [as={$x$}, rectangle];
+    n3 -> n4;
+    n2 -> n3;
+    n5 [as={s6}, rectangle, fill=lightgray];
+    n6 [as={$add$}, rectangle];
+    n7 [as={s1}, rectangle, fill=lightgray];
+    n8 [as={$E$}];
+    n9 [as={$T$}];
+    n10 [as={$F$}];
+    n11 [as={$x$}, rectangle];
+    n10 -> n11;
+    n9 -> n10;
+    n8 -> n9;
+    n12 [as={s0}, rectangle, fill=lightgray];
+    n12 ->[dashed] n8;
+    n8 ->[dashed] n7;
+    n7 ->[dashed] n6;
+    n6 ->[dashed] n5;
+    n5 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n5, n6, n7, n8, n12 };
+  };
+\end{tikzpicture}
+
+
+--- Step 9 ---
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, shape=ellipse}, level sep=2cm, sibling sep=1.5cm] {
+    n1 [as={s1}, rectangle, fill=lightgray];
+    n2 [as={$E$}];
+    n3 [as={$E$}];
+    n4 [as={$T$}];
+    n5 [as={$F$}];
+    n6 [as={$x$}, rectangle];
+    n5 -> n6;
+    n4 -> n5;
+    n3 -> n4;
+    n2 -> n3;
+    n7 [as={$add$}, rectangle];
+    n2 -> n7;
+    n8 [as={$T$}];
+    n9 [as={$F$}];
+    n10 [as={$x$}, rectangle];
+    n9 -> n10;
+    n8 -> n9;
+    n2 -> n8;
+    n11 [as={s0}, rectangle, fill=lightgray];
+    n11 ->[dashed] n2;
+    n2 ->[dashed] n1;
+    { [same layer] n1, n2, n11 };
+  };
+\end{tikzpicture}

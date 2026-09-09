@@ -5,11 +5,12 @@ open FLPQ.Languages
 /// LL parser step-by-step visualization.
 module LLStepVisualizer =
 
-    /// Render a single LL parsing step to a visualization step (DOT + TeX).
+    /// Render a single LL parsing step to a visualization step (DOT + TikZ + TeX).
     let renderStep (symbolVisualizer: Symbol<'t, 'nt> -> string) (step: LLParsingStep<'t, 'nt>) : VisualizationStep =
         let termPrinter = TeXRenderer.termPrinterFromSymbolVisualizer symbolVisualizer
 
         { TreeAndStack = DerivationTreeDot.toDotWithLLStack symbolVisualizer step.Tree step.Stack
+          TreeAndStackTikz = DerivationTreeTikz.toTikzWithLLStack symbolVisualizer step.Tree step.Stack
           Input = TeXRenderer.inputRow termPrinter step.Input.Tokens step.Input.Position }
 
     /// Render a list of LL parsing steps to visualization steps.

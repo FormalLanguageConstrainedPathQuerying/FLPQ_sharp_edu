@@ -30,11 +30,15 @@ module Helpers =
         else
             Directory.CreateDirectory dir |> ignore
 
-    let writeStepsVisualization (outputDir: string) (steps: VisualizationStep list) =
+    let writeStepsVisualization (outputDir: string) (useDot: bool) (steps: VisualizationStep list) =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
 
-            writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].TreeAndStack
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "tree_and_stack.dot")) steps.[idx].TreeAndStack
+            else
+                writeOutputFile (Path.Combine(stepDir, "tree_and_stack.tikz.tex")) steps.[idx].TreeAndStackTikz
+
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
 
     let writeGllStepsVisualization

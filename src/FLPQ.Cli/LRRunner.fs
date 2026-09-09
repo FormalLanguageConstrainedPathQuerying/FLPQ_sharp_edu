@@ -73,5 +73,5 @@ module LRRunner =
 
         let _, steps = LRParser.parseWithSteps aug table tokensWithEoi
         let vizSteps = LRStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
-        Helpers.writeStepsVisualization outputDir vizSteps
+        Helpers.writeStepsVisualization outputDir useDot vizSteps
         printfn "%s trace: %d steps written to %s" (AlgorithmTypes.displayName algo) vizSteps.Length outputDir

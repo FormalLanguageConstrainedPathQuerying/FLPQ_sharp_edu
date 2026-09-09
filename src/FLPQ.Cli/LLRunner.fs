@@ -6,7 +6,7 @@ open FLPQ.Printers
 
 module LLRunner =
 
-    let runLL (grammarFile: string) (inputFile: string) (outputDir: string) (k: int) =
+    let runLL (grammarFile: string) (inputFile: string) (outputDir: string) (k: int) (useDot: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
         let tokens = Tokenizer.tokenizeTerminals inputTokens
@@ -26,5 +26,5 @@ module LLRunner =
 
         let _, steps = LLParser.parseWithSteps grammar table k tokensWithEoi
         let vizSteps = LLStepVisualizer.renderSteps (SymbolTeX.toLaTeX string string) steps
-        Helpers.writeStepsVisualization outputDir vizSteps
+        Helpers.writeStepsVisualization outputDir useDot vizSteps
         printfn "LL(%d) trace: %d steps written to %s" k vizSteps.Length outputDir

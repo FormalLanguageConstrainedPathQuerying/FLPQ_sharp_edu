@@ -98,6 +98,23 @@ let ``LL step visualization stack leaves are connected by dashed edges and same 
     Assert.True(vizSteps |> List.exists (fun s -> s.TreeAndStack.Contains("digraph StackTree")))
 
 [<Fact>]
+let ``LL step visualization includes TikZ stack-tree with same-layer constraint`` () =
+    let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
+
+    let table = LLParser.buildTable g 1
+    let tokens = Tokenizer.tokenizeTerminals "a b"
+    let _, steps = LLParser.parseWithSteps g table 1 tokens
+    let vizSteps = LLStepVisualizer.renderSteps symbolPrinter steps
+
+    Assert.NotEmpty(vizSteps)
+
+    for step in vizSteps do
+        Assert.Contains(@"\begin{tikzpicture}", step.TreeAndStackTikz)
+        Assert.Contains("layered layout", step.TreeAndStackTikz)
+
+    Assert.True(vizSteps |> List.exists (fun s -> s.TreeAndStackTikz.Contains("{ [same layer]")))
+
+[<Fact>]
 let ``LL step visualization tree is properly nested`` () =
     let g = LanguageRegistry.Dyck1.Grammars.[0].Grammar
 

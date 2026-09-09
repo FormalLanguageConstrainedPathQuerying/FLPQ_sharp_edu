@@ -26,7 +26,7 @@ module Program =
             | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot noSppfTable
             | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot noSppfTable
             | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot noSppfTable
-            | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k
+            | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k useDot
             | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
             | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot

@@ -170,8 +170,9 @@ module ExternalTools =
         exitCode = 0 && not hasErrors && pdfOk
 
     /// Compile a TeX string using a template file (template contains `__CONTENT__`).
-    /// Uses a temporary directory. Returns true on success.
-    let compileTexStringWithTemplate (templatePath: string) (tex: string) : bool =
+    /// Uses a temporary directory. Returns success and the lualatex stdout log
+    /// (contains \typeout lines, useful for extracting layout coordinates).
+    let compileTexStringWithTemplateLog (templatePath: string) (tex: string) : bool * string =
         let template = File.ReadAllText templatePath
         let fullDoc = template.Replace("__CONTENT__", tex)
         let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -188,12 +189,18 @@ module ExternalTools =
                     (Some tempDir)
 
             let pdfPath = Path.Combine(tempDir, "test.pdf")
-            latexSucceeded r.ExitCode r.Stdout pdfPath
+            latexSucceeded r.ExitCode r.Stdout pdfPath, r.Stdout
         finally
             try
                 Directory.Delete(tempDir, true)
             with _ ->
                 ()
+
+    /// Compile a TeX string using a template file (template contains `__CONTENT__`).
+    /// Uses a temporary directory. Returns true on success.
+    let compileTexStringWithTemplate (templatePath: string) (tex: string) : bool =
+        let ok, _ = compileTexStringWithTemplateLog templatePath tex
+        ok
 
     /// Compile a TeX file to PDF in the given output directory (single pass).
     /// Returns true on success. The PDF is left in `outputDir`.

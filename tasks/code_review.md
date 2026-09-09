@@ -1,5 +1,29 @@
 # Code Review Report
 
+## Task 262 Review (2026-09-09)
+
+Scope: `src/FLPQ.Printers/DerivationTreeTikz.fs` (new), `src/FLPQ.Printers/{VisualizationTypes,LLStepVisualizer,LRStepVisualizer,SummaryTeX,ExternalTools}.fs`, `src/FLPQ.Cli/{Helpers,LLRunner,LRRunner,Program}.fs`, both fsproj files, `data/tex_{tikz,summary}_template.tex`, tests (`DerivationTreeTikzTests.fs` new, golden/compilation/runner/summary test updates, 4 new `.tikz` goldens), docs (`derivation-tree-viz.md` rewritten, `cli.md`, `summary-tex.md`, `visualization-types.md`, `external-tools.md`, `test-categories.md`, `main.md`, `FLPQ.Printers.md`). Adds TikZ rendering of LL/LR per-step stack-trees via graphdrawing `layered layout` with a native `{ [same layer] ... }` frontier constraint (the equivalent of DOT `{rank=same}`), makes TikZ the default per-step output with `--use-dot` opt-out, and embeds the step pictures inline in TikZ-mode summaries.
+
+**Resolved this task:**
+- §13 (no duplication) — pre-existing duplicate `InputGraphDot` row in the `FLPQ.Printers.md` hub module table (introduced by task 198); removed (commit 3ff24a6).
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — `DerivationTreeTikz.toTikzWithLLStack` / `toTikzWithLRStack` and `ExternalTools.compileTexStringWithTemplateLog` carry `///` comments; `compileTexStringWithTemplate` is now a thin wrapper over the `...Log` variant (no duplicated process logic).
+- §7 (genericity) — both renderers stay generic over `'t`/`'nt`; test helpers instantiate with `string` (allowed for unit tests).
+- §8 (non-empty collections) — `stack: LLStackLeaf list` / `LRStackFrame list` correctly use plain lists: an empty frontier is a legitimate state (e.g., LR step 0, finished LL parse).
+- §9 (separation) — parsers produce `LLParsingStep`/`LRParsingStep` data; all rendering stays in `DerivationTreeTikz`; the CLI only writes files.
+- §13 (no duplication) — `DerivationTreeTikz` mirrors `DerivationTreeDot`'s structure (same pre-order numbering, same chain logic) — the established paired DOT/TikZ renderer pattern (`AutomatonDot`/`AutomatonTikz`, `GssDot`/`GssTikz`); the only deliberate divergence is the reversed LR chain edge direction, documented in the module and in `derivation-tree-viz.md`. `GoldenHelpers.combineSteps` extracted so DOT/TikZ combinators share one implementation.
+- §14 (language registry) — all new tests read grammars from `LanguageRegistry` (`Dyck1`, `APlus`, `ArithExpr`); no inline grammar text.
+- §15/§16 (tests) — 8 new `DerivationTreeTikzTests` facts assert real properties (structural markers, DOT/TikZ node-ID equivalence, empty-stack behavior, lualatex compilation, and same-layer coordinate extraction asserting one-level placement plus left-to-right tree/stack order); no stubs or tautologies.
+- §19 (coverage) — every changed module keeps its correspondent: `DerivationTreeTikzTests`, `LL/LRVisualizerTests` (new `TreeAndStackTikz` fields), `LL/LRStepsGoldenTests` (4 new TikZ goldens), `TexCompilationTests` (all-step TikZ compilation), `LL/LRRunnerTests` (both output modes), `CliSummaryTests` (inline TikZ vs PDF includes). Full Printers suite green: 167 tests.
+- §20 (documentation) — `derivation-tree-viz.md` rewritten for both renderers (same-layer mechanism, chain edge direction, template/library requirements); `cli.md` documents the new default and LL `--use-dot`; `summary-tex.md`, `visualization-types.md`, `external-tools.md`, `test-categories.md`, `main.md` updated.
+- §21 (book traceability) — rendering module: no direct book reference, consistent with the FLPQ.Printers hub convention.
+- §22 (clarity) — no nontrivial optimizations; the double `List.rev` in `toTikzWithLRStack` is intentional (cluster order vs edge direction) and explained in the doc comment.
+
+**No blocking findings.** Second full pass found zero new problems; the one finding (duplicate doc row, pre-existing) was fixed and committed before this report.
+
+---
+
 ## Task 261 Review (2026-09-08)
 
 Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `tests/FLPQ.Languages.Tests/RnglrTests.fs`, `tests/FLPQ.Cli.Tests/{CliSummaryTests,RnglrRunnerTests}.fs`, `docs/developer/{rnglr,summary-tex}.md`. Tracks per-step the GSS vertices where passing-reduction handling triggers (a new edge added from a vertex with non-empty stored states — the book's AddEdge trigger, sec:CFPQ_GLR), highlights them orange in DOT/TikZ step visualizations (same color as GLL stored pops, task 259), and adds the color to the RNGLR summary legend.

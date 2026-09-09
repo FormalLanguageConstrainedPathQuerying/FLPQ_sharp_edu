@@ -23,7 +23,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
-| `--use-dot` | Use Graphviz dot for LR automaton rendering (default: Tikz) | off |
+| `--use-dot` | Use Graphviz dot for LR automaton and LL/LR per-step tree_and_stack rendering (default: Tikz) | off |
 | `--no-sppf-table` | Render CYK/Valiant table cells as sets of nonterminal names without SPPF split points and production indices | off |
 
 ## Output structure
@@ -36,8 +36,8 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 |-----------|---------------|-------------|
 | **CYK** | `table.tex` | `pNiceMatrix` table with optional yellow cell highlights for newly-populated cells |
 | **Valiant** | `table.tex` (+ `bool_decomp_*.tex` on last step) | `pNiceMatrix` table with cell printer rendering sets (empty sets as `\cdot`) |
-| **LL** | `tree_and_stack.dot`, `input.tex` | DOT graph of derivation tree with stack overlay; TeX input row with current position underlined |
-| **LR** | `tree_and_stack.dot`, `input.tex` | Same format as LL — DOT graph includes LR state frames in the stack chain |
+| **LL** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Derivation tree with stack overlay: Tikz graphdrawing picture with a same-layer constraint on the stack frontier, or DOT graph; TeX input row with current position underlined |
+| **LR** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Same format as LL — the picture includes LR state frames in the stack chain |
 
 Root-level artifacts per algorithm:
 
@@ -97,6 +97,7 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 - LR algorithm variants (LR0, SLR1, CLR1) are all served by `LRRunner`.
 - The specific variant name (e.g., "SLR(1)") is included in the merged summary via `AlgorithmTypes.displayName`.
 - LR automaton is rendered as Tikz by default (standalone document compiled to PDF). The `--use-dot` flag switches to Graphviz dot.
+- LL/LR per-step tree_and_stack pictures are rendered as Tikz by default (graphdrawing layered layout with a same-layer constraint on the stack frontier — the equivalent of DOT's `{rank=same}`). The `--use-dot` flag switches to Graphviz dot. Only one format is written per step.
 - TeX step files contain only visualization code (no document headers).
 - Tikz output uses `graphdrawing` (`\graph [layered layout, ...]`). When embedding the generated snippets into another document, that document must load `\usetikzlibrary{graphs,graphdrawing}` and `\usegdlibrary{layered}` and be compiled with `lualatex`.
 - Grammar file reading reuses `Grammar.parseGrammarFromFile`.

@@ -26,6 +26,7 @@
     <Compile Include="RsmTikz.fs" />
     <Compile Include="GssTikz.fs" />
     <Compile Include="InputGraphTikz.fs" />
+    <Compile Include="DerivationTreeTikz.fs" />
     <Compile Include="GllStepVisualizer.fs" />
     <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="RnglrStepVisualizer.fs" />
