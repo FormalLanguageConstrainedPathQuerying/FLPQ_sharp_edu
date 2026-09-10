@@ -1,5 +1,23 @@
 # Code Review Report
 
+## Task 266 Review (2026-09-10)
+
+Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from `ac729de~1:tasks/tasks.md` lines 6-560, byte-for-byte verified by diff), `tasks/tasks.md` (entries 263/264 restored verbatim from the committed detailed plans, `[done]`-tagged; entry 266 added; 265 logged — committed on dev per the task-log durability rule), `AGENTS.md` (working-loop step 2a entry gate, step 8 existence check, Git Safety durability paragraph, Project Structure table), `.opencode/skills/git-workflow/SKILL.md` (pre-merge task-log check, pre-commit checklist clarification), `.opencode/skills/planning/SKILL.md` (logged-task prerequisite, mandatory "Task description (verbatim)" section).
+
+**Findings against the constraint sources:**
+- §13 (no duplication / one source of truth) — the entry-gate rule appears in AGENTS.md (step 2a), the planning skill (prerequisite), and the git-workflow skill (pre-commit clarification). This is the established AGENTS.md↔skill layering (AGENTS.md is the short entry point, skills hold operational detail; cf. the existing "See the `git-workflow` skill for the full procedure" pattern) — each location states its own gate in one sentence, no procedural block is copied. Not a finding.
+- §20 (documentation completeness) — `tasks1.md` is referenced from the `tasks.md` header (pre-existing note, now satisfied) and added to the AGENTS.md Project Structure table. No `docs/` page is required for task-log files (no module docs exist for any `tasks/*.md`).
+- §22 (clarity) — n/a (no code).
+
+**Verified:** restored text is byte-for-byte identical to its recovery source (`diff` against `ac729de~1` extraction and against the `b23a09a`/`58c4f40` plan sections); entry numbers 1-100 (except pre-existing gaps 52-55) each appear exactly once as an entry head in `tasks1.md`; 263/264 appear exactly once in `tasks.md` between 262 and 265; the three instruction files are mutually consistent (entry gate ↔ prerequisite ↔ pre-commit rule; step-8 check ↔ pre-merge grep).
+
+**Pre-existing, out of scope (not introduced by this task):**
+- The `code-review` skill's "Prerequisites" says quality gates must pass *before* code review, while the AGENTS.md working loop runs review (step 6) before the hard gate (step 7); all recent tasks (263/264/265) followed the AGENTS.md order. Reconciling the two requires deciding which order is canonical — a workflow design decision for the user, not fixed here.
+
+**No blocking findings.** Full pass found zero problems in this task's changes.
+
+---
+
 ## Task 265 Review (2026-09-10)
 
 Scope: `src/FLPQ.Printers/RsmTikz.fs` (reworked `extendedRsmToTikz`: pgf-gd component packing `components go down left aligned`, S′-first declaration order, `label=left:` on every block start state), `src/FLPQ.Printers/AutomatonTikz.fs` (new `layeredGraphOptions`, `tikzHeaderWithOptions`; `tikzHeader` now delegates), `src/FLPQ.Printers/SummaryTeX.fs` (`headerSection` gains the Extended RSM head section for GLL/RNGLR Tikz mode), `src/FLPQ.Cli/RnglrRunner.fs` (writes `ext_rsm.tikz.tex` in Tikz mode), `data/tex_tikz_template.tex` (xcolor + lightblue definition), tests (`RsmTikzTests.fs` new; `TexCompilationTests.fs` +1 fact, 2 extended facts; `RnglrRunnerTests.fs` +1 fact), docs (`rsm-viz.md` new; `FLPQ.Printers.md`, `main.md`, `InputGraphDot.md`, `cli.md`, `FLPQ.Cli.md`, `summary-tex.md`).

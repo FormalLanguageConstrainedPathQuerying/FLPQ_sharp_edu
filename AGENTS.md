@@ -32,7 +32,7 @@ Supplementary materials for the book on formal language constrained path queryin
 | `tests/` | Tests — mirror `src/` folder structure |
 | `data/` | Test and example data |
 | `.opencode/skills/` | Skills — operational "How" procedures for tools and workflows |
-| `tasks/` | Task planning: `tasks.md` (user tasks), `detailed_plan.md` (current task plan), `global_plan.md` (multi-task planning), `fixes_for_book.md` (book errors) |
+| `tasks/` | Task planning: `tasks.md` (user tasks, 101+), `tasks1.md` (tasks 1-100), `detailed_plan.md` (current task plan), `global_plan.md` (multi-task planning), `fixes_for_book.md` (book errors) |
 
 ## Workflow
 
@@ -48,6 +48,7 @@ Supplementary materials for the book on formal language constrained path queryin
 0. If the user requests multiple tasks at once, first create a global plan in `tasks/global_plan.md` (see `planning` skill) before proceeding
 1. Ensure user-defined tasks, the global plan, and project architecture are aligned
 2. Choose exactly ONE task that is not yet done
+2a. Verify the chosen task has an entry in `tasks/tasks.md`. If it does not (e.g. the task came from a chat request), add the entry verbatim to `tasks/tasks.md` and commit on `dev` (`docs(tasks): add task NNN`) before creating the branch. No work starts without a logged entry — an entry that lives only in the uncommitted working tree can be lost
 3. Create a feature branch from `dev` for this single task
 4. Generate a detailed plan in `tasks/detailed_plan.md`, decomposing the task into atomic subtasks
 5. Load the `subtask-loop` skill, then execute each subtask using its cycle.
@@ -66,7 +67,7 @@ Supplementary materials for the book on formal language constrained path queryin
     - Report status to the user: "S1-S3 committed, S4 pending, ..."
 6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings
  7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
-8. Mark the task `[done]` in `tasks.md`. The `[done]` tag means COMPLETE:
+8. Mark the task `[done]` in `tasks.md`. Before marking, verify the entry exists (grep by task number); if it is missing, restore it verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` first. The `[done]` tag means COMPLETE:
    every subtask committed, every requirement met, every test passing, zero
    known failures or unresolved limitations. Never mark a task `[done]` if
    any subtask was skipped, reverted, or blocked.
@@ -77,6 +78,8 @@ Supplementary materials for the book on formal language constrained path queryin
 ### Git Safety
 
 Never revert `tasks/tasks.md` or `tasks/fixes_for_book.md` — the user may have added uncommitted content interactively. The working-tree version is authoritative.
+
+Task-log entries must be durable: a new task entry is committed on `dev` at creation time (before the feature branch exists), and the `[done]` mark is committed on `dev` after merge. Never commit `tasks.md` from a feature branch — an entry that lives only in the working tree can be lost by any reset of the file.
 
 See the `git-workflow` skill for the full procedure.
 

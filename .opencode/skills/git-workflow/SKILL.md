@@ -38,7 +38,7 @@ docs(XXX-SN): description
    git diff --cached --name-only | grep -q tasks.md
    ```
    If it matches, unstage it: `git reset HEAD tasks.md`
-   `tasks.md` must never be committed from a feature branch.
+   `tasks.md` must never be committed from a feature branch. Task-log commits — adding an entry at task start, marking `[done]` at task end — happen directly on `dev`, so entries are durable and do not depend on working-tree lifetime.
 
 ### Commit scope
 
@@ -48,6 +48,14 @@ docs(XXX-SN): description
 ## Merging to dev
 
 ### Pre-merge checks
+
+**Task-log check (first):** verify the task entry exists in `tasks/tasks.md`:
+
+```bash
+grep -qE '^[[:space:]]*NNN\.' tasks/tasks.md   # NNN = task ID
+```
+
+If it is missing, **STOP — do not merge.** Restore the entry verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` and commit it on `dev` first. A merged task without a log entry is a lost task.
 
 The hard gate MUST pass before merging. **This is absolute — no exceptions, no self-assessment.**
 

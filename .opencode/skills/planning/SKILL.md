@@ -25,6 +25,10 @@ After the global plan is created, proceed with the normal working loop: one task
 
 ## Detailed Plan (Atomic Subtasks)
 
+**Prerequisite — logged task:** before writing the detailed plan, verify the task has an entry in `tasks/tasks.md`. If it does not, create the entry verbatim and commit it on `dev` first (see the AGENTS.md working loop). Never plan a task that is not logged.
+
+**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the `tasks/tasks.md` entry verbatim. This section is the recovery source of truth if the entry is ever lost from `tasks.md`.
+
 `tasks/detailed_plan.md` MUST decompose the task into atomic subtasks. Each subtask:
 
 - Is small enough to complete in a single focused work session (typically 30–90 minutes)

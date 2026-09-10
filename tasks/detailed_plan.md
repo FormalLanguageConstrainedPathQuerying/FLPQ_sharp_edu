@@ -1,153 +1,92 @@
-# Task 265: Improve TikZ visualization of RSM — components top-to-bottom
+# Task 266: Fix task logging — restore lost entries, harden workflow
 
 ## Task description (verbatim)
 
-Improve TikZ visualization of RSM in GLL and RNGLR. Layout components (blocks) top-to-bottom, preserving left-to-right layout inside each component.
-1. Rework `RsmTikz.extendedRsmToTikz`: use pgf-gd connected-component packing (`components go down left aligned`) so blocks stack vertically; intra-block layout unchanged (layered layout, grow'=right). Start block S' on top, remaining blocks in global-state appearance order. Plain nonterminal label to the left of each block's start state. No inter-block edges exist in the RSM data structure (verified) — if any are detected during implementation, report it.
-2. Add full extended RSM TikZ figure at head of summary for RNGLR and for GLL TikZ mode (currently missing there). No RNGLR step layout changes.
-3. Tests: compilation tests (with/without highlighted state), structural assertions, RNGLR runner file-existence test, summary compilation tests covering the new head section.
+Fix task logging: restore lost task entries and harden the workflow so that every task is reliably logged in `tasks/tasks.md` with no losses.
+1. Restore tasks 1-100 to `tasks/tasks1.md` verbatim from `ac729de~1:tasks/tasks.md` (the version before `ac729de` removed them and replaced them with the header note). Add a one-line provenance note at the top of the file.
+2. Restore entries 263 and 264 in `tasks/tasks.md` verbatim, tagged `[done]`, from the "Task description (verbatim)" sections of `b23a09a:tasks/detailed_plan.md` and `58c4f40:tasks/detailed_plan.md`. Insert between 262 and 265.
+3. Harden workflow instructions so task entries cannot be lost again: (a) AGENTS.md working loop — new gate: before creating a feature branch, verify the chosen task has an entry in `tasks/tasks.md`; if not, add it verbatim and commit on `dev` (`docs(tasks): add task NNN`); step 8 — before marking `[done]`, verify the entry exists, restore verbatim from `detailed_plan.md` if missing. (b) git-workflow skill — pre-merge check: grep the task number in `tasks/tasks.md`; if missing, STOP and restore verbatim from `detailed_plan.md`; clarify that task-log commits happen on `dev`, never on a feature branch. (c) planning skill — detailed plan MUST begin with a `## Task description (verbatim)` section quoting the `tasks.md` entry; verify/create the entry before decomposition.
+4. Delete untracked leftovers: `.opencode/plans/ll-lr-tikz-stack-viz.md`, `data/example_input_a_a_a_a.txt`.
 
 ## Context and analysis
 
-### Verified facts
+### Loss inventory (verified against git history)
 
-1. **No inter-block edges exist in the flat RSM transition matrix.**
-   `RsmBuilder.buildRSMWithStart` (`src/FLPQ.Languages/EbnfParser.fs:383-386`) copies each
-   block's DFA transitions only within its own offset range
-   (`transitions.[offset + localState, offset + localTarget]`).
-   `RSM.extendWithStart` (`src/FLPQ.Languages/RSM.fs:237`) adds only the intra-S′ edge
-   `(oldCount → oldCount+1)`. A `call N` transition stays inside the *caller's* block:
-   its target is the continuation state; the jump to N's start state is implicit
-   (algorithms resolve it via `BlockStart[N]`, e.g. `Gll.fs:84`).
-   **Consequence:** each block is exactly one connected component of the flat graph
-   (derivative DFAs contain only states reachable from the block start).
+| Item | Evidence | Recovery source |
+|------|----------|-----------------|
+| Tasks 1-100 | Removed by `ac729de` ("docs: mark task 109 as done", 2026-07-05): 599 lines deleted, replaced with header note "First part of tasks located in `tasks1.md`"; `tasks1.md` never existed on disk or in git history | `ac729de~1:tasks/tasks.md` lines 6-560 (entry 1 at line 6, entry 100 ends before line 561 where 101 begins). Numbers 52-55 were already absent in that version — skipped, not lost |
+| Tasks 263, 264 | Executed and merged (`b23a09a feat(263)`, `58c4f40 feat(264)`) but never present in any committed or working-tree version of `tasks/tasks.md` (last commit touching it before this task: `45d5188`, task 262) | `b23a09a:tasks/detailed_plan.md` and `58c4f40:tasks/detailed_plan.md`, "Task description (verbatim)" sections |
+| Task 265 | Entry existed only as uncommitted working-tree change | Committed durably on dev in `a745d97` before this branch was created |
 
-2. **The current left-to-right component arrangement is pgf-gd's default
-   connected-component packing** of the single flat `\graph [layered layout]` in
-   `RsmTikz.extendedRsmToTikz` (src/FLPQ.Printers/RsmTikz.fs:17). PGF manual §28.7:
-   components are laid out individually, sorted by `component order`
-   (default: *by first specified node*), and placed relative to each other along
-   `component direction` (default 0 = right) with `component sep` padding.
+### Root causes
 
-3. **Solution:** change the packing direction only —
-   `components go down left aligned` stacks components top-to-bottom with left edges
-   aligned; internal growth (`grow'=right`) is untouched, so the layout *inside* each
-   component is computed by exactly today's layered algorithm. No per-block subgraphs,
-   no manual coordinates, no height estimation, no template changes (no `fit` library).
+1. No entry-before-work gate: a task arriving as a chat request could start without a `tasks.md` entry.
+2. Working-tree-only lifetime: "never commit `tasks.md` from a feature branch" meant entries added mid-task stayed uncommitted until `[done]` marking; any reset of `tasks.md` wiped them.
+3. No existence check at `[done]` time or at merge time.
 
-### Scope decisions (user-confirmed)
+### Design decisions
 
-| Decision | Choice |
-|----------|--------|
-| RNGLR scope | Full extended-RSM TikZ at head of summary only; RNGLR step layout untouched |
-| Block delimiting | Plain nonterminal label left of each block's start state; no frame |
-| Inter-block edges | None exist (verified); nothing to draw or remove |
-| Block order | S′ (fresh start) on top; remaining blocks in global-state appearance order |
+- **Durability rule (user decision):** task entries are committed on `dev` at creation time (`docs(tasks): add task NNN`) before the feature branch exists. The existing rule "never commit `tasks.md` from a feature branch" stays — task-log commits simply never happen on feature branches; they happen on `dev` (entry at start, `[done]` at end).
+- **Recovery target for 1-100:** `tasks/tasks1.md` — the header note in `tasks.md` already references that file; restoring it there matches the original intent and keeps `tasks.md` unchanged except for 263/264.
+- **Verbatim principle:** restored task text is copied byte-for-byte from the recovery source; only the `[done]` status tag is added to 263/264 (permitted by the strict rule in `tasks.md`).
+- **Recovery source of truth going forward:** every `detailed_plan.md` MUST begin with "## Task description (verbatim)" — this is what made 263/264 recoverable; it becomes mandatory.
 
-### Affected artifacts
+### Reuse checklist
 
-- `ext_rsm.tikz.tex` (GLL runner, TikZ mode) — new layout automatically.
-- Per-step `rsm.tikz.tex` (GLL steps, highlighted current state) — new layout automatically.
-- RNGLR: new `ext_rsm.tikz.tex` artifact + "Extended RSM" section at summary head.
-- GLL summary head in TikZ mode currently has **no** RSM figure (`Summary.fs:111` looks
-  for `ext_rsm.dot`, absent in TikZ mode) — filled by the same new section.
-- DOT renderings (`RsmDot`) unchanged. No golden files affected (no RSM TikZ goldens
-  exist; templates unchanged).
+- No new code. All changes are `.md` files: `tasks/tasks1.md` (new), `tasks/tasks.md`, `AGENTS.md`, `.opencode/skills/git-workflow/SKILL.md`, `.opencode/skills/planning/SKILL.md`.
+- Existing structures reused: the "Task description (verbatim)" convention already used in recent detailed plans; the pre-merge checks section of the git-workflow skill; the working loop of AGENTS.md.
 
 ## Subtasks
 
-### S1: Rework RsmTikz layout to top-to-bottom component stacking — [done, 7bcd147]
+### S1: Restore tasks 1-100 to `tasks/tasks1.md` — [done, c3e9f79]
 
-Spike results (pre-implementation, lualatex coordinate extraction): `components go down
-left aligned` stacks components top-to-bottom in declaration order with left edges
-aligned; intra-block layered LTR layout unchanged. Block start states land in layer 0 of
-their component even for cyclic blocks (`S -> (a S b)*` has a cycle through the start
-state) — the mid-row label fallback was not needed. `lightblue` is not a default xcolor
-name: `data/tex_tikz_template.tex` gains `\usepackage{xcolor}` + the same
-`\definecolor{lightblue}{rgb}{0.68,0.85,0.90}` as `tex_summary_template.tex` so the
-highlighted-state compilation test passes standalone (no golden embeds the tikz template).
-
-**Code:** `src/FLPQ.Printers/RsmTikz.fs` — rework `extendedRsmToTikz`:
-- Graph options gain `components go down left aligned, component sep=1.5cm`
-  (existing `layered layout, nodes={draw, circle}, grow'=right, level sep=2cm,
-  sibling sep=1.5cm` unchanged).
-- Node declaration order: S′ block first (its start state declared first within the
-  block), then remaining blocks in global-state appearance order; within each non-start
-  block the start state is also declared first, other states in local-index order.
-  This drives `component order=by first specified node` (pgf-gd default) → S′ on top.
-- Each block's start state gains `label=left:<escaped Nt>` (text mode, same escaping as
-  node content via `AutomatonTikz.escapeLatex`). On the overall start state this
-  coexists with the existing `label=above:Start`.
-- Edge emission unchanged (all edges are intra-block — verified).
-
-**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs`:
-- Existing ``RSM tikz compiles with lualatex`` must pass with the new options.
-- New ``RSM tikz with highlighted state compiles with lualatex`` (highlightedState = Some).
-- New structural facts in a `RsmTikzTests` section (new file or existing printer test
-  file): output contains `components go down left aligned`; exactly one `\graph`;
-  node declaration count = `StateCount`; S′ block nodes declared before all others;
-  every block's start state carries `label=left:`; edge line count equals the number of
-  (i, j, label) triples in the transition matrix.
-
-**Docs:** new `docs/developer/rsm-viz.md` (RsmDot + RsmTikz: formats, component-packing
-approach with PGF manual §28.7 reference, book refs sec:CFPQ_GLL / sec:CFPQ_RNGLR);
-add module row to `docs/developer/FLPQ.Printers.md` table; fix dangling `rsm-dot.md`
-link in `docs/developer/InputGraphDot.md` (points to nonexistent file) → `rsm-viz.md`.
+**Code:** none (docs-only).
+**Tests:** skip (docs-only).
+**Docs:** new file `tasks/tasks1.md`.
 
 **Spec:**
-- Spike first (no commit): hand-write a minimal standalone TikZ with two disconnected
-  layered components + `components go down left aligned`, compile with lualatex, confirm
-  vertical stacking and left alignment. Then render ANBN "classic" and a Dyck grammar
-  RSM to PDF and inspect: stacking direction, label placement on cyclic blocks (start
-  state may not sit in layer 0 — if `label=left` lands mid-row, label the component's
-  first-declared node instead), spacing. Tune `component sep` if needed (default 1.5em
-  is tighter than sibling sep=1.5cm; 1.5cm proposed for visual consistency).
-- Node options per state keep current semantics: highlighted → `fill=lightblue!20`;
-  overall start → `label=above:Start, fill=green!30`; final → `double, double
-  distance=1.5pt, fill=red!30`; fresh-start block content keeps the `S'\_k` prime form.
-- Block order source: `RSM.nonterminals` (global-state appearance order) with the
-  extended RSM's `StartBlock` (S′) moved to the front.
-- Label text: `nonterminalPrinter nt` escaped with `AutomatonTikz.escapeLatex`.
+- Extract entries 1-100 verbatim from `ac729de~1:tasks/tasks.md` (lines 6-560, i.e. from the `1.` entry up to and including the full `100.` entry, stopping before `101.`).
+- Prepend a one-line provenance note: `* Recovered verbatim from commit ac729de~1 (tasks.md before ac729de split the file); numbers 52-55 were already absent at that point.`
+- Verify: every number 1-100 except 52-55 appears exactly once as an entry head; entry count = 96.
 
-### S2: Extended RSM at head of summary (RNGLR + GLL TikZ mode) — [done]
+### S2: Restore entries 263 and 264 in `tasks/tasks.md` — [done, 13c74d9 on dev]
 
-**Code:**
-- `src/FLPQ.Cli/RnglrRunner.fs`: in TikZ mode (`not useDot`) write
-  `ext_rsm.tikz.tex` via `RsmTikz.extendedRsmToTikz string string extRsm None`
-  (mirrors `GllRunner.fs:52-54`). DOT mode unchanged.
-- `src/FLPQ.Printers/SummaryTeX.fs` `headerSection`: in the GLL and RNGLR branches,
-  when `useTikz`, read `ext_rsm.tikz.tex` from vizDir (same `readIfExists` pattern as
-  the existing `input.tikz.tex` read at SummaryTeX.fs:186) and emit an
-  "Extended RSM" section via `wrapTikzAdjustbox` (adjustbox is already loaded by
-  `tex_summary_template.tex`; it never upscales, so tall stacked figures keep natural
-  size). Section placed where the RSM figure belongs in the head (next to the existing
-  `rsmSppfPdfs` lines). DOT mode keeps current behavior (GLL: `ext_rsm.pdf`,
-  RNGLR: `rsm_blocks.pdf`). No `Summary.fs` signature changes.
+Note: committed directly on `dev` (not on this branch) per the task-log durability rule — `tasks.md` is never committed from a feature branch.
 
-**Tests:**
-- `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`: new fact — RNGLR TikZ-mode run produces
-  `ext_rsm.tikz.tex` (mirrors `GllRunnerTests.fs:296`).
-- `tests/FLPQ.Printers.Tests/TexCompilationTests.fs`: extend ``GLL merged summary TeX
-  with tikz compiles with lualatex`` and ``RNGLR merged summary TeX with tikz compiles
-  with lualatex`` to write `ext_rsm.tikz.tex` into the temp viz dir so the new head
-  section is exercised end-to-end.
-
-**Docs:** `docs/user/cli.md` — RNGLR output table gains `ext_rsm.tikz.tex` (TikZ mode);
-`docs/developer/FLPQ.Cli.md` — note the summary head now includes the extended RSM
-figure in TikZ mode for GLL and RNGLR.
+**Code:** none (docs-only).
+**Tests:** skip (docs-only).
+**Docs:** `tasks/tasks.md`.
 
 **Spec:**
-- The section must be skipped gracefully when `ext_rsm.tikz.tex` is absent
-  (`readIfExists` → None → no lines), so older viz dirs still build.
-- No changes to `RnglrStepVisualizer`, step templates, or per-step artifacts.
+- Copy the "Task description (verbatim)" section content from `b23a09a:tasks/detailed_plan.md` (task 263) and `58c4f40:tasks/detailed_plan.md` (task 264).
+- Insert as entries `263. [done] ...` and `264. [done] ...` between the existing `262.` entry and the `265.` entry, matching the file's indentation style (one leading space before the number, sub-items indented).
+- Task text is verbatim; only the `[done]` tag is added (permitted additive change).
 
-Notes from implementation:
-- `docs/user/cli.md` RNGLR row listed `ext_rsm.dot`, which RnglrRunner never
-  writes (any mode) — replaced with `ext_rsm.tikz.tex` (default Tikz mode). The
-  GLL row gained the same mode annotation for its ext_rsm artifact.
-- Summary compilation tests assert `components go down left aligned` in the
-  built content so the new head section is verified, not just compiled.
+### S3: Harden workflow instructions — [done]
 
-## Execution order
+**Code:** none (docs-only).
+**Tests:** skip (docs-only).
+**Docs:** `AGENTS.md`, `.opencode/skills/git-workflow/SKILL.md`, `.opencode/skills/planning/SKILL.md`.
 
-S1 → S2 (S2 consumes S1's renderer; independent files otherwise).
+**Spec:**
+- **AGENTS.md working loop:**
+  - New step after "Choose exactly ONE task that is not yet done": verify the chosen task has an entry in `tasks/tasks.md`; if not (e.g. task came from a chat request), add the entry verbatim and commit on `dev` (`docs(tasks): add task NNN`) before creating the branch. No work starts without a logged entry.
+  - Step 8 ("Mark the task `[done]`"): before marking, verify the entry exists (grep by number); if missing, restore it verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` first.
+- **git-workflow skill:**
+  - Pre-merge checks: add a check that the task entry exists in `tasks/tasks.md` (`grep -qE '^[[:space:]]*NNN\.' tasks/tasks.md`); if missing, STOP and restore verbatim from `tasks/detailed_plan.md` before merging.
+  - Clarify in the pre-commit checklist / rules: task-log commits (adding an entry, marking `[done]`) happen on `dev`, never on a feature branch.
+- **planning skill:**
+  - Detailed Plan section: the plan MUST begin with a `## Task description (verbatim)` section quoting the `tasks.md` entry verbatim.
+  - Before decomposition: verify the task has an entry in `tasks/tasks.md`; if not, create it first (per AGENTS.md working loop).
+
+### S4: Delete untracked leftovers — [done, no commit — untracked file deletion]
+
+Both files were untracked (never in git), so their deletion produces no git change; this plan entry records the action.
+
+**Code:** none.
+**Tests:** skip.
+**Docs:** none.
+
+**Spec:**
+- Delete `.opencode/plans/ll-lr-tikz-stack-viz.md` (superseded by the committed task 262 detailed plan) and `data/example_input_a_a_a_a.txt` (unreferenced test leftover). Both are untracked and referenced nowhere in the repo (verified by grep).
+- Remove the now-empty `.opencode/plans/` directory.
