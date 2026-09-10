@@ -790,6 +790,23 @@ let ``RSM tikz compiles with lualatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
+let ``RSM tikz with highlighted state compiles with lualatex`` () =
+    let tikzTemplatePath =
+        [ Path.Combine("data", "tex_tikz_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
+          Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "tex_tikz_template.tex") ]
+        |> List.tryFind File.Exists
+        |> Option.defaultWith (fun () -> failwith "Could not locate tex_tikz_template.tex (RSM tikz highlighted)")
+
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
+    let freshStart = Nonterminal "S'"
+    let ersm = ExtendedRSM.create freshStart rsm
+    let tikz = RsmTikz.extendedRsmToTikz string string ersm (Some 1)
+    Assert.Contains("fill=lightblue!20", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
 let ``SPPF tikz compiles with lualatex`` () =
     let tikzTemplatePath =
         [ Path.Combine("data", "tex_tikz_template.tex")
@@ -866,6 +883,7 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
 
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
     File.WriteAllText(Path.Combine(tempDir, "input.tikz.tex"), InputGraphTikz.toTikz string graph None)
+    File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
 
     let gllStepTikzTemplatePath =
         [ Path.Combine("data", "GLL_step_tikz_template.tex")
@@ -903,6 +921,9 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
             ""
             true
         |> String.concat "\n"
+
+    // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
+    Assert.Contains("components go down left aligned", content)
 
     let template =
         File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))
@@ -974,6 +995,8 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
 
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
 
+    File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
+
     File.WriteAllText(
         Path.Combine(tempDir, "rnglr_table.tex"),
         RnglrTableTeX.tableToTeXTabularOnly string string lrTable
@@ -1015,6 +1038,9 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
             rnglrStepTikzTemplate
             true
         |> String.concat "\n"
+
+    // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
+    Assert.Contains("components go down left aligned", content)
 
     let template =
         File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))

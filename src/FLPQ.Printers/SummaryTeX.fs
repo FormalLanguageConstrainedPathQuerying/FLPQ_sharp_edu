@@ -161,6 +161,14 @@ module SummaryTeX =
 
         let grammar = maybe "grammar_original.tex" "Original Grammar" wrapCenter
 
+        // Extended RSM figure at the head in TikZ mode (blocks stacked top-to-bottom).
+        // Skipped gracefully when ext_rsm.tikz.tex is absent so older viz dirs still build.
+        let extRsmTikzSection =
+            if useTikz then
+                maybe "ext_rsm.tikz.tex" "Extended RSM" wrapTikzAdjustbox
+            else
+                []
+
         let algoLines =
             match algoKind with
             | SummaryKind.TablePerStep ->
@@ -195,7 +203,7 @@ module SummaryTeX =
 
                 let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
 
-                colorLegend @ inputSection @ rsmSppfLines @ pathIndexLines
+                colorLegend @ inputSection @ extRsmTikzSection @ rsmSppfLines @ pathIndexLines
 
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
@@ -208,7 +216,7 @@ module SummaryTeX =
 
                 let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
 
-                colorLegend @ tableLines @ rsmSppfLines @ pathIndexLines
+                colorLegend @ tableLines @ extRsmTikzSection @ rsmSppfLines @ pathIndexLines
 
         grammar @ algoLines
 

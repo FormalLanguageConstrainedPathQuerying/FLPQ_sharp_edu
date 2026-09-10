@@ -75,6 +75,7 @@ What our standards and principles are, and why we chose them.
 - [LL and LR steps visualization](developer/visualization-types.md)
 - [GrammarTeX module](developer/grammar-tex.md)
 - [InputGraphDot module](developer/input-graph-dot.md)
+- [RSM visualization: Dot and Tikz](developer/rsm-viz.md)
 - [BasicSPPF visualization: Dot and Tikz](developer/basic-sppf-viz.md)
 - [SummaryTeX module](developer/summary-tex.md)
 - [ExternalTools module](developer/external-tools.md)

@@ -1,5 +1,36 @@
 # Code Review Report
 
+## Task 265 Review (2026-09-10)
+
+Scope: `src/FLPQ.Printers/RsmTikz.fs` (reworked `extendedRsmToTikz`: pgf-gd component packing `components go down left aligned`, S′-first declaration order, `label=left:` on every block start state), `src/FLPQ.Printers/AutomatonTikz.fs` (new `layeredGraphOptions`, `tikzHeaderWithOptions`; `tikzHeader` now delegates), `src/FLPQ.Printers/SummaryTeX.fs` (`headerSection` gains the Extended RSM head section for GLL/RNGLR Tikz mode), `src/FLPQ.Cli/RnglrRunner.fs` (writes `ext_rsm.tikz.tex` in Tikz mode), `data/tex_tikz_template.tex` (xcolor + lightblue definition), tests (`RsmTikzTests.fs` new; `TexCompilationTests.fs` +1 fact, 2 extended facts; `RnglrRunnerTests.fs` +1 fact), docs (`rsm-viz.md` new; `FLPQ.Printers.md`, `main.md`, `InputGraphDot.md`, `cli.md`, `FLPQ.Cli.md`, `summary-tex.md`).
+
+**Resolved this task:**
+- §13 (no duplication) — `extRsmTikzSection` initially inlined the `readIfExists` match; refactored to reuse `headerSection`'s existing `maybe` helper.
+- §6 (XML doc comments) — new public `tikzHeaderWithOptions` and its delegator `tikzHeader` carry `///` comments.
+- §20 (documentation) — `summary-tex.md` updated: overview bullet for the Extended RSM head figure, corrected `headerSection` signature (was missing `rsmSppfPdfs`/`useTikz`), new design-decision row.
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — `extendedRsmToTikz`'s comment documents the new stacking, ordering, and label semantics; `layeredGraphOptions` documented.
+- §7 (genericity) — `RsmTikz.extendedRsmToTikz` stays generic over `'t`/`'nt`; SummaryTeX change is string-level.
+- §13 (no duplication) — the RnglrRunner `ext_rsm.tikz.tex` write mirrors GllRunner's identical call; per-runner artifact writing is the established pattern (each runner writes its own `sppf.tikz.tex`, `input.tikz.tex`, ...). The repeated 3-path template lookup in `TexCompilationTests.fs` is a pre-existing pattern shared by ~10 facts; left as-is.
+- §14 (language registry) — `RsmTikzTests` reads grammars from `LanguageRegistry` (`ANBN/classic`, `ArithExpr/leftAssoc`, `Dyck1/ebnfStar`); runner facts use inline grammar text, consistent with every existing runner fact.
+- §15/§16 (tests) — all new tests assert real properties: packing keys present + exactly one `\graph`; declared-state set equals `0..StateCount-1`; S′ block declared before all others (character offsets); every block start state carries `label=left:<Nt>`; edge-line count equals the transition-matrix symbol count; highlighted fill present + lualatex compilation; summary content contains `components go down left aligned` before full-document compilation. No stubs or tautologies.
+- §19 (coverage) — changed modules keep their correspondents: `RsmTikzTests` + `TexCompilationTests` (Printers), `RnglrRunnerTests` (Cli). Hard gate: all projects 0 failed / 0 skipped, total coverage 91.0% (threshold 90%), lint 0 warnings.
+- §20 (documentation) — `rsm-viz.md` created (both renderers, component-packing approach with PGF §28.7 reference, book refs); hub row + `main.md` navigation added; dangling `rsm-dot.md` link in `InputGraphDot.md` fixed; `cli.md` output tables updated — the RNGLR row previously listed `ext_rsm.dot`, which RnglrRunner never writes in any mode (replaced with `ext_rsm.tikz.tex`); GLL row gained the mode annotation.
+- §21 (book traceability) — `RsmTikz` module comment keeps `sec:CFPQ_GLL`; `rsm-viz.md` references `sec:CFPQ_GLL` / `sec:CFPQ_RNGLR`.
+- §22 (clarity) — straight declaration/edge loops; no nontrivial optimizations.
+
+**Verified end-to-end:** lualatex coordinate extraction on generated figures confirmed vertical stacking in declaration order (S′ on top), left-edge alignment, unchanged intra-block layered LTR layout, and start states at layer 0 even for cyclic blocks (`S -> (a S b)*` has a cycle through the start state). GLL and RNGLR merged summaries compile with the new head section. `lightblue` is not a default xcolor name — `tex_tikz_template.tex` now loads xcolor and defines it identically to `tex_summary_template.tex` (no golden embeds the tikz template, so no goldens changed).
+
+**Pre-existing, out of scope (not introduced by this task):**
+- `InputGraphDot.md` also links two nonexistent docs (`gll-step-visualizer.md`, `gss-dot.md`) — same class as the fixed `rsm-dot.md` link; separate documentation task.
+- `FLPQ.Printers.md` hub still links several module docs that do not exist (pre-existing, noted in Task 263 review).
+- GLL Tikz-mode summary includes both an SPPF PDF (head, via `sppf.dot`) and an SPPF TikZ figure (tail, via `sppfSection`) — pre-existing duplication.
+
+**No blocking findings.** Full pass found zero problems; the three findings above were fixed and committed before this report.
+
+---
+
 ## Task 264 Review (2026-09-10)
 
 Scope: `src/FLPQ.Printers/SummaryTeX.fs` (new `wrapTikzAdjustbox`, `stackStepSection` switched from `wrapTikzCenter` to it), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (LL inline-TikZ test extended with adjustbox assertions, new SLR1 adjustbox fact), `docs/developer/summary-tex.md`. LL/LR step stack-tree figures in the merged summary are now scaled with `\begin{adjustbox}{max width=\textwidth}` (shrink-only) instead of `\resizebox{0.98\textwidth}{!}` (exact-scale, upscales small figures and scales node text).

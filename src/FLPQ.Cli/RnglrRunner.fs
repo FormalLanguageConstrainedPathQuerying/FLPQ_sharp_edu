@@ -60,6 +60,10 @@ module RnglrRunner =
                 (Path.Combine(outputDir, "input.tikz.tex"))
                 (InputGraphTikz.toTikz string inputGraph None)
 
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "ext_rsm.tikz.tex"))
+                (RsmTikz.extendedRsmToTikz string string extRsm None)
+
         let vizSteps =
             RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex inputGraph
 

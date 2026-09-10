@@ -96,15 +96,19 @@ module AutomatonTikz =
                     |> ignore
                 | _ -> ()
 
-    let tikzHeader (shape: string) (sb: StringBuilder) : unit =
+    /// Common options for a left-to-right layered graph drawing.
+    let layeredGraphOptions (shape: string) : string =
+        sprintf "layered layout, nodes={draw, %s}, grow'=right, level sep=2cm, sibling sep=1.5cm" shape
+
+    /// Opens a tikzpicture with a single \graph using the given graph options.
+    let tikzHeaderWithOptions (graphOptions: string) (sb: StringBuilder) : unit =
         sb.AppendLine(@"\begin{tikzpicture}") |> ignore
 
-        sb.AppendLine(
-            sprintf
-                @"  \graph [layered layout, nodes={draw, %s}, grow'=right, level sep=2cm, sibling sep=1.5cm] {"
-                shape
-        )
-        |> ignore
+        sb.AppendLine(sprintf @"  \graph [%s] {" graphOptions) |> ignore
+
+    /// Opens a tikzpicture with a single left-to-right layered graph of the given node shape.
+    let tikzHeader (shape: string) (sb: StringBuilder) : unit =
+        tikzHeaderWithOptions (layeredGraphOptions shape) sb
 
     let tikzFooter (sb: StringBuilder) : unit =
         sb.AppendLine("  };") |> ignore

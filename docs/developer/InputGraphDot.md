@@ -54,4 +54,4 @@ Renders the input graph as a DOT digraph string.
 
 - [GllStepVisualizer](gll-step-visualizer.md) — GLL step visualization that consumes this module
 - [GSS Dot](gss-dot.md) — GSS DOT rendering following a similar pattern
-- [RsmDot](rsm-dot.md) — RSM DOT rendering
+- [RsmDot / RsmTikz](rsm-viz.md) — RSM DOT and Tikz rendering

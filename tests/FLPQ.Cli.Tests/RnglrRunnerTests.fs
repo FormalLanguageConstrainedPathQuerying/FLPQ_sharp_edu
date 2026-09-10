@@ -106,6 +106,14 @@ let ``runRnglr tikz mode produces input.tikz.tex`` () =
     cleanup outDir
 
 [<Fact>]
+let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
+    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
 let ``runRnglr tikz mode produces sppf.tikz.tex`` () =
     let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "sppf.tikz.tex")

@@ -1,142 +1,153 @@
-# Task 264: Scale LL/LR step TikZ figures with adjustbox instead of resizebox
+# Task 265: Improve TikZ visualization of RSM — components top-to-bottom
 
 ## Task description (verbatim)
 
-Use `\begin{adjustbox}{max width=\textwidth}...\end{adjustbox}` instead of `\resizebox{0.98\textwidth}{!}{%%` in LL and LR steps visualization to scale tikz figure.
+Improve TikZ visualization of RSM in GLL and RNGLR. Layout components (blocks) top-to-bottom, preserving left-to-right layout inside each component.
+1. Rework `RsmTikz.extendedRsmToTikz`: use pgf-gd connected-component packing (`components go down left aligned`) so blocks stack vertically; intra-block layout unchanged (layered layout, grow'=right). Start block S' on top, remaining blocks in global-state appearance order. Plain nonterminal label to the left of each block's start state. No inter-block edges exist in the RSM data structure (verified) — if any are detected during implementation, report it.
+2. Add full extended RSM TikZ figure at head of summary for RNGLR and for GLL TikZ mode (currently missing there). No RNGLR step layout changes.
+3. Tests: compilation tests (with/without highlighted state), structural assertions, RNGLR runner file-existence test, summary compilation tests covering the new head section.
 
 ## Context and analysis
 
-### Current behavior
+### Verified facts
 
-In the merged summary, each LL/LR step's stack-tree figure (`tree_and_stack.tikz.tex`)
-is wrapped by `SummaryTeX.stackStepSection` → `wrapTikzCenter`
-(`src/FLPQ.Printers/SummaryTeX.fs:219`, helper at `:45-51`), which emits:
+1. **No inter-block edges exist in the flat RSM transition matrix.**
+   `RsmBuilder.buildRSMWithStart` (`src/FLPQ.Languages/EbnfParser.fs:383-386`) copies each
+   block's DFA transitions only within its own offset range
+   (`transitions.[offset + localState, offset + localTarget]`).
+   `RSM.extendWithStart` (`src/FLPQ.Languages/RSM.fs:237`) adds only the intra-S′ edge
+   `(oldCount → oldCount+1)`. A `call N` transition stays inside the *caller's* block:
+   its target is the continuation state; the jump to N's start state is implicit
+   (algorithms resolve it via `BlockStart[N]`, e.g. `Gll.fs:84`).
+   **Consequence:** each block is exactly one connected component of the flat graph
+   (derivative DFAs contain only states reachable from the block start).
 
-```latex
-\begin{center}
-\resizebox{0.98\textwidth}{!}{%%
-<tikz>
-}
-\end{center}
-```
+2. **The current left-to-right component arrangement is pgf-gd's default
+   connected-component packing** of the single flat `\graph [layered layout]` in
+   `RsmTikz.extendedRsmToTikz` (src/FLPQ.Printers/RsmTikz.fs:17). PGF manual §28.7:
+   components are laid out individually, sorted by `component order`
+   (default: *by first specified node*), and placed relative to each other along
+   `component direction` (default 0 = right) with `component sep` padding.
 
-`\resizebox{0.98\textwidth}{!}` scales the figure to **exactly** 0.98\textwidth — small
-figures are upscaled and node text/labels are scaled along with the picture, blurring
-font metrics. `\begin{adjustbox}{max width=\textwidth}` only shrinks figures wider than
-`\textwidth` and never upscales, preserving natural size and font rendering.
+3. **Solution:** change the packing direction only —
+   `components go down left aligned` stacks components top-to-bottom with left edges
+   aligned; internal growth (`grow'=right`) is untouched, so the layout *inside* each
+   component is computed by exactly today's layered algorithm. No per-block subgraphs,
+   no manual coordinates, no height estimation, no template changes (no `fit` library).
 
-### Scope
+### Scope decisions (user-confirmed)
 
-`wrapTikzCenter` is shared by four call sites:
+| Decision | Choice |
+|----------|--------|
+| RNGLR scope | Full extended-RSM TikZ at head of summary only; RNGLR step layout untouched |
+| Block delimiting | Plain nonterminal label left of each block's start state; no frame |
+| Inter-block edges | None exist (verified); nothing to draw or remove |
+| Block order | S′ (fresh start) on top; remaining blocks in global-state appearance order |
 
-| Call site | Line | After change |
-|-----------|------|--------------|
-| `stackStepSection` (LL/LR step figures) | 225 | **adjustbox** (this task) |
-| LR automaton header | 168 | resizebox (unchanged) |
-| GLL input string | 177 | resizebox (unchanged) |
-| SPPF section | 368 | resizebox (unchanged) |
+### Affected artifacts
 
-The task is scoped to "LL and LR steps visualization", so only `stackStepSection`
-switches. Other call sites keep `wrapTikzCenter` (GLL-wide adjustbox migration is the
-separate, still-open task 244).
-
-### Reuse checklist
-
-- No existing adjustbox wrapper for TikZ in `SummaryTeX`. `MatrixTeX.toTeXStyled`
-  (`src/FLPQ.Printers/MatrixTeX.fs:164`) uses `\begin{adjustbox}{max width=\textwidth}`
-  inline for matrices — different context (math-mode matrix), not reusable as a
-  tikzpicture wrapper.
-- New helper `wrapTikzAdjustbox` follows the existing `wrap*` naming pattern in
-  `SummaryTeX` (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `wrapTabularResized`).
-- The summary preamble already loads `\usepackage{adjustbox}`
-  (`data/tex_summary_template.tex:8`) — no template change needed.
+- `ext_rsm.tikz.tex` (GLL runner, TikZ mode) — new layout automatically.
+- Per-step `rsm.tikz.tex` (GLL steps, highlighted current state) — new layout automatically.
+- RNGLR: new `ext_rsm.tikz.tex` artifact + "Extended RSM" section at summary head.
+- GLL summary head in TikZ mode currently has **no** RSM figure (`Summary.fs:111` looks
+  for `ext_rsm.dot`, absent in TikZ mode) — filled by the same new section.
+- DOT renderings (`RsmDot`) unchanged. No golden files affected (no RSM TikZ goldens
+  exist; templates unchanged).
 
 ## Subtasks
 
-### S1: Wrap LL/LR step figures with adjustbox in merged summary — [done, a5eea65]
+### S1: Rework RsmTikz layout to top-to-bottom component stacking — [done, 7bcd147]
 
-**Code:** `src/FLPQ.Printers/SummaryTeX.fs`:
-- Add public `wrapTikzAdjustbox : string -> string` — wraps TikZ content in a centered
-  `adjustbox` with `max width=\textwidth` (spec below).
-- `stackStepSection`: use `wrapTikzAdjustbox` instead of `wrapTikzCenter` for the
-  TikZ-mode step picture. DOT mode (`--use-dot`, `\includegraphics`) unchanged.
+Spike results (pre-implementation, lualatex coordinate extraction): `components go down
+left aligned` stacks components top-to-bottom in declaration order with left edges
+aligned; intra-block layered LTR layout unchanged. Block start states land in layer 0 of
+their component even for cyclic blocks (`S -> (a S b)*` has a cycle through the start
+state) — the mid-row label fallback was not needed. `lightblue` is not a default xcolor
+name: `data/tex_tikz_template.tex` gains `\usepackage{xcolor}` + the same
+`\definecolor{lightblue}{rgb}{0.68,0.85,0.90}` as `tex_summary_template.tex` so the
+highlighted-state compilation test passes standalone (no golden embeds the tikz template).
 
-**Tests:** `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`:
-- Extend ``LL summary default mode embeds step stack-trees as inline TikZ``: assert the
-  merged TeX contains `\begin{adjustbox}{max width=\textwidth}` and does NOT contain
-  `\resizebox{0.98\textwidth}` (the LL summary has no other TikZ figures, so absence is
-  a precise check).
-- Add ``SLR(1) summary step stack-trees use adjustbox scaling``: run the SLR1 pipeline,
-  assert the merged TeX contains `\begin{adjustbox}{max width=\textwidth}` (step
-  figures). Only presence is asserted — the LR automaton section legitimately keeps
-  `\resizebox{0.98\textwidth}`.
-- Existing end-to-end compilation tests (``LL summary merged TeX compiles with
-  lualatex``, ``SLR(1) summary merged TeX compiles with lualatex``) verify the new
-  wrapper produces compilable output.
+**Code:** `src/FLPQ.Printers/RsmTikz.fs` — rework `extendedRsmToTikz`:
+- Graph options gain `components go down left aligned, component sep=1.5cm`
+  (existing `layered layout, nodes={draw, circle}, grow'=right, level sep=2cm,
+  sibling sep=1.5cm` unchanged).
+- Node declaration order: S′ block first (its start state declared first within the
+  block), then remaining blocks in global-state appearance order; within each non-start
+  block the start state is also declared first, other states in local-index order.
+  This drives `component order=by first specified node` (pgf-gd default) → S′ on top.
+- Each block's start state gains `label=left:<escaped Nt>` (text mode, same escaping as
+  node content via `AutomatonTikz.escapeLatex`). On the overall start state this
+  coexists with the existing `label=above:Start`.
+- Edge emission unchanged (all edges are intra-block — verified).
 
-**Docs:** `docs/developer/summary-tex.md`:
-- Abstract: add `wrapTikzAdjustbox` to the helper list.
-- Function signatures: add `val wrapTikzAdjustbox: string -> string`.
-- Design decisions: add a row — LL/LR step figures use adjustbox (shrink-only, no
-  upscaling, font metrics preserved); other TikZ inclusions keep resizebox.
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs`:
+- Existing ``RSM tikz compiles with lualatex`` must pass with the new options.
+- New ``RSM tikz with highlighted state compiles with lualatex`` (highlightedState = Some).
+- New structural facts in a `RsmTikzTests` section (new file or existing printer test
+  file): output contains `components go down left aligned`; exactly one `\graph`;
+  node declaration count = `StateCount`; S′ block nodes declared before all others;
+  every block's start state carries `label=left:`; edge line count equals the number of
+  (i, j, label) triples in the transition matrix.
+
+**Docs:** new `docs/developer/rsm-viz.md` (RsmDot + RsmTikz: formats, component-packing
+approach with PGF manual §28.7 reference, book refs sec:CFPQ_GLL / sec:CFPQ_RNGLR);
+add module row to `docs/developer/FLPQ.Printers.md` table; fix dangling `rsm-dot.md`
+link in `docs/developer/InputGraphDot.md` (points to nonexistent file) → `rsm-viz.md`.
 
 **Spec:**
-- `wrapTikzAdjustbox` output for input `tikz`:
-  ```latex
-  \begin{center}
-  \begin{adjustbox}{max width=\textwidth}
-  <tikz>
-  \end{adjustbox}
-  \end{center}
-  ```
-- `wrapTikzCenter` is unchanged and still used for the LR automaton, GLL input string,
-  and SPPF sections.
-- No changes to standalone per-step artifacts (`tree_and_stack.tikz.tex` stays a bare
-  tikzpicture, per task 107.5).
+- Spike first (no commit): hand-write a minimal standalone TikZ with two disconnected
+  layered components + `components go down left aligned`, compile with lualatex, confirm
+  vertical stacking and left alignment. Then render ANBN "classic" and a Dyck grammar
+  RSM to PDF and inspect: stacking direction, label placement on cyclic blocks (start
+  state may not sit in layer 0 — if `label=left` lands mid-row, label the component's
+  first-declared node instead), spacing. Tune `component sep` if needed (default 1.5em
+  is tighter than sibling sep=1.5cm; 1.5cm proposed for visual consistency).
+- Node options per state keep current semantics: highlighted → `fill=lightblue!20`;
+  overall start → `label=above:Start, fill=green!30`; final → `double, double
+  distance=1.5pt, fill=red!30`; fresh-start block content keeps the `S'\_k` prime form.
+- Block order source: `RSM.nonterminals` (global-state appearance order) with the
+  extended RSM's `StartBlock` (S′) moved to the front.
+- Label text: `nonterminalPrinter nt` escaped with `AutomatonTikz.escapeLatex`.
 
-### S2: Fix flaky RPQ.Tests stack overflow blocking the hard gate — [done, c4ada33]
+### S2: Extended RSM at head of summary (RNGLR + GLL TikZ mode) — [done]
 
-**Trigger:** The pre-merge hard gate for this task was BLOCKED at FLPQ.RPQ.Tests
-("Test Run Aborted / Stack overflow" in `Regexp.derive`, called from
-`regexToDfa` → `buildDfaFromRegex` in the ``Belyanin and Arroyuelo produce identical
-results with random regex`` property). The crash was rare (a few runs out of ~30) but
-absolute per gate rules. User directive: analyze and fix even though flaky.
+**Code:**
+- `src/FLPQ.Cli/RnglrRunner.fs`: in TikZ mode (`not useDot`) write
+  `ext_rsm.tikz.tex` via `RsmTikz.extendedRsmToTikz string string extRsm None`
+  (mirrors `GllRunner.fs:52-54`). DOT mode unchanged.
+- `src/FLPQ.Printers/SummaryTeX.fs` `headerSection`: in the GLL and RNGLR branches,
+  when `useTikz`, read `ext_rsm.tikz.tex` from vizDir (same `readIfExists` pattern as
+  the existing `input.tikz.tex` read at SummaryTeX.fs:186) and emit an
+  "Extended RSM" section via `wrapTikzAdjustbox` (adjustbox is already loaded by
+  `tex_summary_template.tex`; it never upscales, so tall stacked figures keep natural
+  size). Section placed where the RSM figure belongs in the head (next to the existing
+  `rsmSppfPdfs` lines). DOT mode keeps current behavior (GLL: `ext_rsm.pdf`,
+  RNGLR: `rsm_blocks.pdf`). No `Summary.fs` signature changes.
 
-**Root cause analysis:**
-- `Regexp.derive`'s local `mkAlt` deduplicated only **one level** of alternation
-  nesting. For regexes like `(a*)(aa)*`, each derivation step produced
-  `RAlt(RAlt(...), newAlt)` — the duplicate alternative was buried below the depth
-  dedup could see, so every step yielded a strictly larger, syntactically distinct
-  derivative. The set of syntactic derivatives is infinite for such shapes, so
-  `buildDfaFromRegex`'s state-discovery loop never terminated; after ~5,400 iterations
-  the states were deep enough that `derive` stack-overflowed the test host.
-- Exhaustive search over **all 2,881,200** regexes of depth ≤ 3 over {a, b, eps}
-  (the full space of the RPQ test generator) found **202 shapes** with unbounded
-  closures before the fix; 0 after (max closure: 13 states / 45 nodes).
+**Tests:**
+- `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`: new fact — RNGLR TikZ-mode run produces
+  `ext_rsm.tikz.tex` (mirrors `GllRunnerTests.fs:296`).
+- `tests/FLPQ.Printers.Tests/TexCompilationTests.fs`: extend ``GLL merged summary TeX
+  with tikz compiles with lualatex`` and ``RNGLR merged summary TeX with tikz compiles
+  with lualatex`` to write `ext_rsm.tikz.tex` into the temp viz dir so the new head
+  section is exercised end-to-end.
 
-**Code:** `src/FLPQ.Languages/EbnfParser.fs`:
-- New `flattenAlts : Regexp<'t,'nt> -> Regexp<'t,'nt> list` — flattens nested
-  alternations into a list of direct alternatives.
-- `mkAlt` (moved to module level, private) now collects both arguments through
-  `flattenAlts`, drops `REmpty`, removes duplicates with `List.distinct`, and
-  recombines as a left-nested `RAlt` chain (no `REmpty` leaves — an earlier draft
-  folded over `REmpty` and added a spurious third DFA state to `a* a*`).
+**Docs:** `docs/user/cli.md` — RNGLR output table gains `ext_rsm.tikz.tex` (TikZ mode);
+`docs/developer/FLPQ.Cli.md` — note the summary head now includes the extended RSM
+figure in TikZ mode for GLL and RNGLR.
 
-**Tests:** `tests/FLPQ.Languages.Tests/EbnfParserTests.fs`:
-- New `RegexpDerivativeTests` module: builds DFAs for three previously unbounded
-  shapes (`(a*)(aa)*`, `((aa)eps|a)*`, `(a*+b*)*`) and cross-checks acceptance
-  against a direct exponential membership interpreter on all strings of length ≤ 5.
-  Before the fix these calls never returned; after, DFAs are deterministic with < 20
-  states and match the interpreter exactly.
+**Spec:**
+- The section must be skipped gracefully when `ext_rsm.tikz.tex` is absent
+  (`readIfExists` → None → no lines), so older viz dirs still build.
+- No changes to `RnglrStepVisualizer`, step templates, or per-step artifacts.
 
-**Docs:** `tasks/fixes_for_book.md` — recorded the flaw (the book may present the
-same one-level-dedup `mkAlt`; if so it must be updated to flatten alternations).
+Notes from implementation:
+- `docs/user/cli.md` RNGLR row listed `ext_rsm.dot`, which RnglrRunner never
+  writes (any mode) — replaced with `ext_rsm.tikz.tex` (default Tikz mode). The
+  GLL row gained the same mode annotation for its ext_rsm artifact.
+- Summary compilation tests assert `components go down left aligned` in the
+  built content so the new head section is verified, not just compiled.
 
-## Verification (after all subtasks)
+## Execution order
 
-1. Generate the LL summary via CLI; inspect merged TeX — every step figure wrapped in
-   `\begin{adjustbox}{max width=\textwidth}`, no `\resizebox{0.98\textwidth}` anywhere.
-2. Generate the SLR1 summary — step figures in adjustbox, LR automaton still resizebox.
-3. Both merged TeX files compile with lualatex (covered by existing tests).
-4. Full test suite via hard gate — `STATUS: PASS` (achieved 2026-09-10 after S2;
-   FLPQ.RPQ.Tests step OK, coverage 90.9%, lint 0 warnings).
+S1 → S2 (S2 consumes S1's renderer; independent files otherwise).
