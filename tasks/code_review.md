@@ -1,5 +1,25 @@
 # Code Review Report
 
+## Task 264 Review (2026-09-10)
+
+Scope: `src/FLPQ.Printers/SummaryTeX.fs` (new `wrapTikzAdjustbox`, `stackStepSection` switched from `wrapTikzCenter` to it), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (LL inline-TikZ test extended with adjustbox assertions, new SLR1 adjustbox fact), `docs/developer/summary-tex.md`. LL/LR step stack-tree figures in the merged summary are now scaled with `\begin{adjustbox}{max width=\textwidth}` (shrink-only) instead of `\resizebox{0.98\textwidth}{!}` (exact-scale, upscales small figures and scales node text).
+
+**Findings against the constraint sources:**
+- §6 (XML doc comments) — new public `wrapTikzAdjustbox` carries a `///` comment documenting the shrink-only semantics.
+- §7 (genericity) — `wrapTikzAdjustbox : string -> string`, same signature family as its `wrap*` siblings; no algorithm types involved.
+- §13 (no duplication) — `wrapTikzAdjustbox` vs `wrapTikzCenter`: 5-line wrappers differing in the scaling construct (`adjustbox` max-width vs `resizebox` exact-width). Intentional, documented divergence: the task scopes adjustbox to LL/LR step figures only; the LR automaton, GLL input string, and SPPF keep resizebox (GLL-wide migration is the separate open task 244). Merging them into one parameterized wrapper would couple four call sites with two different scaling policies.
+- §15/§16 (tests) — the extended LL fact asserts both presence of `\begin{adjustbox}{max width=\textwidth}` and absence of `\resizebox{0.98\textwidth}` in the real end-to-end merged TeX (LL summary has no other TikZ figures, so absence is precise); the new SLR1 fact asserts adjustbox presence (presence only — the LR automaton section legitimately keeps resizebox). Existing lualatex compilation facts for LL/SLR1 summaries verify the new wrapper compiles. No stubs or tautologies.
+- §19 (coverage) — changed module keeps its correspondent: `CliSummaryTests` (end-to-end, 16 Summary-category tests green).
+- §20 (documentation) — `summary-tex.md`: abstract helper list, function signatures, and two design-decision rows (adjustbox rationale + scope; `stackStepSection` row updated to mention the adjustbox wrap).
+- §21 (book traceability) — rendering module: no direct book reference, consistent with the FLPQ.Printers hub convention.
+- §22 (clarity) — wrapper is a 5-line list concatenation identical in shape to `wrapTikzCenter`; no optimization.
+
+**Verified end-to-end:** LL summary for `example_grammar.bnf` / `example_input_an_bn.txt` — all 16 step figures wrapped in adjustbox, zero resizebox; SLR1 summary — 10 step figures in adjustbox, exactly one resizebox (LR automaton). Both merged TeX files compile with lualatex.
+
+**No blocking findings.** Full pass found zero problems.
+
+---
+
 ## Task 263 Review (2026-09-09)
 
 Scope: `src/FLPQ.Printers/TeXRenderer.fs` (new `escapeMath`, `inputRow` now escapes each cell), `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` (2 new facts, 2 updated facts), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (2 new end-to-end compilation facts, `mergedTexPath` helper), `docs/developer/visualization-types.md`. Fixes LL/LR merged-summary lualatex failures: the `$` end-of-input marker appended by LL/LR runners was emitted raw inside the math-mode `pNiceMatrix` input row.

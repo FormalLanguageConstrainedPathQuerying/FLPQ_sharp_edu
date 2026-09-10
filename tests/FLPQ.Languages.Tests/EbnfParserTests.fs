@@ -254,6 +254,76 @@ F -> x
         Assert.Equal(Nonterminal "A", rsm.StartBlock)
 
 
+module RegexpDerivativeTests =
+
+    // Shapes whose syntactic derivative closure was unbounded before mkAlt
+    // flattened nested alternations: buildDfaFromRegex looped forever on them,
+    // and derive eventually stack-overflowed on the ever-growing states.
+    let private blowupShapes: (string * Regexp<string, string>) list =
+        let a = RTerm(Terminal "a")
+        let b = RTerm(Terminal "b")
+
+        [ "(a*)(aa)*", RSeq(RStar a, RStar(RSeq(a, a)))
+          "((aa)eps|a)*", RStar(RAlt(RSeq(RSeq(a, a), REps), a))
+          "(a*+b*)*", RStar(RAlt(RStar a, RStar b)) ]
+
+    /// Direct (exponential) language-membership interpreter for cross-checking
+    /// the derivative-built DFA against the original regexp semantics.
+    let rec private matches (r: Regexp<string, string>) (input: string list) : bool =
+        let rec star (p: Regexp<string, string>) (rest: string list) : bool =
+            if List.isEmpty rest then
+                true
+            else
+                [ for i in 1 .. rest.Length do
+                      let piece = List.take i rest
+
+                      if matches p piece && star p (List.skip i rest) then
+                          true ]
+                |> List.exists id
+
+        match r with
+        | REps -> List.isEmpty input
+        | REmpty -> false
+        | RTerm(Terminal t) -> input = [ t ]
+        | RNonterm _ -> false
+        | RSeq(l, r2) ->
+            [ for i in 0 .. input.Length do
+                  if matches l (List.take i input) && matches r2 (List.skip i input) then
+                      true ]
+            |> List.exists id
+        | RAlt(l, r2) -> matches l input || matches r2 input
+        | RStar p -> star p input
+
+    let rec private allStrings (len: int) : string list list =
+        if len = 0 then
+            [ [] ]
+        else
+            [ for s in allStrings (len - 1) do
+                  yield s @ [ "a" ]
+                  yield s @ [ "b" ] ]
+
+    let private shortAlphabetStrings () : string list list =
+        [ for len in 0..5 do
+              yield! allStrings len ]
+
+    [<Fact>]
+    let ``buildDfaFromRegex terminates and is correct on previously unbounded shapes`` () =
+        for name, r in blowupShapes do
+            let deriveFn (r: Regexp<string, string>) (sym: string) =
+                Regexp.derive r (RsmSymbol.RTerm(Terminal sym))
+
+            let dfa = Regexp.buildDfaFromRegex [ "a"; "b" ] deriveFn r
+
+            Assert.True(Dfa.isDeterministic dfa, sprintf "%s: DFA is not deterministic" name)
+            Assert.True(Dfa.stateCount dfa < 20, sprintf "%s: DFA has %d states" name (Dfa.stateCount dfa))
+
+            for s in shortAlphabetStrings () do
+                let expected = matches r s
+                let actual = Dfa.accept dfa (List.map Terminal s)
+                let ok = expected = actual
+                Assert.True(ok, sprintf "%s: input %A expected=%b actual=%b" name s expected actual)
+
+
 module EbnfPropertyTests =
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]

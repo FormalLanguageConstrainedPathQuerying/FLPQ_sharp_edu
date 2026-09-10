@@ -1,132 +1,142 @@
-# Task 263: Fix LL summary TeX compilation (raw `$` EOI terminal in math mode)
+# Task 264: Scale LL/LR step TikZ figures with adjustbox instead of resizebox
 
 ## Task description (verbatim)
 
-When I compile summary tex file for LL (generated with `dotnet src/FLPQ.Cli/bin/Release/net10.0/FLPQ.Cli.dll -s -a LL -o viz_output/LL/ -i data/example_input_an_bn.txt -g data/example_grammar.bnf`) I get number of errors. Fix it. Check that other algorithms visualization not broken. Add tests to prevent such problem in the future.
+Use `\begin{adjustbox}{max width=\textwidth}...\end{adjustbox}` instead of `\resizebox{0.98\textwidth}{!}{%%` in LL and LR steps visualization to scale tikz figure.
 
 ## Context and analysis
 
-### Root cause (verified empirically)
+### Current behavior
 
-`TeXRenderer.inputRow` (`src/FLPQ.Printers/TeXRenderer.fs:13`) renders the input token
-list as a one-row `pNiceMatrix` — a **math-mode** environment. LL and LR runners append
-the end-of-input marker to the tokens before parsing:
+In the merged summary, each LL/LR step's stack-tree figure (`tree_and_stack.tikz.tex`)
+is wrapped by `SummaryTeX.stackStepSection` → `wrapTikzCenter`
+(`src/FLPQ.Printers/SummaryTeX.fs:219`, helper at `:45-51`), which emits:
 
-- `LLRunner.fs:13` — `tokensWithEoi = tokens @ [ Grammar.eoiTerminal ]`
-- `LRRunner.fs:19` — same
+```latex
+\begin{center}
+\resizebox{0.98\textwidth}{!}{%%
+<tikz>
+}
+\end{center}
+```
 
-`Grammar.eoiTerminal = Terminal "$"` (`Grammar.fs:67`). The terminal printer used by the
-step visualizers is the identity function (`SymbolTeX.toLaTeX string string`), so the EOI
-token is emitted as a **raw `$`** inside math mode. In LaTeX a raw `$` in math mode is a
-math-shift character and is invalid — lualatex reports `! Missing $ inserted.` at every
-input row.
+`\resizebox{0.98\textwidth}{!}` scales the figure to **exactly** 0.98\textwidth — small
+figures are upscaled and node text/labels are scaled along with the picture, blurring
+font metrics. `\begin{adjustbox}{max width=\textwidth}` only shrinks figures wider than
+`\textwidth` and never upscales, preserving natural size and font rendering.
 
-Reproduction results (grammar `S -> a S b S | eps`, input `a b a b a b`):
+### Scope
 
-| Algorithm | Merged summary compile | Errors |
-|-----------|------------------------|--------|
-| LL        | FAIL                   | 16 × `Missing $ inserted` (one per step input row) |
-| LR0 / SLR1 / CLR1 | FAIL              | 10 × same error each |
-| CYK, Valiant, ValiantModified, RNGLR | PASS (0 errors) | — |
-| GLL       | FAIL (unrelated, pre-existing) | `TeX capacity exceeded [number of strings=476553]` — 31 repeated 50×50 path-index matrices exhaust TeX's string pool; also >10 min with `\maxstrings=1000000`. **Out of scope** — separate pre-existing performance issue, reported to user |
+`wrapTikzCenter` is shared by four call sites:
 
-### Why existing tests missed it
+| Call site | Line | After change |
+|-----------|------|--------------|
+| `stackStepSection` (LL/LR step figures) | 225 | **adjustbox** (this task) |
+| LR automaton header | 168 | resizebox (unchanged) |
+| GLL input string | 177 | resizebox (unchanged) |
+| SPPF section | 368 | resizebox (unchanged) |
 
-- ``LL step input TeX compiles with lualatex`` and ``LR step input TeX compiles with
-  lualatex`` (`tests/FLPQ.Printers.Tests/TexCompilationTests.fs:51,65`) parse **without**
-  the EOI terminal — unlike the real runners. The rendered input row never contains `$`.
-- `CliSummaryTests.fs` runs the full pipeline for LL and all LR variants but only checks
-  that the merged TeX file exists — it never compiles it.
+The task is scoped to "LL and LR steps visualization", so only `stackStepSection`
+switches. Other call sites keep `wrapTikzCenter` (GLL-wide adjustbox migration is the
+separate, still-open task 244).
 
-### Why other rendering paths are safe (checked)
+### Reuse checklist
 
-- LL/LR/RNGLR table renderers hardcode the EOI column header as `\$`
-  (`LLTableTeX.fs:69`, `LRTableTeX.fs:104`, `RnglrTableTeX.fs:66,170`).
-- TikZ edge labels are escaped for text mode via `AutomatonTikz.escapeLatex`.
-- LR(1) item lookaheads render EOI as `\varepsilon` (no raw `$`).
-- CYK/Valiant/RNGLR input rows contain no EOI token.
-
-`inputRow` is the only unescaped math-mode path for terminals.
-
-### Fix design
-
-Escape TeX special characters at the math-mode boundary: add `escapeMath` to
-`TeXRenderer` and apply it to each cell in `inputRow`. Math-mode-safe forms (verified
-with lualatex): `\` → `\textbackslash `, `&` → `\&`, `%` → `\%`, `$` → `\$`,
-`#` → `\#`, `_` → `\_`, `{` → `\{`, `}` → `\}`, `^` → `\text{\^{}}`. `~` is valid as-is
-in math mode.
-
-Not reused: `AutomatonTikz.escapeLatex` is a **text-mode** escaper (`\^`, `\~{}` forms
-are invalid in math mode) and lives in the automaton-rendering module; generalizing it
-would touch 8+ call sites for no benefit. The codebase pattern is per-boundary escapers
-(`AutomatonTikz.escapeLatex` for text, `DerivationTreeDot.escapeLabel` for DOT), so a
-math-mode escaper in `TeXRenderer` follows the same pattern.
-
-Fixing `inputRow` fixes LL and all three LR variants at once and protects CYK/Valiant/
-RNGLR input rows if an input ever contains a TeX-special terminal.
+- No existing adjustbox wrapper for TikZ in `SummaryTeX`. `MatrixTeX.toTeXStyled`
+  (`src/FLPQ.Printers/MatrixTeX.fs:164`) uses `\begin{adjustbox}{max width=\textwidth}`
+  inline for matrices — different context (math-mode matrix), not reusable as a
+  tikzpicture wrapper.
+- New helper `wrapTikzAdjustbox` follows the existing `wrap*` naming pattern in
+  `SummaryTeX` (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `wrapTabularResized`).
+- The summary preamble already loads `\usepackage{adjustbox}`
+  (`data/tex_summary_template.tex:8`) — no template change needed.
 
 ## Subtasks
 
-### S1: Escape TeX special characters in `inputRow` (math mode) — [done, bfa639d]
+### S1: Wrap LL/LR step figures with adjustbox in merged summary — [done, a5eea65]
 
-**Code:** `src/FLPQ.Printers/TeXRenderer.fs` — add public `escapeMath : string -> string`
-(math-mode escaper, spec below); apply it to each cell content in `inputRow` after the
-terminal printer is applied. No other source changes.
-**Tests:** New `[<Fact>]` in `tests/FLPQ.Printers.Tests/TexCompilationTests.fs`:
-`inputRow` with an EOI token (`Grammar.eoiTerminal`) compiles with lualatex (this is the
-direct regression test for the bug); plus a `[<Fact>]` asserting `escapeMath` maps each
-special character to its escaped form and leaves plain identifiers untouched.
-**Docs:** Update `docs/developer/visualization-types.md` — `TeXRenderer` section: add
-`escapeMath` entry and note that `inputRow` escapes TeX special characters (math mode).
+**Code:** `src/FLPQ.Printers/SummaryTeX.fs`:
+- Add public `wrapTikzAdjustbox : string -> string` — wraps TikZ content in a centered
+  `adjustbox` with `max width=\textwidth` (spec below).
+- `stackStepSection`: use `wrapTikzAdjustbox` instead of `wrapTikzCenter` for the
+  TikZ-mode step picture. DOT mode (`--use-dot`, `\includegraphics`) unchanged.
 
-**Spec:**
-- `escapeMath` replaces, in this order: `\` → `\textbackslash `, `&` → `\&`, `%` → `\%`,
-  `$` → `\$`, `#` → `\#`, `_` → `\_`, `{` → `\{`, `}` → `\}`, `^` → `\text{\^{}}`.
-  `~` and all other characters pass through unchanged.
-- In `inputRow`, each cell = `escapeMath (symbolPrinter token)`; the current-position
-  cell is then wrapped in `\underbar{...}` as before. Empty-token case (`\varepsilon`)
-  unchanged.
-- All existing golden/compilation tests must pass without regeneration (escaping is a
-  no-op for the plain `a`/`b` terminals used by all current fixtures).
+**Tests:** `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`:
+- Extend ``LL summary default mode embeds step stack-trees as inline TikZ``: assert the
+  merged TeX contains `\begin{adjustbox}{max width=\textwidth}` and does NOT contain
+  `\resizebox{0.98\textwidth}` (the LL summary has no other TikZ figures, so absence is
+  a precise check).
+- Add ``SLR(1) summary step stack-trees use adjustbox scaling``: run the SLR1 pipeline,
+  assert the merged TeX contains `\begin{adjustbox}{max width=\textwidth}` (step
+  figures). Only presence is asserted — the LR automaton section legitimately keeps
+  `\resizebox{0.98\textwidth}`.
+- Existing end-to-end compilation tests (``LL summary merged TeX compiles with
+  lualatex``, ``SLR(1) summary merged TeX compiles with lualatex``) verify the new
+  wrapper produces compilable output.
 
-### S2: Include EOI terminal in LL/LR step-input compilation tests — [done, 7167231]
-
-**Code:** none.
-**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update
-``LL step input TeX compiles with lualatex`` and ``LR step input TeX compiles with
-lualatex`` to append `Grammar.eoiTerminal` to the token list before `parseWithSteps`,
-matching `LLRunner.fs:13` / `LRRunner.fs:19`. This closes the gap that let the bug
-through (tests parsed EOI-free inputs while runners always append EOI).
-**Docs:** none.
+**Docs:** `docs/developer/summary-tex.md`:
+- Abstract: add `wrapTikzAdjustbox` to the helper list.
+- Function signatures: add `val wrapTikzAdjustbox: string -> string`.
+- Design decisions: add a row — LL/LR step figures use adjustbox (shrink-only, no
+  upscaling, font metrics preserved); other TikZ inclusions keep resizebox.
 
 **Spec:**
-- LL test: `let tokens = Tokenizer.tokenizeTerminals "a b" @ [ Grammar.eoiTerminal ]`.
-- LR test: same for its `"a a"` input.
-- Both tests must fail on the pre-fix code (verified by running against the unfixed
-  `inputRow`) and pass after S1.
+- `wrapTikzAdjustbox` output for input `tikz`:
+  ```latex
+  \begin{center}
+  \begin{adjustbox}{max width=\textwidth}
+  <tikz>
+  \end{adjustbox}
+  \end{center}
+  ```
+- `wrapTikzCenter` is unchanged and still used for the LR automaton, GLL input string,
+  and SPPF sections.
+- No changes to standalone per-step artifacts (`tree_and_stack.tikz.tex` stays a bare
+  tikzpicture, per task 107.5).
 
-### S3: Add merged-summary compilation tests for LL and LR — [done, 3fb17c0]
+### S2: Fix flaky RPQ.Tests stack overflow blocking the hard gate — [done, c4ada33]
 
-**Code:** none.
-**Tests:** `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` — add two `[<Fact>]` tests that run
-the full CLI pipeline (existing `runWithSummary` helper, which already uses the user's
-exact scenario: Dyck1 grammar + input `a a b a b b`) and then compile the produced
-merged TeX with `ExternalTools.compileTexFile`:
-- ``LL summary merged TeX compiles with lualatex``
-- ``SLR(1) summary merged TeX compiles with lualatex``
+**Trigger:** The pre-merge hard gate for this task was BLOCKED at FLPQ.RPQ.Tests
+("Test Run Aborted / Stack overflow" in `Regexp.derive`, called from
+`regexToDfa` → `buildDfaFromRegex` in the ``Belyanin and Arroyuelo produce identical
+results with random regex`` property). The crash was rare (a few runs out of ~30) but
+absolute per gate rules. User directive: analyze and fix even though flaky.
 
-**Docs:** none.
+**Root cause analysis:**
+- `Regexp.derive`'s local `mkAlt` deduplicated only **one level** of alternation
+  nesting. For regexes like `(a*)(aa)*`, each derivation step produced
+  `RAlt(RAlt(...), newAlt)` — the duplicate alternative was buried below the depth
+  dedup could see, so every step yielded a strictly larger, syntactically distinct
+  derivative. The set of syntactic derivatives is infinite for such shapes, so
+  `buildDfaFromRegex`'s state-discovery loop never terminated; after ~5,400 iterations
+  the states were deep enough that `derive` stack-overflowed the test host.
+- Exhaustive search over **all 2,881,200** regexes of depth ≤ 3 over {a, b, eps}
+  (the full space of the RPQ test generator) found **202 shapes** with unbounded
+  closures before the fix; 0 after (max closure: 13 states / 45 nodes).
 
-**Spec:**
-- Reuse `runWithSummary algo false` (TikZ mode — the default and the mode the user hit).
-- Locate `results/<algo>/<algo>_merged.tex` via the existing `assertMergedTexExists`
-  path logic, then `Assert.True(ExternalTools.compileTexFile texPath (dir of texPath))`.
-- Clean up the temp output directory in a `finally` block.
-- Both tests must fail on pre-fix code and pass after S1.
+**Code:** `src/FLPQ.Languages/EbnfParser.fs`:
+- New `flattenAlts : Regexp<'t,'nt> -> Regexp<'t,'nt> list` — flattens nested
+  alternations into a list of direct alternatives.
+- `mkAlt` (moved to module level, private) now collects both arguments through
+  `flattenAlts`, drops `REmpty`, removes duplicates with `List.distinct`, and
+  recombines as a left-nested `RAlt` chain (no `REmpty` leaves — an earlier draft
+  folded over `REmpty` and added a spurious third DFA state to `a* a*`).
+
+**Tests:** `tests/FLPQ.Languages.Tests/EbnfParserTests.fs`:
+- New `RegexpDerivativeTests` module: builds DFAs for three previously unbounded
+  shapes (`(a*)(aa)*`, `((aa)eps|a)*`, `(a*+b*)*`) and cross-checks acceptance
+  against a direct exponential membership interpreter on all strings of length ≤ 5.
+  Before the fix these calls never returned; after, DFAs are deterministic with < 20
+  states and match the interpreter exactly.
+
+**Docs:** `tasks/fixes_for_book.md` — recorded the flaw (the book may present the
+same one-level-dedup `mkAlt`; if so it must be updated to flatten alternations).
 
 ## Verification (after all subtasks)
 
-1. Re-run the user's exact command; compile `viz_output/LL/results/ll/ll_merged.tex` — 0 errors.
-2. Generate + compile summaries for LR0, SLR1, CLR1 — 0 errors each.
-3. Generate + compile CYK, Valiant, ValiantModified, RNGLR — still 0 errors (no regression).
-4. Full test suite via hard gate — `STATUS: PASS`.
+1. Generate the LL summary via CLI; inspect merged TeX — every step figure wrapped in
+   `\begin{adjustbox}{max width=\textwidth}`, no `\resizebox{0.98\textwidth}` anywhere.
+2. Generate the SLR1 summary — step figures in adjustbox, LR automaton still resizebox.
+3. Both merged TeX files compile with lualatex (covered by existing tests).
+4. Full test suite via hard gate — `STATUS: PASS` (achieved 2026-09-10 after S2;
+   FLPQ.RPQ.Tests step OK, coverage 90.9%, lint 0 warnings).

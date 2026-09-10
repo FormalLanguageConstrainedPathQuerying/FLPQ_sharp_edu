@@ -87,6 +87,22 @@ let ``LL summary default mode embeds step stack-trees as inline TikZ`` () =
     Assert.Contains(@"\graph [layered layout", content)
     Assert.Contains("{ [same layer]", content)
     Assert.DoesNotContain("dot_pdfs/step_", content)
+    // Step figures are scaled with adjustbox (shrink-only), not resizebox.
+    // The LL summary has no other TikZ figures, so resizebox must be absent entirely.
+    Assert.Contains(@"\begin{adjustbox}{max width=\textwidth}", content)
+    Assert.DoesNotContain(@"\resizebox{0.98\textwidth}", content)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``SLR(1) summary step stack-trees use adjustbox scaling`` () =
+    let outDir = runWithSummary "SLR1" false
+    let texPath = Path.Combine(outDir, "results", "slr1", "slr1_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    // Step figures use adjustbox. Only presence is asserted: the LR automaton
+    // section legitimately keeps \resizebox{0.98\textwidth}.
+    Assert.Contains(@"\begin{adjustbox}{max width=\textwidth}", content)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]

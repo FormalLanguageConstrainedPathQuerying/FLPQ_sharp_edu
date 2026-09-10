@@ -50,6 +50,16 @@ module SummaryTeX =
           @"\end{center}" ]
         |> String.concat "\n"
 
+    /// Wraps a TikZ picture in a centered adjustbox that shrinks the figure to at most
+    /// \textwidth without upscaling smaller figures (font metrics are preserved).
+    let wrapTikzAdjustbox (tikz: string) : string =
+        [ @"\begin{center}"
+          @"\begin{adjustbox}{max width=\textwidth}"
+          tikz
+          @"\end{adjustbox}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
     /// Wraps a raw TeX tabular in a centered, resizable box (no math mode, no inner center).
     let wrapTabularResized (tabular: string) : string =
         [ @"\begin{center}"
@@ -222,7 +232,7 @@ module SummaryTeX =
         let pictureLines =
             if useTikz then
                 match readIfExists (Path.Combine(stepDir, "tree_and_stack.tikz.tex")) with
-                | Some tikz -> [ wrapTikzCenter tikz; "" ]
+                | Some tikz -> [ wrapTikzAdjustbox tikz; "" ]
                 | None -> []
             else
                 [ includePdf (sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName); "" ]

@@ -26,16 +26,31 @@ module Regexp =
         | RAlt(l, r) -> nullable l || nullable r
         | RSeq(l, r) -> nullable l && nullable r
 
-    let rec derive (r: Regexp<'t, 'nt>) (sym: RsmSymbol<'t, 'nt>) : Regexp<'t, 'nt> =
-        let mkAlt l r =
-            match l, r with
-            | REmpty, _ -> r
-            | _, REmpty -> l
-            | RAlt(a, b), x
-            | x, RAlt(a, b) when a = x || b = x -> RAlt(a, b)
-            | l, r when l = r -> l
-            | l, r -> RAlt(l, r)
+    /// Flatten nested alternations into a list of direct alternatives.
+    let rec private flattenAlts (r: Regexp<'t, 'nt>) : Regexp<'t, 'nt> list =
+        match r with
+        | RAlt(l, r2) -> flattenAlts l @ flattenAlts r2
+        | other -> [ other ]
 
+    /// Combine two alternatives into a flat, duplicate-free alternation.
+    /// Flattening is required for termination of buildDfaFromRegex: without it,
+    /// repeated derivation of expressions like (a*)(aa)* nests RAlt one level
+    /// deeper per step (dedup only sees one level), so syntactically distinct
+    /// derivatives grow without bound and the DFA construction never terminates.
+    let private mkAlt (l: Regexp<'t, 'nt>) (r: Regexp<'t, 'nt>) : Regexp<'t, 'nt> =
+        let alts =
+            [ l; r ]
+            |> List.collect (function
+                | REmpty -> []
+                | other -> flattenAlts other)
+            |> List.distinct
+
+        match alts with
+        | [] -> REmpty
+        | [ single ] -> single
+        | first :: rest -> List.fold (fun acc a -> RAlt(acc, a)) first rest
+
+    let rec derive (r: Regexp<'t, 'nt>) (sym: RsmSymbol<'t, 'nt>) : Regexp<'t, 'nt> =
         match r with
         | REmpty -> REmpty
         | REps -> REmpty

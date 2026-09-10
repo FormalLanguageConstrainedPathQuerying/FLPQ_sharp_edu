@@ -7,7 +7,7 @@
 **Depends on:** GrammarTeX, MatrixTeX, ExternalTools
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Generates TeX content for merged summary documents produced by the CLI. Provides LaTeX helper functions (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `includePdf`, `section`) and structured section builders (`headerSection`, `tableStepSection`, `stackStepSection`, `buildContent`) that assemble per-step artifacts (tables, stacks, dot-generated PDFs, Tikz diagrams) into a single compilable TeX document. Operates purely on string content — file I/O is handled by the CLI.
+> **Abstract:** Generates TeX content for merged summary documents produced by the CLI. Provides LaTeX helper functions (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `wrapTikzAdjustbox`, `includePdf`, `section`) and structured section builders (`headerSection`, `tableStepSection`, `stackStepSection`, `buildContent`) that assemble per-step artifacts (tables, stacks, dot-generated PDFs, Tikz diagrams) into a single compilable TeX document. Operates purely on string content — file I/O is handled by the CLI.
 
 ## Contents
 
@@ -31,6 +31,7 @@ The SummaryTeX module assembles per-algorithm visualization artifacts into one m
 val wrapMath: string -> string
 val wrapCenter: string -> string
 val wrapTikzCenter: string -> string
+val wrapTikzAdjustbox: string -> string
 val includePdf: string -> string
 val section: string -> string
 ```
@@ -53,8 +54,9 @@ val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:i
 | String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; testable independently |
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
 | `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
-| `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary |
-| `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier); `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
+| `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary (LR automaton, GLL input string, SPPF) |
+| `wrapTikzAdjustbox` for LL/LR step figures | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used only by `stackStepSection`; other TikZ inclusions keep resizebox (GLL-wide migration is task 244) |
+| `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier), wrapped in adjustbox; `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
 
 ## See Also
 
