@@ -18,8 +18,7 @@ Supplementary materials for the book on formal language constrained path queryin
 
 - Documentation is about "What" and "Why". Skills are about "How".
 - This file is a short entry point for fast cold errors-free start.
-- Only one source of truth.
-- No duplicates.
+- Only one source of truth. No duplicates. Each thing (in doth code and documentation) described exactly once. Use generalization (especially for code), cross-references, links, other similar techniques to avoid duplicates and reuse staff.
 - Tools, not instructions.
 - Always learn, never forget — encode patterns before session ends
 
