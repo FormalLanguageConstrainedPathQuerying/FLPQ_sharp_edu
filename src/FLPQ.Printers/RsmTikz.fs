@@ -99,12 +99,15 @@ module RsmTikz =
                 match rsm.Transitions.[i, j] with
                 | Some symbols ->
                     for symbol in NonEmptySet.toSeq symbols do
+                        // Escape only the printer-produced names; the epsilon label
+                        // is math-mode TeX and must not be escaped.
                         let edgeLabel =
                             match symbol with
-                            | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) -> terminalPrinter t
+                            | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) ->
+                                AutomatonTikz.escapeLatex (terminalPrinter t)
                             | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
-                                sprintf "call %s" (nonterminalPrinter nt)
-                            | AutomatonLabel.AEpsilon -> "\\varepsilon"
+                                sprintf "call %s" (AutomatonTikz.escapeLatex (nonterminalPrinter nt))
+                            | AutomatonLabel.AEpsilon -> "$\\varepsilon$"
 
                         let style =
                             match symbol with
@@ -113,9 +116,7 @@ module RsmTikz =
 
                         let loopAttr = if i = j then ",loop above" else ""
 
-                        let escaped = AutomatonTikz.escapeLatex edgeLabel
-
-                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i escaped loopAttr style j)
+                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i edgeLabel loopAttr style j)
                         |> ignore
                 | None -> ()
 

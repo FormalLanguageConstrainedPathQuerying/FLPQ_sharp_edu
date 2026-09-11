@@ -47,7 +47,7 @@
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
 - Loop edges: `s%d ->["label",loop above] s%d`
-- Epsilon transitions: `dotted` edges with `\varepsilon` label
+- Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
 ### Template

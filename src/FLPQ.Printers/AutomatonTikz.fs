@@ -92,7 +92,9 @@ module AutomatonTikz =
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
                     let loopAttr = if i = j then ",loop above" else ""
 
-                    sb.AppendLine(sprintf "    s%d ->[dotted, \"\\varepsilon\"%s] s%d;" i loopAttr j)
+                    // Math-mode label: a bare \varepsilon in text mode renders as an empty
+                    // box (math symbols require math mode), silently losing the label.
+                    sb.AppendLine(sprintf "    s%d ->[dotted, \"$\\varepsilon$\"%s] s%d;" i loopAttr j)
                     |> ignore
                 | _ -> ()
 

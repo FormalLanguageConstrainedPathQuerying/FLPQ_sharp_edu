@@ -560,9 +560,10 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+    // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
+    File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
 
-    let rsmSppfPdfs =
-        [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+    let rsmPdfs = [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
 
     let gllStepTemplatePath =
         [ Path.Combine("data", "GLL_step_template.tex")
@@ -585,7 +586,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
             vizSteps.Length
             None
             None
-            rsmSppfPdfs
+            rsmPdfs
             gllStepTemplate
             ""
             ""
@@ -669,9 +670,10 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+    // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
+    File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
 
-    let rsmSppfPdfs =
-        [ ("RSM", "dot_pdfs/rsm_blocks.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+    let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
 
     let rnglrStepTemplatePath =
         [ Path.Combine("data", "RNGLR_step_template.tex")
@@ -694,7 +696,7 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
             vizSteps.Length
             None
             None
-            rsmSppfPdfs
+            rsmPdfs
             ""
             rnglrStepTemplate
             ""
@@ -825,6 +827,11 @@ let ``SPPF tikz compiles with lualatex`` () =
     let sppf = Sppf.buildSppfFromExtendedRsm pathIndex ersm.ExtendedRsm vertexCount
     let tikz = SppfTikz.toTikz string string sppf
     Assert.True(tikz.Length > 0)
+    // Math-mode labels: epsilon nodes and range/intermediate arrows must be real
+    // math, not escaped literal TeX source (task 269).
+    Assert.Contains(@"^{\varepsilon}$", tikz)
+    Assert.Contains(@"$\to$", tikz)
+    Assert.DoesNotContain(@"\textbackslash", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
 [<Fact>]
@@ -856,20 +863,6 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
         Directory.Delete(tempDir, true)
 
     Directory.CreateDirectory(tempDir) |> ignore
-
-    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
-    Directory.CreateDirectory(dotPdfDir) |> ignore
-
-    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
-    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
-
-    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
-    |> ignore
-
-    File.Delete(Path.Combine(tempDir, "_stub.dot"))
-
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
 
     for idx in 0 .. vizSteps.Length - 1 do
         let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
@@ -903,8 +896,12 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
 
     let gllStepTikzTemplate = File.ReadAllText gllStepTikzTemplatePath
 
-    let rsmSppfPdfs =
-        [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+    // Tikz mode: the head RSM figure comes from ext_rsm.tikz.tex (no PDF entries),
+    // and SPPF is rendered by the trailing sppfSection from sppf.tikz.tex.
+    let sppf = Sppf.buildSppfFromExtendedRsm pathIndex ersm.ExtendedRsm vertexCount
+    File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
+
+    let rsmPdfs: (string * string) list = []
 
     let content =
         SummaryTeX.buildContent
@@ -914,7 +911,7 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
             vizSteps.Length
             None
             None
-            rsmSppfPdfs
+            rsmPdfs
             ""
             ""
             gllStepTikzTemplate
@@ -950,6 +947,7 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     let freshStart = Nonterminal "S'"
     let input = [ "a"; "a" ]
     let graph = GLL.stringToGraph input
+    let vertexCount = FLPQ.GraphAnalysis.Graph.vertexCount graph
     let ersm = ExtendedRSM.create freshStart rsm
     let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
 
@@ -983,7 +981,6 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     File.Delete(Path.Combine(tempDir, "_stub.dot"))
 
     File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
 
     for idx in 0 .. vizSteps.Length - 1 do
         let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
@@ -1020,8 +1017,14 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
 
     let rnglrStepTikzTemplate = File.ReadAllText rnglrStepTikzTemplatePath
 
-    let rsmSppfPdfs =
-        [ ("RSM", "dot_pdfs/rsm_blocks.pdf"); ("SPPF", "dot_pdfs/sppf.pdf") ]
+    // Tikz mode: SPPF is rendered by the trailing sppfSection from sppf.tikz.tex;
+    // the RSM figure stays a header PDF entry (rsm_blocks.dot is always written).
+    let sppf =
+        Sppf.buildSppfFromExtendedRsm pathIndex (ExtendedRSM.extRsm ersm) vertexCount
+
+    File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
+
+    let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
 
     let content =
         SummaryTeX.buildContent
@@ -1031,7 +1034,7 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
             vizSteps.Length
             None
             None
-            rsmSppfPdfs
+            rsmPdfs
             ""
             ""
             ""

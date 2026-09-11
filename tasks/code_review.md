@@ -1,5 +1,28 @@
 # Code Review Report
 
+## Task 269 Review (2026-09-11)
+
+Scope: `src/FLPQ.Cli/Summary.fs` (removed the duplicate SPPF header entry for GLL/RNGLR), `src/FLPQ.Printers/SppfTikz.fs` (math-mode node labels; removed dead `getShape`/`shape`), `src/FLPQ.Printers/RsmTikz.fs` + `AutomatonTikz.fs` (math-mode epsilon edge labels), `src/FLPQ.Printers/SummaryTeX.fs` (parameter rename), tests (`CliSummaryTests.fs` +2 facts, `TexCompilationTests.fs` 4 fixture updates +1 assertion block, `RsmTikzTests.fs` +1 fact, `AutomatonVisualizationTests.fs` 2 strengthened facts), docs (`summary-tex.md`, `automaton-viz.md`, `rsm-viz.md`).
+
+**Findings resolved this review:**
+
+- §15/§23 (test fidelity / naming semantics) — the four merged-summary compilation tests in `TexCompilationTests.fs` still passed `("SPPF", "dot_pdfs/sppf.pdf")` through the header path, a configuration the CLI no longer produces after S1. Fixed: DOT-mode tests write `sppf.dot` so the trailing `sppfSection` renders `dot_pdfs/sppf.pdf`; tikz-mode tests write a real `sppf.tikz.tex` (`Sppf.buildSppfFromExtendedRsm` + `SppfTikz.toTikz`, exactly as the runners do) and pass header lists matching the CLI (empty for GLL tikz mode, RSM-only for RNGLR). The dead stub-PDF machinery was removed from the GLL tikz test.
+- §13/§22 (no dead code / clarity) — `SppfTikz.toTikz` carried a `getShape` function and per-node `shape` binding that were never used (node options only carry `as=`/`fill=`, so all nodes rendered as default circles regardless of type). Removed both; no behavior change.
+- §23 (naming semantics) — `LrVisuals.RsmSppfPdfs` / `headerSection`'s `rsmSppfPdfs` / local `rsmSppfLines` no longer carry SPPF entries after S1. Renamed to `HeaderVisuals.RsmPdfs` / `rsmPdfs` / `rsmFigureLines` across `Summary.fs`, `SummaryTeX.fs`, `TexCompilationTests.fs`, and the `summary-tex.md` signature.
+
+**Verified:** FLPQ.Printers.Tests 176/176, FLPQ.Cli.Tests 153/153 (0 skipped); regenerated GLL + RNGLR summaries (tikz and DOT modes) — exactly one trailing SPPF section each, math-mode labels (`$S^{\varepsilon}$`, `[s0,v0]$\to$[s4,v6]`), zero `\textbackslash`, both merged documents compile with lualatex.
+
+**Findings against the constraint sources:**
+
+- §9 (separation) — all changes stay in printers/CLI orchestration; no algorithm logic touched.
+- §14 (language registry) — new tests reuse registry grammars (`ANBN classic`, `DoubleA singleRule`); the one manual fixture (2-state RSM with an explicit `AEpsilon` edge in `RsmTikzTests.fs`) is justified: EBNF-derived RSMs encode epsilon as "start state is final" and never produce `AEpsilon` edges, so no registry grammar can exercise that rendering arm.
+- §19 (test coverage) — every changed module has correspondent tests; the SPPF TikZ compilation test now also asserts the math-mode label properties.
+- §20 (documentation completeness) — `summary-tex.md` documents the single trailing SPPF section and the renamed signature; `automaton-viz.md`/`rsm-viz.md` document the math-mode epsilon edge style with the verified rationale (bare `\varepsilon` in text mode renders as an empty box — confirmed empirically with lualatex, not a compile error).
+
+**No blocking findings.** Second and third passes over the changed surface found only the naming leftovers listed above; after their fixes a final pass found zero problems.
+
+---
+
 ## Task 268 Review (2026-09-11)
 
 Scope: tools + docs/skills only (no `.fs` changes). `tools/mdformat_tasklog/` (new plugin package — ordered-list numbering preservation, `---` hr renderer, GFM table support with pipe re-escaping), `tools/split_tasks.py` (new repair → mdformat → verify → split pipeline), `tools/common.py` (`tracked_md_files`), `tools/{quality_check,hard_gate}.py` (new Markdown format step + renumbering), `.github/workflows/ci.yml` (Python 3.10 setup + mdformat check), one-time normalization of all 76 tracked `.md` files (including frontmatter fixes in 9 SKILL.md files), AGENTS.md + 7 skill files (multi-file task log scheme, continuous mdformat rule).

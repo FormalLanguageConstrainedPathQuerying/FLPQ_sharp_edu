@@ -132,8 +132,9 @@ let ``automaton with epsilon loop tikz compiles`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains(@"\varepsilon", tikz)
-    Assert.Contains("dotted", tikz)
+    // Epsilon labels are math mode (task 269): a bare \varepsilon in text mode renders as empty.
+    Assert.Contains(@"dotted, ""$\varepsilon$""", tikz)
+    Assert.DoesNotContain(@"\textbackslash", tikz)
     Assert.Contains("loop above", tikz)
     Assert.Contains("fill=green!30", tikz)
     Assert.Contains("double", tikz)
@@ -202,8 +203,9 @@ let ``automaton with epsilon tikz compiles`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains(@"\varepsilon", tikz)
-    Assert.Contains("dotted", tikz)
+    // Epsilon labels are math mode (task 269): a bare \varepsilon in text mode renders as empty.
+    Assert.Contains(@"dotted, ""$\varepsilon$""", tikz)
+    Assert.DoesNotContain(@"\textbackslash", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
 [<Fact>]

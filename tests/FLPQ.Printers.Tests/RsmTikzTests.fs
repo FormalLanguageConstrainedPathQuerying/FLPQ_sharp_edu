@@ -5,6 +5,7 @@ open System.Text.RegularExpressions
 open Xunit
 open FSharpPlus.Data
 open FLPQ.Languages
+open FLPQ.LinearAlgebra
 open FLPQ.Printers
 open FLPQ.TestUtilities
 
@@ -114,3 +115,41 @@ let ``RSM tikz emits one edge line per transition symbol`` () =
         let tikz = RsmTikz.extendedRsmToTikz string string ersm None
 
         Assert.Equal(transitionSymbolCount rsm, edgePattern.Matches(tikz).Count)
+
+[<Fact>]
+let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
+    // EBNF-derived RSMs encode epsilon as "start state is final" (no AEpsilon edges),
+    // so build a minimal RSM with an explicit epsilon transition to cover the
+    // AEpsilon rendering arm (task 269).
+    let transitions = Matrix.init 2 2 None
+    transitions.[0, 1] <- Some(NonEmptySet.singleton AutomatonLabel.AEpsilon)
+
+    let blockStart = System.Collections.Generic.Dictionary<Nonterminal<string>, int>()
+    blockStart.[Nonterminal "S"] <- 0
+
+    let rsm =
+        { Transitions = transitions
+          StateCount = 2
+          StateInfo =
+            [| { BlockNonterminal = Nonterminal "S"
+                 LocalState = 0
+                 IsFinal = false }
+               { BlockNonterminal = Nonterminal "S"
+                 LocalState = 1
+                 IsFinal = true } |]
+          BlockStart = blockStart
+          FinalStates = set [ 1 ]
+          StartBlock = Nonterminal "S" }
+
+    let freshStart = Nonterminal "S'"
+    let ersm = ExtendedRSM.create freshStart rsm
+    let tikz = RsmTikz.extendedRsmToTikz string string ersm None
+
+    // The epsilon label must be math-mode TeX, not escaped literal source.
+    Assert.Contains(@"""$\varepsilon$"", dotted", tikz)
+    Assert.DoesNotContain(@"\textbackslash varepsilon", tikz)
+
+    let tikzTemplatePath =
+        System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)

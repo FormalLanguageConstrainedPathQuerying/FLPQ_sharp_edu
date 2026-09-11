@@ -26,37 +26,30 @@ module SppfTikz =
             | SppfEdgeLabel.RightChild -> "R"
             | SppfEdgeLabel.PackedAlternative -> "alt"
 
-        let getShape (info: SppfNodeInfo<'t, 'nt>) : string =
-            match info with
-            | SppfNodeInfo.SppfTerminal _ -> "circle"
-            | SppfNodeInfo.SppfNonterminal _ -> "circle"
-            | SppfNodeInfo.SppfEpsilon _ -> "none"
-            | SppfNodeInfo.SppfRange _ -> "rectangle"
-            | SppfNodeInfo.SppfIntermediate _ -> "diamond"
-
         let isRoot i = Set.contains i rootSet
 
         for i in 0 .. vertexCount - 1 do
             let info = FLPQ.GraphAnalysis.Graph.getVertex i sppf.Graph
 
+            // Escape only the printer-produced names; structural TeX (math-mode
+            // \varepsilon and \to) must stay intact or it renders as literal text.
             let label =
                 match info with
-                | SppfNodeInfo.SppfTerminal(Terminal t, l, r) -> sprintf "%s [%d,%d]" (terminalPrinter t) l r
+                | SppfNodeInfo.SppfTerminal(Terminal t, l, r) ->
+                    sprintf "%s [%d,%d]" (AutomatonTikz.escapeLatex (terminalPrinter t)) l r
                 | SppfNodeInfo.SppfNonterminal(Nonterminal nt, l, r, _, _) ->
-                    sprintf "%s [%d,%d]" (nonterminalPrinter nt) l r
-                | SppfNodeInfo.SppfEpsilon(Nonterminal nt, p) -> sprintf "%s^\\varepsilon @%d" (nonterminalPrinter nt) p
-                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]\\to[s%d,v%d]" fs fp ts tp
+                    sprintf "%s [%d,%d]" (AutomatonTikz.escapeLatex (nonterminalPrinter nt)) l r
+                | SppfNodeInfo.SppfEpsilon(Nonterminal nt, p) ->
+                    sprintf "$%s^{\\varepsilon}$ @%d" (AutomatonTikz.escapeLatex (nonterminalPrinter nt)) p
+                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]$\\to$[s%d,v%d]" fs fp ts tp
                 | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
-                    sprintf "I(%d,%d) @[s%d,v%d]\\to[s%d,v%d]" s p fs fp ts tp
-
-            let escapedLabel = AutomatonTikz.escapeLatex label
-            let shape = getShape info
+                    sprintf "I(%d,%d) @[s%d,v%d]$\\to$[s%d,v%d]" s p fs fp ts tp
 
             let opts =
                 if isRoot i then
-                    sprintf "as={%s}, fill=green!30" escapedLabel
+                    sprintf "as={%s}, fill=green!30" label
                 else
-                    sprintf "as={%s}" escapedLabel
+                    sprintf "as={%s}" label
 
             sb.AppendLine(sprintf "    n%d [%s];" i opts) |> ignore
 

@@ -1,330 +1,180 @@
-# Task 268: Improve task log formatting and splitting
+# Task 269: Fix duplicated SPPF section in GLL/RNGLR summary and broken math rendering in TikZ SPPF/RSM figures
 
 ## Task description (verbatim)
 
-268. Improve task log formatting and splitting. `tasks/tasks.md` must contain at most 100 tasks; older tasks are archived in `tasks/tasks<N>.md` files (tasks1.md = 1-100, tasks2.md = 101-200, ...); task numbering is continuous, no reset.
-     1. Create helper `tools/split_tasks.py`. On every run it must: (a) parse entry heads in `tasks/tasks.md` (numbered lines, strictly increasing; lines inside fenced code blocks skipped); (b) repair head-line indentation — dedent heads not at column 0 to column 0, leading whitespace only, entry text never touched; (c) normalize with mdformat; (d) verify structure preservation and abort on violation — repair stage: changed lines differ only in leading whitespace and are exactly the repaired heads; format stage: markdown-it-py AST deep equality modulo style (token types/sequence, block text, ordered-list start numbers, fence bytes compared; bullet markers and emphasis delimiters excluded) — no renumbering, no list/block flattening, no new nesting or sections, no missing data; marker/emphasis/whitespace normalization allowed; split stage: moved blocks byte-identical to the formatted source; (e) if more than 100 entries, move the oldest 100 to the next `tasks/tasks<N>.md` with a one-line provenance header and update the archive-reference line in `tasks.md`. Output to `tmp/split-tasks.txt`, exit code authoritative, `--dry-run` supported.
-     2. Run it on the current files: repair + format `tasks/tasks.md` and `tasks/tasks1.md` in place; create `tasks/tasks2.md` (101-200); leave 201+ in `tasks/tasks.md`. Verify all invariants and idempotency (second run makes no changes).
-     3. Extend instructions and skills so task log files stay well-formatted continuously with mdformat — no tricks or workarounds: `tools/quality_check.py` format step gains `mdformat --check tasks/tasks*.md`; AGENTS.md working loop runs the script after every task-log change (add entry, `[done]`, USER GUIDANCE) and commits the result on dev; pre-merge and `[done]` existence checks search all `tasks/tasks*.md`; git-workflow never-checkout rule extended to all `tasks/tasks*.md`; planning/subtask-loop/user-guidance-transfer reference "the task-log file containing the entry"; document the tool in `tools/README.md` and `docs/developer/guides/tools.md`.
+269. Fix duplicated SPPF section in GLL/RNGLR summary and broken math rendering in TikZ SPPF/RSM figures. The GLL and RNGLR merged summaries contain SPPF twice — once in the header (DOT-compiled PDF via `rsmSppfPdfs`) and once at the end (`sppfSection`, TikZ in tikz mode). The trailing TikZ version renders node labels as literal TeX source (`S^\varepsilon @1`, `[s0,v0]\to[s4,v6]`) because `SppfTikz.toTikz` passes whole labels through `AutomatonTikz.escapeLatex`, which escapes the math commands.
 
-## User guidance (2026-09-11)
-
-- mdformat scope is extended beyond `tasks/tasks*.md`: after this one-time
-  normalization, **all** tracked `.md` files must stay mdformat-clean
-  continuously — "we must just use mdformat to continuously provide consistent
-  well-formatted md files without any tricks, workarounds".
-- Allowed normalizations: spaces/newlines, text style (bold/italic markers),
-  item markers (`*`/`-`). Forbidden: renumbering, data loss, list/block
-  flattening, new nesting, new sections.
+     1. Remove the SPPF entry from the GLL/RNGLR summary header: drop `("SPPF", "dot_pdfs/sppf.pdf")` from the pdfs lists in `Summary.fs`. The trailing `sppfSection` becomes the single SPPF location (TikZ in tikz mode, DOT PDF fallback otherwise), consistent with CYK/Valiant summaries.
+     2. Fix `SppfTikz.toTikz`: escape only terminal/nonterminal names via `AutomatonTikz.escapeLatex`; structural TeX stays intact and math commands are placed in math mode — epsilon node label `$S^{\varepsilon}$ @1`, range/intermediate labels `[s0,v0]$ \to $[s4,v6]`.
+     3. Fix the same bug class in RSM/automaton TikZ: `RsmTikz` epsilon edge label becomes `$\varepsilon$` (not routed through escapeLatex; names still escaped); `AutomatonTikz.epsEdges` `\varepsilon` becomes `$\varepsilon$`.
+     4. Tests: regression assertions that SPPF TikZ output contains `$\varepsilon$`/`$\to$` and no `\textbackslash`; RSM TikZ epsilon edge label is `$\varepsilon$`; existing TeX compilation tests (SPPF tikz, RSM tikz, GLL/RNGLR merged summaries) keep passing; regenerate GLL + RNGLR summaries and verify exactly one SPPF section.
 
 ## Context and analysis
 
-### File scheme
+### Root causes (verified in code and generated output)
 
-- `tasks/tasks.md` — active log, at most 100 entries.
-- `tasks/tasks<N>.md` — archive covering `(N-1)*100+1 .. N*100`.
-- Numbering is continuous across files, no reset. Current state:
-  `tasks.md` = 168 entries (101-268), `tasks1.md` = 96 entries (1-100,
-  numbers 52-55 were never used).
+1. **Duplication.** `Summary.fs:109-128` puts `("SPPF", "dot_pdfs/sppf.pdf")` into
+   `rsmSppfPdfs` for GLL and RNGLR; `SummaryTeX.headerSection` renders it as a
+   `\subsection*{SPPF}` + `\includegraphics` (DOT-compiled PDF). Independently,
+   `SummaryTeX.buildContent` appends `sppfSection vizDir useTikz` at the end of
+   the document (TikZ in tikz mode, DOT PDF fallback). The header entry dates
+   from task 152 (DOT era); the trailing section from tasks 238/243 (TikZ era).
+   In tikz mode both render (two different renderings of the same forest); in
+   DOT mode the same PDF is included twice. CYK/Valiant have no header SPPF —
+   only the trailing section — so removing the GLL/RNGLR header entry makes all
+   algorithms consistent: exactly one SPPF section, at the end.
 
-### Empirical parsing rules (markdown-it-py, verified on minimal cases)
+2. **Broken math in TikZ SPPF.** `SppfTikz.toTikz` (SppfTikz.fs:42-52) builds
+   labels containing math commands (`S^\varepsilon @1`, `[s0,v0]\to[s4,v6]`) and
+   then passes the *whole* label through `AutomatonTikz.escapeLatex`, which
+   rewrites `\` → `\textbackslash` and `^` → `\^`. Verified in
+   `viz_output/check_rnglr/sppf.tikz.tex`: labels render as literal text
+   `S^\varepsilon @1` / `[s0,v0]\to[s4,v6]`. The DOT renderer (SppfDot.fs) uses
+   Unicode `ε`/`→` directly, which is why the header version "looks good".
 
-mdformat parses with markdown-it-py, so these rules govern both.
-
-1. Entry heads at column 0 (or \<=3 leading spaces) inside an open list are
-   always proper list items, with or without blank lines between them.
-2. A list marker line indented **< the parent entry's content column**
-   `C(N) = len(str(N)) + 1` and \<=3 spaces is treated as a **top-level**
-   marker: it becomes a *sibling* item of the outer list (absorbed sub-list).
-3. A list marker line indented **>= C(N)** nests inside the entry item.
-4. A paragraph line after a blank line, indented < C(N), **escapes the list
-   item** and becomes a top-level paragraph — this *breaks* the ordered list.
-5. An ordered list can interrupt a top-level paragraph **only if its start
-   number is 1**. After an escaped paragraph, subsequent entries (start != 1)
-   are swallowed as lazy continuation lines of that paragraph.
-6. A column-0 fenced code block between entries breaks the ordered list.
-7. The AST stores only the list `start` attribute + item count — **per-item
-   numbers and gaps are lost**. Any compliant renderer renumbers a list with
-   a gap (e.g. 1..51, 56..100 renders as 1..96).
-
-### Corruption found in current files
-
-- `tasks.md`: entries 183-215 are swallowed into one giant paragraph of entry
-  182 (its "Detailed analysis" sub-block is indented 3 < C(182)=5 and contains
-  blank lines -> rule 4, then rule 5). Entry 268 head has 1 leading space.
-- `tasks1.md`: entry 9's sub-list indented 2 < C(9)=3 -> absorbed as siblings
-  (rule 2); entries 76/78 have column-0 fences -> list breaks (rule 6); the
-  line after entry 78's fence is a column-0 paragraph -> entries 79-100
-  swallowed (rules 4+5); gap 51->56 would renumber under any renderer (rule 7).
-
-### mdformat behavior (v1.0.0, verified)
-
-- Default ordered-list rendering **destroys numbering**: `101./102./103.` ->
-  `101./001./001.`; `1./2./3.` -> `1./1./1.`.
-- `--number` flag: consecutive numbering but **zero-padded to the last
-  number's width**: `9./10./11.` -> `09./10./11.` — also destructive.
-- Therefore a custom mdformat plugin is required: consecutive numbering from
-  `start`, no padding. Previous session started `tools/mdformat_tasklog/`
-  (entry-point API was wrong, `indent_width` used first number's width — both
-  fixed in S1). With the plugin: all verified cases preserve numbers and are
-  idempotent (second run = no change).
-- YAML frontmatter (all 12 SKILL.md files) requires the `mdformat-frontmatter`
-  plugin; tables nested inside list items render correctly.
+3. **Same bug class in RSM/automaton TikZ.** `RsmTikz.fs:107,116` routes the
+   `\varepsilon` edge label through `escapeLatex` (literal text).
+   `AutomatonTikz.fs:95` emits raw `\varepsilon` in a text-mode edge quote —
+   an undefined control sequence if ever compiled. `LRAutomatonTikz` is not
+   affected (its content is wrapped in `$\begin{aligned}$`, line 68).
 
 ### Reuse decisions (reusing skill checklist)
 
-- Reuse `tools/common.py`: `run_cmd`, `ensure_output_dir`,
-  `remove_output_file`, `write_output_file` in `split_tasks.py`.
-- Reuse (fix, do not rewrite) the previous session's `tools/mdformat_tasklog/`
-  package.
-- Follow existing step pattern of `quality_check.py` / `hard_gate.py` for the
-  new mdformat step; follow `tools/README.md` output conventions.
-- Canonical tool docs live in `docs/developer/guides/tools.md`;
-  `tools/README.md` keeps the table + conventions only (no duplication).
+- **S1**: no new code; `sppfSection` (SummaryTeX.fs:380) is the existing single
+  source of truth for SPPF placement — it already handles TikZ/DOT fallback and
+  is shared with CYK/Valiant. Only the two header entries are removed.
+- **S2**: reuse `AutomatonTikz.escapeLatex` for name escaping only; label
+  construction stays local to `SppfTikz`. No new helpers.
+- **S3**: local one-line-class fixes in `RsmTikz`/`AutomatonTikz`; no new
+  helpers.
+- **S4**: extend existing tests (`TexCompilationTests.fs`, runner tests) rather
+  than adding new files; reuse `ExternalTools.compileTexStringWithTemplate` and
+  the registry grammars already used by those tests.
+
+### Affected docs (documentation-conventions mapping)
+
+- `docs/developer/summary-tex.md` — SPPF is a single trailing section for all
+  algorithms; header no longer carries SPPF for GLL/RNGLR.
+- `docs/developer/automaton-viz.md` — epsilon edge label is `$\varepsilon$`
+  (math mode), not raw `\varepsilon`.
+- `docs/developer/rsm-viz.md` — note the Tikz epsilon edge style (dotted,
+  `$\varepsilon$`).
 
 ## Subtasks
 
-### S1: mdformat plugin package `tools/mdformat_tasklog` — preserve ordered-list numbering — [done]
+### S1: Remove duplicate SPPF from GLL/RNGLR summary header [done — a795e96]
 
-**Code:** `tools/mdformat_tasklog/mdformat_tasklog/__init__.py` — fix the
-previous session's skeleton: (1) add the required `update_mdit(mdit)` static
-method (mdformat loads entry points and calls it; without it mdformat crashes
-with AttributeError); (2) compute `indent_width` from the **last** number's
-width (`starting_number + len(node.children) - 1`), exactly like upstream's
-consecutive branch, so continuation lines stay inside items when digit count
-grows (e.g. list 1..51). Keep `RENDERERS = {"ordered_list": ordered_list}`,
-`CHANGES_AST = False`, `pyproject.toml` entry point
-`mdformat.parser_extension`. Install: `pip install -e tools/mdformat_tasklog`.
-**Tests:** no Python test infra in repo — verify by running mdformat on
-fixtures and recording results: (a) `101./102./103.` preserved; (b)
-`9./10./11.` preserved without zero-padding; (c) nested list under a
-multi-digit entry renders canonically; (d) gapless 1..12 with multi-line items
-is stable across two runs (idempotency diff empty).
-**Docs:** `tools/README.md` — add the plugin to the setup notes (install line).
+**Code:** `src/FLPQ.Cli/Summary.fs` — drop the
+`if File.Exists(Path.Combine(vizDir, "sppf.dot")) then ("SPPF", "dot_pdfs/sppf.pdf")`
+entries from the GLL (lines 113-114) and RNGLR (lines 123-124) pdfs lists.
+Reuse: trailing `SummaryTeX.sppfSection` becomes the single SPPF location.
 
-**Spec:**
+**Tests:** `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` — add a test that the GLL
+and RNGLR merged TeX contain exactly one `\subsection*{SPPF` occurrence (the
+trailing "SPPF (Shared Packed Parse Forest)" section) and no
+`\includegraphics` of `dot_pdfs/sppf.pdf` in the header area. Reuse the existing
+`mergedTexPath` helper and runner invocation pattern.
 
-- The renderer mirrors mdformat 1.0.0's `consecutive_numbering` branch minus
-  zero-padding: marker = `str(start + index) + "."`, no `rjust`.
-- A list with a gap in its numbers is unrecoverable from the AST (rule 7);
-  the plugin renders it consecutively — preventing gaps is the script's job
-  (S2), not the plugin's.
-
-### S2: `tools/split_tasks.py` — repair + format + verify + split pipeline — [done]
-
-**Code:** New `tools/split_tasks.py` (reuses `tools/common.py`). Processes
-`tasks/tasks.md` and every `tasks/tasks<N>.md`. Pipeline per file:
-
-1. **Parse**: markdown-it-py (with `table`) -> fenced-code line ranges; entry
-   heads = lines matching `^\s*(\d+)\.\s` outside fences whose number is
-   strictly greater than the previous head's.
-2. **Repair** (leading-whitespace-only changes, entry text never touched):
-   - Heads not at column 0 -> dedent to column 0.
-   - Each non-head line with indent < C(parent head) belongs to a sub-block
-     that escapes/absorbs (rules 2, 4); shift the whole block right by
-     `C - indent` so every line sits >= C. Fenced blocks are atomic units
-     (opening marker + content + closing marker shifted together).
-   - Gap handling (extension of the committed spec, required by rule 7): if a
-     top-level ordered list would contain non-consecutive entry numbers,
-     insert a thematic break (`---` surrounded by blank lines) between the two
-     entries so each consecutive run is its own list. Without this, any
-     renderer renumbers across the gap (56 -> 52 in tasks1.md).
-3. **Format**: `mdformat.text(text, extensions=tuple(PARSER_EXTENSIONS.keys()))`
-   — the API does not auto-load plugins (only the CLI does), so all installed
-   parser extensions (tasklog, frontmatter) are passed explicitly.
-4. **Verify** — abort (exit 1) on any violation:
-   - Repair stage: every changed line differs from the original only in
-     leading whitespace; changed lines are exactly heads + shifted block
-     lines; added lines are exactly gap separators.
-   - Format stage: structural AST equality between repaired and formatted —
-     flat token sequence of `(type, content, ordered-list start)` compared
-     with whitespace collapsed in inline content (paragraph re-wrapping is
-     allowed); fence `content` compared byte-exact; the entry-number sequence
-     (regex on both texts) is identical.
-   - Structure invariants: every head is a direct `list_item` of some
-     top-level ordered list; each top-level ordered list's direct item numbers
-     are consecutive from its `start`; no head occurs inside a paragraph.
-   - Split stage (when splitting): moved blocks byte-identical to the
-     formatted source lines; target file = provenance header + moved lines;
-     number sets partition correctly; chunk alignment — `tasks<N>.md` contains
-     exactly `(N-1)*100+1 .. N*100`.
-5. **Split**: if `tasks.md` has > 100 entries, move the oldest 100 to
-   `tasks/tasks<N>.md` where N = (max existing archive number) + 1, with a
-   one-line provenance header (`- Archived from tasks.md by tools/split_tasks.py:  entries <first>-<last>.`); regenerate the archive-reference line in
-   `tasks.md` — the bullet line matching `^[-*+] .*tasks\d+\.md` (currently
-   `* First part of tasks located in tasks1.md`) becomes
-   `- Archived: 1-100 in tasks1.md, 101-200 in tasks2.md.` (inserted after the
-   header bullets if absent). Bullets are written as `-` because mdformat
-   normalizes `*`/`+` to `-`.
-
-Output per `tools/README.md` conventions: `tmp/split-tasks.txt` (header
-`PASS`/`BLOCKED`, `--- DETAILED LOG ---`, body), nothing to console, exit code
-authoritative (0 = ok incl. "no split needed", 1 = blocked). `--dry-run`:
-full pipeline, no file writes.
-
-**Tests:** fixture runs in /tmp covering each corruption mode (indented head;
-escaped sub-block with blank lines; column-0 fence between entries; gap), plus
-idempotency (second run reports no changes). The script's own verify stage is
-the primary test; fixture results recorded in the commit message.
-**Docs:** none yet (tool docs land in S5).
+**Docs:** `docs/developer/summary-tex.md` — Overview: SPPF appears exactly once,
+as a trailing section for all algorithms (TikZ in tikz mode, DOT PDF fallback);
+header no longer includes SPPF for GLL/RNGLR. Add a Design Decisions row.
 
 **Spec:**
 
-- The script never rewrites entry text: repair touches leading whitespace only;
-  format and split are verified against it (format-stage AST equality,
-  split-stage byte identity).
-- Idempotency is a first-class invariant: on an already-clean file the script
-  makes zero changes.
+- After the change, `rsmSppfPdfs` for GLL carries only the Extended RSM entry
+  (DOT mode) and for RNGLR only the RSM entry; in tikz mode both lists may be
+  empty (the TikZ head sections come from `extRsmTikzSection`).
+- `sppfSection` output is unchanged: title "SPPF (Shared Packed Parse Forest)",
+  TikZ via `wrapTikzCenter` when `sppf.tikz.tex` exists and `useTikz`, else
+  `includePdf "dot_pdfs/sppf.pdf"` when `sppf.dot` exists, else omitted.
+- Merged summaries for GLL/RNGLR must still compile with lualatex (existing
+  tests cover this).
 
-### S3: Run the script on current task files — split tasks.md, create tasks2.md — [done]
+### S2: Fix math rendering in SppfTikz labels [done — b6ce4d4]
 
-**Code:** script run + resulting data-file changes. Two script fixes were
-required by the real files (found only outside fixtures):
+**Code:** `src/FLPQ.Printers/SppfTikz.fs` — escape only the terminal/nonterminal
+names (`AutomatonTikz.escapeLatex (terminalPrinter t)` /
+`escapeLatex (nonterminalPrinter nt)`); build labels with math commands intact:
 
-- `python3 tools/split_tasks.py` puts `tools/` on `sys.path[0]`, where the
-  `mdformat_tasklog` project directory shadows the installed package as a
-  namespace package and breaks mdformat entry-point loading; the script now
-  removes its own directory from `sys.path` after importing `common`.
-- mdformat canonically rewrites indented code blocks as fenced ones (content
-  passes through byte-identical); `verify_format` now accepts exactly that
-  rewrite (`_norm_fp` maps `code_block`/empty-info `fence` to one key).
-  **Tests:** script verify stage PASS; idempotency — second run makes no
-  changes; grep checks: `tasks.md` = 68 heads (201-268), `tasks2.md` = 100 heads
-  (101-200), `tasks1.md` = 96 heads (1-100 minus 52-55); numbering continuous
-  across files; `mdformat --check tasks/tasks*.md` passes.
-  **Docs:** none.
+- terminal/nonterminal: `sprintf "%s [%d,%d]" escapedName l r`
+- epsilon: `sprintf "$%s^{\\varepsilon}$ @%d" escapedName p`
+- range: `sprintf "[s%d,v%d]$\\to$[s%d,v%d]" fs fp ts tp`
+- intermediate: `sprintf "I(%d,%d) @[s%d,v%d]$\\to$[s%d,v%d]" s p fs fp ts tp`
+
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — extend the
+existing `SPPF tikz compiles with lualatex` test (line 810) with assertions:
+output contains `$\varepsilon$` and `$\to$`, and does NOT contain
+`\textbackslash`. The grammar/input used (ANBN classic, `a a b b`) produces
+epsilon and range nodes.
+
+**Docs:** none required beyond S1's summary-tex.md update (no dedicated
+SppfTikz doc page exists; label format is covered by the compilation test).
 
 **Spec:**
 
-- `tasks/tasks.md`: repaired + formatted in place, entries 101-200 moved out,
-  archive-reference line updated.
-- `tasks/tasks1.md`: repaired + formatted in place; `---` inserted between
-  entries 51 and 56 (the historical gap); provenance header line preserved.
-- `tasks/tasks2.md`: created — provenance header + entries 101-200
-  byte-identical to the formatted source blocks.
+- Node labels must render as math: epsilon node shows S^ε with a proper
+  superscript, range/intermediate nodes show an arrow between bracketed
+  coordinates.
+- Names from printers are still escaped (a terminal named `a_b` must not break
+  the picture).
+- The picture must compile under `data/tex_tikz_template.tex` (lualatex).
 
-### S4: One-time mdformat normalization of all tracked .md files — [done]
+### S3: Fix epsilon labels in RsmTikz and AutomatonTikz [done — 8837732]
 
-**Code:** mdformat run over `git ls-files '*.md'` (76 files). Three things
-were required beyond the plain run (found only on the real corpus):
+**Code:**
 
-- **GFM tables**: mdformat parses with markdown-it's default preset, which
-  has no table support — a table row is parsed as a paragraph and `\|` cell
-  escapes are unescaped, silently destroying tables. The tasklog plugin now
-  enables the `table` rule in `update_mdit` and provides the renderers
-  mdformat ships none for (`table`/`thead`/`tbody`/`tr`/`th`/`td`, separator
-  row synthesized from header alignment). Literal pipes are re-escaped in
-  cell text and inside code spans (the parser's line-level cell splitter
-  consumes `\|` before inline parsing, so a code span containing a pipe only
-  survives re-parsing with the escape kept; rendered content is unchanged).
-- **Frontmatter**: 9 SKILL.md files had invalid YAML (`description:` values
-  with unquoted colons); mdformat-frontmatter warned and passed them through.
-  Values are now double-quoted (parsed value identical, warnings gone).
-- **Fingerprint hardening**: `normalize_inline` now compares code-span
-  content byte-exact (previously invisible — the table splitter's backslash
-  consumption could have slipped through undetected).
+- `src/FLPQ.Printers/RsmTikz.fs` — for `AutomatonLabel.AEpsilon` emit the edge
+  label `$\varepsilon$` without routing it through `escapeLatex`; terminal and
+  `call Nt` labels keep escaping the name part only.
+- `src/FLPQ.Printers/AutomatonTikz.fs` — `epsEdges`: `"\\varepsilon"` →
+  `"$\\varepsilon$"`.
 
-**Tests:** per-file structural AST equality before/after (token sequence
-`(type, content, start)`, whitespace collapsed in inline content, fence bytes
-exact) — one-off check, not committed; afterwards `mdformat --check` on all
-files passes with zero warnings; second run makes zero changes.
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — add a test that
+renders an RSM/extended-RSM TikZ figure containing an epsilon transition and
+asserts the edge label is `$\varepsilon$` (not `\textbackslash varepsilon`) and
+compiles with lualatex. Reuse the registry grammar with an epsilon production
+(e.g. ANBN classic has `S -> eps`) and `RsmTikz.extendedRsmToTikz`.
+
+**Docs:** `docs/developer/automaton-viz.md` — Visual Style: epsilon transitions
+are `dotted` edges with `$\varepsilon$` label (math mode).
+`docs/developer/rsm-viz.md` — Tikz section: note epsilon transitions render as
+dotted edges with `$\varepsilon$` label.
+
+**Spec:**
+
+- Epsilon edge labels must be valid math-mode TeX in both modules.
+- Non-epsilon labels (terminals, `call Nt`) keep the existing escaping behavior.
+- Existing compilation tests (RSM tikz highlighted, GLL/RNGLR merged summaries)
+  keep passing.
+
+### S4: End-to-end verification and regression assertions [done — see results]
+
+**Verification results (grammar `S -> a S b | eps`, input `a a b b`):**
+
+- GLL + RNGLR merged TeX (tikz mode): 0 header `\subsection*{SPPF}` occurrences,
+  exactly 1 trailing "SPPF (Shared Packed Parse Forest)" section each.
+- SPPF TikZ labels in the merged documents: `$S^{\varepsilon}$ @2` and
+  `[s0,v0]$\to$[s4,v6]` style; zero `\textbackslash` occurrences.
+- Both merged documents compile with lualatex (exit 0).
+- GLL DOT mode (`--use-dot`): 1 trailing SPPF section including
+  `dot_pdfs/sppf.pdf` exactly once.
+- Full suites: FLPQ.Cli.Tests 153/153, FLPQ.Printers.Tests 176/176, 0 skipped.
+
+**Code:** none (verification only).
+
+**Tests:**
+
+- Run the full TeX compilation test suite (SPPF tikz, RSM tikz, GLL/RNGLR
+  merged summaries in both DOT and TikZ modes) plus `CliSummaryTests`.
+- Regenerate real summaries via the CLI for a GLL and an RNGLR example
+  (accepted input with epsilon + range nodes), verify: exactly one SPPF
+  subsection per merged TeX, SPPF TikZ labels contain `$\varepsilon$`/`$\to$`
+  and no `\textbackslash`, and the merged documents compile with lualatex.
+
 **Docs:** none.
 
 **Spec:**
 
-- All tracked `.md` files (docs/, AGENTS.md, README.md, skills, tools/) become
-  mdformat-clean so the continuous gate (S5) starts green.
-- Only formatting changes: no word added/removed/reordered (AST equality),
-  no list/block structure change, no new sections.
-
-### S5: Continuous enforcement — quality gates + CI + tool docs — [done]
-
-**Code:**
-
-- `tools/quality_check.py`: new Step 1 "Markdown format" —
-  `mdformat --check` over all tracked `.md` files (from `git ls-files`);
-  renumber existing steps; BLOCKED on failure.
-- `tools/hard_gate.py`: same step added to the gate sequence (before dotnet
-  format), progress counter updated.
-- `.github/workflows/ci.yml`: new step — setup-python,
-  `pip install mdformat mdformat-frontmatter`,
-  `pip install -e tools/mdformat_tasklog`, then `mdformat --check` over all
-  tracked `.md` files.
-  **Tests:** run `tools/quality_check.py` -> PASS (files are clean after S4);
-  CI YAML sanity check (no local CI runner).
-  **Docs:** `tools/README.md` — add `split_tasks.py` row + mdformat toolchain
-  setup section; `docs/developer/guides/tools.md` — new `split_tasks.py` section
-  (pipeline, invariants, output format) and mdformat toolchain section (plugins,
-  install, why the tasklog plugin exists).
-
-**Spec:**
-
-- The gate checks **all** tracked `.md` files (user guidance: continuous
-  well-formatted md, no workarounds) — a superset of the committed spec's
-  `tasks/tasks*.md`.
-- Any agent modifying an `.md` file must run mdformat on it before committing
-  (instruction lands in S6).
-
-### S6: Instructions and skills updates — [done]
-
-**Code:** none (docs-only).
-**Tests:** skip (docs-only).
-**Docs:**
-
-- `AGENTS.md`: Project Structure table — tasks/ row describes the
-  `tasks.md` + `tasks<N>.md` scheme; working loop step 2a — after any
-  task-log change (add entry, `[done]`, USER GUIDANCE) run
-  `python3 tools/split_tasks.py` and commit the result on dev; Git Safety —
-  never-checkout/restore rule extended to all `tasks/tasks*.md`, with the
-  exception that a task whose deliverable is the task log itself (like 268)
-  commits restructured files on the feature branch; new rule — all `.md`
-  files must be mdformat-clean, run mdformat on any `.md` you modify.
-- `.opencode/skills/git-workflow/SKILL.md`: pre-merge existence check greps
-  `tasks/tasks*.md`; never-checkout rule extended to all `tasks/tasks*.md` +
-  the restructuring exception; pre-commit tasks.md check annotated with the
-  exception.
-- `.opencode/skills/planning/SKILL.md`: verbatim section quotes the entry from
-  "the task-log file containing it" (`tasks/tasks.md` or `tasks/tasks<N>.md`).
-- `.opencode/skills/subtask-loop/SKILL.md`: re-read spec / mark `[done]` in
-  "the task-log file containing the entry"; pre-commit check annotated.
-- `.opencode/skills/user-guidance-transfer/SKILL.md`: append guidance to "the
-  task-log file containing the entry".
-- `.opencode/skills/quality-gates/SKILL.md`: document the new mdformat step in
-  quality_check and hard_gate sequences.
-- `.opencode/skills/documentation/SKILL.md`: after editing any `.md` file, run
-  mdformat on it (gate enforces).
-
-**Spec:**
-
-- Every "does entry NNN exist" check searches all `tasks/tasks*.md` — archived
-  tasks must not look lost.
-- One source of truth: the file scheme is described in AGENTS.md; skills
-  reference it, do not restate it.
-
-### Code Review (2026-09-11) — [done]
-
-**Code:** `tools/split_tasks.py` — two findings from the post-subtask review:
-
-- Escaped indented code blocks were shifted by `C(N) - indent`, landing the
-  first line exactly at column `C(N)` — where a line after a blank line is
-  parsed as paragraph text. An escaped code block under an entry with N >= 100
-  was thus silently converted to a paragraph (code formatting lost) while all
-  verifications passed. Indented code blocks are now atomic units like fences,
-  and an escaped one shifts by exactly `C(N)`: in-item code strips `C(N)+4`
-  while top-level code strips 4, so the block stays a code block with
-  byte-identical content (the format stage then fences it).
-- `chr(10).join` inside an f-string expression in `process_file` (a
-  pre-3.12-backslash workaround) — replaced with a local binding.
-
-**Tests:** seven synthetic scenarios through the full pipeline (escaped code
-single/multi-line/mixed-indent, in-item code untouched, escaped fence, flat
-paragraph with blank lines, escaped nested list); a 105-entry synthetic log
-exercises repair + gap separator + split end-to-end; the misaligned-chunk
-guard correctly BLOCKs a gapped log; real files: dry-run PASS with zero
-repairs, full run byte-identical (idempotent).
-**Docs:** `tasks/code_review.md` — Task 268 section.
-
-**Spec:**
-
-- The S2 repair description above is superseded for indented code blocks:
-  atomic shift by exactly `C(N)`, not `C(N) - indent`.
+- Zero test failures; no skipped tests introduced.
+- Both regenerated merged TeX files compile (lualatex) and contain a single
+  SPPF section at the end of the document.

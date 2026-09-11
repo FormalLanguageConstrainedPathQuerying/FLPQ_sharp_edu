@@ -205,3 +205,34 @@ let ``RNGLR summary color legend includes passing-reductions orange row`` () =
 let ``ValiantModified summary produces merged TeX`` () =
     let outDir = runWithSummary "ValiantModified" false
     assertMergedTexExists outDir "ValiantModified"
+
+// SPPF must appear exactly once in the GLL/RNGLR merged summary — as the trailing
+// "SPPF (Shared Packed Parse Forest)" section. The header no longer carries a
+// separate "\subsection*{SPPF}" with the DOT-compiled PDF (task 269).
+let private assertSingleTrailingSppfSection (outDir: string) (algorithm: string) =
+    let texPath = mergedTexPath outDir algorithm
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+
+    // Note: the leading backslash must be doubled — in .NET regex a single \s is the whitespace class.
+    let headerMatches =
+        System.Text.RegularExpressions.Regex.Matches(content, @"\\subsection\*{SPPF\}")
+
+    let trailingMatches =
+        System.Text.RegularExpressions.Regex.Matches(content, @"\\subsection\*{SPPF \(Shared Packed Parse Forest\)}")
+
+    Assert.Equal(0, headerMatches.Count)
+    Assert.Equal(1, trailingMatches.Count)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``GLL summary contains exactly one SPPF section (trailing)`` () =
+    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    assertSingleTrailingSppfSection outDir "GLL"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary contains exactly one SPPF section (trailing)`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    assertSingleTrailingSppfSection outDir "RNGLR"

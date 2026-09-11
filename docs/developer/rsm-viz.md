@@ -43,6 +43,7 @@ A single `tikzpicture` with one flat `\graph`:
 - **Between blocks** — pgf-gd connected-component packing (`components go down left aligned`, PGF manual §28.7) stacks the components top-to-bottom with left edges aligned and `component sep=1.5cm` vertical padding.
 - **Block order** — pgf-gd orders components by first specified node, so node declaration order controls stacking: the S′ block is declared first (on top), remaining blocks follow in global-state appearance order; within each block the start state is declared first.
 - **Labels** — state content is `Nt_globalIdx` (S′ states keep the prime form `S'\_k`). Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`); block start states also get `label=above:Start` and `fill=green!30`, final states `double, double distance=1.5pt, fill=red!30`, a highlighted state `fill=lightblue!20`.
+- **Edge labels** — terminals as-is (escaped), nonterminal calls as `call Nt`, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
 
 ## Function Signatures
 

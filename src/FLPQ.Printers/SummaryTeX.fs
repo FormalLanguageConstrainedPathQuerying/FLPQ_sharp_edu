@@ -151,7 +151,7 @@ module SummaryTeX =
         (algoKind: SummaryKind)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
-        (rsmSppfPdfs: (string * string) list)
+        (rsmPdfs: (string * string) list)
         (useTikz: bool)
         : string list =
         let maybe (file: string) (label: string) (wrap: string -> string) =
@@ -197,26 +197,26 @@ module SummaryTeX =
                     else
                         [ section "Input String"; includePdf "dot_pdfs/input.pdf"; "" ]
 
-                let rsmSppfLines =
-                    rsmSppfPdfs
+                let rsmFigureLines =
+                    rsmPdfs
                     |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
 
                 let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
 
-                colorLegend @ inputSection @ extRsmTikzSection @ rsmSppfLines @ pathIndexLines
+                colorLegend @ inputSection @ extRsmTikzSection @ rsmFigureLines @ pathIndexLines
 
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
 
                 let tableLines = maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
 
-                let rsmSppfLines =
-                    rsmSppfPdfs
+                let rsmFigureLines =
+                    rsmPdfs
                     |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
 
                 let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
 
-                colorLegend @ tableLines @ extRsmTikzSection @ rsmSppfLines @ pathIndexLines
+                colorLegend @ tableLines @ extRsmTikzSection @ rsmFigureLines @ pathIndexLines
 
         grammar @ algoLines
 
@@ -408,7 +408,7 @@ module SummaryTeX =
         (stepCount: int)
         (lrAutomatonPdf: string option)
         (lrAutomatonTikz: string option)
-        (rsmSppfPdfs: (string * string) list)
+        (rsmPdfs: (string * string) list)
         (gllStepTemplate: string)
         (rnglrStepTemplate: string)
         (gllStepTikzTemplate: string)
@@ -421,7 +421,7 @@ module SummaryTeX =
               "" ]
 
         let headerLines =
-            headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmSppfPdfs useTikz
+            headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmPdfs useTikz
 
         let isTableBased = algoKind = SummaryKind.TablePerStep
         let isGll = algoKind = SummaryKind.GLL
