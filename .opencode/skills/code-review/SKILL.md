@@ -5,7 +5,7 @@ description: Use when performing code review: detect and fix architecture proble
 
 # Code Review
 
-Performed at task completion — after all subtasks are committed and quality gates pass, before marking `[done]`. Covers the **entire repo** (`src/` and `tests/`).
+Performed at task completion — after all subtasks are committed, BEFORE the hard gate (AGENTS.md working loop: step 6 review, then step 7 gate), and before marking `[done]`. Covers the **entire repo** (`src/` and `tests/`).
 
 ## Core Loop
 
@@ -91,8 +91,9 @@ After the loop completes (zero findings), update `tasks/code_review.md`:
 Before running code review:
 
 1. All subtasks committed
-2. Quality gates pass (format check, lint, build, tests, coverage) — see `quality-gates` skill
-3. No uncommitted changes in the working tree
+2. No uncommitted changes in the working tree
+
+The hard gate runs AFTER code review (AGENTS.md working loop: step 6 review, then step 7 gate) — review fixes are included in the final gate run. See the `quality-gates` skill for the gate procedure.
 
 ## Completion
 

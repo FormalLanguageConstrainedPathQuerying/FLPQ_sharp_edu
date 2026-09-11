@@ -1,5 +1,16 @@
 # Code Review Report
 
+## Task 267 Review (2026-09-10)
+
+Scope: docs-only. `.opencode/skills/code-review/SKILL.md` (intro line + Prerequisites section). Resolves the open item from the Task 266 report: the skill required quality gates to pass before code review, contradicting the AGENTS.md working loop (step 6 review → step 7 gate). User decision: review-before-gate is canonical.
+
+**Findings against the constraint sources:**
+- §13 (one source of truth) — after the fix, all workflow documents agree on the order: AGENTS.md (step 6 → step 7), code-review skill (intro + prerequisites), subtask-loop ("After ALL subtasks are committed" — gate at task completion, no ordering claim vs review), git-workflow (gate before merge, no ordering claim vs review). Verified by grep across AGENTS.md and all skills.
+
+**No blocking findings.** Full pass found zero problems.
+
+---
+
 ## Task 266 Review (2026-09-10)
 
 Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from `ac729de~1:tasks/tasks.md` lines 6-560, byte-for-byte verified by diff), `tasks/tasks.md` (entries 263/264 restored verbatim from the committed detailed plans, `[done]`-tagged; entry 266 added; 265 logged — committed on dev per the task-log durability rule), `AGENTS.md` (working-loop step 2a entry gate, step 8 existence check, Git Safety durability paragraph, Project Structure table), `.opencode/skills/git-workflow/SKILL.md` (pre-merge task-log check, pre-commit checklist clarification), `.opencode/skills/planning/SKILL.md` (logged-task prerequisite, mandatory "Task description (verbatim)" section).
@@ -12,7 +23,7 @@ Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from 
 **Verified:** restored text is byte-for-byte identical to its recovery source (`diff` against `ac729de~1` extraction and against the `b23a09a`/`58c4f40` plan sections); entry numbers 1-100 (except pre-existing gaps 52-55) each appear exactly once as an entry head in `tasks1.md`; 263/264 appear exactly once in `tasks.md` between 262 and 265; the three instruction files are mutually consistent (entry gate ↔ prerequisite ↔ pre-commit rule; step-8 check ↔ pre-merge grep).
 
 **Pre-existing, out of scope (not introduced by this task):**
-- The `code-review` skill's "Prerequisites" says quality gates must pass *before* code review, while the AGENTS.md working loop runs review (step 6) before the hard gate (step 7); all recent tasks (263/264/265) followed the AGENTS.md order. Reconciling the two requires deciding which order is canonical — a workflow design decision for the user, not fixed here.
+- The `code-review` skill's "Prerequisites" said quality gates must pass *before* code review, while the AGENTS.md working loop runs review (step 6) before the hard gate (step 7); all recent tasks (263/264/265) followed the AGENTS.md order. **Resolved in Task 267** — user confirmed review-before-gate is canonical; the skill was fixed.
 
 **No blocking findings.** Full pass found zero problems in this task's changes.
 
