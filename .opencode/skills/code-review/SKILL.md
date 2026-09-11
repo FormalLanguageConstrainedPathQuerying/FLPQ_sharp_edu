@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use when performing code review: detect and fix architecture problems, code duplication, signature inconsistencies, naming issues, stubbed tests, test gaps, and genericity violations across all projects. Iterative fix loop until zero findings.
+description: "Use when performing code review: detect and fix architecture problems, code duplication, signature inconsistencies, naming issues, stubbed tests, test gaps, and genericity violations across all projects. Iterative fix loop until zero findings."
 ---
 
 # Code Review
@@ -24,7 +24,7 @@ Code review checks code against rules defined in **canonical source documents**.
 Before reviewing, read each canonical source. For categories marked **Auto**, the tool has already verified compliance — skip manual checking but note the tool in the report. For **Manual** categories, check code directly against the rule stated in the referenced source section.
 
 | # | Review Category | Canonical Source | Auto/Manual |
-|---|----------------|-----------------|-------------|
+| --- | --- | --- | --- |
 | 1 | Naming case (PascalCase/camelCase) | `docs/developer/guides/coding-conventions.md` § Casing | Auto — FSharpLint |
 | 2 | Code style idioms (`x=true`→`x`, `List.map f (List.map g x)`→`map(g>>f)x`, etc.) | `fsharplint.json` hints | Auto — FSharpLint |
 | 3 | Tab characters, redundant keywords, unused bindings | `fsharplint.json` | Auto — FSharpLint |
@@ -102,4 +102,4 @@ Code review is complete when:
 - A full-repo review pass finds zero problems
 - All fixes are committed
 - `tasks/code_review.md` is updated
-- The task can proceed to `[done]` in `tasks.md`
+- The task can proceed to `[done]` in the task-log file containing its entry

@@ -28,34 +28,34 @@
 ### Grammar and Lexing
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Grammar` | `Grammar.fs` | [Grammar module design and logic](grammar.md) |
 | `Tokenizer` | `Tokenizer.fs` | [Tokenizer module design and logic](tokenizer.md) |
 
 ### First/Follow
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `FirstFollow` | `FirstFollow.fs` | [FirstFollow module design and logic](first-follow.md) |
 
 ### Automata
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Automaton` | `Automaton.fs` | [Automaton module design and logic](automaton.md) |
 | `RSM` | `RSM.fs` | [RSM module design and logic](rsm.md) |
 
 ### EBNF Parsing
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `EbnfParser` | `EbnfParser.fs` | [EBNF Parser module design and logic](ebnf-parser.md) |
 | `RsmToGrammar` | `RsmToGrammar.fs` | [RSM to Grammar module design and logic](rsm-to-grammar.md) |
 
 ### Parsing Algorithms
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Cyk` | `Cyk.fs` | [CYK algorithm module design and logic](cyk.md) |
 | `Valiant` | `Valiant.fs` | [Valiant algorithm module design and logic](valiant.md) |
 | `LLParser` | `LLParser.fs` | [LL parser module design and logic](ll-parser.md) |
@@ -64,7 +64,7 @@
 ### GLL / CFPQ
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `GLL` | `GLL.fs` | [GLL parsing](gll.md) |
 | `Sppf` | `Sppf.fs` | [SPPF module design and logic](sppf.md) |
 | `PathIndex` | `PathIndex.fs` | [PathIndex module design and logic](path-index.md) |
@@ -73,19 +73,20 @@
 ### Derivation Tree
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `DerivationTree` | `DerivationTree.fs` | [DerivationTree module design and logic](derivation-tree.md) |
 
 ### Visualization
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `ParsingTable` | `ParsingTable.fs` | [Parsing table types design](sppf-parsing-table.md) |
 | `VisualizationTypes` | `VisualizationTypes.fs` | [LL and LR steps visualization](visualization-types.md) |
 
 ## Role
 
 Central library for formal language processing:
+
 - **Grammar types** — BNF grammar, CNF transformation, generic over terminal/nonterminal types
 - **Parsing** — CYK, Valiant (standard and modified), LL(k), LR(0)/SLR(1)/CLR(1) with derivation tree construction, GLL for CFPQ on RSMs
 - **Parsing table types** — `ParsingTable<'nt>` (set-based), `LRAction<'a>`, `SppfParsingEntry<'nt>`, `SppfParsingTable<'nt>` for BasicSPPF construction

@@ -26,7 +26,7 @@ Every documentation file in `docs/developer/` must begin with a metadata block u
 ### Metadata Fields
 
 | Field | Format | Required | Description |
-|-------|--------|----------|-------------|
+| --- | --- | --- | --- |
 | **Tags** | `tag1, tag2, ...` | Yes | Classifying keywords for grep-based search |
 | **Kind** | One of: `algorithm`, `data-structure`, `utility`, `visualization`, `hub`, `guide` | Yes | Document category determining the section template |
 | **Module** | `F# module name` | Yes (except guides) | The F# module this doc describes |
@@ -70,9 +70,11 @@ Every developer doc follows this structure:
 ## Document Kinds and Section Templates
 
 ### `kind: algorithm`
+
 Documents describing parsing algorithms, graph algorithms, and language-theoretic procedures.
 
 **Required sections:**
+
 - `## Algorithm` — structured pseudocode, time/space complexity. This section describes the algorithm *before* the type/function details. Must include: input/output specification, step-by-step procedure, complexity analysis.
 - `## Type Definitions` — types specific to this algorithm (e.g., trace step types)
 - `## Function Signatures` — all public function signatures with behavior, preconditions, postconditions
@@ -83,9 +85,11 @@ Documents describing parsing algorithms, graph algorithms, and language-theoreti
 **Example:** CYK, Valiant, GLL, RNGLR, LL parser, LR parser, Belyanin/Arroyuelo/Kronecker RPQ
 
 ### `kind: data-structure`
+
 Documents describing generic data types and their operations.
 
 **Required sections:**
+
 - `## Data Structure` — the abstract concept explained before F# types: what it represents, invariants, complexity characteristics
 - `## Type Definitions` — F# types with design rationale for each
 - `## Module Functions` — all public functions with behavior, preconditions, postconditions
@@ -96,9 +100,11 @@ Documents describing generic data types and their operations.
 **Example:** Matrix, SPPF, PathIndex, Automaton, RSM, DerivationTree, Graph
 
 ### `kind: utility`
+
 Documents describing parsers, readers, converters, and tool wrappers.
 
 **Required sections:**
+
 - `## Purpose` — what problem this utility solves
 - `## Type Definitions` — types (if any)
 - `## Function Signatures` — all public functions
@@ -108,9 +114,11 @@ Documents describing parsers, readers, converters, and tool wrappers.
 **Example:** Tokenizer, GraphReader, EbnfParser, RsmToGrammar, ExternalTools
 
 ### `kind: visualization`
+
 Documents describing TeX/DOT/Tikz rendering and visualization modules.
 
 **Required sections:**
+
 - `## Overview` — what is visualized, what output formats are produced
 - `## Supported Formats` — list of output formats with examples
 - `## Function Signatures` — all public rendering functions
@@ -120,9 +128,11 @@ Documents describing TeX/DOT/Tikz rendering and visualization modules.
 **Example:** AutomatonViz, DerivationTreeViz, GrammarTeX, VisualizationTypes
 
 ### `kind: hub`
+
 Project-level overview documents listing modules and their relationships.
 
 **Required sections:**
+
 - `## Project` — project type, path, dependencies
 - `## Modules` — table of modules with source/doc links
 - `## Role` — role of this project in the overall architecture
@@ -131,9 +141,11 @@ Project-level overview documents listing modules and their relationships.
 **Example:** FLPQ.LinearAlgebra.md, FLPQ.Languages.md, FLPQ.RPQ.md
 
 ### `kind: guide`
+
 Developer guides describing conventions, principles, and standards.
 
 **Required sections:**
+
 - `## Why <topic> matters` — motivation
 - `## What our <topic> are` — the rules/principles/standards
 - `## See Also` — cross-references to related guides
@@ -145,7 +157,7 @@ Developer guides describing conventions, principles, and standards.
 ### Domain Tags
 
 | Tag | When to use |
-|-----|-------------|
+| --- | --- |
 | `parsing` | Doc describes a parsing algorithm or parser infrastructure |
 | `automaton` | Doc describes finite automata, DFAs, NFAs, RSM blocks |
 | `graph` | Doc describes graph types, graph algorithms, MS-BFS |
@@ -160,7 +172,7 @@ Developer guides describing conventions, principles, and standards.
 ### Algorithm Tags
 
 | Tag | When to use |
-|-----|-------------|
+| --- | --- |
 | `cyk` | CYK algorithm |
 | `valiant` | Valiant algorithm (standard or modified) |
 | `ll` | LL(k) parsing |
@@ -178,7 +190,7 @@ Developer guides describing conventions, principles, and standards.
 ### Data Structure Tags
 
 | Tag | When to use |
-|-----|-------------|
+| --- | --- |
 | `matrix` | Matrix type |
 | `sppf` | Shared Packed Parse Forest |
 | `path-index` | Path index matrix for GLL/RNGLR |
@@ -190,7 +202,7 @@ Developer guides describing conventions, principles, and standards.
 ### Approach Tags
 
 | Tag | When to use |
-|-----|-------------|
+| --- | --- |
 | `dynamic-programming` | DP-based algorithm |
 | `recursive-descent` | Top-down parsing |
 | `shift-reduce` | Bottom-up parsing |
@@ -305,7 +317,7 @@ If additional information not presented in the book was required, record it simi
 For every source change, the corresponding doc changes are mandatory. Use this table to determine which docs are affected:
 
 | Source change | Required doc actions |
-|---|---|
+| --- | --- |
 | New module in `src/FLPQ.Printers/` | New `docs/developer/<module-name>.md` — follow the canonical template with metadata, abstract, TOC |
 | New module in `src/FLPQ.Languages/` | New `docs/developer/<module-name>.md` |
 | New module in `src/FLPQ.LinearAlgebra/` | New `docs/developer/<module-name>.md` |

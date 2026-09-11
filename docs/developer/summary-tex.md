@@ -19,6 +19,7 @@
 ## Overview
 
 The SummaryTeX module assembles per-algorithm visualization artifacts into one merged TeX document per algorithm. The merged document includes:
+
 - Algorithm header (original grammar, CNF grammar, input string)
 - LL/LR parsing table and automaton (for LL/LR algorithms)
 - Per-step sections (tables for CYK/Valiant; stack+tree picture for LL/LR — inline TikZ in default mode, dot-compiled PDF with `--use-dot`)
@@ -28,6 +29,7 @@ The SummaryTeX module assembles per-algorithm visualization artifacts into one m
 ## Function Signatures
 
 ### LaTeX Helpers
+
 ```fsharp
 val wrapMath: string -> string
 val wrapCenter: string -> string
@@ -38,19 +40,21 @@ val section: string -> string
 ```
 
 ### Section Builders
+
 ```fsharp
 val headerSection: vizDir:string -> algoKind:SummaryKind -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> rsmSppfPdfs:(string*string) list -> useTikz:bool -> string list
 val tableStepSection: stepDir:string -> stepNum:int -> string list
 val stackStepSection: stepDir:string -> stepNum:int -> stepName:string -> useTikz:bool -> string list
 val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
 ```
+
 - `algoKind`: `"table"` (CYK/Valiant), `"ll"`, or `"lr"`
 - `buildContent` assembles the complete merged TeX for one algorithm
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Separate module in Printers | TeX content generation is formatting logic, not CLI orchestration |
 | String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; testable independently |
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |

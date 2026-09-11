@@ -22,6 +22,7 @@
 ## Data Structure
 
 A `Graph<'v,'e>` is a labeled directed graph where:
+
 - **Vertices** are integer-indexed (0..n-1) with labels stored in a `Map<int, 'v>`. Integer indices enable efficient matrix operations.
 - **Edges** are stored in a square `Matrix<'e>` where cell `[i,j]` is the edge from vertex i to vertex j.
 
@@ -38,9 +39,11 @@ type Graph<'v, 'e> =
 ## Module Functions
 
 ### Construction
+
 - `fromEdges: 'v list -> Matrix<'e> -> Graph<'v, 'e>` — creates a graph from a list of vertex labels and an edge matrix.
 
 ### Accessors
+
 - `vertexCount: Graph<'v, 'e> -> int`
 - `vertices: Graph<'v, 'e> -> (int * 'v) list` — all (index, label) pairs, sorted by index
 - `tryGetVertex: int -> Graph<'v, 'e> -> 'v option`
@@ -48,24 +51,28 @@ type Graph<'v, 'e> =
 - `edge: Graph<'v, 'e> -> int -> int -> 'e`
 
 ### Transformations
+
 - `mapVertices: ('v -> 'w) -> Graph<'v, 'e> -> Graph<'w, 'e>`
 - `mapEdges: ('e -> 'f) -> Graph<'v, 'e> -> Graph<'v, 'f>`
 
 ### Vertex Removal
+
 - `keepVertices: Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps only specified vertices and edges between them. Indices remapped to 0..|keep|-1 preserving ascending order.
 
 ### Generic Graph Filtering
+
 - `filterOutgoingGeneric: zero:'e -> maskOp:(bool -> 'e -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps outgoing edges from selected vertices via diagonal matrix multiplication.
 - `filterIncomingGeneric: zero:'e -> maskOp:('e -> bool -> 'e) -> combineOp:('e -> 'e -> 'e) -> Set<int> -> Graph<'v, 'e> -> Graph<'v, 'e>` — keeps incoming edges to selected vertices.
 
 ### Boolean Graph Filtering
+
 - `filterOutgoing: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>`
 - `filterIncoming: Set<int> -> Graph<'v, bool> -> Graph<'v, bool>`
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Generic filter functions parameterized by `zero`/`maskOp`/`combineOp` | Enables filtering on graphs with arbitrary edge types without Boolean decomposition |
 | `keepVertices` instead of filter-combinations | Removing vertices automatically removes all incident edges — no separate edge-filtering step needed |
 | `keepVertices` preserves ascending order | Remapped indices are deterministic and predictable |

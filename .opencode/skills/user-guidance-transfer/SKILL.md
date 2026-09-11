@@ -31,7 +31,7 @@ User responds. The guidance is authoritative — it resolves the ambiguity.
 
 ### 4. Transfer to Task
 
-Append guidance to the task in `tasks/tasks.md`. The annotation goes after the task's **full formulation** (including all sub-items), before the next task number:
+Append guidance to the task in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). The annotation goes after the task's **full formulation** (including all sub-items), before the next task number:
 
 ```
 XXX. Task description line 1
@@ -65,6 +65,6 @@ Proceed with the task using the clarified understanding. The guidance annotation
 ## Integration Points
 
 | Skill | Integration |
-|-------|------------|
+| --- | --- |
 | `subtask-loop` | Blocked Work Protocol references this skill for step "transfer user guidance to task" |
 | `planning` | Ambiguities found during detailed plan creation → ask user → annotate task before decomposition |

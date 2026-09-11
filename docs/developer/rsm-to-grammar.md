@@ -24,6 +24,7 @@ Provides the bridge between RSM-based QFPQ algorithms (GLL, RNGLR) and grammar-b
 ## Function Signatures
 
 ### `rsmToGrammar: RSM<'t, 'nt> -> Grammar<'t, 'nt>`
+
 Converts an RSM to an equivalent BNF grammar:
 
 1. For each block's transition `(q, x, q')`:
@@ -35,7 +36,7 @@ Converts an RSM to an equivalent BNF grammar:
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Right-linear grammar fragments | Each DFA block produces a right-linear grammar where state names become nonterminals |
 | Start state identification | Block's start state becomes the grammar nonterminal matching the block's nonterminal name |
 | Auxiliary nonterminals | Other block states become auxiliary grammar nonterminals distinct from the block's identifying nonterminal |

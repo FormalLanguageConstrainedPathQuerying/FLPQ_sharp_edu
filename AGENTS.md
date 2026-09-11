@@ -16,23 +16,23 @@ Supplementary materials for the book on formal language constrained path queryin
 
 ## Main Principles
 
-* Documentation is about "What" and "Why". Skills are about "How".
-* This file is a short entry point for fast cold errors-free start.
-* Only one source of truth.
-* No duplicates.
-* Tools, not instructions.
-* Always learn, never forget — encode patterns before session ends
+- Documentation is about "What" and "Why". Skills are about "How".
+- This file is a short entry point for fast cold errors-free start.
+- Only one source of truth.
+- No duplicates.
+- Tools, not instructions.
+- Always learn, never forget — encode patterns before session ends
 
 ## Project Structure
 
 | Directory | Purpose |
-|-----------|---------|
+| --- | --- |
 | `docs/` | Documentation: [project](docs/main.md), [developer](docs/developer/guides/coding-conventions.md), [user](docs/user/cli.md) |
 | `src/` | Source code |
 | `tests/` | Tests — mirror `src/` folder structure |
 | `data/` | Test and example data |
 | `.opencode/skills/` | Skills — operational "How" procedures for tools and workflows |
-| `tasks/` | Task planning: `tasks.md` (user tasks, 101+), `tasks1.md` (tasks 1-100), `detailed_plan.md` (current task plan), `global_plan.md` (multi-task planning), `fixes_for_book.md` (book errors) |
+| `tasks/` | Task planning: `tasks.md` (active log, at most 100 entries), `tasks<N>.md` (archives — `tasks1.md` = 1-100, `tasks2.md` = 101-200, ...; numbering is continuous across files), `detailed_plan.md` (current task plan), `global_plan.md` (multi-task planning), `fixes_for_book.md` (book errors) |
 
 ## Workflow
 
@@ -48,44 +48,47 @@ Supplementary materials for the book on formal language constrained path queryin
 0. If the user requests multiple tasks at once, first create a global plan in `tasks/global_plan.md` (see `planning` skill) before proceeding
 1. Ensure user-defined tasks, the global plan, and project architecture are aligned
 2. Choose exactly ONE task that is not yet done
-2a. Verify the chosen task has an entry in `tasks/tasks.md`. If it does not (e.g. the task came from a chat request), add the entry verbatim to `tasks/tasks.md` and commit on `dev` (`docs(tasks): add task NNN`) before creating the branch. No work starts without a logged entry — an entry that lives only in the uncommitted working tree can be lost
+   2a. Verify the chosen task has an entry in the task log (grep by task number across all `tasks/tasks*.md`). If it does not (e.g. the task came from a chat request), add the entry verbatim to `tasks/tasks.md` and commit on `dev` (`docs(tasks): add task NNN`) before creating the branch. No work starts without a logged entry — an entry that lives only in the uncommitted working tree can be lost
+   2b. After ANY task-log change (add entry, mark `[done]`, append USER GUIDANCE), run `python3 tools/split_tasks.py` and commit the resulting file changes on `dev` together with the log change — it repairs/normalizes the log and archives the oldest 100 entries to the next `tasks/tasks<N>.md` when the active log exceeds 100
 3. Create a feature branch from `dev` for this single task
 4. Generate a detailed plan in `tasks/detailed_plan.md`, decomposing the task into atomic subtasks
 5. Load the `subtask-loop` skill, then execute each subtask using its cycle.
-5a. Verify all subtasks are complete and unblocked. Check `tasks/detailed_plan.md`:
-    - If any subtask is marked `[blocked]` or `[deferred]`, STOP immediately.
-      The task is NOT complete. Do NOT proceed to code review or merge.
-      Report blocking subtasks to the user and await guidance.
-    - If a subtask was attempted, not committed, and its work reverted, the subtask
-      is NOT complete. Do not silently skip it.
-5b. When continuing a partially-done task, analyze current state before any code changes:
-    - Verify `git branch --show-current` is the correct feature branch
-    - Review committed subtasks: `git log --oneline` on the feature branch
-    - Read `tasks/detailed_plan.md` and `tasks/global_plan.md`
-    - Cross-reference committed file changes with planned subtasks:
-      `git diff --stat HEAD..dev` shows what was modified
-    - Report status to the user: "S1-S3 committed, S4 pending, ..."
+   5a. Verify all subtasks are complete and unblocked. Check `tasks/detailed_plan.md`:
+   - If any subtask is marked `[blocked]` or `[deferred]`, STOP immediately.
+     The task is NOT complete. Do NOT proceed to code review or merge.
+     Report blocking subtasks to the user and await guidance.
+   - If a subtask was attempted, not committed, and its work reverted, the subtask
+     is NOT complete. Do not silently skip it.
+     5b. When continuing a partially-done task, analyze current state before any code changes:
+   - Verify `git branch --show-current` is the correct feature branch
+   - Review committed subtasks: `git log --oneline` on the feature branch
+   - Read `tasks/detailed_plan.md` and `tasks/global_plan.md`
+   - Cross-reference committed file changes with planned subtasks:
+     `git diff --stat HEAD..dev` shows what was modified
+   - Report status to the user: "S1-S3 committed, S4 pending, ..."
 6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings
- 7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
-8. Mark the task `[done]` in `tasks.md`. Before marking, verify the entry exists (grep by task number); if it is missing, restore it verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` first. The `[done]` tag means COMPLETE:
+7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
+8. Mark the task `[done]` in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). Before marking, verify the entry exists (grep by task number across all `tasks/tasks*.md`); if it is missing, restore it verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` first. The `[done]` tag means COMPLETE:
    every subtask committed, every requirement met, every test passing, zero
    known failures or unresolved limitations. Never mark a task `[done]` if
    any subtask was skipped, reverted, or blocked.
 9. Before marking the task `[done]`, re-read the task description. For each clause, verify the implementation satisfies it. Partial completion is not completion.
-9a. If any clause was skipped, reverted, deferred, or left unresolved — the task is NOT done. Follow the Blocked Work Protocol in the `subtask-loop` skill.
-9b. Return to step 2
+   9a. If any clause was skipped, reverted, deferred, or left unresolved — the task is NOT done. Follow the Blocked Work Protocol in the `subtask-loop` skill.
+   9b. Return to step 2
 
 ### Git Safety
 
-Never revert `tasks/tasks.md` or `tasks/fixes_for_book.md` — the user may have added uncommitted content interactively. The working-tree version is authoritative.
+Never revert any `tasks/tasks*.md` file or `tasks/fixes_for_book.md` — the user may have added uncommitted content interactively. The working-tree version is authoritative.
 
-Task-log entries must be durable: a new task entry is committed on `dev` at creation time (before the feature branch exists), and the `[done]` mark is committed on `dev` after merge. Never commit `tasks.md` from a feature branch — an entry that lives only in the working tree can be lost by any reset of the file.
+Task-log entries must be durable: a new task entry is committed on `dev` at creation time (before the feature branch exists), and the `[done]` mark is committed on `dev` after merge. Never commit a task-log file from a feature branch — an entry that lives only in the working tree can be lost by any reset of the file. Exception: a task whose deliverable is the task log itself (like 268) commits the restructured files on the feature branch — every change there is script-generated and content-preservation verified.
+
+All `.md` files must be mdformat-clean; the gates check every tracked `.md` file. After modifying any `.md` file, run `mdformat <file>` before committing (setup: see `tools/README.md`).
 
 See the `git-workflow` skill for the full procedure.
 
 ## CI
 
-Pipeline (`.github/workflows/ci.yml`): restore → install tools → format check → lint → build → test.
+Pipeline (`.github/workflows/ci.yml`): restore → install tools → markdown format check → format check → lint → build → test.
 
 Lint configuration: see the `quality-gates` skill.
 
@@ -96,7 +99,7 @@ Loading the relevant skill is a **hard requirement** before starting any activit
 Operational procedures are in standalone skills. Load the relevant skill for each activity:
 
 | Activity | Skill |
-|----------|-------|
+| --- | --- |
 | Git operations (branch, commit, merge) | `git-workflow` |
 | Quality checks (format, lint, build, test, coverage) | `quality-gates` |
 | dotnet CLI commands | `dotnet-tooling` |

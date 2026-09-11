@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Hard gate quality check: format + build + tests (per project) + coverage + lint on changed projects.
+"""Hard gate quality check: markdown format + format + build + tests (per project) + coverage + lint on changed projects.
 
 Sequence:
-  1. Format: dotnet fantomas . --check
-  2. Build: dotnet build FLPQ.slnx -c Debug
-  3. Tests: dotnet test per project with per-project coverage collection, then merge
-  4. Coverage gate: per-project >= 85% line, total >= 90% line
-  5. Lint: dotnet-fsharplint lint on changed projects only
+  1. Markdown format: mdformat --check on all tracked .md files
+  2. Format: dotnet fantomas . --check
+  3. Build: dotnet build FLPQ.slnx -c Debug
+  4. Tests: dotnet test per project with per-project coverage collection, then merge
+  5. Coverage gate: per-project >= 85% line, total >= 90% line
+  6. Lint: dotnet-fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
 No console output. No timeout on subprocess calls.
@@ -30,6 +31,7 @@ from common import (
     ensure_output_dir,
     remove_output_file,
     write_output_file,
+    tracked_md_files,
 )
 
 OUTPUT_FILE = "tmp/hard-gate.txt"
@@ -198,7 +200,7 @@ def run_tests_per_project(
     cov_files: list[str] = []
     all_ok = True
 
-    detailed_logs.append("--- STEP 3: TESTS (per project) ---")
+    detailed_logs.append("--- STEP 4: TESTS (per project) ---")
     test_end_step = test_start_step + len(test_packages) - 1
     lines.append(f"Step {test_start_step}-{test_end_step}/{total_steps} (Tests):")
 
@@ -275,7 +277,7 @@ def main() -> None:
     changed_projects = detect_changed_projects()
 
     test_projects = find_test_packages()
-    total_steps = 1 + 1 + len(test_projects) + 1 + len(changed_projects)
+    total_steps = 1 + 1 + 1 + len(test_projects) + 1 + len(changed_projects)
     current_step = 0
 
     def next_step() -> int:
@@ -283,11 +285,31 @@ def main() -> None:
         current_step += 1
         return current_step
 
-    # --- Step 1: Format ---
-    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 1 (Format) started")
+    # --- Step 1: Markdown format ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 1 (Markdown format) started")
+    flush_log(lines, detailed_logs)
+    md_files = tracked_md_files()
+    if not md_files:
+        md_rc, md_stdout, md_stderr = -1, "", "git ls-files failed"
+    else:
+        md_rc, md_stdout, md_stderr = run_cmd(["mdformat", "--check", *md_files])
+    detailed_logs.append("--- STEP 1: MARKDOWN FORMAT (mdformat --check) ---")
+    md_output = md_stdout + md_stderr
+    detailed_logs.append(md_output.strip() if md_output.strip() else "(no output)")
+    s = next_step()
+    if md_rc == 0:
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Markdown format): OK")
+    else:
+        lines.append(f"[{_now()}] Step {s}/{total_steps} (Markdown format): BLOCKED (files need formatting, exit code {md_rc})")
+        overall_pass = False
+
+    flush_log(lines, detailed_logs)
+
+    # --- Step 2: Format ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 2 (Format) started")
     flush_log(lines, detailed_logs)
     fmt_rc, fmt_stdout, fmt_stderr = run_cmd(["dotnet", "fantomas", ".", "--check"])
-    detailed_logs.append("--- STEP 1: FORMAT (dotnet fantomas . --check) ---")
+    detailed_logs.append("--- STEP 2: FORMAT (dotnet fantomas . --check) ---")
     detailed_logs.append(fmt_stdout.strip() if fmt_stdout else "(no output)")
     if fmt_stderr.strip():
         detailed_logs.append(fmt_stderr.strip())
@@ -300,14 +322,14 @@ def main() -> None:
 
     flush_log(lines, detailed_logs)
 
-    # --- Step 2: Build ---
-    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 2 (Build) started")
+    # --- Step 3: Build ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 3 (Build) started")
     flush_log(lines, detailed_logs)
     build_rc, build_stdout, build_stderr = run_cmd(
         ["dotnet", "build", SOLUTION, "-c", "Debug"]
     )
     build_output = build_stdout + build_stderr
-    detailed_logs.append("--- STEP 2: BUILD (dotnet build) ---")
+    detailed_logs.append("--- STEP 3: BUILD (dotnet build) ---")
     detailed_logs.append(build_output.strip())
 
     build_ok = build_rc == 0 and "Build succeeded" in build_output
@@ -324,9 +346,9 @@ def main() -> None:
         flush_log(lines, detailed_logs, "BLOCKED")
         sys.exit(1)
 
-    # --- Step 3: Tests (per project) ---
+    # --- Step 4: Tests (per project) ---
     test_start_step = current_step + 1
-    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 3 (Tests) started")
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 4 (Tests) started")
     flush_log(lines, detailed_logs)
     test_all_ok = run_tests_per_project(
         lines, detailed_logs, next_step, total_steps, test_start_step
@@ -336,11 +358,11 @@ def main() -> None:
 
     flush_log(lines, detailed_logs)
 
-    # --- Step 4: Coverage Gate ---
-    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 4 (Coverage) started")
+    # --- Step 5: Coverage Gate ---
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 5 (Coverage) started")
     flush_log(lines, detailed_logs)
     cov_lines, _under_threshold, cov_ok = run_coverage_gate()
-    detailed_logs.append("--- STEP 4: COVERAGE GATE ---")
+    detailed_logs.append("--- STEP 5: COVERAGE GATE ---")
     for cl in cov_lines:
         detailed_logs.append(cl)
     s = next_step()
@@ -355,9 +377,9 @@ def main() -> None:
 
     flush_log(lines, detailed_logs)
 
-    # --- Step 5: Lint on changed projects ---
-    detailed_logs.append("--- STEP 5: LINT (on changed projects) ---")
-    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 5 (Lint) started")
+    # --- Step 6: Lint on changed projects ---
+    detailed_logs.append("--- STEP 6: LINT (on changed projects) ---")
+    detailed_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Step 6 (Lint) started")
     flush_log(lines, detailed_logs)
 
     if not changed_projects:

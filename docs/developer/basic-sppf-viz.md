@@ -61,7 +61,7 @@ display strings, and return a complete standalone rendering snippet.
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Math mode for nonterminal/terminal labels in Tikz only | CNF nonterminal names (`N_1`) and terminal subscripts (`a_{l,r}`) render correctly as math; DOT is plain text, so it keeps literal labels |
 | Nonterminal span `[l,r]` outside math mode | The span is plain positional metadata, not a math expression |
 | Epsilon/production labels left unescaped-math | They are not part of the math-mode convention; existing plain rendering is preserved |

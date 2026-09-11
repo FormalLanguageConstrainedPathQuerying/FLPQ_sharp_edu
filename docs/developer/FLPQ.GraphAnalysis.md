@@ -26,13 +26,14 @@
 ## Modules
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Graph` | `Graph.fs` | [Graph module design and logic](graph.md) |
 | `MsBfs` | `MsBfs.fs` | [MS-BFS and matrix operations module design and logic](msbfs.md) |
 
 ## Role
 
 Provides graph infrastructure used by languages and RPQ algorithms:
+
 - **Graph** — generic graph type with vertices in a map and edges in a matrix. NFA/DFA types wrap this graph. Provides edge filtering via Boolean matrix multiplication with diagonal matrices.
 - **MS-BFS** — multiple-source BFS expressed as linear-algebraic operations: front propagation via Boolean matrix multiplication, filtered by inverted mask semiring
 - **Boolean semiring** operations (`⊕_B`, `⊗_B`) — element-wise OR and Boolean matrix product

@@ -55,7 +55,7 @@ Printers convert symbol values to display strings; the highlighted-state argumen
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Single flat `\graph` with component packing instead of per-block subgraphs | Blocks are exactly the connected components, so pgf-gd packs them natively; intra-block layout stays the plain layered algorithm with no manual coordinates or height estimation |
 | `components go down left aligned` + declaration order for stacking | PGF §28.7: component order defaults to *by first specified node*; declaring S′ first puts it on top, and appearance order keeps the rest deterministic |
 | Plain nonterminal label left of each block's start state (no frame) | The user-confirmed delimiting style; the start state always lands in layer 0 of its component (verified for cyclic blocks such as `S -> (a S b)*`), so the label sits cleanly at the block's left edge |

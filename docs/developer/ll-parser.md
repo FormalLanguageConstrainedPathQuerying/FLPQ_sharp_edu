@@ -46,48 +46,58 @@
 ## Type Definitions
 
 ### `LLStackLeaf<'t, 'nt>` (struct)
+
 ```fsharp
 [<Struct>]
 type LLStackLeaf<'t, 'nt> =
     { tree: DerivationTree<'t, 'nt>
       path: int list }
 ```
+
 Identifies a leaf node currently on the stack by its immutable snapshot and its path from the tree root.
 
 The `path` is a list of child indices from the root to the leaf (e.g., `[0; 1]` means root → child[0] → child[1]). This enables the DOT renderer to locate stack nodes in the full tree.
 
 ### Derivation Tree Types
+
 The derivation tree type (`DerivationTree<'t,'nt>`) and the mutable tree type (`MutableTree<'t,'nt>`) are defined in the [DerivationTree module](derivation-tree.md).
 
 ## Function Signatures
 
 ### `LLParser.buildTable`
+
 ```fsharp
 val buildTable: Grammar<'t, 'nt> -> k: int -> Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int>
 ```
+
 Constructs an LL(k) parsing table. Lookahead is a list of grammar symbols; end-of-input is `[Epsilon]`.
 
 **Postconditions:**
+
 - Returns a map from `(nonterminal, lookahead_string)` to rule index.
 - All lookahead strings have length ≤ `k`.
 - Throws on LL(k) conflict (two productions for the same nonterminal and lookahead).
 
 ### `LLParser.parseWithSteps`
+
 ```fsharp
 val parseWithSteps: Grammar<'t, 'nt> -> table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<'t, 'nt>> * LLParsingStep<'t, 'nt> list
 ```
+
 Table-driven LL(k) recursive descent parser that builds a derivation tree and collects visualization steps.
 
 ### `LLParser.parse`
+
 ```fsharp
 val parse: Grammar<'t, 'nt> -> table: Map<Nonterminal<'nt> * Symbol<'t, 'nt> list, int> -> k: int -> terminals: Terminal<'t> list -> Option<DerivationTree<'t, 'nt>>
 ```
+
 Same as `parseWithSteps` but returns only the tree (no steps).
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Table is `Map<(Nonterminal * Symbol list), int>` | Simple lookup; nonterminal + lookahead uniquely identifies a rule |
 | Conflict detection throws exception | Immediate feedback during table construction |
 | Lookahead from first_k and follow_k | Standard LL(k) construction from the book |

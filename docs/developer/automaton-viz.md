@@ -21,7 +21,7 @@
 ## Supported Formats
 
 | Format | Module | Features |
-|--------|--------|----------|
+| --- | --- | --- |
 | **DOT** | `AutomatonDot` | Standard automaton visualization via Graphviz |
 | **Tikz** | `AutomatonTikz` | Layered layout, parametrizable shapes, enhanced styling |
 | **Tikz (LR)** | `LRAutomatonTikz` | Rectangle states, aligned LR items with state numbers |
@@ -29,16 +29,19 @@
 ## AutomatonDot Module
 
 ### Functions
+
 - `nfaToDot: (int -> 's -> string) -> NFA<'t,'s> -> string` — renders NFA with green start states, double-circle final states, dotted epsilon transitions
 - `dfaToDot: (int -> 's -> string) -> DFA<'t,'s> -> string` — renders DFA to DOT
 
 ## AutomatonTikz Module
 
 ### Functions
+
 - `nfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> NFA<'t,'s> -> string`
 - `dfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> string`
 
 ### Visual Style
+
 - Default shape: `circle` (parametrizable — `rectangle` for LR automata)
 - Layout: `layered layout, grow'=right, level sep=2cm, sibling sep=1.5cm`
 - Start states: `fill=green!30, label=above:Start`
@@ -48,27 +51,31 @@
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
 ### Template
+
 Uses `data/tex_tikz_template.tex` with `standalone` class, `tikz`, graphdrawing libraries, and `babel` for edge label quotes. When embedded in a merged summary, tikzpicture is wrapped in `\resizebox{0.98\textwidth}{!}{...}`.
 
 ## LRAutomatonTikz Module
 
 ### Functions
+
 - `lr0AutomatontoTikz` / `lr1AutomatontoTikz` — render LR automata with rectangle states
 
 ### State Content Format
+
 ```
 $\begin{aligned}
 \text{State N}\\
 A &\to \alpha \cdot \beta \\
 \end{aligned}$
 ```
+
 - State number in `\text{State N}` header, LR items aligned by `&`, dot as `\cdot`, LR(1) lookahead appended after comma
 - Delegates to `AutomatonTikz.dfaToTikz` with `shape = "rectangle"`
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | State visualizer callback | Allows parameterized label generation per state index and label |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |

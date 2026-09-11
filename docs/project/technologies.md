@@ -1,7 +1,7 @@
 # Third-Party Libraries and Tools
 
 | Dependency | Role | Rationale |
-|-----------|------|-----------|
+| --- | --- | --- |
 | [Argu](https://fsprojects.github.io/Argu/) | CLI argument parsing | First-class F# DU-based argument declarations with built-in help generation — matches the project's type-first design philosophy |
 | [FSharpPlus](https://fsprojects.github.io/FSharpPlus/) | `NonEmptyList`, `NonEmptySet` | Compile-time enforcement of non-emptiness invariants for grammars, RSMs, and automata — aligns with the "non-empty by type" convention in [coding conventions](../developer/guides/coding-conventions.md) |
 | [FsCheck](https://fscheck.github.io/FsCheck/) | Property-based testing | Generates random inputs and shrinks counterexamples — provides statistical confidence in algorithm correctness without exhaustive enumeration |
@@ -14,7 +14,7 @@
 ## Compile-time vs Run-time Dependencies
 
 | Category | Example | When Required |
-|----------|---------|---------------|
+| --- | --- | --- |
 | NuGet packages | Argu, FSharpPlus, FsCheck, xUnit | Always (compile and test) |
 | .NET local tools | `dotnet-fsharplint`, `dotnet-coverage`, `dotnet fantomas` | Quality gates only |
 | External executables | `dot` (Graphviz), `lualatex` | Visualization tests and `--summary` CLI flag only |

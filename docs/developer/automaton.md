@@ -25,43 +25,52 @@
 Automata wrap `Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>` — vertices are state labels, edges are transition label sets. The separation follows the book's hierarchy: a graph is a generic structure, and automata are graphs with additional semantic annotations (start/final state sets). This enables reuse of graph operations (vertex counting, filtering, keepVertices) without reimplementation.
 
 ### `AutomatonLabel<'t>`
+
 ```fsharp
 type AutomatonLabel<'t> =
     | ATerm of 't
     | AEpsilon
 ```
+
 Distinguishes terminal symbols from epsilon in the transition matrix. Eliminates the separate `epsTransitions: Set<int * int>` field.
 
 ### `Config` (struct)
+
 ```fsharp
 [<Struct>]
 type Config =
     { state: int
       position: int }
 ```
+
 A configuration in automaton acceptance: a state index and current input position.
 
 ### `NFA<'t, 's>`
+
 ```fsharp
 type NFA<'t, 's when 't: comparison> =
     { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startStates: Set<int>
       finalStates: Set<int> }
 ```
+
 Nondeterministic finite automaton with multiple start states. Epsilon transitions stored in the matrix as cells containing `Some nes` where `nes` includes `AEpsilon`.
 
 ### `DFA<'t, 's>`
+
 ```fsharp
 type DFA<'t, 's when 't: comparison> =
     { graph: Graph<'s, Option<NonEmptySet<AutomatonLabel<'t>>>>
       startState: int
       finalStates: Set<int> }
 ```
+
 Deterministic finite automaton with exactly one start state and no epsilon transitions.
 
 ## Nfa Module Functions
 
 ### Construction and Conversion
+
 ```fsharp
 val buildMatrix: int -> (int * AutomatonLabel<'t> * int) list -> Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>
 val fromTransitions: 's list -> (int * 't * int) list -> Set<int * int> -> Set<int> -> Set<int> -> NFA<'t, 's>
@@ -69,6 +78,7 @@ val toDfa: NFA<'t, 's> -> DFA<'t, Set<int>>
 ```
 
 ### Operations
+
 ```fsharp
 val stateCount: NFA<'t, 's> -> int
 val alphabet: NFA<'t, 's> -> Set<'t>
@@ -79,6 +89,7 @@ val accept: NFA<'t, 's> -> Terminal<'t> list -> bool
 ```
 
 ### Intersection
+
 ```fsharp
 val intersectEdgeSets:
     Option<NonEmptySet<AutomatonLabel<'t>>> -> Option<NonEmptySet<AutomatonLabel<'t>>>
@@ -100,7 +111,7 @@ val accept: DFA<'t, 's> -> Terminal<'t> list -> bool
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Automaton wraps `Graph<'s, ...>` | Separates graph structure from automaton semantics, following the book's hierarchy |
 | `AutomatonLabel<'t>` DU for epsilon in matrix | Eliminates separate `epsTransitions` field; epsilon transitions are first-class edge labels |
 | `epsilonClosure` scans matrix | After epsilon moves into matrix, closure requires scanning rows for `AEpsilon` edges |
@@ -113,6 +124,7 @@ val accept: DFA<'t, 's> -> Terminal<'t> list -> bool
 ## Book Reference
 
 The automaton module provides the generic finite automaton infrastructure used by:
+
 - LR automata construction with `Symbol<'t,'nt>` labels
 - RSM builder constructing deterministic blocks from EBNF rules via Brzozowski derivatives
 - RPQ algorithms with string-labeled query automata

@@ -35,7 +35,7 @@ This applies to:
 For every topic — a tool's behavior, a coding convention, a design decision — exactly one file is the authoritative source. Other files reference it rather than restating it.
 
 | Topic | Canonical Source |
-|-------|-----------------|
+| --- | --- |
 | Tool conventions (no timeout, output format, STATUS values) | `tools/README.md` |
 | Per-tool details (steps, thresholds, output examples) | `docs/developer/guides/tools.md` |
 | Coding conventions (naming, genericity, immutability) | `docs/developer/guides/coding-conventions.md` |

@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: Use when writing or updating documentation: module docs in docs/, recording book errors in fixes_for_book.md, or documenting design decisions. Covers the procedure for identifying, writing, and linking documentation.
+description: "Use when writing or updating documentation: module docs in docs/, recording book errors in fixes_for_book.md, or documenting design decisions. Covers the procedure for identifying, writing, and linking documentation."
 ---
 
 # Documentation
@@ -23,6 +23,7 @@ For every source change, determine which doc files are affected using the mappin
 - For new files: update `docs/developer/FLPQ.<Project>.md` and `docs/project/architecture.md`
 - For new doc pages: update `docs/main.md` with navigation links
 - For book errors: record in `tasks/fixes_for_book.md`
+- After editing any `.md` file, run `mdformat <file>` on it — all tracked `.md` files must be mdformat-clean (the quality gates check every one; setup: `tools/README.md`)
 
 ### 3. Verify completeness
 

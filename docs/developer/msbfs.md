@@ -8,7 +8,7 @@
 **Used by:** BelyaninRPQ, ArroyueloRPQ, KroneckerRPQ, Automaton, Nfa
 **Book reference:** Chapter 3, Section 05_BFS.tex, Algorithm algo:MS-BFS_linal
 
-> **Abstract:** Implements the Multiple-Source Breadth-First Search (MS-BFS) algorithm expressed as linear-algebraic operations. Performs independent BFS traversals from k starting vertices simultaneously using Boolean matrix multiplication for front propagation and mask-filtering for visited-set management. Returns a k×|V| boolean matrix where row i is the visited set for source K[i]. Also provides Boolean semiring operations (⊕_B, ⊗_B) and mask filtering (⊕_M).
+> **Abstract:** Implements the Multiple-Source Breadth-First Search (MS-BFS) algorithm expressed as linear-algebraic operations. Performs independent BFS traversals from k starting vertices simultaneously using Boolean matrix multiplication for front propagation and mask-filtering for visited-set management. Returns a k×|V| boolean matrix where row i is the visited set for source K[i]. Also provides Boolean semiring operations (⊕\_B, ⊗\_B) and mask filtering (⊕\_M).
 
 ## Contents
 
@@ -35,23 +35,27 @@ Algorithm `algo:MS-BFS_linal`:
 ## Function Signatures
 
 ### `boolAdd: Matrix<bool> -> Matrix<bool> -> Matrix<bool>`
-Boolean semiring addition (⊕_B): element-wise OR (`map2 (||)`).
+
+Boolean semiring addition (⊕\_B): element-wise OR (`map2 (||)`).
 
 ### `boolMul: Matrix<bool> -> Matrix<bool> -> Matrix<bool>`
-Boolean semiring multiplication (⊗_B): matrix-matrix product with AND as multiplication and OR as addition (`mxm (&&) (||) false`).
+
+Boolean semiring multiplication (⊗\_B): matrix-matrix product with AND as multiplication and OR as addition (`mxm (&&) (||) false`).
 
 ### `maskFilter: Matrix<bool> -> Matrix<bool> -> Matrix<bool>`
-Mask operation (⊕_M): element-wise `nf && not v`. Keeps values from the first operand only where the second is 0. Used to filter BFS front: keep only vertices NOT yet visited.
+
+Mask operation (⊕\_M): element-wise `nf && not v`. Keeps values from the first operand only where the second is 0. Used to filter BFS front: keep only vertices NOT yet visited.
 
 Truth table: 0⊕0=0, 1⊕1=0, 0⊕1=0, 1⊕0=1.
 
 ### `msBfs: int[] -> Matrix<bool> -> Matrix<bool>`
+
 Multiple-source BFS. Performs independent BFS traversals from k starting vertices simultaneously. Returns a k×|V| boolean matrix where row i is the BFS front for source K[i].
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | All operations via existing generic matrix operations (`map2`, `mxm`) | No ad-hoc loops; consistent functional style |
 | Boolean semiring operations as standalone functions | Reused by Belyanin, Arroyuelo, and Kronecker RPQ algorithms |
 | MS-BFS in `FLPQ.GraphAnalysis` | Grouped with graph-related operations alongside the `Graph` module |

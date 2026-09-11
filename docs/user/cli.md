@@ -16,7 +16,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 ## Command-line flags
 
 | Flag | Description | Default |
-|------|-------------|---------|
+| --- | --- | --- |
 | `-a` / `--algorithm` | Parsing algorithm | (required) |
 | `-g` / `--grammar` | Grammar file (.bnf) | (required) |
 | `-i` / `--input` | Input string file | (required) |
@@ -33,7 +33,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 
 | Algorithm | Files per step | Description |
-|-----------|---------------|-------------|
+| --- | --- | --- |
 | **CYK** | `table.tex` | `pNiceMatrix` table with optional yellow cell highlights for newly-populated cells |
 | **Valiant** | `table.tex` (+ `bool_decomp_*.tex` on last step) | `pNiceMatrix` table with cell printer rendering sets (empty sets as `\cdot`) |
 | **LL** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Derivation tree with stack overlay: Tikz graphdrawing picture with a same-layer constraint on the stack frontier, or DOT graph; TeX input row with current position underlined |
@@ -42,7 +42,7 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 Root-level artifacts per algorithm:
 
 | Algorithm | Files |
-|-----------|-------|
+| --- | --- |
 | **CYK** | `grammar_original.tex`, `grammar_cnf.tex`, `input.tex` |
 | **Valiant** | `grammar_original.tex`, `grammar_cnf.tex`, `input.tex` |
 | **LL** | `grammar_original.tex`, `ll_table.tex` |

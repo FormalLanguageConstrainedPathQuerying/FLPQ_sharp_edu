@@ -74,7 +74,7 @@ When writing a function `f : 'a -> 'b`, ask: can `'a` or `'b` be more general? I
 All code must be as generic as possible:
 
 | Domain | Generic over | Must NOT be |
-|--------|-------------|-------------|
+| --- | --- | --- |
 | Parsing algorithms (CYK, Valiant, LL, LR) | Terminal `'t`, Nonterminal `'nt` | `string`-based `Symbol`/`Terminal`/`Nonterminal` |
 | Matrix operations (`mxm`, `kron`, `transpose`) | Element type `'a`, `'b`, `'c` | `bool` or `int` |
 | Graphs and automata | Vertex and edge label types | Hardcoded vertex/label types |

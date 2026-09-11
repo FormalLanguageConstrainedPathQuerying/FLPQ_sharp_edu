@@ -23,17 +23,20 @@ Graph files are the input for Regular Path Querying algorithms. The module parse
 ## Function Signatures
 
 ### `parseGraph: string -> NFA<string, int>`
+
 Parse a graph from text. Input format:
+
 - Optional first line: space-separated start vertex indices (0-based). If absent, all vertices are start vertices.
 - Following lines: `fromVertex label toVertex` triples.
 
 ### `parseGraphFile: string -> NFA<string, int>`
+
 Parse a graph from a file. Convenience wrapper around `parseGraph`.
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Returns `NFA<string, int>` | Unifies the interface across all RPQ algorithms |
 | Defaults to all vertices as start states | When no explicit sources are given |
 | Vertex count from maximum index | Computes from the maximum vertex index appearing in edges |

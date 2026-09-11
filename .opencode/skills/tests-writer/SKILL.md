@@ -1,6 +1,6 @@
 ---
 name: tests-writer
-description: Use when writing tests: FsCheck property-based tests, golden/snapshot tests, test generators, and FsCheck.Xunit integration. Covers FsCheck API, Arbitrary/Gen patterns, generator registration, and golden test workflow. For FsCheck API quirks (Gen shadowing, naming, overloads), see the fsharp-coder skill.
+description: "Use when writing tests: FsCheck property-based tests, golden/snapshot tests, test generators, and FsCheck.Xunit integration. Covers FsCheck API, Arbitrary/Gen patterns, generator registration, and golden test workflow. For FsCheck API quirks (Gen shadowing, naming, overloads), see the fsharp-coder skill."
 ---
 
 # Writing Tests
@@ -85,15 +85,15 @@ See the specification: [`docs/developer/guides/language-registry.md`](/docs/deve
        [<Property>]
        let ``MyParser and CYK agree`` (s: string) = ...
    ```
- 6. **For cross-algorithm equivalence**, select a language with multiple grammars:
-    ```fsharp
-    [<Property>]
-    let ``ParserA and ParserB agree on Dyck1`` (s: string) =
-        let g1 = LanguageRegistry.Dyck1.Grammars[0]
-        let g2 = LanguageRegistry.Dyck1.Grammars[1]
-        ParserA.parse g1.Grammar input = ParserB.parse g2.Grammar input
-        // For GLL/RNGLR parsers, use g1.Rsm instead of g1.Grammar
-    ```
+6. **For cross-algorithm equivalence**, select a language with multiple grammars:
+   ```fsharp
+   [<Property>]
+   let ``ParserA and ParserB agree on Dyck1`` (s: string) =
+       let g1 = LanguageRegistry.Dyck1.Grammars[0]
+       let g2 = LanguageRegistry.Dyck1.Grammars[1]
+       ParserA.parse g1.Grammar input = ParserB.parse g2.Grammar input
+       // For GLL/RNGLR parsers, use g1.Rsm instead of g1.Grammar
+   ```
 
 ### Do NOT
 

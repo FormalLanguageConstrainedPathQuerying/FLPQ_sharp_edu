@@ -26,7 +26,7 @@
 ## Modules
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Matrix` | `Matrix.fs` | [Matrix module design and logic](matrix.md) |
 | `LinearAlgebra` | `LinearAlgebra.fs` | [LinearAlgebra module design and logic](linear-algebra.md) |
 | `BooleanDecomposition` | `BooleanDecomposition.fs` | [BooleanDecomposition module design and logic](boolean-decomposition.md) |
@@ -34,6 +34,7 @@
 ## Role
 
 Provides the foundation for all other projects:
+
 - **`Matrix<'a>`** — generic matrix type wrapping `'a[,]` with explicit dimensions
 - **`mxm`** — general matrix-matrix multiplication parameterized by semiring operations
 - **`kron`** — Kronecker product

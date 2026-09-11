@@ -78,12 +78,15 @@ completeVLayerModified(M):
 ## Type Definitions
 
 ### `Submatrix`
+
 ```fsharp
 type Submatrix = { row: int; col: int; Size: int }
 ```
+
 Defines a square region in the parsing table. The cells are `(i,j)` where `A - Size < i ≤ A` and `B ≤ j < B + Size`. The pair `(A,B)` is the vertex (bottom-right corner relative to the diagonal).
 
 ### `ValiantTraceStep<'nt>`
+
 ```fsharp
 [<Struct>]
 type ValiantTraceStep<'nt when 'nt: comparison> =
@@ -92,38 +95,45 @@ type ValiantTraceStep<'nt when 'nt: comparison> =
       multiplied: (Submatrix * Submatrix) list
       changedCells: (int * int) list }
 ```
+
 Record representing a single multiplication step from `doMultiplications`. Contains the current table snapshot, the target submatrix receiving the result, the list of (left, right) operand submatrices, and the coordinates of cells that changed.
 
 ### `ModifiedValiantTraceStep<'nt>`
+
 ```fsharp
 [<Struct>]
 type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
     | LayerForward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
     | LayerBackward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list * changedCells: (int * int) list
 ```
+
 DU representing trace steps for the modified Valiant algorithm. `LayerForward` records the initialization state (1×1 diagonal terminal blocks). `LayerBackward` records the state after completing one V-layer, with the layer's blocks and the changed cell coordinates. Each trace table is the full power-of-two padded `tableSize × tableSize` grid (same as standard Valiant).
 
 ## Submatrix Operations
 
 ### Quarter splitting
+
 - `bottomSubmatrix(m)` — lower-left quarter, closest to the diagonal (higher row indices)
 - `leftSubmatrix(m)` — upper-left quarter (lower row indices, same columns)
 - `rightSubmatrix(m)` — lower-right quarter (higher rows, right columns)
 - `topSubmatrix(m)` — upper-right quarter (lower rows, right columns)
 
 ### Grounding
+
 - `rightGrounded(m)` — shifts submatrix so vertex lies on the diagonal `i+1=j`
 - `leftGrounded(m)` — shifts submatrix so vertex lies on the diagonal
 
 ### Set-based matrix operations
+
 - `setMult(binaryRules)(a, b)` — set semiring multiplication: `{N3 | N3 → N1 N2, N1 ∈ a, N2 ∈ b}`
 - `mxmSet(binaryRules)(a, b)` — matrix multiplication using `setMult` as ⊗ and set union as ⊕
 - `writeSliceUnion(target, m, slice)` — union a slice into the target submatrix
 - `extractSlice(matrix, m)` — extract a submatrix slice
 
 ### Modified Valiant additions
+
 | Function | Signature | Description |
-|----------|-----------|-------------|
+| --- | --- | --- |
 | `rightNeighbor` | `Submatrix -> Submatrix` | Shift submatrix down by its size |
 | `leftNeighbor` | `Submatrix -> Submatrix` | Shift submatrix left by its size |
 | `constructLayer` | `int -> int -> Submatrix list` | Build V-layer i: disjoint submatrices of size 2^i |
@@ -131,69 +141,89 @@ DU representing trace steps for the modified Valiant algorithm. `LayerForward` r
 ## Function Signatures
 
 ### `parse`
+
 ```fsharp
 val parse: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> bool
 ```
+
 Determines whether the token sequence belongs to the language of grammar `g` using Valiant's algorithm.
 
 ### `parseWithTable`
+
 ```fsharp
 val parseWithTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ParsingTable<'nt> * bool
 ```
+
 Runs Valiant's algorithm without tracing and returns both the final parsing table and the acceptance status.
 
 ### `parseWithTrace`
+
 ```fsharp
 val parseWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ValiantTraceStep<'nt> list
 ```
+
 Runs standard Valiant with step-by-step tracing of `doMultiplications` calls only. Each trace step records a single multiplication task.
 
 ### `parseModified`
+
 ```fsharp
 val parseModified: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> bool
 ```
+
 Check acceptance using the modified Valiant algorithm.
 
 ### `parseModifiedWithTable`
+
 ```fsharp
 val parseModifiedWithTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ParsingTable<'nt> * bool
 ```
+
 Run the modified Valiant algorithm and return both the parsing table and acceptance status.
 
 ### `parseModifiedWithTrace`
+
 ```fsharp
 val parseModifiedWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ModifiedValiantTraceStep<'nt> list
 ```
+
 Run the modified Valiant algorithm with step-by-step tracing. Emits one initialization step (1×1 diagonal terminal blocks, layer size 2^0) followed by one step per V-layer (2×2, 4×4, … blocks), each rendered on the full power-of-two padded table. Layer blocks are highlighted in a single light red (`red!10`); changed cells are highlighted in yellow, matching CYK.
 
 ### `parseWithSppfInfo`
+
 ```fsharp
 val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
 ```
+
 Runs standard Valiant and returns an enriched parsing table with `(nonterminal, splitPoint, productionNumber)` entries for BasicSPPF construction. Uses `mxmi` for indexed matrix multiplication, capturing the split point `k` in each entry.
 
 ### `parseWithSppfTable`
+
 ```fsharp
 val parseWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
 ```
+
 Returns both the enriched SPPF table and acceptance status.
 
 ### `parseModifiedWithSppfInfo`
+
 ```fsharp
 val parseModifiedWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
 ```
+
 Runs layer-based modified Valiant and returns an enriched SPPF table.
 
 ### `parseModifiedWithSppfTable`
+
 ```fsharp
 val parseModifiedWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
 ```
+
 Returns both the enriched modified SPPF table and acceptance status.
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Set-based matrices (no Boolean decomposition) | Simpler: each cell holds `Set<SppfParsingEntry<'nt>>` directly. No `decompose`/`recompose` conversion |
 | Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production number). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`, and modified variants) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
 | Multiplication-only trace steps | Trace records only `doMultiplications` results (target + operand submatrices + changed cells), omitting decomposition transitions and size-1 terminal steps |

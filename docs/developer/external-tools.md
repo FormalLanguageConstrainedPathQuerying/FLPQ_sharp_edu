@@ -23,16 +23,19 @@
 The module bridges the gap between generated TeX/Dot strings and compilable PDFs. Both the test suite (verifying that generated output is valid) and the CLI (assembling the final visualization PDF) need external tool access. This module centralizes that logic with consistent error detection.
 
 ### `DotInfo`
+
 ```fsharp
 type DotInfo =
     { nodeCount: int; edgeCount: int
       nodeLabels: string list; edgeLabels: string list }
 ```
+
 Parsed information from Graphviz `-Tplain` output. Used by visualization tests to assert structural properties.
 
 ## Function Signatures
 
 ### Dot Compilation
+
 ```fsharp
 val compileDotStringToInfo : string -> DotInfo
 val compileDotString : string -> bool
@@ -40,6 +43,7 @@ val compileDotFileToPdf : dotPath:string -> pdfPath:string -> bool
 ```
 
 ### TeX Compilation
+
 ```fsharp
 val compileTexStringWithTemplate : templatePath:string -> tex:string -> bool
 val compileTexStringWithTemplateLog : templatePath:string -> tex:string -> bool * string
@@ -53,6 +57,7 @@ val compileTexFileTwice : texPath:string -> outputDir:string -> bool
 ## Strict Error Detection
 
 A lualatex run succeeds only when ALL of:
+
 1. Exit code is 0.
 2. No stdout line starts with `!` or contains `Fatal error` or `Error:`.
 3. The output PDF exists and is non-empty.
@@ -62,7 +67,7 @@ Relying on exit code alone is insufficient — lualatex may exit 0 even when err
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Module in `FLPQ.Printers` | Both CLI and tests already depend on Printers; no new project needed |
 | Split API: string-based + file-based | Tests use string-based (in-memory); CLI uses file-based (preserves PDFs) |
 | Bool returns + stderr messages | CLI can continue processing other algorithms and report aggregate exit code |

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mdformat-tasklog"
+version = "0.1.0"
+description = "mdformat plugin: preserve ordered list start numbers (consecutive, no zero padding)"
+requires-python = ">=3.10"
+dependencies = ["mdformat>=1.0"]
+
+[project.entry-points."mdformat.parser_extension"]
+tasklog = "mdformat_tasklog:TaskLogExtension"
+
+[tool.setuptools]
+packages = ["mdformat_tasklog"]

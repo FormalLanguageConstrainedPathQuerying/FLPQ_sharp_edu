@@ -25,6 +25,19 @@ jobs:
           dotnet tool install -g dotnet-fantomas
           dotnet tool install -g dotnet-fsharplint
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install markdown toolchain
+        run: |
+          pip install mdformat mdformat-frontmatter
+          pip install -e tools/mdformat_tasklog
+
+      - name: Markdown format check
+        run: mdformat --check $(git ls-files '*.md')
+
       - name: Format check
         run: dotnet fantomas . --check
 

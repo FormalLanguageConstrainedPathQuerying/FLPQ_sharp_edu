@@ -25,7 +25,7 @@
 ## Modules
 
 | Module | Source | Documentation |
-|--------|--------|---------------|
+| --- | --- | --- |
 | `Program` | `Program.fs` | [CLI console application](../user/cli.md) |
 
 ## Role

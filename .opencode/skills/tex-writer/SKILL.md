@@ -10,6 +10,7 @@ description: Use when generating TeX/LaTeX output, Tikz graphics, or compiling L
 **Problem**: nicematrix versions 6.x+ use a different `\Block` syntax. The old positional syntax `\Block[draw=red]{r1-c1-r2-c2}{}` was removed.
 
 **New syntax**: `\Block[draw=red]{rows-cols}{content}`
+
 - `rows`: number of rows the block spans
 - `cols`: number of columns the block spans
 - `content`: the content displayed in the block (overrides the top-left cell content)
@@ -83,7 +84,7 @@ Inside `\mbox`, content is in text mode, so the cell value must be wrapped in `$
 Project templates live in `data/`. Each serves a specific purpose:
 
 | Template | Packages | Math Wrapper | Use Case |
-|----------|----------|-------------|----------|
+| --- | --- | --- | --- |
 | `tex_template.tex` | `nicematrix`, `graphicx` | `\[ ... \]` | General TeX tests, nicematrix-dependent content |
 | `tex_color_template.tex` | `xcolor`, `nicematrix`, `graphicx` | `\[ ... \]` | Color-dependent TeX tests (`\colorbox`, `\cellcolor`) |
 | `tex_tabular_template.tex` | `amsmath` | none | Non-matrix TeX (tabular, LL tables) |

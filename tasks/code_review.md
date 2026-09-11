@@ -1,10 +1,32 @@
 # Code Review Report
 
+## Task 268 Review (2026-09-11)
+
+Scope: tools + docs/skills only (no `.fs` changes). `tools/mdformat_tasklog/` (new plugin package — ordered-list numbering preservation, `---` hr renderer, GFM table support with pipe re-escaping), `tools/split_tasks.py` (new repair → mdformat → verify → split pipeline), `tools/common.py` (`tracked_md_files`), `tools/{quality_check,hard_gate}.py` (new Markdown format step + renumbering), `.github/workflows/ci.yml` (Python 3.10 setup + mdformat check), one-time normalization of all 76 tracked `.md` files (including frontmatter fixes in 9 SKILL.md files), AGENTS.md + 7 skill files (multi-file task log scheme, continuous mdformat rule).
+
+**Findings resolved this review:**
+
+- Correctness — `split_tasks.py`'s repair shifted escaped indented code blocks by `C(N) - indent`, landing the first line exactly at column `C(N)`. There, a line after a blank line parses as paragraph text, so an escaped code block under an entry with N >= 100 was silently converted to a paragraph (code formatting lost) while every verification passed (whitespace-only repair ✓, repaired-vs-formatted AST equality ✓, structure ✓). Fixed: indented code blocks are now atomic units like fences, and an escaped one shifts by exactly `C(N)` — in-item code strips `C(N)+4` while top-level code strips 4, so the block stays a code block with byte-identical content (the format stage then fences it). Verified pre/post with parser experiments.
+- §22 (clarity) — `chr(10).join` inside an f-string expression in `process_file` (a pre-3.12 backslash workaround); replaced with a local `changed` binding.
+
+**Verified:** seven synthetic scenarios through the full pipeline (escaped code single/multi-line/mixed-indent, in-item code untouched, escaped fence, flat paragraph with blank lines, escaped nested list) — all PASS, code blocks end as fenced blocks with exact content; a 105-entry synthetic log exercises repair + gap separator + split end-to-end (archive + active log well-formed, provenance header + archive-reference line correct); the misaligned-chunk guard correctly BLOCKs a gapped log (first 100 entries spanning 1-101); real files: dry-run PASS with zero repairs, full run byte-identical (idempotent).
+
+**Findings against the constraint sources:**
+
+- §13 (no duplication) — gate step logic is duplicated between `quality_check.py`/`hard_gate.py`, matching the established per-script self-contained pattern; the mdformat file scope is shared via `common.tracked_md_files`. The plugin's pipe re-escaping in `text`/`code_inline` shares `_in_table_cell`; no extraction warranted.
+- §20 (documentation completeness) — `split_tasks.py` documented in both `tools/README.md` and `docs/developer/guides/tools.md` (setup, pipeline stages, invariants, output contract); the plugin's module docstring documents the install requirement; AGENTS.md + skills document the continuous mdformat rule and the task-log scheme.
+- §22 (clarity) — the script is a straight pipeline of named stages; no nontrivial optimizations.
+
+**No blocking findings.** Second pass over the changed surface (plugin renderers, verification functions, split mechanics, docs/skills consistency: gate step numbering 1-6 across hard_gate/quality_check/CI/skills) found zero additional problems.
+
+---
+
 ## Task 267 Review (2026-09-10)
 
 Scope: docs-only. `.opencode/skills/code-review/SKILL.md` (intro line + Prerequisites section). Resolves the open item from the Task 266 report: the skill required quality gates to pass before code review, contradicting the AGENTS.md working loop (step 6 review → step 7 gate). User decision: review-before-gate is canonical.
 
 **Findings against the constraint sources:**
+
 - §13 (one source of truth) — after the fix, all workflow documents agree on the order: AGENTS.md (step 6 → step 7), code-review skill (intro + prerequisites), subtask-loop ("After ALL subtasks are committed" — gate at task completion, no ordering claim vs review), git-workflow (gate before merge, no ordering claim vs review). Verified by grep across AGENTS.md and all skills.
 
 **No blocking findings.** Full pass found zero problems.
@@ -16,6 +38,7 @@ Scope: docs-only. `.opencode/skills/code-review/SKILL.md` (intro line + Prerequi
 Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from `ac729de~1:tasks/tasks.md` lines 6-560, byte-for-byte verified by diff), `tasks/tasks.md` (entries 263/264 restored verbatim from the committed detailed plans, `[done]`-tagged; entry 266 added; 265 logged — committed on dev per the task-log durability rule), `AGENTS.md` (working-loop step 2a entry gate, step 8 existence check, Git Safety durability paragraph, Project Structure table), `.opencode/skills/git-workflow/SKILL.md` (pre-merge task-log check, pre-commit checklist clarification), `.opencode/skills/planning/SKILL.md` (logged-task prerequisite, mandatory "Task description (verbatim)" section).
 
 **Findings against the constraint sources:**
+
 - §13 (no duplication / one source of truth) — the entry-gate rule appears in AGENTS.md (step 2a), the planning skill (prerequisite), and the git-workflow skill (pre-commit clarification). This is the established AGENTS.md↔skill layering (AGENTS.md is the short entry point, skills hold operational detail; cf. the existing "See the `git-workflow` skill for the full procedure" pattern) — each location states its own gate in one sentence, no procedural block is copied. Not a finding.
 - §20 (documentation completeness) — `tasks1.md` is referenced from the `tasks.md` header (pre-existing note, now satisfied) and added to the AGENTS.md Project Structure table. No `docs/` page is required for task-log files (no module docs exist for any `tasks/*.md`).
 - §22 (clarity) — n/a (no code).
@@ -23,6 +46,7 @@ Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from 
 **Verified:** restored text is byte-for-byte identical to its recovery source (`diff` against `ac729de~1` extraction and against the `b23a09a`/`58c4f40` plan sections); entry numbers 1-100 (except pre-existing gaps 52-55) each appear exactly once as an entry head in `tasks1.md`; 263/264 appear exactly once in `tasks.md` between 262 and 265; the three instruction files are mutually consistent (entry gate ↔ prerequisite ↔ pre-commit rule; step-8 check ↔ pre-merge grep).
 
 **Pre-existing, out of scope (not introduced by this task):**
+
 - The `code-review` skill's "Prerequisites" said quality gates must pass *before* code review, while the AGENTS.md working loop runs review (step 6) before the hard gate (step 7); all recent tasks (263/264/265) followed the AGENTS.md order. **Resolved in Task 267** — user confirmed review-before-gate is canonical; the skill was fixed.
 
 **No blocking findings.** Full pass found zero problems in this task's changes.
@@ -34,11 +58,13 @@ Scope: docs-only. `tasks/tasks1.md` (new — tasks 1-100 restored verbatim from 
 Scope: `src/FLPQ.Printers/RsmTikz.fs` (reworked `extendedRsmToTikz`: pgf-gd component packing `components go down left aligned`, S′-first declaration order, `label=left:` on every block start state), `src/FLPQ.Printers/AutomatonTikz.fs` (new `layeredGraphOptions`, `tikzHeaderWithOptions`; `tikzHeader` now delegates), `src/FLPQ.Printers/SummaryTeX.fs` (`headerSection` gains the Extended RSM head section for GLL/RNGLR Tikz mode), `src/FLPQ.Cli/RnglrRunner.fs` (writes `ext_rsm.tikz.tex` in Tikz mode), `data/tex_tikz_template.tex` (xcolor + lightblue definition), tests (`RsmTikzTests.fs` new; `TexCompilationTests.fs` +1 fact, 2 extended facts; `RnglrRunnerTests.fs` +1 fact), docs (`rsm-viz.md` new; `FLPQ.Printers.md`, `main.md`, `InputGraphDot.md`, `cli.md`, `FLPQ.Cli.md`, `summary-tex.md`).
 
 **Resolved this task:**
+
 - §13 (no duplication) — `extRsmTikzSection` initially inlined the `readIfExists` match; refactored to reuse `headerSection`'s existing `maybe` helper.
 - §6 (XML doc comments) — new public `tikzHeaderWithOptions` and its delegator `tikzHeader` carry `///` comments.
 - §20 (documentation) — `summary-tex.md` updated: overview bullet for the Extended RSM head figure, corrected `headerSection` signature (was missing `rsmSppfPdfs`/`useTikz`), new design-decision row.
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — `extendedRsmToTikz`'s comment documents the new stacking, ordering, and label semantics; `layeredGraphOptions` documented.
 - §7 (genericity) — `RsmTikz.extendedRsmToTikz` stays generic over `'t`/`'nt`; SummaryTeX change is string-level.
 - §13 (no duplication) — the RnglrRunner `ext_rsm.tikz.tex` write mirrors GllRunner's identical call; per-runner artifact writing is the established pattern (each runner writes its own `sppf.tikz.tex`, `input.tikz.tex`, ...). The repeated 3-path template lookup in `TexCompilationTests.fs` is a pre-existing pattern shared by ~10 facts; left as-is.
@@ -52,6 +78,7 @@ Scope: `src/FLPQ.Printers/RsmTikz.fs` (reworked `extendedRsmToTikz`: pgf-gd comp
 **Verified end-to-end:** lualatex coordinate extraction on generated figures confirmed vertical stacking in declaration order (S′ on top), left-edge alignment, unchanged intra-block layered LTR layout, and start states at layer 0 even for cyclic blocks (`S -> (a S b)*` has a cycle through the start state). GLL and RNGLR merged summaries compile with the new head section. `lightblue` is not a default xcolor name — `tex_tikz_template.tex` now loads xcolor and defines it identically to `tex_summary_template.tex` (no golden embeds the tikz template, so no goldens changed).
 
 **Pre-existing, out of scope (not introduced by this task):**
+
 - `InputGraphDot.md` also links two nonexistent docs (`gll-step-visualizer.md`, `gss-dot.md`) — same class as the fixed `rsm-dot.md` link; separate documentation task.
 - `FLPQ.Printers.md` hub still links several module docs that do not exist (pre-existing, noted in Task 263 review).
 - GLL Tikz-mode summary includes both an SPPF PDF (head, via `sppf.dot`) and an SPPF TikZ figure (tail, via `sppfSection`) — pre-existing duplication.
@@ -65,6 +92,7 @@ Scope: `src/FLPQ.Printers/RsmTikz.fs` (reworked `extendedRsmToTikz`: pgf-gd comp
 Scope: `src/FLPQ.Printers/SummaryTeX.fs` (new `wrapTikzAdjustbox`, `stackStepSection` switched from `wrapTikzCenter` to it), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (LL inline-TikZ test extended with adjustbox assertions, new SLR1 adjustbox fact), `docs/developer/summary-tex.md`. LL/LR step stack-tree figures in the merged summary are now scaled with `\begin{adjustbox}{max width=\textwidth}` (shrink-only) instead of `\resizebox{0.98\textwidth}{!}` (exact-scale, upscales small figures and scales node text).
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — new public `wrapTikzAdjustbox` carries a `///` comment documenting the shrink-only semantics.
 - §7 (genericity) — `wrapTikzAdjustbox : string -> string`, same signature family as its `wrap*` siblings; no algorithm types involved.
 - §13 (no duplication) — `wrapTikzAdjustbox` vs `wrapTikzCenter`: 5-line wrappers differing in the scaling construct (`adjustbox` max-width vs `resizebox` exact-width). Intentional, documented divergence: the task scopes adjustbox to LL/LR step figures only; the LR automaton, GLL input string, and SPPF keep resizebox (GLL-wide migration is the separate open task 244). Merging them into one parameterized wrapper would couple four call sites with two different scaling policies.
@@ -85,9 +113,11 @@ Scope: `src/FLPQ.Printers/SummaryTeX.fs` (new `wrapTikzAdjustbox`, `stackStepSec
 Scope: `src/FLPQ.Printers/TeXRenderer.fs` (new `escapeMath`, `inputRow` now escapes each cell), `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` (2 new facts, 2 updated facts), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (2 new end-to-end compilation facts, `mergedTexPath` helper), `docs/developer/visualization-types.md`. Fixes LL/LR merged-summary lualatex failures: the `$` end-of-input marker appended by LL/LR runners was emitted raw inside the math-mode `pNiceMatrix` input row.
 
 **Resolved this task:**
+
 - §13 (no duplication) — `assertMergedTexCompiles` duplicated the merged-TeX path construction and existence check from `assertMergedTexExists`; extracted `mergedTexPath`, `assertMergedTexCompiles` now reuses `assertMergedTexExists` (commit 53292a7).
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — new public `TeXRenderer.escapeMath` carries a `///` comment; `inputRow`'s comment updated to document the escaping behavior.
 - §7 (genericity) — `escapeMath : string -> string` is a string-level operation; `inputRow` stays generic over `'t`.
 - §13 (no duplication) — `escapeMath` (math mode) vs `AutomatonTikz.escapeLatex` (text mode): 7 of 9 replacements coincide, but the two are intentionally different at the math/text boundary (`^` → `\text{\^{}}` in math vs `\^` in text; `~` untouched in math). Extracting a shared core would couple `TeXRenderer` to `AutomatonTikz` and parameterize 8+ call sites for a 9-line helper. Accepted as deliberate per-boundary escapers, consistent with the existing pattern (`DerivationTreeDot.escapeLabel`, `BasicSppfDot.escapeLabel`, `SppfDot.escapeLabel` are separate one-liners per DOT boundary).
@@ -99,6 +129,7 @@ Scope: `src/FLPQ.Printers/TeXRenderer.fs` (new `escapeMath`, `inputRow` now esca
 - §22 (clarity) — escaper is a straight chain of 9 `Replace` calls; no optimization.
 
 **Pre-existing, out of scope (not introduced by this task):**
+
 - GLL merged summary for input `a b a b a b` fails with `TeX capacity exceeded [number of strings=476553]` — 31 repeated 50×50 path-index matrices exhaust TeX's string pool; still not finished after >10 min with `\maxstrings=1000000`. Separate performance issue, reported to the user.
 - `FLPQ.Printers.md` hub links to 11 module docs that do not exist (`tex-renderer.md`, `symbol-tex.md`, `matrix-tex.md`, …); those modules are documented in other pages (e.g. TeXRenderer in `visualization-types.md`). Pre-existing since the hub table was written; fixing all links is a separate documentation task.
 
@@ -111,9 +142,11 @@ Scope: `src/FLPQ.Printers/TeXRenderer.fs` (new `escapeMath`, `inputRow` now esca
 Scope: `src/FLPQ.Printers/DerivationTreeTikz.fs` (new), `src/FLPQ.Printers/{VisualizationTypes,LLStepVisualizer,LRStepVisualizer,SummaryTeX,ExternalTools}.fs`, `src/FLPQ.Cli/{Helpers,LLRunner,LRRunner,Program}.fs`, both fsproj files, `data/tex_{tikz,summary}_template.tex`, tests (`DerivationTreeTikzTests.fs` new, golden/compilation/runner/summary test updates, 4 new `.tikz` goldens), docs (`derivation-tree-viz.md` rewritten, `cli.md`, `summary-tex.md`, `visualization-types.md`, `external-tools.md`, `test-categories.md`, `main.md`, `FLPQ.Printers.md`). Adds TikZ rendering of LL/LR per-step stack-trees via graphdrawing `layered layout` with a native `{ [same layer] ... }` frontier constraint (the equivalent of DOT `{rank=same}`), makes TikZ the default per-step output with `--use-dot` opt-out, and embeds the step pictures inline in TikZ-mode summaries.
 
 **Resolved this task:**
+
 - §13 (no duplication) — pre-existing duplicate `InputGraphDot` row in the `FLPQ.Printers.md` hub module table (introduced by task 198); removed (commit 3ff24a6).
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — `DerivationTreeTikz.toTikzWithLLStack` / `toTikzWithLRStack` and `ExternalTools.compileTexStringWithTemplateLog` carry `///` comments; `compileTexStringWithTemplate` is now a thin wrapper over the `...Log` variant (no duplicated process logic).
 - §7 (genericity) — both renderers stay generic over `'t`/`'nt`; test helpers instantiate with `string` (allowed for unit tests).
 - §8 (non-empty collections) — `stack: LLStackLeaf list` / `LRStackFrame list` correctly use plain lists: an empty frontier is a legitimate state (e.g., LR step 0, finished LL parse).
@@ -135,9 +168,11 @@ Scope: `src/FLPQ.Printers/DerivationTreeTikz.fs` (new), `src/FLPQ.Printers/{Visu
 Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `tests/FLPQ.Languages.Tests/RnglrTests.fs`, `tests/FLPQ.Cli.Tests/{CliSummaryTests,RnglrRunnerTests}.fs`, `docs/developer/{rnglr,summary-tex}.md`. Tracks per-step the GSS vertices where passing-reduction handling triggers (a new edge added from a vertex with non-empty stored states — the book's AddEdge trigger, sec:CFPQ_GLR), highlights them orange in DOT/TikZ step visualizations (same color as GLL stored pops, task 259), and adds the color to the RNGLR summary legend.
 
 **Resolved this task:**
+
 - §14 (language registry) — the S3 runner tests hardcoded the triggering grammar text inline although it is the registry entry `Dyck1/ambiguousWithConcat` (`Grammars.[1]`); now read from `LanguageRegistry.Dyck1.Grammars.[1].Text`, with the scenario input extracted to a documented `passingReductionInput` constant (commit 063803c).
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — new `PassingReductionVertices` field carries a `///` comment; no other new public API.
 - §7 (genericity) — tracking stays generic over `'t`/`'nt`; vertex indices are `int` like every other GSS-index set on the step record.
 - §8 (non-empty collections) — `PassingReductionVertices: Set<int>` is correct: empty is a legitimate state (step 0, levels without triggers).
@@ -158,6 +193,7 @@ Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStep
 Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStepVisualizer,SummaryTeX}.fs`, `src/FLPQ.Cli/{Helpers,RnglrRunner}.fs`, `data/RNGLR_step{,_tikz}_template.tex`, `tests/FLPQ.Printers.Tests/{RnglrStepVisualizationTests,TexCompilationTests}.fs` + fsproj + GoldenData, `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`, `docs/developer/rnglr.md`. Replaces the descriptor-queue + recursive cascade with the canonical level-based driver (shift, then reduce to fixpoint, per input position), removes `RnglrDescriptor` entirely, and rebuilds the step visualization as a two-column layout.
 
 **Resolved this task:**
+
 - §6 (XML doc comments) — `Rnglr.buildPathIndex`, `buildPathIndexWithSteps`, `RnglrStepVisualizer.{RnglrVisualizationStep,renderStep,renderSteps}`, and `SummaryTeX.rnglrStepSection` had no `///` comments (pre-existing gap in files touched by this task); added.
 - §21 (book traceability) — the level loop now carries an explicit `sec:CFPQ_GLR` / `sec:CFPQ_RNGLR` reference; public entry points reference `sec:CFPQ_RNGLR`.
 - §23 (signature hygiene) — `renderStep`/`renderSteps` took unused `lrStateCount` and `vertexCount` parameters (pre-existing); removed from the signatures and all four call sites, dropping the dead bindings.
@@ -165,6 +201,7 @@ Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStep
 - Pre-existing fsharplint warnings blocking the pre-merge full-solution lint — 4 warnings in `tests/FLPQ.LinearAlgebra.Tests/MatrixTests.fs` mxmi tests (FL0034 lambda-removal x2, FL0065 identity multiplication x2); fixed with `Matrix.create 2 3 (+)` and simplified expected dot products. Full-solution lint now reports `Summary: 0 warnings`.
 
 **Findings against the constraint sources:**
+
 - §7 (genericity) — driver, types, and visualizer stay generic over `'t`/`'nt`; no `string` hardcoding.
 - §8 (non-empty collections) — `RnglrGSS.verticesAt` returns `int list`; empty is a legitimate snapshot state, so plain `list` is correct.
 - §9 (separation) — `Rnglr.fs` produces step data (`RnglrParsingStep`); all rendering stays in `RnglrStepVisualizer.fs`/`SummaryTeX.fs`.
@@ -184,10 +221,12 @@ Scope: `src/FLPQ.Languages/{Rnglr,RnglrTypes}.fs`, `src/FLPQ.Printers/{RnglrStep
 Scope: `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Printers/ValiantTeX.fs`, `tests/FLPQ.Languages.Tests/ValiantTests.fs`, `tests/FLPQ.Printers.Tests/GoldenData/valiant_modified_grammar1_ab.tex`, `docs/developer/valiant.md`. Aligns the modified Valiant trace to the full power-of-two padded grid, restructures it into an init step + one step per layer, and fixes layer/changed-cell coloring.
 
 **Resolved this task:**
+
 - §13 (no duplication) — `diffCells` and the new `diffWholeTable` shared a "new entries appeared" predicate; extracted `hasNewEntries` (`Valiant.fs`).
 - §13 (no duplication) — `sppfModifiedStepToTeX` and `sppfModifiedStepToTeXAsNt` each duplicated the LayerForward/LayerBackward block+highlight rendering (4 near-identical branches); extracted `sppfModifiedStepToTeXWith`, making the two public functions thin wrappers (`ValiantTeX.fs`, −196 lines).
 
 **Findings against the constraint sources:**
+
 - §6 (XML doc comments) — no new public API; `sppfModifiedStepToTeXWith` is `private`.
 - §7 (genericity) — all changes stay generic over `'nt`; no `string` hardcoding.
 - §9 (separation) — `Valiant.fs` produces trace data (steps, changed cells); rendering stays in `ValiantTeX.fs`.
@@ -224,9 +263,11 @@ Scope: `src/FLPQ.Printers/BasicSppfTikz.fs`, `tests/FLPQ.Printers.Tests/BasicSpp
 Scope: `src/FLPQ.Languages/{Grammar,Cyk,Valiant,BasicSppf}.fs`, `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Languages.Tests/{GrammarTests,CykTests}.fs`, `tests/FLPQ.Printers.Tests/GoldenData/{cyk_grammar7_xplusx,valiant_grammar1_abab,valiant_modified_grammar1_ab}*.tex`, and `docs/developer/{grammar,grammar-tex,cyk,valiant,sppf-parsing-table}.md`. Makes `SppfParsingEntry.ProdIdx` a 1-based canonical production number (start-nonterminal-first order) shared by CNF rendering, CYK/Valiant table cells, and Basic SPPF via a number→production map.
 
 **Resolved this task:**
+
 - §22 (clarity) — the initial CYK change recomputed `Grammar.numberedRules cnf` inside the diagonal and span loops; hoisted to a single `let numbered` per run in `cykSppfCore` and `parseWithSppfTrace`.
 
 **Findings against the constraint sources:**
+
 - §13 (no duplication) — the start-first reordering + 1-based numbering was extracted into `Grammar.numberedRules`/`productionNumberMap`; `GrammarTeX.renderGrammar` now consumes `Grammar.numberedRules` instead of its own local reordering.
 - §6 (XML doc comments) — both new functions carry `///` comments describing ordering and 1-based semantics.
 - §7 (genericity) — `numberedRules`/`productionNumberMap` are generic over `'t`/`'nt`; no `string` hardcoding.
@@ -260,10 +301,12 @@ Scope: `src/FLPQ.Printers/GrammarTeX.fs`, `tests/FLPQ.Printers.Tests/GoldenData/
 Scope: `src/FLPQ.Languages/Cyk.fs`, `src/FLPQ.Languages/Valiant.fs`, `src/FLPQ.Cli/*`, `src/FLPQ.Printers/{ParsingTableTeX,CykTeX,ValiantTeX}.fs`, and CYK/Valiant tests. Covers SPPF unification (with/without SPPF) and the `--no-sppf-table` rendering flag.
 
 **Resolved this task:**
+
 - **D6** — Valiant `complete`/`compute` duplicated for two type variants. Now a single SPPF computation path; the non-SPPF public API (`parse`, `parseWithTable`, `parseWithTrace`, `parseModified*`) are thin wrappers over it (`Cyk.fs:211-242`, `Valiant.fs:601-658`).
 - **A5** (partially) — `Valiant.fs` reduced from ~912 to 658 lines by removing the duplicated non-SPPF computation path.
 
 **New tests added this task (test-coverage restore):**
+
 - `CykTests.WrapperEquivalenceTests` — property test verifying `Cyk.parseWithTrace` equals the nonterminal projection of `parseWithSppfTrace`, with identical highlights.
 - `ValiantTests.TraceWrapperEquivalenceTests` — property tests for `Valiant.parseWithTrace` and `Valiant.parseModifiedWithTrace` (previously untested wrappers), verifying table projection plus preserved `Target`/`Multiplied`/`ChangedCells`/layer fields.
 - `TestHelpers.checkCykValiantEquivalence` — restored explicit SPPF-vs-non-SPPF acceptance and table equivalence checks (wrapper-conversion oracle).
@@ -285,7 +328,7 @@ Each issue was verified against the current codebase. Issues from prior reports 
 ## 1. Duplication
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | D1 | `addToIndex` — structurally identical local wrapper function in `Gll.fs:111–118` and `Rnglr.fs:104–111`. Both delegate to `PathIndex.addWithTracking`. | §13 | Medium | `Gll.fs:111`, `Rnglr.fs:104` |
 | D2 | Twin Grammar test modules — `GllTests.fs` and `RnglrTests.fs` share identical module structure (GllSharedAcceptance, GllTreeYield, GllPropertyTreeYield, etc.). Most logic is shared via `ParsingTestCases` and `TestHelpers`, but near-identical boilerplate remains. | §13 | Medium | `GllTests.fs`, `RnglrTests.fs` |
 | D3 | `regexToDfa` (`RPQTests.fs:237`) and `buildBlockDfa` (`EbnfParser.fs:319`) — both call `Regexp.buildDfaFromRegex` with slight parameter wrappings. Conceptual duplication. | §13 | Medium | `RPQTests.fs:237`, `EbnfParser.fs:319` |
@@ -297,7 +340,7 @@ Each issue was verified against the current codebase. Issues from prior reports 
 ## 2. Architecture
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | A1 | Missing explicit `ProjectReference` to `FLPQ.GraphAnalysis` in `FLPQ.Printers.fsproj` and `FLPQ.Cli.fsproj`. Both projects use `open FLPQ.GraphAnalysis` / `FLPQ.GraphAnalysis.Graph.*` but rely on transitive propagation through `FLPQ.Languages`. | §9 | Medium | `.fsproj` files |
 | A2 | `GraphReader.fs` in `FLPQ.RPQ` — parses graph files into `NFA<string, int>` (type from `FLPQ.Languages`). Could belong in `FLPQ.GraphAnalysis` or `FLPQ.Languages`. | §9,§10 | Low | `GraphReader.fs` |
 | A3 | `System.IO` + file-read convenience functions in core algorithm modules: `Grammar.fs:4,118`, `EbnfParser.fs:4,301,391`, `GraphReader.fs:3,85`. Thin wrappers alongside pure algorithm code — acceptable but worth noting. | §9 | Low | Multiple files |
@@ -307,14 +350,14 @@ Each issue was verified against the current codebase. Issues from prior reports 
 ## 3. Naming and Types
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | T1 | `VisualizationStep` record (`VisualizationTypes.fs:7`) uses hardcoded `string` fields: `TreeAndStack: string`, `Input: string`. Serialization bridge type — acceptable but breaks genericity chain. | §7,§23 | Low | `VisualizationTypes.fs:7` |
 | T2 | `DerivationTree.Node` (`DerivationTree.fs:7`) uses `list` instead of `NonEmptyList` for children. Type-level invariant: a non-leaf node must have at least one child. | §8,§12 | Low | `DerivationTree.fs:7` |
 
 ## 4. Genericity (Hardcoded to `string`)
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | G1 | `RsmToGrammar.convert` — signature `RSM<string, string> -> Grammar<string, string>`. Uses `sprintf` for nonterminal names. | §7 | Low | `RsmToGrammar.fs:23` |
 | G2 | `EbnfParser.parseEbnf` returns `(Nonterminal<string> * Regexp<string, string>) list`. `RsmBuilder.buildRSM` takes `Map<Nonterminal<string>, Regexp<string, string>>`. Inherently text-bound. | §7 | Low | `EbnfParser.fs:298,377` |
 | G3 | `Grammar.parseGrammar` returns `Grammar<string, string>`. Uses `System.Char.IsUpper`. Acceptable for text parser. | §7 | Low | `Grammar.fs:103` |
@@ -324,7 +367,7 @@ Each issue was verified against the current codebase. Issues from prior reports 
 ## 5. Test Coverage Gaps
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | T1 | RPQ generators hardcode alphabet as `["a"; "b"]` in multiple generator types (`Generators.fs:127,191,268,348`). No tests with larger alphabets, numeric labels, or special characters. | §17 | Low | `Generators.fs` |
 | T2 | `GllPropertyTreeYield` module (`GllTests.fs:88–122`) has no `[<Properties(Arbitrary=...)>]`. Uses FsCheck's default `Arbitrary<string>` which generates random unicode — most strings are trivially rejected. Compare with `RnglrPropertyTreeYield` which uses `GenToArbitrary.AbString`. | §16,§17 | Low | `GllTests.fs:88` |
 | T3 | `GraphTests.fs:253` — `[<Property>]` test `fromEdges produces correct dimensions` takes `()` and uses only hardcoded data. Should be `[<Fact>]`. | §16 | Low | `GraphTests.fs:253` |
@@ -334,7 +377,7 @@ Each issue was verified against the current codebase. Issues from prior reports 
 ## 6. Documentation Gaps
 
 | # | Description | Source | Severity | File:Line |
-|---|-------------|--------|----------|-----------|
+| --- | --- | --- | --- | --- |
 | D1 | Missing XML doc comments on all 13 public functions in `FLPQ.Cli/Helpers.fs`. | §6 | High | `Helpers.fs` |
 | D2 | Missing XML doc comments on all 6 CLI runner entry-point functions (`runCyk`, `runValiant`, `runGll`, `runLL`, `runLR`, `runRnglr`). | §6 | Medium | `*Runner.fs` |
 | D3 | Missing XML doc comments on `FLPQ.Cli/Summary.fs` (`algorithmToKind`, `algorithmLower`, `buildSummary`) and `Program.fs` (`runCli`). | §6 | Low | `Summary.fs`, `Program.fs` |
@@ -352,7 +395,7 @@ The [tests-writer skill](.opencode/skills/tests-writer/SKILL.md) and [language-r
 These files call `Grammar.parseGrammar` with hardcoded strings instead of sourcing grammar text from the registry.
 
 | # | File | ~Locations | Duplicates Registry? | Severity |
-|---|------|-----------|---------------------|----------|
+| --- | --- | --- | --- | --- |
 | RV1 | `GrammarTests.fs` — tests verify `Grammar.parseGrammar` itself. Uses `"S -> a S b S \| eps"` (Dyck1), `"S -> a S \| a"` (APlus), `"S -> a"` (SingleA), `"S -> eps"` (EpsilonOnly), etc. Should use `LanguageRegistry.*.Grammars[n].Text`. Edge-case grammars (unit chains, empty input) must be registered first. | ~36 | Partial | Medium |
 | RV2 | `FirstFollowTests.fs` — tests of First/Follow computation. Uses `"S -> a S b S \| eps"` (Dyck1), `"S -> a S \| a"` (APlus), `"S -> a B \| B -> b"` (ANB-like), `"E -> E + T \| T \| T -> x"` (ArithExpr subset), etc. Should use registry grammars. | ~13 | Partial | Medium |
 | RV3 | `StressTests.fs:10` — `balancedGrammar` is Dyck1 grammar1. Should use `LanguageRegistry.Dyck1.Grammars[0].Grammar`. Line 123 dynamically generates grammar text — acceptable. | 1 | Yes | Low |
@@ -363,7 +406,7 @@ These files call `Grammar.parseGrammar` with hardcoded strings instead of sourci
 Every printer/golden test hardcodes grammar strings that duplicate LanguageRegistry entries.
 
 | # | File | ~Locations | Registry Equivalent | Severity |
-|---|------|-----------|--------------------|----------|
+| --- | --- | --- | --- | --- |
 | RV5 | `TexCompilationTests.fs` | ~14 | Dyck1, APlus | Medium |
 | RV6 | `AutomatonVisualizationTests.fs` | 4 | Dyck1, APlus | Medium |
 | RV7 | `LLVisualizerTests.fs` | 7 | Dyck1, APlus, ANBN, SingleAB | Medium |
@@ -384,7 +427,7 @@ Every printer/golden test hardcodes grammar strings that duplicate LanguageRegis
 These files test EBNF/RSM-related functions but hardcode EBNF grammar text instead of sourcing from the registry.
 
 | # | File | ~Locations | Duplicates Registry? | Severity |
-|---|------|-----------|---------------------|----------|
+| --- | --- | --- | --- | --- |
 | RV17 | `EbnfParserTests.fs` | ~20 | Partial | Medium |
 | RV18 | `RSMTests.fs` | ~17 | Partial (SingleA, SingleAB) | Medium |
 | RV19 | `RsmToGrammarTests.fs` | ~10 | Partial | Medium |
@@ -392,7 +435,7 @@ These files test EBNF/RSM-related functions but hardcode EBNF grammar text inste
 ### 7.4 Hardcoded `RsmBuilder.buildRSMFromText` — Printer/Golden Test Files
 
 | # | File | ~Locations | Severity |
-|---|------|-----------|----------|
+| --- | --- | --- | --- |
 | RV20 | `TexCompilationTests.fs` | ~7 | Medium |
 | RV21 | `RnglrTests.fs` | 1 | Low |
 | RV22 | `RnglrStepVisualizationTests.fs` | 1 | Low |
@@ -403,7 +446,7 @@ These files test EBNF/RSM-related functions but hardcode EBNF grammar text inste
 ### 7.5 `TestHelpers.grammarToRsm` Bypasses Pre-built `g.Rsm` + Hardcoded Utilities
 
 | # | Description | ~Locations | Severity |
-|---|-------------|-----------|----------|
+| --- | --- | --- | --- |
 | RV24 | `TestHelpers.grammarToRsm` reconstructs RSM from text when `AnnotatedGrammar.Rsm` already exists. Called in `GllTests.fs` (~11), `RnglrTests.fs` (~6), `CrossParserEquivalenceTests.fs` (~6), `ParsingTestCases.fs:177`, `PathIndexTeXTests.fs` (~4). Should use `g.Rsm` directly. | ~28 | Medium |
 | RV25 | `TestHelpers.fs` itself hardcodes `grammarToEbnfText` (line 87), `grammarToRsm` (line 107), `buildRegexRsm` (line 129). These utility functions bypass the registry. Fix: remove `grammarToRsm` (replaced by `g.Rsm`), move `grammarToEbnfText` to registry (or delete — callers should use `AnnotatedGrammar.Text`). | 3 | Medium |
 | RV26 | `grammarToEbnfText` duplicated in `LanguageRegistry.fs:~50` and `TestHelpers.fs:87`. | 2 | Low |
@@ -411,7 +454,7 @@ These files test EBNF/RSM-related functions but hardcode EBNF grammar text inste
 ### 7.6 `data/*.bnf` Files Duplicate Registry Grammar Definitions
 
 | # | Description | Severity |
-|---|-------------|----------|
+| --- | --- | --- |
 | RV27 | 7 `.bnf` files in `data/` duplicate LanguageRegistry entries: `example_grammar.bnf` (Dyck1 grammar1), `example_grammar_amb.bnf` (Dyck1 grammar2), `example_grammar_a_a_a.bnf` (APlus grammar5), `example_grammar_an_bn.bnf` (ANBN), `example_grammar_chain.bnf`, `example_grammar_simple.bnf`, `example_lr_grammar.bnf` (ArithExpr grammar7). Used by `FLPQ.Cli.Tests`. Fix: CLI tests should generate temp files from the registry or read `.Text`. | Low |
 
 ## 8. Verification Completeness
@@ -419,7 +462,7 @@ These files test EBNF/RSM-related functions but hardcode EBNF grammar text inste
 This table tracks whether each constraint source (rows §1–§23 from the [Constraint Sources Map](.opencode/skills/code-review/SKILL.md#constraint-sources-map)) was verified during this review. "Verified" means either the tool reported zero violations, or manual inspection confirmed compliance or produced findings.
 
 | § | Constraint | Status | Evidence |
-|---|-----------|--------|----------|
+| --- | --- | --- | --- |
 | 1 | Naming case | Auto — 0 FSharpLint warnings | FSharpLint |
 | 2 | Code style idioms | Auto — 0 FSharpLint warnings | FSharpLint |
 | 3 | Tab chars, redundant keywords, unused bindings | Auto — 0 FSharpLint warnings | FSharpLint |

@@ -24,10 +24,12 @@
 ## Data Structure
 
 The SPPF is a directed graph where:
+
 - **Vertices** carry parse information (`SppfNodeInfo`) — terminals, nonterminals, epsilons, intermediates, ranges
 - **Edges** are labeled with structural relationships (`SppfEdgeLabel`) — SingleChild, LeftChild, RightChild, PackedAlternative
 
 Key structural properties:
+
 - **Sharing**: Each distinct range has exactly one `SppfRange` node. Multiple derivation alternatives for the same range share this node via multiple `PackedAlternative` edges.
 - **Packing**: Nonterminal nodes are children of range nodes (not alternatives themselves). A nonterminal is a call-site marker; its child range lies in the callee block.
 - **Immutability**: The SPPF is built once after parsing and is fully immutable — it can be traversed multiple times independently.
@@ -35,6 +37,7 @@ Key structural properties:
 ## Type Definitions
 
 ### `SppfNodeInfo<'t, 'nt>`
+
 ```fsharp
 type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
     | SppfTerminal of Terminal<'t> * leftPos: int * rightPos: int
@@ -45,7 +48,7 @@ type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
 ```
 
 | Variant | Purpose |
-|---------|---------|
+| --- | --- |
 | `SppfTerminal` | Leaf node for a matched terminal spanning graph positions [leftPos, rightPos] |
 | `SppfNonterminal` | Call-site marker — a nonterminal spanning a range. Links to callee's range via SingleChild |
 | `SppfEpsilon` | Epsilon derivation at position pos. Carries optional nonterminal to track PEpsilonNonterminal origin |
@@ -53,6 +56,7 @@ type SppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
 | `SppfRange` | Grouping node: collects all PackedAlternative children that span the same range |
 
 ### `SppfEdgeLabel`
+
 ```fsharp
 type SppfEdgeLabel =
     | SingleChild
@@ -62,32 +66,37 @@ type SppfEdgeLabel =
 ```
 
 | Label | Connects | Meaning |
-|-------|----------|---------|
+| --- | --- | --- |
 | `SingleChild` | Nonterminal → Range\|Epsilon | The nonterminal derives the target sub-derivation |
 | `LeftChild` | Intermediate → Range\|Epsilon | Left half of a concatenation split |
 | `RightChild` | Intermediate → Range\|Epsilon | Right half of a concatenation split |
 | `PackedAlternative` | Range → Terminal\|Nonterminal\|Intermediate\|Epsilon | One alternative derivation for this range |
 
 ### `SPPF<'t, 'nt>`
+
 ```fsharp
 type SPPF<'t, 'nt when 't: comparison and 'nt: comparison> =
     { Graph: Graph<SppfNodeInfo<'t, 'nt>, Option<SppfEdgeLabel>>
       RootIndices: int list }
 ```
+
 - `Graph`: the SPPF as a vertex/edge-labeled graph
 - `RootIndices`: indices of SppfRange nodes for the queried root ranges
 
 ## Construction
 
 ### `Sppf.buildSppfFromIndex`
+
 ```fsharp
 buildSppfFromIndex
     : PathIndex<'t, 'nt> -> RangeKey list -> Map<Nonterminal<'nt>, int> option
    -> Map<Nonterminal<'nt>, Set<int>> option -> SPPF<'t, 'nt>
 ```
+
 Top-down SPPF construction from a path index. Each root range is processed via `processRange`, which recurses into sub-ranges.
 
 **Construction logic per range:**
+
 1. **Memoization**: Each range processed exactly once. `SppfRange` created on first visit; subsequent visits reuse it and add new `PackedAlternative` edges.
 2. **PTerminal** → `SppfTerminal` leaf, `PackedAlternative` edge.
 3. **PNonterminal** → `SppfNonterminal` node (call-site). Links via `SingleChild` to callee's range node (found through blockStart/blockFinals lookup).
@@ -99,12 +108,15 @@ Top-down SPPF construction from a path index. Each root range is processed via `
 ## Tree Enumeration
 
 ### `Sppf.enumerateTrees`
+
 ```fsharp
 enumerateTrees : SPPF<'t, 'nt> -> rootIdx: int -> seq<DerivationTree<'t, 'nt>>
 ```
+
 Lazily enumerates derivation trees in order of increasing depth using iterative deepening.
 
 **Key properties:**
+
 - **Lazy evaluation (`seq`)**: Trees generated on demand.
 - **Iterative deepening**: Outer loop increments `depth` from 1 up to 50, calling `childrenByDepth depth rootIdx` at each level.
 - **Transparent Range nodes**: `SppfRange` forwards to all `PackedAlternative` children without consuming a depth level.
@@ -125,7 +137,7 @@ val validateIntermediateConnectedness : SPPF<'t, 'nt> -> Result<unit, string lis
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | SPPF as separate immutable structure | Decouples parsing from forest construction and tree extraction |
 | SppfRange as grouping node | One node per range regardless of ambiguity — the defining property of SPPF |
 | PNonterminal not self-referencing | Nonterminal links to callee's range via blockStart/blockFinals lookup, avoiding trivial self-cycles |

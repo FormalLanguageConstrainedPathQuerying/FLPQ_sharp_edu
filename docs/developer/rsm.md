@@ -23,6 +23,7 @@
 ## Data Structure
 
 An RSM `⟨N, Σ, B, B_S, Q, Q_S⟩` from the book:
+
 - **N**: nonterminals — one block per nonterminal
 - **Σ**: terminals — labels on transitions
 - **B**: blocks — each a DFA over `RsmSymbol<'t,'nt>` = Σ ∪ Q_S
@@ -35,28 +36,34 @@ The key design feature: all transitions for all blocks are stored in a common `M
 ## Type Definitions
 
 ### `RsmSymbol<'t, 'nt>`
+
 ```fsharp
 [<RequireQualifiedAccess>]
 type RsmSymbol<'t, 'nt when 't: comparison and 'nt: comparison> =
     | RTerm of Terminal<'t>
     | RNonterm of Nonterminal<'nt>
 ```
+
 A transition label in an RSM block. Either a terminal (consuming input) or a nonterminal (recursive call).
 
 ### `RsmBlock<'t, 'nt>`
+
 ```fsharp
 type RsmBlock<'t, 'nt when 't: comparison and 'nt: comparison> =
     { nonterminal: Nonterminal<'nt>
       dfa: DFA<RsmSymbol<'t, 'nt>, int> }
 ```
+
 A single block — a DFA for one nonterminal. States are simple integer indices.
 
 ### `RSM<'t, 'nt>`
+
 ```fsharp
 type RSM<'t, 'nt when 't: comparison and 'nt: comparison> =
     { blocks: RsmBlock<'t, 'nt> list
       startBlock: Nonterminal<'nt> }
 ```
+
 The full RSM tuple. `blocks` contains all blocks (one per nonterminal). `startBlock` identifies the entry point.
 
 ## Module Functions
@@ -74,15 +81,18 @@ val stateCount: RSM<'t, 'nt> -> int
 ## ExtendedRSM
 
 ### `ExtendedRSM<'t, 'nt>`
+
 ```fsharp
 type ExtendedRSM<'t, 'nt when 't: comparison and 'nt: comparison> =
     { originalRsm: RSM<'t, 'nt>
       freshStart: Nonterminal<'nt>
       extendedRsm: RSM<'t, 'nt> }
 ```
+
 An RSM augmented with fresh start `S'`. The extended RSM has `S'` as its start block with a single transition `0 --RNonterm(originalStart)--> 1`. Preserves the relationship between original and augmented RSMs.
 
 ### Module helpers
+
 ```fsharp
 val create: Nonterminal<'nt> -> RSM<'t, 'nt> -> ExtendedRSM<'t, 'nt>
 val originalRsm: ExtendedRSM<'t, 'nt> -> RSM<'t, 'nt>
@@ -98,7 +108,7 @@ val extBlocks: ExtendedRSM<'t, 'nt> -> RsmBlock<'t, 'nt> list
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Reuse existing `DFA<'t, 's>` type for blocks | Avoids duplicating automaton infrastructure |
 | `RsmSymbol` as discriminated union | Cleanly represents Σ ∪ Q_S alphabet |
 | Simple `int` states | Block states are simple indices; no need for named states |

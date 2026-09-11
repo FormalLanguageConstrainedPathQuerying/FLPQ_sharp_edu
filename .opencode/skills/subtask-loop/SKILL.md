@@ -1,6 +1,6 @@
 ---
 name: subtask-loop
-description: Use when executing an atomic subtask from the detailed plan: implement → test → document → pre-commit checks → quality checks → commit → mark done. Covers the full execution cycle, code quality checks, commit rules, and completion tracking.
+description: "Use when executing an atomic subtask from the detailed plan: implement → test → document → pre-commit checks → quality checks → commit → mark done. Covers the full execution cycle, code quality checks, commit rules, and completion tracking."
 ---
 
 # Subtask Execution Loop
@@ -16,7 +16,7 @@ Execute these steps in order. **Do not skip steps. Do not proceed past a step un
 When a subtask modifies only `.md` files (no `.fs` files), the following cycle steps are adapted:
 
 | Step | Action |
-|------|--------|
+| --- | --- |
 | 1. Implement | Write documentation |
 | 2. Write Tests | **Skip** — no code to test |
 | 3. Update Docs | The implementation IS the documentation; verify navigation links are updated |
@@ -107,11 +107,11 @@ Commit with message `feat(XXX-SN): description` where `XXX` is the task ID and `
 
 **Before commit:**
 
-- Verify `tasks.md` is not staged:
+- Verify no task-log file is staged (`tasks/tasks.md`, `tasks/tasks<N>.md`):
   ```bash
-  git diff --cached --name-only | grep -q tasks.md
+  git diff --cached --name-only | grep -qE 'tasks/tasks(\.md|[0-9]+\.md)'
   ```
-  If it matches, unstage it: `git reset HEAD tasks.md`
+  If it matches, unstage it: `git reset HEAD <file>` (exception: a task whose deliverable is the task log itself — see the `git-workflow` skill)
 
 See the `git-workflow` skill for the full git workflow.
 
@@ -134,7 +134,7 @@ Never silently skip a subtask. If a subtask was attempted, reverted, and its pla
 
 ### Requirement Cross-Check
 
-Before marking a subtask complete, re-read the task specification in `tasks/tasks.md`. Verify each clause against what was actually implemented:
+Before marking a subtask complete, re-read the task specification in the task-log file containing the entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). Verify each clause against what was actually implemented:
 
 - [ ] Every clause in the task description is traceable to code that was committed
 - [ ] No requirement was silently skipped or deferred without user approval
@@ -171,12 +171,17 @@ A `todowrite` listing "S1: Implement [completed], S2: Implement [completed], S1:
 If you encounter an algorithmic problem that you cannot resolve to 100% correctness, **STOP**. Do not commit. Do not merge. Do not comment out or weaken failing tests to make the suite green. Instead:
 
 1. Stay on the feature branch
+
 2. Report the problem concretely to the user:
+
    - Which tests fail and why
    - What algorithmic gap exists (e.g., "LR goto entries missing for nested nonterminal calls")
    - What you've tried and what remains unresolved
+
 3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task
-4. **Transfer user guidance to the task** per the `user-guidance-transfer` skill — append `**[USER GUIDANCE]**` annotation to the task in `tasks/tasks.md`
+
+4. **Transfer user guidance to the task** per the `user-guidance-transfer` skill — append `**[USER GUIDANCE]**` annotation to the task in the task-log file containing its entry
+
 5. Append a `## Design Notes` section to `tasks/detailed_plan.md`. See the `planning` skill for the full template. Minimum required content:
 
    - **Correct Design**: algorithmic design as confirmed by the user — coordinate spaces, invariants, decomposition schema. Quote the user's design guidance verbatim where available.
@@ -198,6 +203,6 @@ Do not mark the task as done. Fix every failure and re-run until `STATUS: PASS`,
 
 ## Marking Complete
 
-Mark the task as completed in `tasks.md` — **only prepend `[done] ` to the existing task line. Never rewrite the task description.** The task text in `tasks.md` is user-authored and immutable.
+Mark the task as completed in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`) — **only prepend `[done] ` to the existing task line. Never rewrite the task description.** The task text is user-authored and immutable.
 
 The `[done]` tag means COMPLETE: every requirement met, every test passing, every edge case handled. Never mark a task as `[done]` with known failures or unresolved limitations.

@@ -23,6 +23,7 @@ print("[TRACE] detect_changes.py: found 3 modified files", file=sys.stderr)
 ```
 
 **Rules:**
+
 - Every trace line starts with `[TRACE]` — enables reliable grep filtering
 - Remove all trace lines before committing
 - Prefer unique location names for unambiguous filtering
@@ -62,7 +63,7 @@ grep TRACE tmp/test-trace.txt
 ### Common Pitfalls
 
 | Symptom | Likely Cause | Debug Approach |
-|---------|-------------|----------------|
+| --- | --- | --- |
 | Test never starts ("Starting test execution" hangs) | Test discovery timeout | Check `dotnet build` first; use `--no-build` only after successful separate build |
 | `Seq.head` never returns | Infinite seq or slow depth enumeration | Add trace inside seq generator and `childrenByDepth` |
 | `for` loop appears to process forever | Seq is strict (forced), not lazy | Check for `List.collect`/`@` inside `seq { }` — replace with `Seq.collect`/`Seq.append` |

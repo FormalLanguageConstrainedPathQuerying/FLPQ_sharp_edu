@@ -25,7 +25,7 @@
 ## Modules
 
 | Module | Description |
-|--------|-------------|
+| --- | --- |
 | [SymbolTeX](symbol-tex.md) | Unified TeX rendering for grammar symbols |
 | [ParsingTableTeX](parsing-table-tex.md) | Common TeX rendering for parsing algorithm tables (CYK, Valiant) |
 | [MatrixTeX](matrix-tex.md) | TeX rendering for matrices using nicematrix |
@@ -48,6 +48,7 @@
 ## Design
 
 The printer library follows the data-then-print pattern:
+
 1. Algorithms produce structured F# data (trace steps, tables, trees, automata)
 2. Printers consume that data and produce TeX or Dot strings
 3. The CLI or tests write those strings to files

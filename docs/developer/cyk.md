@@ -46,49 +46,61 @@
 ## Type Definitions
 
 ### `CykTraceStep<'nt>`
+
 ```fsharp
 type CykTraceStep<'nt> =
     { table: ParsingTable<'nt>
       highlights: Matrix.Highlight list }
 ```
+
 A snapshot of the CYK working table at one step, with cells modified at this step highlighted in yellow.
 
 ## Function Signatures
 
 ### `parse`
+
 ```fsharp
 val parse: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> bool
 ```
+
 Determines whether the token sequence belongs to the language of grammar `g`. Auto-converts the grammar to CNF internally.
 
 ### `parseWithTable`
+
 ```fsharp
 val parseWithTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> ParsingTable<'nt> * bool
 ```
+
 Runs CYK and returns both the final parsing table (n × n matrix where cell `[i,j]` contains the set of nonterminals deriving the substring) and the acceptance status.
 
 ### `parseWithTrace`
+
 ```fsharp
 val parseWithTrace: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> CykTraceStep<'nt> list
 ```
+
 Runs CYK and returns the sequence of working table states, one per diagonal. The first element is the table after filling the diagonal, subsequent elements show the state after each span length. Useful for step-by-step visualization.
 
 ### `parseWithSppfInfo`
+
 ```fsharp
 val parseWithSppfInfo: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt>
 ```
+
 Runs CYK and returns an enriched parsing table where each cell stores `(nonterminal, splitPoint, productionNumber)` tuples. The `splitPoint` encodes the decomposition point (`k`) for binary rules or the terminal position for terminal rules; `productionNumber` is the 1-based production number of the CNF grammar rule in the canonical start-nonterminal-first order (matching `grammarToTeXWithNumbers`). This table provides all data needed for BasicSPPF construction (see `BasicSppf.fromParsingTable`).
 
 ### `parseWithSppfTable`
+
 ```fsharp
 val parseWithSppfTable: freshNonterminal:(int -> 'nt) -> g:Grammar<'t, 'nt> -> terminals:Terminal<'t> list -> SppfParsingTable<'nt> * bool
 ```
+
 Runs CYK and returns both the enriched parsing table and the acceptance status. Equivalent to calling `parseWithSppfInfo` and checking for the start nonterminal in cell `(0, n-1)`.
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Grammar auto-converted to CNF inside `parse` | Caller doesn't need to manually convert; simplifies API |
 | Single internal computation using SPPF entries | All table cells always store `SppfParsingEntry<'nt>` (nonterminal, split point, production number). Non-SPPF public functions (`parse`, `parseWithTable`, `parseWithTrace`) are wrappers that extract nonterminals from the SPPF table. Avoids duplicating the algorithm for with/without-SPPF variants. |
 | Cells use `Set<SppfParsingEntry<'nt>>` internally | Enables SPPF construction without re-running the algorithm; non-SPPF callers get only nonterminals via conversion |

@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Use when doing git operations: branching, committing, merging, rebasing. Covers branch naming convention, commit message format, merge strategy, and pre-commit/pre-merge checks for this project.
+description: "Use when doing git operations: branching, committing, merging, rebasing. Covers branch naming convention, commit message format, merge strategy, and pre-commit/pre-merge checks for this project."
 ---
 
 # Git Workflow
@@ -9,7 +9,7 @@ description: Use when doing git operations: branching, committing, merging, reba
 
 - Stable development branch: `dev`
 - Protected main branch: `main`
-- Feature branches: `feature/XXX-short-description` where `XXX` is the task ID from `tasks/tasks.md`
+- Feature branches: `feature/XXX-short-description` where `XXX` is the task ID from the task log (`tasks/tasks*.md`)
 - One task per branch — never combine multiple task IDs in a single branch
 
 ## Commits
@@ -33,12 +33,12 @@ docs(XXX-SN): description
 ### Pre-commit checklist
 
 1. Run commit gate (format + build). See `quality-gates` skill.
-2. **Verify `tasks.md` is not staged:**
+2. **Verify no task-log file is staged:**
    ```bash
-   git diff --cached --name-only | grep -q tasks.md
+   git diff --cached --name-only | grep -qE 'tasks/tasks(\.md|[0-9]+\.md)'
    ```
-   If it matches, unstage it: `git reset HEAD tasks.md`
-   `tasks.md` must never be committed from a feature branch. Task-log commits — adding an entry at task start, marking `[done]` at task end — happen directly on `dev`, so entries are durable and do not depend on working-tree lifetime.
+   If it matches, unstage it: `git reset HEAD <file>`
+   Task-log files (`tasks/tasks.md`, `tasks/tasks<N>.md`) must never be committed from a feature branch. Task-log commits — adding an entry at task start, marking `[done]` at task end — happen directly on `dev`, so entries are durable and do not depend on working-tree lifetime. Exception: a task whose deliverable is the task log itself (like 268) commits the restructured files on the feature branch — every change there is script-generated and content-preservation verified.
 
 ### Commit scope
 
@@ -49,10 +49,10 @@ docs(XXX-SN): description
 
 ### Pre-merge checks
 
-**Task-log check (first):** verify the task entry exists in `tasks/tasks.md`:
+**Task-log check (first):** verify the task entry exists in a task-log file (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`):
 
 ```bash
-grep -qE '^[[:space:]]*NNN\.' tasks/tasks.md   # NNN = task ID
+grep -qE '^[[:space:]]*NNN\.' tasks/tasks*.md   # NNN = task ID
 ```
 
 If it is missing, **STOP — do not merge.** Restore the entry verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` and commit it on `dev` first. A merged task without a log entry is a lost task.
@@ -81,4 +81,4 @@ See the `quality-gates` skill for the full async polling procedure. The gate wri
 - No emergency fixes
 - All work is local, no `push`-es
 - If a test cannot pass, use `[<Fact(Skip="explanation")>]` with a clear reason — never an empty body `()`, tautological assertions, or commented-out asserts
-- Never run `git checkout tasks/tasks.md` or `git restore tasks/tasks.md` — the working-tree version is authoritative and may contain uncommitted user-authored content
+- Never run `git checkout` or `git restore` on any `tasks/tasks*.md` file — the working-tree version is authoritative and may contain uncommitted user-authored content

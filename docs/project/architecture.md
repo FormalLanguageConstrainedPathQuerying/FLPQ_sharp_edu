@@ -118,7 +118,7 @@ FLPQ.slnx
 Each project has a hub documentation file grouping its modules. Design and logic of individual modules is documented in dedicated files linked from these hubs.
 
 | Project | Hub Document |
-|---------|-------------|
+| --- | --- |
 | FLPQ.LinearAlgebra | [FLPQ.LinearAlgebra.md](../developer/FLPQ.LinearAlgebra.md) |
 | FLPQ.GraphAnalysis | [FLPQ.GraphAnalysis.md](../developer/FLPQ.GraphAnalysis.md) |
 | FLPQ.Languages | [FLPQ.Languages.md](../developer/FLPQ.Languages.md) |

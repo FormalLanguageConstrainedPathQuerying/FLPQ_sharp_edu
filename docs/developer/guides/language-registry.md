@@ -11,7 +11,7 @@
 - [Language Entries](#language-entries)
   - [Dyck1 (balanced a/b)](#dyck1-balanced-ab)
   - [APlus (a^+)](#aplus-a)
-  - [AStar (a*)](#astar-a)
+  - [AStar (a\*)](#astar-a)
   - [ArithExpr (arithmetic expressions)](#arithexpr-arithmetic-expressions)
   - [TwoTrackDyck (ab↔c, ax↔y)](#twotrackdyck-abc-axy)
   - [ANB (a^n b)](#anb-an-b)
@@ -50,21 +50,22 @@
 
 ### Dyck1 (balanced a/b)
 
-**Formal language**: L = {w ∈ {a,b}* | every prefix of w has at least as many a's as b's, and |w|_a = |w|_b}
+**Formal language**: L = {w ∈ {a,b}\* | every prefix of w has at least as many a's as b's, and |w|\_a = |w|\_b}
 
 **F# access**: `LanguageRegistry.Dyck1`
 
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar1` | S → a S b S \| ε | no | no | yes | yes | no | ambiguous Dyck-1; LL(1)-compatible |
 | `grammar2` | S → a S b \| S S \| ε | yes | yes | yes | yes | no | S→SS creates direct left-recursion; not LL, not LR |
 | `grammarSaSb_eps` | S → S a S b \| ε | yes | yes | yes | yes | no | left-recursive Dyck-1; S→S a S b has direct left-recursion |
 
 **Accept strings**:
+
 | String |
-|--------|
+| --- |
 | `a b a b` |
 | `a b` |
 | (empty) |
@@ -72,8 +73,9 @@
 | `a a b a b b` |
 
 **Reject strings**:
+
 | String |
-|--------|
+| --- |
 | `a a` |
 | `b b` |
 | `a b b` |
@@ -95,7 +97,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar3` | S → a S \| a | no | no | no | no | no | right-recursive; LL(1), SLR(1)-compatible |
 | `grammar4` | S → S a \| a | yes | yes | no | no | no | left-recursive |
 | `grammar5` | S → S S \| S S S \| a | yes | yes | yes | no | no | ambiguous left-recursive |
@@ -111,7 +113,7 @@
 
 ---
 
-### AStar (a*)
+### AStar (a\*)
 
 **Formal language**: L = {a^n | n ≥ 0}
 
@@ -120,8 +122,8 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
-| `grammar13` | S → ε \| a a S \| a S | no | no | yes | yes | no | ambiguous a*; multiple derivations for a^n |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `grammar13` | S → ε \| a a S \| a S | no | no | yes | yes | no | ambiguous a\*; multiple derivations for a^n |
 
 **Accept strings**: (empty), `a`, `a a`, `a a a`, `a a a a`
 
@@ -133,14 +135,14 @@
 
 ### ArithExpr (arithmetic expressions)
 
-**Formal language**: Arithmetic expressions over terminals {x, +, *, (, )}
+**Formal language**: Arithmetic expressions over terminals {x, +, \*, (, )}
 
 **F# access**: `LanguageRegistry.ArithExpr`
 
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar6` | S → x \| S + S \| S * S \| (S) | yes | yes | yes | no | no | ambiguous; no precedence; not LL, not LR |
 | `grammar7` | E → E + T \| T; T → T * F \| F; F → (E) \| x | yes | yes | no | no | no | unambiguous; left-assoc; SLR(1)-compatible |
 | `grammar8` | E → T + E \| T; T → F * T \| F; F → (E) \| x | no | no | no | no | no | unambiguous; right-assoc |
@@ -162,7 +164,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar9` | S → S1 \| S2; S1 → a b S c \| ε; S2 → a x S y \| ε | no | no | yes | yes | no | ambiguous (empty via S1 or S2) |
 | `grammar10` | S → S1 \| S2; S1 → a b S c; S → ε; S2 → a x S y | no | no | yes | yes | no | same language; different epsilon handling |
 
@@ -183,7 +185,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar_aS_b` | S → a S \| b | no | no | no | no | no | right-recursive; unambiguous |
 
 **Accept strings**: `b`, `a b`, `a a b`, `a a a b`
@@ -203,7 +205,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammar_aSb_eps` | S → a S b \| ε | no | no | no | yes | no | classic; unambiguous; LL(1)-compatible |
 
 **Accept strings**: (empty), `a b`, `a a b b`, `a a a b b b`
@@ -223,7 +225,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammarRightNullable` | S → A B; A → a A \| ε; B → b B \| ε | no | no | no | yes | no | a^m b^n; right-nullable A and B; unambiguous |
 
 **Accept strings**: (empty), `a`, `b`, `a b`, `a a b`, `a b b`
@@ -243,7 +245,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammarS2a` | S → a | no | no | no | no | no | trivial single-terminal grammar |
 
 **Accept strings**: `a`
@@ -263,7 +265,7 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammarAB` | S → a b | no | no | no | no | no | trivial two-terminal grammar |
 
 **Accept strings**: `a b`
@@ -283,11 +285,11 @@
 **Grammars**:
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
-|------|-----------|-----|-----|-----|---|-----|-------|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | `grammarEps` | S → ε | no | no | no | yes | yes | simplest epsilon grammar |
 | `grammarNtoEps` | S → N; N → ε | no | no | no | yes | no | epsilon via intermediate nonterminal |
 | `grammarNNtoEps` | S → N N; N → ε | no | no | no | yes | yes | epsilon via nullable binary; CNF-compatible |
-| `grammarNStarEps` | S → N*; N → ε | no | no | no | yes | no | epsilon via Kleene star of nullable; uses EBNF |
+| `grammarNStarEps` | S → N\*; N → ε | no | no | no | yes | no | epsilon via Kleene star of nullable; uses EBNF |
 | `grammarSSeps` | S → S S \| ε | yes | yes | yes | yes | yes | epsilon via self-recursive binary; ambiguous; CNF-compatible |
 | `grammarChainEps` | S → A B; A → C D; B → D C; D → ε; C → ε | no | no | no | yes | no | epsilon via chain of nullable nonterminals |
 | `grammarAltEps` | S → A \| B; A → C D; B → D C; D → ε; C → ε | no | no | yes | yes | no | ambiguously epsilon via alternative paths |
@@ -302,7 +304,7 @@
 ## Grammar Properties Reference
 
 | Column | Meaning |
-|--------|---------|
+| --- | --- |
 | **LR** (HasLeftRecursion) | ∃A ⇒⁺ Aβ — some nonterminal can derive itself as the leftmost symbol in a derivation. Incompatible with LL parsers. |
 | **DLR** (HasDirectLeftRecursion) | ∃A → Aα — a nonterminal appears as the leftmost symbol of its own production RHS. Stricter than LR; incompatible with LL. |
 | **Amb** (IsAmbiguous) | ∃w with ≥2 distinct parse trees in this grammar. Incompatible with deterministic LL/LR parsers. |
@@ -315,7 +317,7 @@
 ## Generator Reference
 
 | Generator name | Language | What it produces | FsCheck type |
-|---------------|----------|-----------------|-------------|
+| --- | --- | --- | --- |
 | `abStringGen` | Dyck1, ANB, ANBN, ASTAR_BSTAR | Random sequences of `a` and `b` | `Gen<string>` |
 | `aStringGen` | APlus, AStar | Sequences of `a` tokens, space-separated | `Gen<string>` |
 | `exprStringGen` | ArithExpr | Recursively-generated arithmetic expressions | `Gen<string>` |

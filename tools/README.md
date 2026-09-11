@@ -16,13 +16,27 @@ Auxiliary tools for project work and code quality control.
 
 For detailed per-tool documentation (steps, thresholds, output format examples), see `docs/developer/guides/tools.md`.
 
+## Setup
+
+The markdown toolchain requires a one-time install per environment:
+
+```bash
+pip install mdformat mdformat-frontmatter
+pip install -e tools/mdformat_tasklog
+```
+
+- `mdformat` — Markdown formatter; all `.md` files in the repo must be mdformat-clean.
+- `mdformat-frontmatter` — keeps YAML frontmatter intact (SKILL.md files).
+- `tools/mdformat_tasklog` — local plugin: ordered lists keep consecutive numbering without zero-padding (explicit list numbers such as task entries survive formatting), and GFM tables are parsed and rendered correctly (mdformat's default preset has no table support and would destroy them).
+
 ## Tools
 
 | Script | Purpose |
-|--------|---------|
+| --- | --- |
 | `detect_changes.py` | Detect projects with modified `.fs` files relative to `dev` |
-| `quality_check.py` | Inter-subtask check: format + build |
-| `hard_gate.py` | Full gate: format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
+| `quality_check.py` | Inter-subtask check: markdown format + format + build |
+| `hard_gate.py` | Full gate: markdown format + format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
+| `split_tasks.py` | Task log formatter/splitter: repairs and mdformat-normalizes `tasks/tasks.md` and `tasks/tasks<N>.md`, verifies structure preservation, and archives the oldest 100 entries to the next `tasks/tasks<N>.md` when the active log exceeds 100 entries. Run after every task-log change. |
 
 ## Usage
 
@@ -30,6 +44,7 @@ For detailed per-tool documentation (steps, thresholds, output format examples),
 python3 tools/detect_changes.py
 python3 tools/quality_check.py
 python3 tools/hard_gate.py
+python3 tools/split_tasks.py
 ```
 
 After each run, read and analyze the corresponding `tmp/<script>.txt` file:

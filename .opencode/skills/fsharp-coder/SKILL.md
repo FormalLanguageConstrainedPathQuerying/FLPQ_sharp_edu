@@ -1,6 +1,6 @@
 ---
 name: fsharp-coder
-description: Use when writing F# code: language-specific patterns, idioms, gotchas, and library API quirks. Covers FsCheck API quirks (Gen shadowing, naming, overloads), closure patterns, record ambiguity, NonEmptySet API, optional parameters, pattern annotations, Argu flags, and CLI entry points.
+description: "Use when writing F# code: language-specific patterns, idioms, gotchas, and library API quirks. Covers FsCheck API quirks (Gen shadowing, naming, overloads), closure patterns, record ambiguity, NonEmptySet API, optional parameters, pattern annotations, Argu flags, and CLI entry points."
 ---
 
 # F# Coding Patterns and Quirks
@@ -31,7 +31,7 @@ MyGen.choose(1, 5)   // Works
 Functions in `FsCheck.FSharp.Gen` have **lowercase** F# source names but **PascalCase** CLR names:
 
 | F# Source Name | CLR Name | Usage |
-|----------------|----------|-------|
+| --- | --- | --- |
 | `choose` | `Choose` | `MyGen.choose(1, 5)` |
 | `bind` | `Bind` | `MyGen.bind` |
 | `map` | `Map` | `MyGen.map` |
@@ -110,7 +110,7 @@ In FSharpPlus 1.9.1, `NonEmptySet.ofSet : Set<'a> -> NonEmptySet<'a>` returns th
 ### Available Members
 
 | Function | Signature | Notes |
-|----------|-----------|-------|
+| --- | --- | --- |
 | `NonEmptySet.singleton` | `'a -> NonEmptySet<'a>` | Create singleton |
 | `NonEmptySet.add` | `'a -> NonEmptySet<'a> -> NonEmptySet<'a>` | Add element |
 | `NonEmptySet.contains` | `'a -> NonEmptySet<'a> -> bool` | Membership test |
@@ -133,6 +133,7 @@ In FSharpPlus 1.9.1, `NonEmptySet.ofSet : Set<'a> -> NonEmptySet<'a>` returns th
   ```
 
 - **Explicit `bool` parameter**: accept the flag as a required parameter
+
 - **`Option<'T>` parameter**: accept `Option<bool>` explicitly
 
 ## Pattern Type Annotation Syntax

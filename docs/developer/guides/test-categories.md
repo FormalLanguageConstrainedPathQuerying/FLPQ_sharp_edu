@@ -21,7 +21,7 @@ Tests in this project use xUnit `[<Trait("Category", "...")>]` attributes to gro
 ## Categories
 
 | Category | Required tool | Affected tests | Purpose |
-|----------|--------------|----------------|---------|
+| --- | --- | --- | --- |
 | `Graphviz` | `dot` (Graphviz) | `AutomatonVisualizationTests`, `DerivationTreeVisualizationTests`, `LLVisualizerTests`, `LRVisualizerTests`, `ExternalToolsTests`, `TexCompilationTests` | Compile generated DOT graphs to verify structural correctness (`-Tplain` parsing) and produce PDFs |
 | `TeX` | `lualatex` | `AutomatonVisualizationTests`, `DerivationTreeTikzTests`, `ExternalToolsTests`, `TexCompilationTests` | Compile generated TeX/Tikz fragments in a standalone document to verify correctness and strict error detection |
 | `Summary` | `lualatex` | `CliSummaryTests` | End-to-end CLI `--summary` producing merged TeX documents, compiled to PDF |

@@ -20,6 +20,7 @@
 ## Overview
 
 The visualization pipeline separates data collection from rendering:
+
 1. LL/LR parsers collect raw F# data (`LLParsingStep`/`LRParsingStep`) during `parseWithSteps`.
 2. `LLStepVisualizer`/`LRStepVisualizer` convert data to `VisualizationStep` (DOT + TikZ + TeX strings).
 3. CLI/test code writes the rendered strings to files.
@@ -29,51 +30,62 @@ CYK and Valiant similarly produce structured trace data (`CykTraceStep`/`Valiant
 ## Data Types
 
 ### `VisualizationStep` (struct)
+
 Pre-rendered visualization output: `treeAndStack` (combined DOT graph), `treeAndStackTikz`
 (the same combined picture as a TikZ graphdrawing block with a same-layer constraint on the
 stack frontier), and `input` (TeX input row). Both renderings are always computed; the CLI
 writer picks one by mode (`--use-dot`).
 
 ### `StepInput<'t, 'nt>` (struct)
+
 Input state: `tokens` (all input symbols) and `position` (current index).
 
 ### `LLParsingStep<'t, 'nt>` (struct)
+
 LL step data: immutable `tree` snapshot, `stack` leaf list with paths, and `input` state.
 
 ### `LLStackLeaf<'t, 'nt>` (struct)
+
 Stack leaf with its path from root (`tree` + `path: int list`).
 
 ### `LRParsingStep<'t, 'nt>` (struct)
+
 LR step data: partial `tree`, unified `stack` (LRStackFrame list), and `input` state.
 
 ### `LRStackFrame<'t, 'nt>` (struct)
+
 Unified stack frame: `LRState of state: int` (automaton state) or `LRSymbol of tree: DerivationTree<'t,'nt>` (tree node). Stack alternates state/tree: `[LRState(n), LRSymbol(tree_k), ..., LRState(0)]`.
 
 ## Renderer Modules
 
 ### `TeXRenderer`
+
 - `escapeMath: string -> string` — escapes TeX special characters (`\ & % $ # _ { } ^`) for use in math mode.
 - `inputRow: (Terminal<'t> -> string) -> Terminal<'t> list -> int -> string` — renders input as one-row pNiceMatrix with current token underlined. Each token is passed through `escapeMath`, so terminals containing TeX special characters (e.g. the `$` end-of-input marker appended by LL/LR runners) compile correctly in math mode.
 
 ### `DerivationTreeDot`
+
 - `toDot` — single tree to DOT
 - `toDotWithLLStack` — full tree + LL stack chain overlay (dashed edges, same-rank)
 - `toDotWithLRStack` — LR stack chain overlay with LR state frames (gray fill)
 
 ### `DerivationTreeTikz`
+
 - `toTikzWithLLStack` — full tree + LL stack chain overlay (dashed edges, `{ [same layer] ... }`)
 - `toTikzWithLRStack` — LR stack chain overlay with LR state frames (gray fill)
 
 ### `LLStepVisualizer`
+
 - `renderStep` / `renderSteps` — convert `LLParsingStep` to `VisualizationStep`
 
 ### `LRStepVisualizer`
+
 - `renderStep` / `renderSteps` — convert `LRParsingStep` to `VisualizationStep`
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Separation of data collection and rendering | Parsers collect raw data; visualizers render it. No formatting in algorithm code |
 | Single combined DOT for stack+tree | LL/LR produce one DOT graph with tree + overlay stack chain |
 | LL full tree as base | Tree rendered once; stack leaves located by path for dashed chain overlay |

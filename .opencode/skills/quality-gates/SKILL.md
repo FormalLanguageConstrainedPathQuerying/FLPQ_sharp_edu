@@ -1,6 +1,6 @@
 ---
 name: quality-gates
-description: Use when running quality checks: format check, lint, build, test (with coverage), coverage verification — either per-subtask or pre-merge. Covers tool output capture rules, the full gates sequence, verification commands, and re-running logic.
+description: "Use when running quality checks: format check, lint, build, test (with coverage), coverage verification — either per-subtask or pre-merge. Covers tool output capture rules, the full gates sequence, verification commands, and re-running logic."
 ---
 
 # Quality Gates
@@ -26,7 +26,7 @@ echo $! > tmp/hard-gate.pid
 **Output destinations:**
 
 | What | Where | Notes |
-|------|-------|-------|
+| --- | --- | --- |
 | Progress, step results, final STATUS | `tmp/hard-gate.txt` | The single source of truth. Written internally by the script. Read with `grep`, `head`, `tail`. |
 | Crash traceback | `tmp/hard-gate-stderr.txt` | Python writes `traceback.format_exc()` to `sys.stderr`; `nohup` captures it here. Also appended to `tmp/hard-gate.txt` by the script. |
 | `dotnet build / test` raw output | `tmp/hard-gate.txt` detailed log section | Captured by the script's `run_cmd` and written internally. |
@@ -49,9 +49,11 @@ See `tools/README.md` for the full tool list and output conventions. See `docs/d
 ## Gate Types
 
 | Script | Steps | Output Label | Use |
-|--------|-------|-------------|-----|
-| `tools/quality_check.py` | Format → Build | `COMMIT_GATE: PASS` | Pre-commit (subtask step 4) |
-| `tools/hard_gate.py` | Format → Build → Tests (per-project) → Coverage → Lint (per-project) | `STATUS: PASS` | Pre-merge (task completion) |
+| --- | --- | --- | --- |
+| `tools/quality_check.py` | Markdown format → Format → Build | `COMMIT_GATE: PASS` | Pre-commit (subtask step 4) |
+| `tools/hard_gate.py` | Markdown format → Format → Build → Tests (per-project) → Coverage → Lint (per-project) | `STATUS: PASS` | Pre-merge (task completion) |
+
+The markdown format step runs `mdformat --check` over **all** tracked `.md` files. It is check-only: after modifying any `.md` file, run `mdformat <file>` on it before the gate (toolchain setup: `tools/README.md`).
 
 **Never merge on `COMMIT_GATE: PASS`.** The label is intentionally distinct from `STATUS: PASS`
 to prevent confusion. Confusing the two means skipping tests, coverage, and lint.
@@ -59,7 +61,7 @@ to prevent confusion. Confusing the two means skipping tests, coverage, and lint
 ### Two kinds of tools
 
 | Kind | Examples | How to read output |
-|------|----------|--------------------|
+| --- | --- | --- |
 | **Python tool scripts** | `tools/quality_check.py`, `tools/hard_gate.py` | Scripts write to a **fixed output file** (e.g., `tmp/quality-check.txt`, `tmp/hard-gate.txt`). For `hard_gate.py`, redirect stdout/stderr to `tmp/hard-gate-stderr.txt` — the main log is in the fixed file, not stdout. Read the fixed file directly with the Read or Grep tools. |
 | **Raw CLI tools** | `dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage` | These write to stdout/stderr. **Redirect all output** to a file in `tmp/` before reading. |
 
@@ -72,6 +74,7 @@ For raw CLI tools (`dotnet build`, `dotnet test`, `dotnet-fsharplint lint`, `dot
 **NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on tool output. Write raw output to `tmp/` first, then use the Grep or Read tools to analyze the captured file.
 
 Command pattern:
+
 ```bash
 dotnet test > tmp/test-output.txt 2>&1
 ```
@@ -81,7 +84,7 @@ After capturing, analyze the output file with the Grep or Read tools — do NOT 
 ### File naming convention
 
 | Command | Output file |
-|---------|------------|
+| --- | --- |
 | `dotnet build` | `tmp/build-output.txt` |
 | `dotnet test` | `tmp/test-output.txt` |
 | `dotnet fantomas .` | (in-place, no captured output) |
@@ -104,12 +107,13 @@ Before running any expensive CLI tool, you MUST:
 
 ## Commit Gate
 
-Run before every commit. Both steps must pass.
+Run before every commit. All three steps must pass.
 
-The format step is **check-only**: it verifies formatting but does NOT modify files. You must run fantomas manually before the gate:
+The markdown format and F# format steps are **check-only**: they verify formatting but do NOT modify files. You must format manually before the gate — `mdformat <file>` for each `.md` file you modified, and `dotnet fantomas .` when F# files changed:
 
 ```bash
-dotnet fantomas .
+mdformat path/to/changed.md   # if any .md file was modified
+dotnet fantomas .             # if any .fs file was modified
 ```
 
 Then stage any formatted files (`git add`), then run the gate:
@@ -135,12 +139,13 @@ Run once when all subtasks are done. The full hard gate runs format → build �
 Times are baseline estimates for the current codebase and will grow as the project grows.
 
 | Step | What | Notes |
-|------|------|-------|
-| 1. Format | `dotnet fantomas . --check` | Negligible |
-| 2. Build | `dotnet build FLPQ.slnx` | Builds all projects |
-| 3. Tests | Per-project `dotnet test` with coverage | Printers.Tests is the slowest (TeX compilation) |
-| 4. Coverage | Per-project + total threshold check | Negligible |
-| 5. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects |
+| --- | --- | --- |
+| 1. Markdown format | `mdformat --check` on all tracked `.md` files | Negligible |
+| 2. Format | `dotnet fantomas . --check` | Negligible |
+| 3. Build | `dotnet build FLPQ.slnx` | Builds all projects |
+| 4. Tests | Per-project `dotnet test` with coverage | Printers.Tests is the slowest (TeX compilation) |
+| 5. Coverage | Per-project + total threshold check | Negligible |
+| 6. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects |
 
 ### File Structure of `tmp/hard-gate.txt`
 
@@ -222,14 +227,15 @@ If the manual run passes (0 failed, 0 skipped), the gate tool has a false positi
 ### After Completion
 
 When the gate finishes, check the exit status:
+
 - If any step shows `BLOCKED` in the summary, read the detailed log to identify the failure, fix all problems, and re-run from the start.
 - Exit code 0 and `STATUS: PASS` means proceed to merge.
 
-The hard gate runs: format → build → tests with coverage → coverage verification → lint on changed projects. See `docs/developer/guides/tools.md` for detailed step descriptions, thresholds, and output format examples.
+The hard gate runs: markdown format → format → build → tests with coverage → coverage verification → lint on changed projects. See `docs/developer/guides/tools.md` for detailed step descriptions, thresholds, and output format examples.
 
 ### Lint Verification
 
-The hard gate's Step 5 runs `dotnet-fsharplint lint` on each project with modified `.fs` files (detected by `tools/detect_changes.py`). Output appears in `tmp/hard-gate.txt`.
+The hard gate's Step 6 runs `dotnet-fsharplint lint` on each project with modified `.fs` files (detected by `tools/detect_changes.py`). Output appears in `tmp/hard-gate.txt`.
 
 To run lint manually on a specific project:
 
@@ -240,10 +246,12 @@ DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint <project.fsproj> > tmp/fsharp
 Zero warnings policy: any warning in a modified project is a blocker, including pre-existing warnings.
 
 Report format for each affected project:
+
 ```
 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
 tests/FLPQ.Languages.Tests/FLPQ.Languages.Tests.fsproj: 3 warnings — BLOCKED
 ```
+
 A single `BLOCKED` means go back and fix. Continue only when every line says `PASS`.
 
 **Pre-merge full-solution lint** (run once before merging to `dev`):
@@ -251,6 +259,7 @@ A single `BLOCKED` means go back and fix. Continue only when every line says `PA
 ```bash
 DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
 ```
+
 Timeout: 1800000 (30 min). Must show `Summary: 0 warnings`.
 
 ## Hard Gate
@@ -274,7 +283,7 @@ https://raw.githubusercontent.com/fsprojects/FSharpLint/master/src/FSharpLint.Co
 The following rules were changed from FSharpLint defaults to match the project code style (as documented in `AGENTS.md`):
 
 | Rule | Setting | Default | Reason |
-|------|---------|---------|--------|
+| --- | --- | --- | --- |
 | `genericTypesNames` (FL0069) | `naming: CamelCase` | PascalCase | Project uses `'t`, `'nt`, `'a`, `'s`, `'v` |
 | `nestedFunctionNames` (FL0085) | `enabled: true`, `naming: CamelCase` | disabled, PascalCase | Project uses camelCase for `let rec loop`/`derive` etc. |
 | `recordFieldNames` (FL0039) | `naming: PascalCase` | PascalCase | Per AGENTS.md "PascalCase for record fields and union case fields" |

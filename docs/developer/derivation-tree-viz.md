@@ -20,7 +20,7 @@
 ## Supported Formats
 
 | Format | Module | Features |
-|--------|--------|----------|
+| --- | --- | --- |
 | **DOT** | `DerivationTreeDot` | Plain tree, LL stack overlay, LR stack overlay via Graphviz |
 | **Tikz** | `DerivationTreeTikz` | Same three modes with graphdrawing layered layout and native same-layer constraint |
 
@@ -78,7 +78,7 @@ library, which both `tex_tikz_template.tex` and `tex_summary_template.tex` load.
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Symbol visualizer callback | Flexible label rendering for any symbol type |
 | Unique node IDs via mutable counter | Ensures no ID collisions; DOT and Tikz renderers use the same pre-order numbering so goldens correspond 1:1 |
 | Full tree as base for LL overlay | Tree rendered once; stack leaves located by path |

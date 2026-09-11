@@ -34,6 +34,7 @@ The result is a |startVertices|×|V| boolean reachability matrix.
 ### `evaluate: DFA<'t, int> -> NFA<'t, int> -> Matrix<bool>`
 
 Run Kronecker-based RPQ.
+
 - Input: DFA query and graph as NFA.
 - Output: |sources| × |V| boolean reachability matrix.
 - Sources are taken from the NFA's start states.
@@ -41,7 +42,7 @@ Run Kronecker-based RPQ.
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Single Kronecker with `Nfa.intersectEdgeSets` | Eliminates per-label `BooleanDecomposition`, per-label boolean `nMat` construction, per-label `kron` calls, and the OR-summation loop. One `LinearAlgebra.kron` call replaces all of that. |
 | `intersectEdgeSets` shared with `Nfa.intersect` | Same set-intersection operation powers both automaton intersection and Kronecker RPQ. Defined once in `Nfa` module. |
 | MS-BFS on boolean mask | The product matrix `P` carries label sets; `K = map Option.isSome` strips to boolean for MS-BFS. Equivalent to the old per-label OR-summation but computed in one pass via Kronecker. |

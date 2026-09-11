@@ -1,6 +1,6 @@
 ---
 name: dotnet-tooling
-description: Use when working with dotnet CLI: building, testing, formatting, linting, restoring, cleaning, creating projects/solutions, or collecting code coverage. Covers all common commands with flags and project-specific patterns.
+description: "Use when working with dotnet CLI: building, testing, formatting, linting, restoring, cleaning, creating projects/solutions, or collecting code coverage. Covers all common commands with flags and project-specific patterns."
 ---
 
 # dotnet CLI
@@ -25,6 +25,7 @@ dotnet new xunit -lang F# -n <Name> -o <Path>
 Default packages: `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `coverlet.collector`.
 
 Add FsCheck:
+
 ```bash
 dotnet add package FsCheck.Xunit
 ```
@@ -72,6 +73,7 @@ DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx
 Lint configuration: see the `quality-gates` skill.
 
 Install linter locally:
+
 ```bash
 dotnet tool install -g dotnet-fsharplint
 ```
@@ -105,14 +107,16 @@ dotnet dotnet-coverage collect dotnet test FLPQ.slnx -o tmp/coverage.cobertura -
 ```
 
 Key points:
+
 - Use `cobertura` format for XML output
-- Coverage instruments ALL assemblies loaded during test execution (FSharp.Core, FsCheck, xunit, Microsoft internals, FLPQ.*)
+- Coverage instruments ALL assemblies loaded during test execution (FSharp.Core, FsCheck, xunit, Microsoft internals, FLPQ.\*)
 
 See the `quality-gates` skill for coverage verification (> 80% gate).
 
 ## Prototyping
 
 Use F# scripts and F# interactive:
+
 ```bash
 dotnet fsi Script.fsx
 ```

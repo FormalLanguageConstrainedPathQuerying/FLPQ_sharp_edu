@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Use when planning tasks: creating global plans across multiple tasks, decomposing a task into atomic subtasks, or authoring new task descriptions. Covers multi-task planning, detailed plan format, atomic subtask requirements, and task authoring guidelines.
+description: "Use when planning tasks: creating global plans across multiple tasks, decomposing a task into atomic subtasks, or authoring new task descriptions. Covers multi-task planning, detailed plan format, atomic subtask requirements, and task authoring guidelines."
 ---
 
 # Planning
@@ -25,9 +25,9 @@ After the global plan is created, proceed with the normal working loop: one task
 
 ## Detailed Plan (Atomic Subtasks)
 
-**Prerequisite — logged task:** before writing the detailed plan, verify the task has an entry in `tasks/tasks.md`. If it does not, create the entry verbatim and commit it on `dev` first (see the AGENTS.md working loop). Never plan a task that is not logged.
+**Prerequisite — logged task:** before writing the detailed plan, verify the task has an entry in the task log (grep by task number across all `tasks/tasks*.md`). If it does not, create the entry verbatim in `tasks/tasks.md` and commit it on `dev` first (see the AGENTS.md working loop). Never plan a task that is not logged.
 
-**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the `tasks/tasks.md` entry verbatim. This section is the recovery source of truth if the entry is ever lost from `tasks.md`.
+**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the entry from the task-log file containing it (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`) verbatim. This section is the recovery source of truth if the entry is ever lost from the task log.
 
 `tasks/detailed_plan.md` MUST decompose the task into atomic subtasks. Each subtask:
 
@@ -112,7 +112,7 @@ Requirements:
 
 ## Task Completeness Verification
 
-Before marking a task `[done]` in `tasks/tasks.md`, verify completeness:
+Before marking a task `[done]` in the task-log file containing its entry, verify completeness:
 
 - [ ] Every clause in the task description is traceable to implemented and committed code
 - [ ] No subtask was reverted without resolution

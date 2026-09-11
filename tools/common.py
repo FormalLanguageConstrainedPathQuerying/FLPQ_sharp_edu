@@ -55,6 +55,16 @@ def run_cmd(cmd: list[str]) -> tuple[int, str, str]:
         return -1, "", f"ERROR: {e}"
 
 
+def tracked_md_files() -> list[str]:
+    """All .md files tracked by git — the scope of the mdformat gate.
+
+    Returns an empty list if git fails (callers treat that as a failure)."""
+    rc, stdout, _ = run_cmd(["git", "ls-files", "*.md"])
+    if rc != 0:
+        return []
+    return [f for f in stdout.split("\n") if f]
+
+
 def find_fsproj_paths(root_dir: Optional[str] = None) -> dict[str, str]:
     """Scan for all .fsproj files under root_dir (default: current directory).
     Returns dict mapping project name (stem) to relative file path."""

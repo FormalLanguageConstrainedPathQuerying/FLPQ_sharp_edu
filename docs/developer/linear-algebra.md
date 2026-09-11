@@ -22,6 +22,7 @@
 ## Data Structure
 
 The LinearAlgebra module operates purely on `Matrix<'a>` values — it defines no new types. Its role is to provide generic operations that other modules use by supplying appropriate semiring parameters:
+
 - **Boolean semiring**: `mxm (&&) (||) false` — used by MS-BFS, Graph filtering
 - **Set-based semiring**: `mxm setMult Set.union Set.empty` — used by Valiant
 - **Numeric semiring**: `mxm (*) (+) 0` — used in property tests
@@ -29,23 +30,27 @@ The LinearAlgebra module operates purely on `Matrix<'a>` values — it defines n
 ## Module Functions
 
 ### `mxm` — Generic Matrix-Matrix Multiplication
+
 ```fsharp
 val mxm:
     a: Matrix<'a> -> b: Matrix<'b> ->
     opMult: ('a -> 'b -> 'c) -> opAdd: ('c -> 'c -> 'c) -> zero: 'c ->
     Matrix<'c>
 ```
+
 Classical triple-nested loop multiplication. For each cell `(i,j)`, computes the sum over `k` of `opMult(a[i,k], b[k,j])`, starting from `zero` and accumulating with `opAdd`.
 
 **Preconditions:** `a.cols = b.rows`. **Time complexity:** O(a.rows · b.cols · a.cols).
 
 ### `kron` — Kronecker Product
+
 ```fsharp
 val kron:
     a: Matrix<'a> -> b: Matrix<'b> ->
     opMult: ('a -> 'b -> 'c) -> zero: 'c ->
     Matrix<'c>
 ```
+
 Computes the Kronecker (tensor) product A ⊗ B. Each element `a[i,j]` of A is replaced by the block `opMult(a[i,j], B)`.
 
 **Postcondition:** Result has dimensions `(a.rows * b.rows) × (a.cols * b.cols)`. **Time complexity:** O(a.rows · a.cols · b.rows · b.cols).
@@ -53,7 +58,7 @@ Computes the Kronecker (tensor) product A ⊗ B. Each element `a[i,j]` of A is r
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Generic semiring operations as function parameters | Enables use over numeric, Boolean, tropical, and other semirings without boxing or interfaces |
 | `mxm` uses mutable accumulator in innermost loop | Clear, direct implementation matching textbook descriptions; avoids functional overhead |
 | `kron` computes indices via integer division/modulo | Direct mapping to Kronecker product definition; no intermediate block allocation |

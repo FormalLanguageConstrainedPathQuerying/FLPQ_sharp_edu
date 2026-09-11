@@ -22,6 +22,7 @@
 ## Data Structure
 
 A derivation tree represents how a string is derived from a grammar's start symbol:
+
 - **Leaf nodes** hold grammar symbols (terminal, epsilon) — these form the input string when concatenated.
 - **Internal nodes** hold a nonterminal and a list of child subtrees — the children correspond to one RHS expansion.
 - The tree is rooted at the start symbol; a successful parse produces exactly one root-to-leaf spanning of the entire input.
@@ -29,14 +30,17 @@ A derivation tree represents how a string is derived from a grammar's start symb
 ## Type Definitions
 
 ### `DerivationTree<'t, 'nt>`
+
 ```fsharp
 type DerivationTree<'t, 'nt> =
     | Leaf of Symbol<'t, 'nt>
     | Node of Nonterminal<'nt> * DerivationTree<'t, 'nt> list
 ```
+
 Immutable discriminated union representing a parse tree. `Leaf(sym)` holds any grammar symbol (terminal or epsilon); `Node(nt, children)` is a nonterminal with its expansion.
 
 ### `MutableTree<'t, 'nt>`
+
 ```fsharp
 type MutableTree<'t, 'nt>(sym: Symbol<'t, 'nt>) =
     member val Symbol: Symbol<'t, 'nt> with get, set
@@ -46,14 +50,17 @@ type MutableTree<'t, 'nt>(sym: Symbol<'t, 'nt>) =
     member this.ToImmutable() : DerivationTree<'t, 'nt>
     member this.GetPath() : int list
 ```
+
 Mutable class for in-place tree construction during LL parsing. `Children` are set when a nonterminal expands. `Parent` pointers enable O(log n) path computation for visualization. `ToImmutable()` converts to the immutable type; internal nodes become `Node`, everything else becomes `Leaf`.
 
 ## Module Functions
 
 ### `DerivationTree.leaves`
+
 ```fsharp
 val leaves: DerivationTree<'t, 'nt> -> 't list
 ```
+
 Collects all leaf terminal values in left-to-right traversal order. Epsilon leaves contribute nothing.
 
 **Postconditions:** Concatenating the result reproduces the original input string (modulo epsilon leaves).
@@ -61,7 +68,7 @@ Collects all leaf terminal values in left-to-right traversal order. Epsilon leav
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Separate module | Shared by LL, LR, GLL, and RNGLR parsers; avoids circular dependencies |
 | Generic over `'t` and `'nt` | Works with arbitrary terminal/nonterminal representations |
 | `Leaf` carries `Symbol` | Epsilon is a Symbol case; no separate DU case needed |

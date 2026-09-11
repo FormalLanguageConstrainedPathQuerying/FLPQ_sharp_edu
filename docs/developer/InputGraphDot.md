@@ -45,7 +45,7 @@ Renders the input graph as a DOT digraph string.
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | `fillcolor=green!30` for current position | Distinguishes from current GSS node (lightblue) and new GSS vertices (lightyellow) |
 | `shape=circle` for all vertices | Uniform appearance matching automaton visualization style |
 | `rankdir=LR` | Left-to-right layout matches the natural reading order of input |

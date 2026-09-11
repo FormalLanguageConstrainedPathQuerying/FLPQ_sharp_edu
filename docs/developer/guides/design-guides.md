@@ -43,7 +43,7 @@ Each module file implements a single algorithm or family of closely related algo
 ### Project structure maps to book chapters
 
 | Project | Book content |
-|---------|-------------|
+| --- | --- |
 | `FLPQ.LinearAlgebra` | Chapters 1, 3, 7 — matrices, Kronecker product, Boolean decomposition |
 | `FLPQ.GraphAnalysis` | Chapters 3, 11 — MS-BFS, semiring operations on graphs |
 | `FLPQ.Languages` | Chapters 5, 6, 7 — automata, grammars, parsing algorithms |

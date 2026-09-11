@@ -24,15 +24,19 @@ GrammarTeX converts a grammar into TeX for display in algorithm summary document
 ## Function Signatures
 
 ### `grammarToTeX`
+
 ```fsharp
 val grammarToTeX: Grammar<'t, 'nt> -> string
 ```
+
 Renders the grammar without production numbers.
 
 ### `grammarToTeXWithNumbers`
+
 ```fsharp
 val grammarToTeXWithNumbers: Grammar<'t, 'nt> -> string
 ```
+
 Renders the grammar with 1-based production numbers in the form `N)`.
 
 ## Output Format
@@ -45,6 +49,7 @@ S &\rightarrow \varepsilon
 ```
 
 With numbers:
+
 ```tex
 \begin{alignat*}{3}
 1) \ & S &&\rightarrow a\ S\ b\ S \\
@@ -62,7 +67,7 @@ With numbers:
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | `align*` environment (unnumbered) | Standard LaTeX math alignment; each rule on its own line |
 | `alignat*{3}` environment (numbered) | Three-column alignment (number, LHS, RHS) with precise spacing control |
 | 1-based `N)` numbering with `\ ` thin space | Matches the book's grammar rendering convention |

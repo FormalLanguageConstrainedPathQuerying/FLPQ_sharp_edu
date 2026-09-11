@@ -38,12 +38,14 @@ The matrix is the fundamental data structure in the book — all graph adjacency
 ## Module Functions
 
 ### Dimension Accessors
+
 ```fsharp
 val rows: Matrix<'a> -> int
 val cols: Matrix<'a> -> int
 ```
 
 ### Creation Functions
+
 ```fsharp
 val create: rows:int -> cols:int -> f:(int -> int -> 'a) -> Matrix<'a>
 val init: rows:int -> cols:int -> value:'a -> Matrix<'a>
@@ -53,6 +55,7 @@ val reduceByColumn: op:('a -> 'a -> 'a) -> init:'a -> m:Matrix<'a> -> 'a[]
 ```
 
 ### Transformation Functions
+
 ```fsharp
 val map: f:('a -> 'b) -> Matrix<'a> -> Matrix<'b>
 val map2: f:('a -> 'b -> 'c) -> a:Matrix<'a> -> b:Matrix<'b> -> Matrix<'c>
@@ -61,6 +64,7 @@ val transpose: Matrix<'a> -> Matrix<'a>
 ```
 
 ### Indexed Operations
+
 ```fsharp
 val map2i: f:(int -> int -> 'a -> 'b -> 'c) -> a:Matrix<'a> -> b:Matrix<'b> -> Matrix<'c>
 val mxmi:
@@ -75,6 +79,7 @@ val mxmi:
 `map2i` is like `map2` but passes row and column indices to `f`: `f i j a[i,j] b[i,j]`.
 
 `mxmi` computes indexed matrix multiplication `C = A × B`. For each cell `C[i,j]`:
+
 - Iterates over inner dimension `k`
 - Calls `op_mult i k j a[i,k] b[k,j]` to produce a term
 - Folds terms with `op_add i j acc term` starting from `zero`
@@ -84,6 +89,7 @@ Precondition: `a.cols = b.rows`. Throws `ArgumentException` on dimension mismatc
 ## TeX Printing
 
 ### `toTeX`
+
 ```fsharp
 val toTeX:
     showRowNumbers: bool ->
@@ -92,9 +98,11 @@ val toTeX:
     m: Matrix<'a> ->
     string
 ```
-Generates a LaTeX string using the `pNiceMatrix` environment from the nicematrix package. Cells are separated by ` & `, rows by ` \\`. Numbering is 1-based (standard matrix notation).
+
+Generates a LaTeX string using the `pNiceMatrix` environment from the nicematrix package. Cells are separated by `&`, rows by ` \\`. Numbering is 1-based (standard matrix notation).
 
 ### `toTeXStyled`
+
 ```fsharp
 type Highlight = { row: int; col: int; color: string }
 type SubmatrixBlock =
@@ -106,12 +114,13 @@ val toTeXStyled:
     cellPrinter: ('a -> string) -> m: Matrix<'a> ->
     highlights: Highlight list -> blocks: SubmatrixBlock list -> string
 ```
+
 Extended TeX printing with cell highlighting and submatrix block borders using nicematrix `\Block` commands.
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | Record wrapper over raw 2D array | Explicit `rows`/`cols` avoid recomputation; structural equality aids testing |
 | `rows`/`cols` as functions, not direct field access | Consistent functional API surface; can be replaced with computed properties later |
 | `map2` throws on dimension mismatch | Unambiguous error signaling; caller must ensure matching dimensions |

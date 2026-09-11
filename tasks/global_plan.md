@@ -3,7 +3,7 @@
 ## Tasks
 
 | ID | Title | Summary |
-|----|-------|---------|
+| --- | --- | --- |
 | 248 | Fix Valiant SPPF SplitPoint | Fix `mxmSetSppf` to use absolute SplitPoint = `m1.Col + k` instead of local `k`. Verifies SPPF tables byte-identical CYK vs Valiant. |
 | 249 | Fix BasicSppf Production node reuse | Replace `getOrCreate(Production(...))` with direct allocation. Each Production node is context-dependent (parent cell determines children). |
 | 250 | Complete invariant checks | Add `allCompatibleGrammars`, restore full invariant checks (tree leaves, byte-identical tables, child count = RHS length, structural SPPF equivalence). |
@@ -11,7 +11,7 @@
 ## Dependencies
 
 - **248 is independent** — pure algorithmic fix in Valiant.fs
-- **249 is independent** — pure fix in BasicSppf.fs  
+- **249 is independent** — pure fix in BasicSppf.fs
 - **250 depends on both 248 and 249** — invariant checks that require correctness from prior fixes
 
 ## Execution Order
@@ -23,7 +23,7 @@
 ## Overlapping Files
 
 | File | 248 | 249 | 250 |
-|------|-----|-----|-----|
+| --- | --- | --- | --- |
 | `Valiant.fs` | +leftColOffset param to mxmSetSppf, update doMultiplicationsSppf | — | — |
 | `BasicSppf.fs` | — | direct alloc for Production nodes | — |
 | `LanguageRegistry.fs` | — | — | +allCompatibleGrammars |
@@ -33,15 +33,18 @@
 ## Reuse Analysis
 
 ### Task 248
+
 - `Matrix.mxmi` — existing, already provides `(i, k, j)` indices
 - `Submatrix` type — existing, provides `.Col` offset
 - `doMultiplicationsSppf` — existing, has access to `m1.Col`
 
 ### Task 249
+
 - `fromParsingTable` — existing, local `getOrCreate` function
 - `BasicSppfNodeInfo.Production` — existing DU case
 
 ### Task 250
+
 - `LanguageRegistry.allLanguages` — existing
 - `AnnotatedGrammar.Properties` — existing, has `IsRsmDerived`, `DoesNotCoverFullLanguage`
 - `TestHelpers.isCykValiantCompatible` — existing filter

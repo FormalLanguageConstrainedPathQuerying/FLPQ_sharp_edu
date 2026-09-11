@@ -37,31 +37,38 @@
 ## Function Signatures
 
 ### `FirstFollow.firstK`
+
 ```fsharp
 val firstK: Grammar<'t, 'nt> -> int -> Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>
 ```
+
 Computes the first_k set for every nonterminal in the grammar. `first_k(A)` is the set of all terminal strings of length ≤ k that can begin strings derived from A. The empty string ε is represented as `[Epsilon]`.
 
 **Parameters:**
+
 - `g`: the grammar.
 - `k`: maximum lookahead length (lists longer than k are truncated).
 
 ### `FirstFollow.followK`
+
 ```fsharp
 val followK: Grammar<'t, 'nt> -> int -> Map<Nonterminal<'nt>, Set<Symbol<'t, 'nt> list>>
 ```
+
 Computes the follow_k set for every nonterminal in the grammar. `follow_k(A)` is the set of all terminal strings of length ≤ k that can appear immediately after A in some derivation from the start symbol.
 
 ### `FirstFollow.firstKOfString`
+
 ```fsharp
 val firstKOfString: Map<Nonterminal<'nt>, Set<Symbol<'t,'nt> list>> -> int -> Symbol<'t,'nt> list -> Set<Symbol<'t,'nt> list>
 ```
+
 Computes first_k for an arbitrary string of grammar symbols (concatenation of first_k sets with truncation).
 
 ## Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| --- | --- |
 | `[Epsilon]` for ε | Explicit Symbol representation; no ambiguity with empty terminal strings. No `terminalToString` parameter needed. |
 | Generic over terminal type | firstK/followK work with any grammar, not only string-based ones. Lookahead is `Symbol list`, naturally matching the grammar's symbol type. |
 | Fixed-point iteration with mutable maps | Standard approach; clear termination condition (set sizes stop growing). |
