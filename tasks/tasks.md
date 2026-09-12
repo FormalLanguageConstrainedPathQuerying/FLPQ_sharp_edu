@@ -696,4 +696,4 @@
 
 270. [done] Improve RSM rendering. 1. remove 'call' word from nonterminal edges. Just terminal name. 2. Remove nonterminal name from state. Just number. Current state lable has form N_i. Transform it to just i. 3. Carefully check nodes styling. Now, in GLL steps visualization in case when final state is a part of current gss node, we miss doublecircle for this finak state. Light blue is correct, we use it for current node, but if this node is final, it must be double cyrcled, as regular funal state. Add tests: for all steps in GLL, all rendered to tikz RSMs must have exactly the same number of doubly cyrcled nodes. It must be equal to total number of final states in the input extended RSM.
 
-271. Improve GLL and GLR steps rendering. Wrap GSS and RSM (rsm for GLL only) in each step with `\begin{adjustbox}{max width=\textwidth} ... \end{adjustbox}`. Use existing wrapper function.
+271. [done] Improve GLL and GLR steps rendering. Wrap GSS and RSM (rsm for GLL only) in each step with `\begin{adjustbox}{max width=\textwidth} ... \end{adjustbox}`. Use existing wrapper function.
