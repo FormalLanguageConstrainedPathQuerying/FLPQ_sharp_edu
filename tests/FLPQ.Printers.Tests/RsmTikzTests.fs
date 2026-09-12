@@ -4,6 +4,7 @@ open System
 open System.Text.RegularExpressions
 open Xunit
 open FSharpPlus.Data
+open FLPQ.GraphAnalysis
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.Printers
@@ -11,6 +12,19 @@ open FLPQ.TestUtilities
 
 let private declPattern = Regex(@"s(\d+) \[")
 let private edgePattern = Regex(@"s\d+ ->")
+
+/// Node declaration with its full option list (edge lines never match: they have no space before `[`).
+let private nodeDeclPattern = Regex(@"s(\d+) \[([^\]]*)\];")
+
+/// Number of state declarations carrying the `double` option.
+/// The word-boundary match counts `double distance=1.5pt` as part of the same option.
+let private doubleCircledCount (tikz: string) : int =
+    [ for m in nodeDeclPattern.Matches(tikz) do
+          if Regex.IsMatch(m.Groups.[2].Value, @"(^|,\s*)double(\s*,|$)") then
+              1
+          else
+              0 ]
+    |> List.sum
 
 /// Global state indices of the block for the given nonterminal.
 let private blockStates (nt: Nonterminal<string>) (rsm: RSM<string, string>) : int list =
@@ -153,3 +167,107 @@ let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
         System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``RSM tikz state content is the bare global index`` () =
+    for entry in
+        [ (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
+          (LanguageRegistry.findGrammar LanguageRegistry.ArithExpr "leftAssoc").Rsm ] do
+        let freshStart = Nonterminal "S'"
+        let ersm = ExtendedRSM.create freshStart entry
+        let rsm = ersm.ExtendedRsm
+        let tikz = RsmTikz.extendedRsmToTikz string string ersm None
+
+        let decls =
+            [ for m in nodeDeclPattern.Matches(tikz) do
+                  Int32.Parse(m.Groups.[1].Value), m.Groups.[2].Value ]
+
+        Assert.Equal(rsm.StateCount, decls.Length)
+
+        for idx, opts in decls do
+            let contentMatch = Regex.Match(opts, @"^as=\{(\d+)\}")
+            Assert.True(contentMatch.Success, sprintf "state %d: no numeric content in %s" idx opts)
+            Assert.Equal(idx, Int32.Parse(contentMatch.Groups.[1].Value))
+
+[<Fact>]
+let ``RSM tikz nonterminal edges carry the bare nonterminal name`` () =
+    for entry in
+        [ (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
+          (LanguageRegistry.findGrammar LanguageRegistry.ArithExpr "leftAssoc").Rsm
+          (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ebnfStar").Rsm ] do
+        let freshStart = Nonterminal "S'"
+        let ersm = ExtendedRSM.create freshStart entry
+        let rsm = ersm.ExtendedRsm
+        let tikz = RsmTikz.extendedRsmToTikz string string ersm None
+
+        Assert.DoesNotContain("call ", tikz)
+
+        // Every nonterminal that labels a transition appears as a bare edge label.
+        for nt in TestHelpers.callLabeledNonterminals rsm do
+            let (Nonterminal ntName) = nt
+            Assert.Contains(sprintf "->[\"%s\"" ntName, tikz)
+
+[<Fact>]
+let ``RSM tikz highlighted final state stays double circled with lightblue fill`` () =
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
+    let freshStart = Nonterminal "S'"
+    let ersm = ExtendedRSM.create freshStart rsm
+    let ext = ersm.ExtendedRsm
+    // Covers highlighted start+final, plain final, and S' final states.
+    for f in Set.toList ext.FinalStates do
+        let tikz = RsmTikz.extendedRsmToTikz string string ersm (Some f)
+
+        let declLine =
+            tikz.Split('\n') |> Array.find (fun l -> l.Trim().StartsWith(sprintf "s%d [" f))
+
+        Assert.Contains("double", declLine)
+        Assert.Contains("fill=lightblue!20", declLine)
+        Assert.Equal(Set.count ext.FinalStates, doubleCircledCount tikz)
+
+/// Render every GLL step's RSM TikZ for the given grammar and input.
+let private renderGllStepRsmTikz
+    (rsm: RSM<string, string>)
+    (input: string list)
+    : ExtendedRSM<string, string> * string list =
+    let freshStart = Nonterminal "S'"
+    let graph = GLL.stringToGraph input
+    let vertexCount = Graph.vertexCount graph
+    let ersm = ExtendedRSM.create freshStart rsm
+    let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
+
+    let vizSteps =
+        GllStepVisualizer.renderSteps
+            (SymbolTeX.toLaTeX string string)
+            string
+            string
+            ersm
+            steps
+            pathIndex
+            vertexCount
+            graph
+
+    (ersm, vizSteps |> List.map (fun s -> s.RsmTikz))
+
+[<Fact>]
+let ``every GLL step RSM tikz has exactly the final states doubly circled`` () =
+    for rsm, input in
+        [ ((LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm, [ "a"; "a"; "b"; "b" ])
+          ((LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm, [ "a"; "a" ])
+          ((LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ebnfStar").Rsm, [ "a"; "b"; "a"; "b" ])
+          (LanguageRegistry.APlus.Grammars.[0].Rsm, [ "a"; "a" ]) ] do
+        let ersm, tikzs = renderGllStepRsmTikz rsm input
+
+        Assert.NotEmpty tikzs
+
+        let expected = Set.count ersm.ExtendedRsm.FinalStates
+
+        for i, tikz in List.indexed tikzs do
+            let actual = doubleCircledCount tikz
+            // Bind the comparison: `Assert.True(actual = expected, msg)` would parse
+            // `actual = expected` as a named argument (FS0691).
+            let matches = actual = expected
+
+            Assert.True(
+                matches,
+                sprintf "step %d: doubly circled count %d must equal the final-state count %d" i actual expected
+            )

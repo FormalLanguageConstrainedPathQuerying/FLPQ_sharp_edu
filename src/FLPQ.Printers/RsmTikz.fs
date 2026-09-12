@@ -12,16 +12,20 @@ open FLPQ.Languages
 /// top-to-bottom with left edges aligned, while the layered layout inside each
 /// block grows left-to-right. The start block S' is declared first, so it is
 /// packed on top; remaining blocks follow in global-state appearance order.
-/// Each block's start state carries a plain nonterminal label to its left.
+/// State content is the bare global index; each block's start state carries a
+/// plain nonterminal label to its left (the block's identity).
 /// Book reference: sec:CFPQ_GLL (06_GLL_Based.tex).
 module RsmTikz =
 
     /// Renders an extended RSM as a TikZ tikzpicture using global state numbering.
-    /// State labels use the format "NtName_globalIdx".
+    /// State content is the bare global index; nonterminal edges are labeled with
+    /// the bare nonterminal name (no "call" prefix).
     /// Blocks are stacked top-to-bottom (S' on top); intra-block layout is layered, left-to-right.
-    /// Block start states get fill=green!30 and a plain nonterminal label to the left;
-    /// final states get double + fill=red!30.
-    /// If highlightedState is specified, that state gets fill=lightblue!20.
+    /// Every final state gets `double, double distance=1.5pt` (a highlighted final
+    /// state keeps the double circle); block start states get a plain nonterminal
+    /// label to the left and `label=above:Start`.
+    /// Fill priority: highlighted state fill=lightblue!20, else block start
+    /// fill=green!30, else final state fill=red!30.
     let extendedRsmToTikz
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
@@ -65,7 +69,6 @@ module RsmTikz =
         for nt in blockOrder do
             for globalIdx in blockStates nt do
                 let info = stateInfo.[globalIdx]
-                let isFreshStart = info.BlockNonterminal = freshStart
                 let isStartState = globalIdx = rsm.BlockStart.[nt]
                 let isFinal = info.IsFinal
                 let isHighlighted = highlightedState |> Option.exists (fun hs -> hs = globalIdx)
@@ -74,25 +77,32 @@ module RsmTikz =
                 let ntLabel = nonterminalPrinter ntName
                 let ntEscaped = AutomatonTikz.escapeLatex ntLabel
 
-                let label =
-                    if isFreshStart then
-                        sprintf "%s'\\_%d" ntEscaped globalIdx
-                    else
-                        sprintf "%s\\_%d" ntEscaped globalIdx
+                // State content is the bare global index; block identity comes from
+                // the start state's left label and the edge labels.
+                let label = string globalIdx
 
-                let opts =
-                    if isHighlighted && isStartState then
-                        sprintf "as={%s}, label=left:%s, fill=lightblue!20" label ntEscaped
-                    elif isHighlighted then
-                        sprintf "as={%s}, fill=lightblue!20" label
-                    elif isStartState then
-                        sprintf "as={%s}, label=above:Start, label=left:%s, fill=green!30" label ntEscaped
-                    elif isFinal then
-                        sprintf "as={%s}, double, double distance=1.5pt, fill=red!30" label
+                let above =
+                    if isStartState && not isHighlighted then
+                        ", label=above:Start"
                     else
-                        sprintf "as={%s}" label
+                        ""
 
-                sb.AppendLine(sprintf "    s%d [%s];" globalIdx opts) |> ignore
+                let left =
+                    if isStartState then
+                        sprintf ", label=left:%s" ntEscaped
+                    else
+                        ""
+
+                let double = if isFinal then ", double, double distance=1.5pt" else ""
+
+                let fill =
+                    if isHighlighted then ", fill=lightblue!20"
+                    elif isStartState then ", fill=green!30"
+                    elif isFinal then ", fill=red!30"
+                    else ""
+
+                sb.AppendLine(sprintf "    s%d [as={%s}%s%s%s%s];" globalIdx label above left double fill)
+                |> ignore
 
         for i in 0 .. stateCount - 1 do
             for j in 0 .. stateCount - 1 do
@@ -106,7 +116,7 @@ module RsmTikz =
                             | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) ->
                                 AutomatonTikz.escapeLatex (terminalPrinter t)
                             | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
-                                sprintf "call %s" (AutomatonTikz.escapeLatex (nonterminalPrinter nt))
+                                AutomatonTikz.escapeLatex (nonterminalPrinter nt)
                             | AutomatonLabel.AEpsilon -> "$\\varepsilon$"
 
                         let style =

@@ -1,5 +1,6 @@
 namespace FLPQ.TestUtilities
 
+open System.Collections.Generic
 open FSharpPlus.Data
 open FsCheck
 open FLPQ.Languages
@@ -101,6 +102,22 @@ module TestHelpers =
         match RSM.blockOf nt rsm with
         | Some block -> offset + block.Dfa.StartState
         | None -> -1
+
+    /// Nonterminals that label at least one transition in the RSM (call edges).
+    let callLabeledNonterminals (rsm: RSM<'t, 'nt>) : Nonterminal<'nt> list =
+        let result = ResizeArray<Nonterminal<'nt>>()
+
+        for i in 0 .. rsm.StateCount - 1 do
+            for j in 0 .. rsm.StateCount - 1 do
+                match rsm.Transitions.[i, j] with
+                | Some labels ->
+                    for l in NonEmptySet.toSeq labels do
+                        match l with
+                        | AutomatonLabel.ATerm(RsmSymbol.RNonterm nt) -> result.Add nt
+                        | _ -> ()
+                | None -> ()
+
+        result |> Seq.distinct |> Seq.toList
 
     let buildRegexRsm (regexText: string) : RSM<string, string> =
         RsmBuilder.buildRSMFromText $"S -> {regexText}"

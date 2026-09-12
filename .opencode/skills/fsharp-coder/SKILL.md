@@ -118,6 +118,23 @@ In FSharpPlus 1.9.1, `NonEmptySet.ofSet : Set<'a> -> NonEmptySet<'a>` returns th
 | `NonEmptySet.toSeq` | `NonEmptySet<'a> -> seq<'a>` | Enumerate elements |
 | `NonEmptySet.ofSet` | `Set<'a> -> NonEmptySet<'a>` | Convert from Set. Throws if empty |
 
+## `ident = expr` in Argument Position Parses as a Named Argument (FS0691)
+
+**Problem**: In an application, an argument of the form `ident = expr` is parsed by F# as a *named-argument binding*, not as an equality comparison. So a two-argument call whose first argument is a comparison fails:
+
+```fsharp
+Assert.True(actual = expected, "message")  // ERROR FS0691: Named arguments must appear after all other arguments
+```
+
+The parser reads `actual = expected` as the named argument `actual := expected`; the following positional `"message"` then violates named-argument ordering. Member access (`x.Success`) and function applications (`f x y`) are unaffected — only the bare `ident = expr` shape triggers it.
+
+**Solution** — bind the comparison to a name first (or parenthesize):
+
+```fsharp
+let matches = actual = expected
+Assert.True(matches, "message")
+```
+
 ## Module-Level Optional Parameters — Not Allowed (FS0718)
 
 **Problem**: Optional parameters with `?` syntax work only on type members (methods), not on module-level `let` bindings. Error FS0718: "Optional arguments are only permitted on type members."

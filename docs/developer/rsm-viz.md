@@ -19,16 +19,16 @@
 
 ## Overview
 
-An RSM is stored as a single flat automaton: one global state index space across all blocks, a `StateInfo` array mapping each state to its block, and a `BlockStart` map from nonterminal to the block's start state. Blocks are the graph's connected components — no inter-block edges exist in the transition matrix. A `call N` transition stays inside the caller's block (its target is the continuation state); the jump to N's start state is implicit and resolved by algorithms via `BlockStart[N]`.
+An RSM is stored as a single flat automaton: one global state index space across all blocks, a `StateInfo` array mapping each state to its block, and a `BlockStart` map from nonterminal to the block's start state. Blocks are the graph's connected components — no inter-block edges exist in the transition matrix. A transition labeled with a nonterminal N (a call) stays inside the caller's block (its target is the continuation state); the jump to N's start state is implicit and resolved by algorithms via `BlockStart[N]`.
 
-The extended RSM appends a fresh start block S′ with two states: start → final, labeled `call <originalStart>`. Its states occupy the last global indices.
+The extended RSM appends a fresh start block S′ with two states: start → final, labeled with the original start nonterminal's name. Its states occupy the last global indices.
 
 ## Supported Formats
 
 ### DOT
 
-- `toDot` — one `subgraph cluster_N` per block (dashed frame, nonterminal label; the start block's label gets a `(start)` suffix). Local state numbering inside each cluster.
-- `extendedRsmToDot` — a single flat digraph with global state numbering (`s0`..`sN`). Start states are green-filled, final states double-bordered, S′ block nodes blue-fonted; an optional highlighted state is filled lightblue (same color as the current GSS node).
+- `toDot` — one `subgraph cluster_N` per block (dashed frame, nonterminal label; the start block's label gets a `(start)` suffix). Local state numbering inside each cluster; nonterminal edges carry the bare nonterminal name.
+- `extendedRsmToDot` — a single flat digraph with global state numbering (`s0`..`sN`); node labels are the bare global indices and nonterminal edges carry the bare nonterminal name. Start states are green-filled, final states double-bordered (kept even when highlighted), S′ block nodes blue-fonted; an optional highlighted state is filled lightblue (same color as the current GSS node).
 
 ### Tikz
 
@@ -42,8 +42,8 @@ A single `tikzpicture` with one flat `\graph`:
 - **Inside each block** — the layered layout grows left-to-right (`grow'=right`), exactly as for a standalone DFA drawing.
 - **Between blocks** — pgf-gd connected-component packing (`components go down left aligned`, PGF manual §28.7) stacks the components top-to-bottom with left edges aligned and `component sep=1.5cm` vertical padding.
 - **Block order** — pgf-gd orders components by first specified node, so node declaration order controls stacking: the S′ block is declared first (on top), remaining blocks follow in global-state appearance order; within each block the start state is declared first.
-- **Labels** — state content is `Nt_globalIdx` (S′ states keep the prime form `S'\_k`). Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`); block start states also get `label=above:Start` and `fill=green!30`, final states `double, double distance=1.5pt, fill=red!30`, a highlighted state `fill=lightblue!20`.
-- **Edge labels** — terminals as-is (escaped), nonterminal calls as `call Nt`, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
+- **Labels** — state content is the bare global index. Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`) and `label=above:Start`. Every final state gets `double, double distance=1.5pt` — including a highlighted final state, which keeps the double circle. Fill priority: highlighted state `fill=lightblue!20`, else block start `fill=green!30`, else final state `fill=red!30`.
+- **Edge labels** — terminals as-is (escaped), nonterminal calls as the bare `Nt` name, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
 
 ## Function Signatures
 
@@ -60,6 +60,8 @@ Printers convert symbol values to display strings; the highlighted-state argumen
 | Single flat `\graph` with component packing instead of per-block subgraphs | Blocks are exactly the connected components, so pgf-gd packs them natively; intra-block layout stays the plain layered algorithm with no manual coordinates or height estimation |
 | `components go down left aligned` + declaration order for stacking | PGF §28.7: component order defaults to *by first specified node*; declaring S′ first puts it on top, and appearance order keeps the rest deterministic |
 | Plain nonterminal label left of each block's start state (no frame) | The user-confirmed delimiting style; the start state always lands in layer 0 of its component (verified for cyclic blocks such as `S -> (a S b)*`), so the label sits cleanly at the block's left edge |
+| Bare global-index state content and bare nonterminal edge labels (no `call` prefix) | Matches the book's RSM figures, where states are plain numbers and call edges carry the called block's name; block identity stays visible through the start state's left label |
+| `double` on every final state regardless of highlight/start status | A highlighted final state (the current GLL descriptor's state when it is final) must still read as final; fill priority lightblue > green > red keeps exactly one fill per node |
 | `component sep=1.5cm` | Matches `sibling sep=1.5cm` for visual consistency; the pgf-gd default (1.5em) is tighter than the intra-block spacing |
 | lightblue highlight fill | Shared with the current GSS node color so step figures read consistently in the summary legend |
 

@@ -64,8 +64,7 @@ module RsmDot =
                         let edgeLabel =
                             match label with
                             | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) -> terminalPrinter t
-                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
-                                sprintf "call %s" (nonterminalPrinter nt)
+                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) -> nonterminalPrinter nt
                             | AutomatonLabel.AEpsilon -> "ε"
 
                         let style =
@@ -108,8 +107,9 @@ module RsmDot =
 
     /// Renders an extended RSM as a single DOT digraph using global state numbering.
     /// All states from all blocks (including the fresh start block S') are rendered
-    /// with their global indices. Start states are green, final states have double border,
-    /// and fresh start block nodes are blue.
+    /// with their bare global indices as node labels; nonterminal edges carry the
+    /// bare nonterminal name. Start states are green, final states have double border
+    /// (kept even when highlighted), and fresh start block nodes are blue.
     /// If highlightedState is specified, that state is filled lightblue (same as current GSS node).
     let extendedRsmToDot
         (terminalPrinter: 't -> string)
@@ -129,10 +129,11 @@ module RsmDot =
         let stateInfo = rsm.StateInfo
         let stateCount = rsm.StateCount
 
-        // Vertex declarations with global numbering
+        // Vertex declarations with global numbering.
+        // Node labels are the bare global indices; block identity comes from
+        // the edge labels (the called block's name).
         for globalIdx in 0 .. stateCount - 1 do
             let info = stateInfo.[globalIdx]
-            let (Nonterminal ntName) = info.BlockNonterminal
             let isFreshStart = info.BlockNonterminal = freshStart
 
             let isStartState =
@@ -144,7 +145,7 @@ module RsmDot =
             let isFinal = info.IsFinal
             let isHighlighted = highlightedState |> Option.exists (fun hs -> hs = globalIdx)
 
-            let label = sprintf "%s_%d" (nonterminalPrinter ntName) globalIdx
+            let label = string globalIdx
 
             let attrs =
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
@@ -173,8 +174,7 @@ module RsmDot =
                         let edgeLabel =
                             match symbol with
                             | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) -> terminalPrinter t
-                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
-                                sprintf "call %s" (nonterminalPrinter nt)
+                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) -> nonterminalPrinter nt
                             | AutomatonLabel.AEpsilon -> "ε"
 
                         let style =

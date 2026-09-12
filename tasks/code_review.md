@@ -1,5 +1,27 @@
 # Code Review Report
 
+## Task 270 Review (2026-09-12)
+
+Scope: `src/FLPQ.Printers/RsmTikz.fs` (bare numeric state content, bare nonterminal edge labels, `double, double distance=1.5pt` on every final state), `src/FLPQ.Printers/RsmDot.fs` (same label semantics; highlighted finals keep `peripheries=2`), tests (`RsmTikzTests.fs` +4 facts including the per-step GLL invariant, new `RsmDotTests.fs` with 3 facts, shared `callLabeledNonterminals` in `TestHelpers.fs`), docs (`rsm-viz.md` label/styling semantics + Design Decisions row), skills (FS0691 named-argument quirk in fsharp-coder).
+
+**Findings resolved this review:**
+
+- §13 (no duplication) — the `callLabeledNonterminals` generator was duplicated between `RsmTikzTests.fs` and `RsmDotTests.fs`. Extracted to `TestHelpers.callLabeledNonterminals`, generic in `'t`/`'nt`, used by both files.
+- §15 (test fidelity) — the DOT edge-label assertions matched the loose substring `"label="`, which would also pass for terminal edges with decorated labels. Tightened to the exact `[label="<Nt>"]` form.
+
+**Verified:** RsmTikzTests 10/10, RsmDotTests 3/3; full build green (COMMIT_GATE: PASS). The per-step GLL invariant fact renders every step for four registry grammars with accepted inputs and asserts the double-circled count equals `Set.count ersm.ExtendedRsm.FinalStates` at each step — the ANBN/DoubleA inputs highlight a final state mid-derivation, exercising the S1 fix.
+
+**Findings against the constraint sources:**
+
+- §9 (separation) — all changes stay in the printers and their tests; no algorithm logic touched.
+- §14 (language registry) — every new test uses registry grammars (ANBN classic, DoubleA singleRule, Dyck1 ebnfStar, APlus rightRecursive); no manual fixture was needed for the label semantics.
+- §19 (test coverage) — both changed renderers have correspondent test files; the TikZ file covers the highlight interplay (lightblue fill + double circle), DOT covers it via `peripheries=2`.
+- §20 (documentation completeness) — `rsm-viz.md` documents bare-index state content, bare call-edge names, the always-double finals rule with fill priority, and the book-alignment rationale in Design Decisions.
+
+**No blocking findings.** Second pass over the changed surface (both renderers, both test files, shared helper, docs, skill) found zero additional problems.
+
+---
+
 ## Task 269 Review (2026-09-11)
 
 Scope: `src/FLPQ.Cli/Summary.fs` (removed the duplicate SPPF header entry for GLL/RNGLR), `src/FLPQ.Printers/SppfTikz.fs` (math-mode node labels; removed dead `getShape`/`shape`), `src/FLPQ.Printers/RsmTikz.fs` + `AutomatonTikz.fs` (math-mode epsilon edge labels), `src/FLPQ.Printers/SummaryTeX.fs` (parameter rename), tests (`CliSummaryTests.fs` +2 facts, `TexCompilationTests.fs` 4 fixture updates +1 assertion block, `RsmTikzTests.fs` +1 fact, `AutomatonVisualizationTests.fs` 2 strengthened facts), docs (`summary-tex.md`, `automaton-viz.md`, `rsm-viz.md`).
