@@ -5,6 +5,7 @@ open Xunit
 open FLPQ.Cli
 open FLPQ.Cli.Tests
 open FLPQ.Printers
+open FLPQ.TestUtilities
 
 let private baseDir = System.AppContext.BaseDirectory
 
@@ -199,6 +200,72 @@ let ``RNGLR summary color legend includes passing-reductions orange row`` () =
     let content = File.ReadAllText texPath
     Assert.Contains("Passing reductions handling triggered at GSS vertex", content)
     Assert.Contains(@"\colorbox{orange!30}", content)
+
+// Per-step GSS/RSM figures in TikZ mode are wrapped with the existing
+// wrapTikzAdjustbox helper (shrink-only, at most \textwidth — which inside a step
+// minipage equals the column width). DOT mode includes dot-compiled PDFs instead.
+let private countOccurrences (haystack: string) (needle: string) : int =
+    haystack.Split([| needle |], System.StringSplitOptions.None).Length - 1
+
+let private stepSections (content: string) : string list =
+    // Note: the leading backslash must be doubled — in .NET regex a single \s is the whitespace class.
+    System.Text.RegularExpressions.Regex.Matches(
+        content,
+        @"\\subsection\*\{(Initialization|Step \d+)\}(.*?)(?=\\subsection\*|\Z)",
+        System.Text.RegularExpressions.RegexOptions.Singleline
+    )
+    |> Seq.map (fun m -> m.Groups.[2].Value)
+    |> Seq.toList
+
+// The ANBN classic registry grammar (rules "S -> a S b" and "S -> eps") with its
+// 4-token accept string "a a b b".
+let private anbnEbnf = LanguageRegistry.ANBN.Grammars.[0].Text
+
+let private anbnInput =
+    LanguageRegistry.ANBN.AcceptStrings
+    |> List.find (fun tokens -> List.length tokens = 4)
+    |> List.map (fun (FLPQ.Languages.Terminal t) -> t)
+    |> String.concat " "
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``GLL summary wraps each step GSS and RSM figure in adjustbox`` () =
+    let outDir = runWithSummaryEBNF "GLL" anbnEbnf anbnInput
+    let texPath = Path.Combine(outDir, "results", "gll", "gll_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    let adjustboxBegin = @"\begin{adjustbox}{max width=\textwidth}"
+
+    let sections = stepSections content
+    Assert.NotEmpty(sections)
+
+    for sec in sections do
+        // Each GLL step carries exactly two wrapped figures: GSS and RSM.
+        Assert.Equal(2, countOccurrences sec adjustboxBegin)
+
+    // The head Extended RSM figure contributes exactly one more adjustbox.
+    Assert.Equal(1 + 2 * sections.Length, countOccurrences content adjustboxBegin)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary wraps each step GSS figure in adjustbox`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    let adjustboxBegin = @"\begin{adjustbox}{max width=\textwidth}"
+
+    let sections = stepSections content
+    Assert.NotEmpty(sections)
+
+    for sec in sections do
+        // Each RNGLR step carries exactly one wrapped figure: GSS (no per-step RSM).
+        Assert.Equal(1, countOccurrences sec adjustboxBegin)
+
+    // The head Extended RSM figure contributes exactly one more adjustbox.
+    Assert.Equal(1 + sections.Length, countOccurrences content adjustboxBegin)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]

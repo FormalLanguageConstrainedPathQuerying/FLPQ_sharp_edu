@@ -22,7 +22,7 @@ The SummaryTeX module assembles per-algorithm visualization artifacts into one m
 
 - Algorithm header (original grammar, CNF grammar, input string)
 - LL/LR parsing table and automaton (for LL/LR algorithms)
-- Per-step sections (tables for CYK/Valiant; stack+tree picture for LL/LR — inline TikZ in default mode, dot-compiled PDF with `--use-dot`)
+- Per-step sections (tables for CYK/Valiant; stack+tree picture for LL/LR — inline TikZ in default mode, dot-compiled PDF with `--use-dot`; side-by-side template layout for GLL/RNGLR where the step's GSS and RSM figures are adjustbox-wrapped in TikZ mode)
 - Color legend (for GLL/RNGLR) — a tabular mapping of each highlight color to its meaning. The GLL legend includes an `orange!30` row for "Stored pops handling triggered at GSS vertex" (see [GLL module](gll.md)); the RNGLR legend includes an `orange!30` row for "Passing reductions handling triggered at GSS vertex" (see [RNGLR module](rnglr.md)).
 - Extended RSM figure at the head (for GLL/RNGLR in Tikz mode) — the full extended RSM from `ext_rsm.tikz.tex` (blocks stacked top-to-bottom, see [RSM visualization](rsm-viz.md)), wrapped in adjustbox. In DOT mode the head uses the dot-compiled PDFs instead (`ext_rsm.pdf` for GLL, `rsm_blocks.pdf` for RNGLR).
 - SPPF section at the end (all algorithms) — exactly one "SPPF (Shared Packed Parse Forest)" subsection per document: inline TikZ from `sppf.tikz.tex` in Tikz mode, dot-compiled `dot_pdfs/sppf.pdf` otherwise. No algorithm includes SPPF in the header.
@@ -44,12 +44,15 @@ val section: string -> string
 
 ```fsharp
 val headerSection: vizDir:string -> algoKind:SummaryKind -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> rsmPdfs:(string*string) list -> useTikz:bool -> string list
-val tableStepSection: stepDir:string -> stepNum:int -> string list
+val tableStepSection: stepDir:string -> stepNum:int -> wrap:(string->string) -> string list
 val stackStepSection: stepDir:string -> stepNum:int -> stepName:string -> useTikz:bool -> string list
-val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> string list
+val gllStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemplate:string -> useTikz:bool -> string list
+val rnglrStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemplate:string -> useTikz:bool -> string list
+val sppfSection: vizDir:string -> useTikz:bool -> string list
+val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> rsmPdfs:(string*string) list -> gllStepTemplate:string -> rnglrStepTemplate:string -> gllStepTikzTemplate:string -> rnglrStepTikzTemplate:string -> useTikz:bool -> string list
 ```
 
-- `algoKind`: `"table"` (CYK/Valiant), `"ll"`, or `"lr"`
+- `algoKind`: `TablePerStep` (CYK/Valiant), `LL`, `LR`, `GLL`, or `RNGLR`
 - `buildContent` assembles the complete merged TeX for one algorithm
 
 ## Design Decisions
@@ -61,7 +64,7 @@ val buildContent: algo:string -> algoKind:string -> vizDir:string -> stepCount:i
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
 | `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
 | `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary (LR automaton, GLL input string, SPPF) |
-| `wrapTikzAdjustbox` for LL/LR step figures | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used only by `stackStepSection`; other TikZ inclusions keep resizebox (GLL-wide migration is task 244) |
+| `wrapTikzAdjustbox` for step figures | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used by `stackStepSection` (LL/LR stack-trees) and by `gllStepSection`/`rnglrStepSection` for the per-step GSS and RSM figures (RSM for GLL only). Inside a step minipage `\textwidth` equals the column width, so the wrap shrinks a figure to fit its column. Remaining resizebox inclusions: LR automaton, GLL input string, SPPF (GLL-wide migration is task 244) |
 | `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier), wrapped in adjustbox; `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
 | Extended RSM head section for GLL/RNGLR Tikz mode | `headerSection` reads `ext_rsm.tikz.tex` from the viz dir and wraps it in `wrapTikzAdjustbox` (tall stacked figures keep natural size); skipped gracefully when the file is absent so older viz dirs still build. DOT mode keeps the dot-compiled PDF entries |
 | Single trailing SPPF section for all algorithms | `sppfSection` is the only SPPF placement (TikZ in Tikz mode, DOT PDF fallback); GLL/RNGLR previously also carried a duplicate header entry with the DOT-compiled PDF (removed in task 269) |

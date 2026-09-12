@@ -1,5 +1,29 @@
 # Code Review Report
 
+## Task 271 Review (2026-09-12)
+
+Scope: `src/FLPQ.Printers/SummaryTeX.fs` (`gllStepSection` wraps the step's GSS and RSM TikZ figures, `rnglrStepSection` wraps the step's GSS figure, both via the existing `wrapTikzAdjustbox`; doc comments extended), `data/GLL_step_tikz_template.tex` + `data/RNGLR_step_tikz_template.tex` (redundant `\begin{center}` around the GSS/RSM placeholders removed — the wrapper provides centering), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (+2 facts, shared `countOccurrences`/`stepSections` helpers, registry-sourced ANBN grammar/input), `docs/developer/summary-tex.md` (overview bullet, `wrapTikzAdjustbox` design-decision row, corrected stale section-builder signatures).
+
+**Findings resolved this review:**
+
+- §14 (language registry) — the two new facts initially hardcoded the EBNF grammar text and input string inline. The exact grammar exists in the registry as ANBN classic and "a a b b" is one of its accept strings; the facts now derive both from `LanguageRegistry.ANBN` (`df1f809`).
+- §23 (naming semantics) — the comment describing the test grammar showed pipe notation while the registry text is newline-separated; reworded to describe the rules without implying a source-text form (`6e3348e`).
+
+**Verified:** CliSummaryTests 20/20, TexCompilationTests 37/37 (the tikz-mode merged-summary compilation facts exercise the new wrapping end-to-end); FSharpLint 0 warnings on both changed projects; COMMIT_GATE: PASS. Empirical rendering check: GLL (4-token input) went from 8 overfull hboxes (17.4pt, GSS figures) to 0; RNGLR from 3 overfull hboxes (112.9pt, GSS figures) to 0; both merged documents compile with lualatex. The mechanism is documented in `summary-tex.md`: LaTeX minipage redefines `\textwidth` to the column width inside its scope, so `max width=\textwidth` shrinks an over-wide figure exactly to fit its column.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — both modified public functions carry extended doc comments stating the TikZ-mode adjustbox wrap and the DOT-mode PDF behavior.
+- §13 (no duplication) — the two facts share `countOccurrences`/`stepSections`; the wrap is a one-line composition of the existing helper at each call site, no new wrapper.
+- §15/§16 (test fidelity / Fact vs Property) — the facts assert exact per-step adjustbox counts (2 for GLL: GSS+RSM; 1 for RNGLR: GSS) plus global counts (1+2N / 1+N) that pin the head Extended RSM figure; deterministic end-to-end assertions, correctly `[<Fact>]`.
+- §19 (test coverage) — `SummaryTeX` keeps its correspondents (`CliSummaryTests`, `TexCompilationTests`); DOT mode stays covered by the unchanged compilation facts.
+- §20 (documentation completeness) — `summary-tex.md` is the single doc for this module; overview, design decisions, and signatures updated (the stale `buildContent`/`tableStepSection` signatures and missing `gllStepSection`/`rnglrStepSection`/`sppfSection` entries were corrected as part of the same edit).
+- §21 (book traceability) — rendering-only change; no book algorithm/example is involved, consistent with the rest of `SummaryTeX.fs`.
+
+**No blocking findings.** Second pass over the changed surface found only the comment nit listed above; after its fix a final pass found zero problems. Pre-existing note (unchanged by this task): the five older GLL/RNGLR facts in `CliSummaryTests.fs` still use inline `"S -> a S b | eps"` / `"a a b b"` — same registry-eligible data; migrating them is a separate cleanup.
+
+---
+
 ## Task 270 Review (2026-09-12)
 
 Scope: `src/FLPQ.Printers/RsmTikz.fs` (bare numeric state content, bare nonterminal edge labels, `double, double distance=1.5pt` on every final state), `src/FLPQ.Printers/RsmDot.fs` (same label semantics; highlighted finals keep `peripheries=2`), tests (`RsmTikzTests.fs` +4 facts including the per-step GLL invariant, new `RsmDotTests.fs` with 3 facts, shared `callLabeledNonterminals` in `TestHelpers.fs`), docs (`rsm-viz.md` label/styling semantics + Design Decisions row), skills (FS0691 named-argument quirk in fsharp-coder).

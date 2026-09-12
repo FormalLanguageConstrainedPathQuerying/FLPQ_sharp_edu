@@ -253,6 +253,8 @@ module SummaryTeX =
         header @ pictureLines @ inputLines
 
     /// Builds the content lines for a single GLL step using the side-by-side template layout.
+    /// In TikZ mode the step's GSS and RSM figures are wrapped in adjustbox (shrink-only,
+    /// at most \textwidth) via `wrapTikzAdjustbox`; DOT mode includes the dot-compiled PDFs.
     let gllStepSection
         (stepDir: string)
         (stepNum: int)
@@ -308,8 +310,8 @@ module SummaryTeX =
 
                 tikzTemplate
                     .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
-                    .Replace("__STEP_GSS_TIKZ__", gssTikz)
-                    .Replace("__STEP_RSM_TIKZ__", rsmTikz)
+                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox gssTikz)
+                    .Replace("__STEP_RSM_TIKZ__", wrapTikzAdjustbox rsmTikz)
                     .Replace("__STEP_INPUT_TIKZ__", inputTikz)
                     .Replace("__PATH_INDEX__", pathIndex)
                     .Replace("__NEW_DESCRIPTORS__", newDescriptors)
@@ -326,6 +328,8 @@ module SummaryTeX =
 
     /// Builds the content lines for a single RNGLR step using the two-column template layout
     /// (left: GSS figure + LR table; right: input figure + path index).
+    /// In TikZ mode the step's GSS figure is wrapped in adjustbox (shrink-only, at most
+    /// \textwidth) via `wrapTikzAdjustbox`; DOT mode includes the dot-compiled PDF.
     let rnglrStepSection
         (stepDir: string)
         (stepNum: int)
@@ -363,7 +367,7 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__STEP_GSS_TIKZ__", gssTikz)
+                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox gssTikz)
                     .Replace("__LR_TABLE__", lrTable)
                     .Replace("__STEP_INPUT_TIKZ__", inputTikz)
                     .Replace("__PATH_INDEX__", pathIndex)
