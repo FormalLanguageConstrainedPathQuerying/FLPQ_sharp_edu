@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli, TestHelpers
 **Book reference:** Section sec:CFPQ_RNGLR (Chapter 6)
 
-> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution with a canonical level-based driver: each step processes one input position (level) — first shift, then all possible reductions to fixpoint — and only then moves to the next level. No descriptor worklists. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
+> **Abstract:** Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL. RNGLR builds a **path index** during execution with a canonical level-based driver: each step processes one input position (level) — first all possible reductions to fixpoint, then shifts from all vertices of the level in a single pass — and only then moves to the next level. No descriptor worklists. Reductions are processed by traversing the GSS backwards through inverted RSM block DFAs (product construction). The SPPF is built separately from the index. The LR(0) automaton is adapted for RSM items.
 
 ## Contents
 
@@ -22,7 +22,7 @@
 
 ## Algorithm
 
-The core algorithm is a strict left-to-right **level loop** over input positions. Each level (input position `v`) is processed in rounds until it stabilizes: **shift** every not-yet-shifted GSS vertex at `v`, then run reductions to fixpoint. Only after the level produces no new GSS vertex does the driver move to `v + 1`. There are no descriptor worklists and no recursion — this is the book's per-vertex MakeReductions/Push/ApplyPassingReductions scheme (sec:CFPQ_GLR) specialized to a single input string.
+The core algorithm is a strict left-to-right **level loop** over input positions. Each level (input position `v`) is processed in canonical order: first run **reductions to fixpoint** over all GSS vertices at `v`, then execute **shifts** from all vertices of the level in a single pass. Shifts create no new vertices at `v`, so one shift pass suffices — there are no rounds. Only after both phases complete does the driver move to `v + 1`. There are no descriptor worklists and no recursion — this is the book's per-vertex MakeReductions/Push/ApplyPassingReductions scheme (sec:CFPQ_GLR) specialized to a single input string, with the phase order of Scott & Johnstone 2006, Algorithm 1e PARSE SYMBOL (reductions to fixpoint before SHIFTER executes the collected shifts).
 
 ### buildPathIndex
 
@@ -30,11 +30,10 @@ The core algorithm is a strict left-to-right **level loop** over input positions
 
 2. **Level loop** — for each input position `v` from 0 to vertexCount − 1:
 
-   - **Phase 1 — Shift**: For every LR state with a GSS vertex at `v` that has not been shifted yet this level, follow every terminal edge `v --t--> vNext`: if the LR state has a Shift action on `t`, create the GSS edge and consume stored states for product BFS continuation (passing-reduction continuations across levels).
-   - **Phase 2 — Reduce to fixpoint** (`reduceAtLevel`): full-rescan loop over all GSS vertices at `v` — for each reducible item, `findPredecessors` (product BFS through inverted RSM block) → apply Goto → create GSS edge. Repeats until no new GSS edge is added, so every reduction's product BFS runs over the current (growing) GSS.
-   - **Rounds**: Phase 1 + Phase 2 repeat while a new GSS vertex appeared at `v` during the reduce phase — a goto target must itself be shifted before the level can stabilize.
+   - **Phase 1 — Reduce to fixpoint** (`reduceAtLevel`): full-rescan loop over all GSS vertices at `v` — for each reducible item, `findPredecessors` (product BFS through inverted RSM block) → apply Goto → create GSS edge. Repeats until no new GSS edge is added, so every reduction's product BFS runs over the current (growing) GSS; goto targets created by reductions are themselves reduced in later passes of the same fixpoint.
+   - **Phase 2 — Shift**: For every LR state with a GSS vertex at `v` (including goto targets created by Phase 1), follow every terminal edge `v --t--> vNext`: if the LR state has a Shift action on `t`, create the GSS edge and consume stored states for product BFS continuation (passing-reduction continuations). One pass suffices — shifts create no new vertices at `v`.
    - **Passing-reduction tracking**: whenever `addEdge` from a GSS vertex returns non-empty stored states (a new edge consumes the vertex's stored states — the book's ApplyPassingReductions trigger, sec:CFPQ_GLR), the source vertex is recorded in the level's `PassingReductionVertices` set. Both consumption points are tracked: shift continuations and reduction gotos.
-   - After stabilization, emit the level's step snapshot (active GSS elements, path index copy, shift/reduce activity and passing-reduction trigger vertices accumulated over the whole level).
+   - After both phases complete, emit the level's step snapshot (active GSS elements, path index copy, shift/reduce activity and passing-reduction trigger vertices accumulated over the whole level).
 
 3. **Product BFS**: Following GSS edges backwards through inverted RSM transitions, adding PTerminal, PNonterminal, and PIntermediate entries to the path index. Reaches block start states to find predecessors.
 
@@ -47,7 +46,7 @@ Non-recursive; applies a single reduction for one predecessor found by product B
 1. Look up LR Goto table for `(lrStatePre, reduceNt)` → gotoTarget.
 2. Create GSS edge `(gotoTarget, vEnd) --N(reduceNt)--> gssIdxPre` (deduplicated via `processedGotos`).
 3. PEpsilonNonterminal only when `vPre = vEnd` and `finalRsmState = globalStart` (true epsilon).
-4. Returns `(newEdge, newVertexGotoTarget)` so the level loop knows whether another reduce pass or another round is needed.
+4. Returns true when a new GSS edge was added (the dedup key was new), so the reduce fixpoint knows whether another rescan pass is needed.
 
 ## Type Definitions
 
@@ -135,7 +134,7 @@ val buildPathIndex:
     -> PathIndex<'t, 'nt>
 ```
 
-Core RNGLR algorithm — builds the path index through the level-based driver (shift + reduce fixpoint per input position).
+Core RNGLR algorithm — builds the path index through the level-based driver in canonical order (reduce fixpoint, then shift pass, per input position).
 
 ### Rnglr.buildPathIndexWithSteps
 
@@ -160,11 +159,10 @@ Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, 
 | StoredStates as Dictionary\<int, Set\<...>> not fixed array | Matches dynamic GSS vertex creation; no need to pre-allocate for non-existent vertices |
 | GSS vertices created on-demand with sequential IDs | Decouples GSS indexing from PathIndex grid formula; only allocates for actually used vertices |
 | Deduplication of cascades via processedGotos (Dictionary) | Prevents reprocessing same (reduceNt, predecessor) pair at same GSS vertex |
-| Level-based driver without descriptors | Canonical form of the book's per-vertex scheme: each step is one input position — shift, then reduce to fixpoint — before moving on. No worklist queues, no descriptor bookkeeping; the GSS itself (via `verticesAt`) is the only pending-work representation. storedStates deposited by reductions at V are consumed by shifts at V or V+1 because all work at V completes before V+1 begins |
-| Round loop until the level stabilizes | A reduction's goto target is a new GSS vertex at the same position v that must itself be shifted. Phase 1 (shift unshifted vertices) + Phase 2 (reduce fixpoint) repeat while a new GSS vertex appeared at v; termination follows from the finite LR automaton × finite input positions |
+| Level-based driver without descriptors | Canonical form of the book's per-vertex scheme: each step is one input position — reduce to fixpoint, then shift all vertices of the level in a single pass — before moving on. Phase order per Scott & Johnstone 2006, Algorithm 1e PARSE SYMBOL (reductions to fixpoint before SHIFTER) and book sec:CFPQ_GLR (MakeReductions → Push → ApplyPassingReductions); reverses the shift-then-reduce decision of tasks 225/260. No worklist queues, no descriptor bookkeeping; the GSS itself (via `verticesAt`) is the only pending-work representation. storedStates deposited by a reduction's product BFS are consumed when the next GSS edge is added from that vertex — within the same level, when a later reduction or the shift pass extends a vertex the BFS visited (same-position epsilon edges make such vertices reachable); this is the book's AddEdge passing-reduction trigger |
 | Full-rescan reduce fixpoint (not incremental queue) | The GSS grows during a level, so every pass re-scans all vertices at v until no new GSS edge is added. Guarantees each reduction's product BFS runs over the current GSS — completeness without tracking which vertices changed |
-| No recursion in the driver | `processReduction` returns `(newEdge, newVertexGotoTarget)` and the level loop decides what to do next; the old recursive processNode ↔ processReduction cascade (and its 1000 depth guard) is gone |
-| Visualization steps are per-input-position | One step captures the cumulative result of processing one level (all rounds of shift + reduce fixpoint). Step 0 is the initial empty state. Shift/reduce activity sets accumulate over the whole level |
+| No recursion in the driver | `processReduction` returns whether a new GSS edge was added and the reduce fixpoint decides whether another rescan pass is needed; the old recursive processNode ↔ processReduction cascade (and its 1000 depth guard) is gone |
+| Visualization steps are per-input-position | One step captures the cumulative result of processing one level (reduce fixpoint + shift pass). Step 0 is the initial empty state. Shift/reduce activity sets accumulate over the whole level |
 | Orange highlight for passing-reduction trigger vertices | Reuses the `orange` fill of GLL stored pops (task 259) through the existing `storedPopVertices` parameter of `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` — one color means "stored-state consumption" across both algorithms (task 261). Render priority: current > stored-pop > highlighted > normal |
 
 ## Book Reference
@@ -172,6 +170,7 @@ Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, 
 - Section sec:CFPQ_RNGLR — RNGLR for CFPQ over RSMs
 - Chapter 6, `03_RecursiveAutomata.tex` — RSM definition
 - Section sec:CFPQ_GLR — GLR-based CFPQ (the per-vertex MakeReductions/Push/ApplyPassingReductions scheme that the level-based driver specializes to a single input string)
+- Scott & Johnstone 2006, "Right Nulled GLR Parsers" (book citation `Scott:2006:RNG:1146809.1146810`) — Algorithm 1e PARSE SYMBOL: the canonical per-position order, reductions to fixpoint before SHIFTER
 - Section sec:CFPQ_GLL — GLL parsing (counterpart algorithm, shared path index type)
 - `RnglrLR.fs` — LR(0) table construction for RSM items
 

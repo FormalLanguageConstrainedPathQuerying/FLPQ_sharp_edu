@@ -1,5 +1,26 @@
 # Code Review Report
 
+## Task 274 Review (2026-09-14)
+
+Scope: `src/FLPQ.Languages/Rnglr.fs` (level driver reordered to canonical reduce-then-shift: round loop and `shifted` HashSet removed; `reduceAtLevel` now returns `unit`; `processReduction` return simplified from `bool * int option` to `bool`, dropping the consumer-less `newVertexGotoTarget` component and the `existedBefore` lookup), `docs/developer/rnglr.md` (canonical order described throughout; "Rounds" design-decision row removed; Scott & Johnstone 2006 added to Book Reference).
+
+**Findings resolved this review:** none — the review pass found no problems.
+
+**Verified:** full suite 961 passed / 0 failed / 0 skipped (all six test projects, including `RnglrPassingReductions` and all cross-parser equivalence tests); reference visualization for `data/example_input_a_a_a.txt` + `data/example_grammar_a_a_a.bnf` regenerated with the exact task command — all 29 `.tex`/`.dot` artifacts byte-identical to the pre-change baseline (the two graphviz PDFs differ only in embedded CreationDate metadata, content verified via pdftotext); FSharpLint 0 warnings on FLPQ.Languages; COMMIT_GATE: PASS.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — `buildPathIndex` doc comment and the three private phase functions (`processReduction`, `shiftNode`, `reduceAtLevel`) carry updated comments matching the new signatures and order.
+- §13 (no duplication) — pure reorder plus dead-code removal; no logic added or copied.
+- §18 (equivalence tests) — the change is a reordering of an existing algorithm, not a variant: behavior preservation is established by the unchanged full suite (acceptance, property-based tree-yield, cross-parser equivalence) and the byte-identical reference visualization.
+- §20 (documentation completeness) — `docs/developer/rnglr.md` is the single source of truth for the driver order and is updated in place; no new module or public API, so no hub/architecture changes needed.
+- §21 (book traceability) — the level-loop comment and `reduceAtLevel` doc now cite Scott & Johnstone 2006 Algorithm 1e PARSE SYMBOL and book sec:CFPQ_GLR (MakeReductions → Push → ApplyPassingReductions); the doc's Book Reference section lists the paper with its book citation key.
+- §23 (naming semantics) — `reduceAtLevel : int -> unit` and `processReduction : ... -> bool` names match their behavior; both `processReduction` call sites (`reduceAtLevel`, `shiftNode`'s `|> ignore`) are consistent with the simplified return.
+
+**No blocking findings.** Second pass over the changed surface (driver loop, both phase functions, all comments, doc file) found zero additional problems.
+
+---
+
 ## Task 273 Review (2026-09-14)
 
 Scope: `src/FLPQ.Printers/SppfTikz.fs` (range/intermediate node labels switch to subscript indices — new local `rangeLabel` helper, `SppfRange` and `SppfIntermediate` arms), `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` (stale task-269 `$\to$` assertion replaced with new-format assertions), `tests/FLPQ.Printers.Tests/SppfTikzTests.fs` (new — 3 facts) + fsproj registration.

@@ -266,9 +266,7 @@ module Rnglr =
 
         /// Applies a single reduction: looks up the goto state, adds the GSS edge labeled with
         /// the reduced nonterminal, and records the epsilon entry for direct epsilon derivations.
-        /// Returns (newEdge, newVertexGotoTarget): newEdge is true when a new GSS edge was added
-        /// (the dedup key was new); newVertexGotoTarget is Some gotoTarget when the GSS vertex
-        /// (gotoTarget, vEnd) did not exist before this call.
+        /// Returns true when a new GSS edge was added (the dedup key was new).
         let processReduction
             (reduceNt: Nonterminal<'nt>)
             (finalRsmState: int)
@@ -276,10 +274,9 @@ module Rnglr =
             (gssIdxPre: int)
             (vPre: int)
             (vEnd: int)
-            : bool * int option =
+            : bool =
             match Map.tryFind (lrStatePre, reduceNt) lrTable.Goto with
             | Some gotoTarget ->
-                let existedBefore = gss.VertexLookup.ContainsKey(gotoTarget, vEnd)
                 let gotoGssIdx = RnglrGSS.getOrCreateVertex gss gotoTarget vEnd
                 let dedupKey = (reduceNt, gssIdxPre)
 
@@ -306,10 +303,8 @@ module Rnglr =
                         addToIndex globalStart vPre finalRsmState vEnd (PathIndexEntry.PEpsilonNonterminal reduceNt)
                 | false, _ -> ()
 
-                let newVertex = if isNew && not existedBefore then Some gotoTarget else None
-
-                (isNew, newVertex)
-            | None -> (false, None)
+                isNew
+            | None -> false
 
         /// Shift phase for a single GSS vertex (lrState, v): follows every terminal transition
         /// of the LR table along the input edges from v, creates target vertices at vNext, and
@@ -350,10 +345,9 @@ module Rnglr =
 
         /// Reduction phase at level v: a full-rescan fixpoint over all reducible GSS vertices at
         /// position v. Repeats until no new GSS edge is added, so every reduction's product BFS
-        /// runs over the current (growing) GSS. Returns true when a new GSS vertex appeared at v
-        /// — it must be shifted in the next round of the level loop.
-        let reduceAtLevel (v: int) : bool =
-            let mutable newVertexAtV = false
+        /// runs over the current (growing) GSS. Runs before the shift pass of the level — the
+        /// canonical order (Scott & Johnstone 2006, Algorithm 1e PARSE SYMBOL; book sec:CFPQ_GLR).
+        let reduceAtLevel (v: int) : unit =
             let mutable changed = true
 
             while changed do
@@ -367,17 +361,11 @@ module Rnglr =
                         let predecessors = findPredecessors gssIdx reduceNt
 
                         for pred in predecessors do
-                            let newEdge, newVertex =
+                            let newEdge =
                                 processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v
 
                             if newEdge then
                                 changed <- true
-
-                            match newVertex with
-                            | Some _ -> newVertexAtV <- true
-                            | None -> ()
-
-            newVertexAtV
 
         let collectActiveGss () : Set<int> * Set<int * int> =
             GraphHelpers.collectActiveGssForDict gss.Edges
@@ -413,24 +401,20 @@ module Rnglr =
 
         RnglrGSS.getOrCreateVertex gss 0 0 |> ignore
 
-        // Level-based driver: each step processes one input position (level) — first shift
-        // every not-yet-shifted GSS vertex at v, then reduce to fixpoint; repeat rounds until
-        // the level stabilizes, then move to the next level.
+        // Level-based driver in canonical order: each step processes one input position (level) —
+        // first apply all possible reductions at v to fixpoint, then execute shifts from all
+        // vertices of the level in a single pass; then move to the next level. Shifts create no
+        // new vertices at v, so one shift pass suffices — no rounds.
         // Book reference: sec:CFPQ_GLR (per-vertex MakeReductions/Push/ApplyPassingReductions
-        // specialized to a single input string), sec:CFPQ_RNGLR.
+        // specialized to a single input string), Scott & Johnstone 2006 Algorithm 1e PARSE SYMBOL,
+        // sec:CFPQ_RNGLR.
         for v in 0 .. vertexCount - 1 do
             levelReductions <- Set.empty
-            let shifted = HashSet<int>()
-            let mutable again = true
 
-            while again do
-                again <- false
+            reduceAtLevel v
 
-                for lrState in RnglrGSS.verticesAt gss v do
-                    if shifted.Add(lrState) then
-                        shiftNode lrState v
-
-                again <- reduceAtLevel v
+            for lrState in RnglrGSS.verticesAt gss v do
+                shiftNode lrState v
 
             let activeVerts, activeEdges = collectActiveGss ()
 
@@ -462,8 +446,9 @@ module Rnglr =
 
         pathIndex, gss.VertexInfo
 
-    /// Core RNGLR algorithm — builds the path index through the level-based driver:
-    /// for each input position, shift all unshifted GSS vertices, then reduce to fixpoint.
+    /// Core RNGLR algorithm — builds the path index through the level-based driver in canonical
+    /// order: for each input position, apply all possible reductions to fixpoint, then execute
+    /// shifts from all vertices of the level in a single pass.
     /// Book reference: sec:CFPQ_RNGLR.
     let buildPathIndex
         (_freshStart: Nonterminal<'nt>)
