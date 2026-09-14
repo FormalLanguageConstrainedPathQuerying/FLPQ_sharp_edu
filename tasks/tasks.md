@@ -698,4 +698,4 @@
 
 271. [done] Improve GLL and GLR steps rendering. Wrap GSS and RSM (rsm for GLL only) in each step with `\begin{adjustbox}{max width=\textwidth} ... \end{adjustbox}`. Use existing wrapper function.
 
-272. For all tikz-based SPPF visualization in all algorithms (CYK, Valiant, GLL, RNGLR) replace resizebox with ajustbox. Use ajustbox with following parameters `\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight} ... \end{ajustbox}`. Generalize existing ajustbox wrapper function to use it with and without max totalheight limit.
+272. [done] For all tikz-based SPPF visualization in all algorithms (CYK, Valiant, GLL, RNGLR) replace resizebox with ajustbox. Use ajustbox with following parameters `\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight} ... \end{ajustbox}`. Generalize existing ajustbox wrapper function to use it with and without max totalheight limit.
