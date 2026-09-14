@@ -303,3 +303,37 @@ let ``GLL summary contains exactly one SPPF section (trailing)`` () =
 let ``RNGLR summary contains exactly one SPPF section (trailing)`` () =
     let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
     assertSingleTrailingSppfSection outDir "RNGLR"
+
+// The trailing SPPF section is the only figure wrapped with the max-totalheight
+// adjustbox variant; every other adjustbox (step GSS/RSM, ext-RSM head) uses the
+// width-only variant. Asserting the variant's presence therefore pins the SPPF wrap.
+let private assertSppfUsesMaxTotalHeightAdjustbox (outDir: string) (algorithm: string) =
+    let texPath = mergedTexPath outDir algorithm
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    Assert.Contains(@"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}", content)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``CYK summary SPPF uses adjustbox with max totalheight`` () =
+    let outDir = runWithSummary "CYK" false
+    assertSppfUsesMaxTotalHeightAdjustbox outDir "CYK"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``Valiant summary SPPF uses adjustbox with max totalheight`` () =
+    let outDir = runWithSummary "Valiant" false
+    assertSppfUsesMaxTotalHeightAdjustbox outDir "Valiant"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``GLL summary SPPF uses adjustbox with max totalheight`` () =
+    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    assertSppfUsesMaxTotalHeightAdjustbox outDir "GLL"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary SPPF uses adjustbox with max totalheight`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    assertSppfUsesMaxTotalHeightAdjustbox outDir "RNGLR"

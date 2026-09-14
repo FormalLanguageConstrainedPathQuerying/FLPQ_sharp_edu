@@ -51,10 +51,13 @@ module SummaryTeX =
         |> String.concat "\n"
 
     /// Wraps a TikZ picture in a centered adjustbox that shrinks the figure to at most
-    /// \textwidth without upscaling smaller figures (font metrics are preserved).
-    let wrapTikzAdjustbox (tikz: string) : string =
+    /// \textwidth without upscaling smaller figures (font metrics are preserved). When
+    /// `limitHeight` is true the figure is additionally limited to at most \textheight.
+    let wrapTikzAdjustbox (limitHeight: bool) (tikz: string) : string =
+        let heightOpt = if limitHeight then @", max totalheight=\textheight" else ""
+
         [ @"\begin{center}"
-          @"\begin{adjustbox}{max width=\textwidth}"
+          sprintf @"\begin{adjustbox}{max width=\textwidth%s}" heightOpt
           tikz
           @"\end{adjustbox}"
           @"\end{center}" ]
@@ -165,7 +168,7 @@ module SummaryTeX =
         // Skipped gracefully when ext_rsm.tikz.tex is absent so older viz dirs still build.
         let extRsmTikzSection =
             if useTikz then
-                maybe "ext_rsm.tikz.tex" "Extended RSM" wrapTikzAdjustbox
+                maybe "ext_rsm.tikz.tex" "Extended RSM" (fun t -> wrapTikzAdjustbox false t)
             else
                 []
 
@@ -240,7 +243,7 @@ module SummaryTeX =
         let pictureLines =
             if useTikz then
                 match readIfExists (Path.Combine(stepDir, "tree_and_stack.tikz.tex")) with
-                | Some tikz -> [ wrapTikzAdjustbox tikz; "" ]
+                | Some tikz -> [ wrapTikzAdjustbox false tikz; "" ]
                 | None -> []
             else
                 [ includePdf (sprintf "dot_pdfs/%s_tree_and_stack.pdf" stepName); "" ]
@@ -310,8 +313,8 @@ module SummaryTeX =
 
                 tikzTemplate
                     .Replace("__DESCRIPTORS_TABLE__", descriptorsTable)
-                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox gssTikz)
-                    .Replace("__STEP_RSM_TIKZ__", wrapTikzAdjustbox rsmTikz)
+                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox false gssTikz)
+                    .Replace("__STEP_RSM_TIKZ__", wrapTikzAdjustbox false rsmTikz)
                     .Replace("__STEP_INPUT_TIKZ__", inputTikz)
                     .Replace("__PATH_INDEX__", pathIndex)
                     .Replace("__NEW_DESCRIPTORS__", newDescriptors)
@@ -367,7 +370,7 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox gssTikz)
+                    .Replace("__STEP_GSS_TIKZ__", wrapTikzAdjustbox false gssTikz)
                     .Replace("__LR_TABLE__", lrTable)
                     .Replace("__STEP_INPUT_TIKZ__", inputTikz)
                     .Replace("__PATH_INDEX__", pathIndex)
@@ -381,13 +384,15 @@ module SummaryTeX =
         [ header; filledTemplate; "" ]
 
     /// Builds the SPPF section using TikZ if available, falling back to DOT PDF.
+    /// In TikZ mode the figure is wrapped in an adjustbox limited to at most \textwidth
+    /// and \textheight (shrink-only); DOT mode includes the dot-compiled PDF.
     let sppfSection (vizDir: string) (useTikz: bool) : string list =
         let tikzPath = Path.Combine(vizDir, "sppf.tikz.tex")
         let dotPath = Path.Combine(vizDir, "sppf.dot")
 
         if useTikz then
             match readIfExists tikzPath with
-            | Some tikz -> [ section "SPPF (Shared Packed Parse Forest)"; wrapTikzCenter tikz; "" ]
+            | Some tikz -> [ section "SPPF (Shared Packed Parse Forest)"; wrapTikzAdjustbox true tikz; "" ]
             | None ->
                 match readIfExists dotPath with
                 | Some _ ->

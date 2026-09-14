@@ -35,7 +35,7 @@ The SummaryTeX module assembles per-algorithm visualization artifacts into one m
 val wrapMath: string -> string
 val wrapCenter: string -> string
 val wrapTikzCenter: string -> string
-val wrapTikzAdjustbox: string -> string
+val wrapTikzAdjustbox: bool -> string -> string
 val includePdf: string -> string
 val section: string -> string
 ```
@@ -54,6 +54,7 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 
 - `algoKind`: `TablePerStep` (CYK/Valiant), `LL`, `LR`, `GLL`, or `RNGLR`
 - `buildContent` assembles the complete merged TeX for one algorithm
+- `wrapTikzAdjustbox limitHeight tikz`: wraps `tikz` in a centered adjustbox limited to at most `\textwidth`; when `limitHeight` is true it is additionally limited to at most `\textheight`. Shrink-only — small figures are never upscaled and node font metrics are preserved.
 
 ## Design Decisions
 
@@ -63,8 +64,8 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 | String-based algo kind | Avoids dependency on CLI-specific `Algorithm` DU; testable independently |
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
 | `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
-| `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary (LR automaton, GLL input string, SPPF) |
-| `wrapTikzAdjustbox` for step figures | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used by `stackStepSection` (LL/LR stack-trees) and by `gllStepSection`/`rnglrStepSection` for the per-step GSS and RSM figures (RSM for GLL only). Inside a step minipage `\textwidth` equals the column width, so the wrap shrinks a figure to fit its column. Remaining resizebox inclusions: LR automaton, GLL input string, SPPF (GLL-wide migration is task 244) |
+| `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary (LR automaton, GLL input string) |
+| `wrapTikzAdjustbox` for step figures and SPPF | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used by `stackStepSection` (LL/LR stack-trees), by `gllStepSection`/`rnglrStepSection` for the per-step GSS and RSM figures (RSM for GLL only), and by `sppfSection` for the SPPF — the latter passes `limitHeight = true`, adding `max totalheight=\textheight` so tall SPPF forests also fit the page height. Inside a step minipage `\textwidth` equals the column width, so the wrap shrinks a figure to fit its column. Remaining resizebox inclusions: LR automaton, GLL input string (GLL-wide migration is task 244) |
 | `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier), wrapped in adjustbox; `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
 | Extended RSM head section for GLL/RNGLR Tikz mode | `headerSection` reads `ext_rsm.tikz.tex` from the viz dir and wraps it in `wrapTikzAdjustbox` (tall stacked figures keep natural size); skipped gracefully when the file is absent so older viz dirs still build. DOT mode keeps the dot-compiled PDF entries |
 | Single trailing SPPF section for all algorithms | `sppfSection` is the only SPPF placement (TikZ in Tikz mode, DOT PDF fallback); GLL/RNGLR previously also carried a duplicate header entry with the DOT-compiled PDF (removed in task 269) |

@@ -1,5 +1,26 @@
 # Code Review Report
 
+## Task 272 Review (2026-09-14)
+
+Scope: `src/FLPQ.Printers/SummaryTeX.fs` (`wrapTikzAdjustbox` gains a leading `limitHeight: bool`; the five existing call sites — ext-RSM head, LL/LR stack step, GLL per-step GSS+RSM, RNGLR per-step GSS — pass `false`, and `sppfSection` switches from `wrapTikzCenter` to `wrapTikzAdjustbox true`), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (+1 shared helper, +4 facts — one per algorithm), `docs/developer/summary-tex.md` (helper signature, flag-semantics note, two design-decision rows).
+
+**Findings resolved this review:** none — the review pass found no problems. (A verbatim-string escape issue in the first draft of `wrapTikzAdjustbox` — a regular string literal turned `\textheight` into `<TAB>extheight` — was caught during S2 implementation by the four new facts and fixed before this review; it is recorded here as evidence that the facts exercise the real emitted TeX.)
+
+**Verified:** CliSummaryTests — the 4 new SPPF facts pass, and the pre-existing adjustbox facts (LL inline-TikZ, SLR1 step stack-trees, GLL/RNGLR per-step) still pass unmodified; TexCompilationTests tikz-mode merged-summary compilation facts (GLL, RNGLR) compile the new SPPF wrapping end-to-end with lualatex. FSharpLint 0 warnings on both changed projects; COMMIT_GATE: PASS.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — `wrapTikzAdjustbox` and `sppfSection` carry updated doc comments stating the flag semantics and the SPPF adjustbox wrap.
+- §13 (no duplication) — the SPPF reuses the generalized `wrapTikzAdjustbox` (one new parameter, no second wrapper); the four facts share a single helper.
+- §15/§16 (test fidelity / Fact vs Property) — the facts assert the exact max-totalheight adjustbox variant in the real end-to-end merged TeX; that variant is unique to the SPPF section, so the assertion is precise and not a tautology. Deterministic, correctly `[<Fact>]`.
+- §19 (test coverage) — all four algorithms' SPPF wrapping is now covered (CYK/Valiant via `runWithSummary`, GLL/RNGLR via `runWithSummaryEBNF`).
+- §20 (documentation completeness) — `summary-tex.md` signature, flag note, and design-decision rows updated; SPPF moved out of the resizebox scope.
+- §21 (book traceability) — rendering-only change to an existing wrapper; no new book algorithm/example involved.
+
+**No blocking findings.** Second pass over the changed surface (wrapper, five call sites, SPPF switch, four facts, docs) found zero additional problems.
+
+---
+
 ## Task 271 Review (2026-09-12)
 
 Scope: `src/FLPQ.Printers/SummaryTeX.fs` (`gllStepSection` wraps the step's GSS and RSM TikZ figures, `rnglrStepSection` wraps the step's GSS figure, both via the existing `wrapTikzAdjustbox`; doc comments extended), `data/GLL_step_tikz_template.tex` + `data/RNGLR_step_tikz_template.tex` (redundant `\begin{center}` around the GSS/RSM placeholders removed — the wrapper provides centering), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (+2 facts, shared `countOccurrences`/`stepSections` helpers, registry-sourced ANBN grammar/input), `docs/developer/summary-tex.md` (overview bullet, `wrapTikzAdjustbox` design-decision row, corrected stale section-builder signatures).
