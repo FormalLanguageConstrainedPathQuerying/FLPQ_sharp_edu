@@ -828,9 +828,11 @@ let ``SPPF tikz compiles with lualatex`` () =
     let tikz = SppfTikz.toTikz string string sppf
     Assert.True(tikz.Length > 0)
     // Math-mode labels: epsilon nodes and range/intermediate arrows must be real
-    // math, not escaped literal TeX source (task 269).
+    // math, not escaped literal TeX source (task 269). Range/intermediate labels use
+    // subscript indices inside the math span (task 273).
     Assert.Contains(@"^{\varepsilon}$", tikz)
-    Assert.Contains(@"$\to$", tikz)
+    Assert.Contains(@"$[s_{", tikz)
+    Assert.Contains(@"\to[s_{", tikz)
     Assert.DoesNotContain(@"\textbackslash", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 

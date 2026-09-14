@@ -30,6 +30,7 @@
     <Compile Include="RsmDotTests.fs" />
     <Compile Include="RnglrStepVisualizationTests.fs" />
     <Compile Include="BasicSppfDotTests.fs" />
+    <Compile Include="SppfTikzTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

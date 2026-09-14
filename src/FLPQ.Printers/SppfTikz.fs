@@ -26,6 +26,11 @@ module SppfTikz =
             | SppfEdgeLabel.RightChild -> "R"
             | SppfEdgeLabel.PackedAlternative -> "alt"
 
+        // Range notation [s_i,v_j] -> [s_k,v_l] with subscript indices, in math mode
+        // (a bare '_' is invalid in LaTeX text mode). Book reference: sec:CFPQ_GLL.
+        let rangeLabel (fs: int) (fp: int) (ts: int) (tp: int) : string =
+            sprintf "$[s_{%d},v_{%d}]\\to[s_{%d},v_{%d}]$" fs fp ts tp
+
         let isRoot i = Set.contains i rootSet
 
         for i in 0 .. vertexCount - 1 do
@@ -41,9 +46,9 @@ module SppfTikz =
                     sprintf "%s [%d,%d]" (AutomatonTikz.escapeLatex (nonterminalPrinter nt)) l r
                 | SppfNodeInfo.SppfEpsilon(Nonterminal nt, p) ->
                     sprintf "$%s^{\\varepsilon}$ @%d" (AutomatonTikz.escapeLatex (nonterminalPrinter nt)) p
-                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> sprintf "[s%d,v%d]$\\to$[s%d,v%d]" fs fp ts tp
+                | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> rangeLabel fs fp ts tp
                 | SppfNodeInfo.SppfIntermediate(s, p, fs, fp, ts, tp) ->
-                    sprintf "I(%d,%d) @[s%d,v%d]$\\to$[s%d,v%d]" s p fs fp ts tp
+                    sprintf "$I_{%d,%d}$ @ %s" s p (rangeLabel fs fp ts tp)
 
             let opts =
                 if isRoot i then

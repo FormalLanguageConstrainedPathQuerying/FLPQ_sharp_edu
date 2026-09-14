@@ -1,5 +1,28 @@
 # Code Review Report
 
+## Task 273 Review (2026-09-14)
+
+Scope: `src/FLPQ.Printers/SppfTikz.fs` (range/intermediate node labels switch to subscript indices — new local `rangeLabel` helper, `SppfRange` and `SppfIntermediate` arms), `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` (stale task-269 `$\to$` assertion replaced with new-format assertions), `tests/FLPQ.Printers.Tests/SppfTikzTests.fs` (new — 3 facts) + fsproj registration.
+
+**Findings resolved this review:**
+
+- §14 (language registry) — the new `SppfTikzTests` initially hardcoded the 4-token input `[ "a"; "a"; "b"; "b" ]` inline. The exact string is ANBN's 4-token accept string in the registry; the test now derives it from `LanguageRegistry.ANBN.AcceptStrings` (`1d7545d`).
+
+**Verified:** SppfTikzTests 3/3 (rendered label counts equal the actual `SppfRange`/`SppfIntermediate` node counts in the ANBN classic "aabb" SPPF, so every node of both kinds is checked against the new format); `TexCompilationTests.SPPF tikz compiles with lualatex` passes — the subscript math mode (`$[s_{i},v_{j}]\to[s_{k},v_{l}]$`, `$I_{m,p}$`) compiles end-to-end; FSharpLint 0 warnings on both changed projects; COMMIT_GATE: PASS.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — `rangeLabel` is a local function (no doc comment required); the public `toTikz` doc comment is unchanged and still accurate.
+- §13 (no duplication) — the range notation previously duplicated across the two match arms now lives in the single `rangeLabel` helper; the test regexes restate the expected output format (spec assertions, not logic).
+- §15/§16 (test fidelity / Fact vs Property) — the facts assert exact rendered-label counts against node counts plus absence of both pre-task-273 formats; deterministic, correctly `[<Fact>]`.
+- §19 (test coverage) — `SppfTikz` gains a dedicated correspondent test file (previously only covered indirectly by the TeX compilation test).
+- §20 (documentation completeness) — no doc update required: no new module, no public API change; no developer doc describes the SppfTikz label format (consistent with task 269, which changed these same labels without docs).
+- §21 (book traceability) — the `rangeLabel` comment references sec:CFPQ_GLL, matching the module's book reference.
+
+**No blocking findings.** Second pass over the changed surface (renderer, both test files, fsproj, runner tests for stale assertions) found zero additional problems. Pre-existing note (unchanged by this task): `TexCompilationTests.fs` and `RsmTikzTests.fs` still hardcode the same 4-token ANBN input inline — registry-eligible data; migrating them is a separate cleanup.
+
+---
+
 ## Task 272 Review (2026-09-14)
 
 Scope: `src/FLPQ.Printers/SummaryTeX.fs` (`wrapTikzAdjustbox` gains a leading `limitHeight: bool`; the five existing call sites — ext-RSM head, LL/LR stack step, GLL per-step GSS+RSM, RNGLR per-step GSS — pass `false`, and `sppfSection` switches from `wrapTikzCenter` to `wrapTikzAdjustbox true`), `tests/FLPQ.Cli.Tests/CliSummaryTests.fs` (+1 shared helper, +4 facts — one per algorithm), `docs/developer/summary-tex.md` (helper signature, flag-semantics note, two design-decision rows).

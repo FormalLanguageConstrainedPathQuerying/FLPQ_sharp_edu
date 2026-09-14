@@ -1,120 +1,103 @@
-# Detailed Plan: Task 272 — SPPF TikZ: resizebox → adjustbox (max width + max totalheight)
+# Detailed Plan: Task 273 — SPPF TikZ (GLL/RNGLR): subscript indices in range and intermediate nodes
 
 ## Task description (verbatim)
 
-272. For all tikz-based SPPF visualization in all algorithms (CYK, Valiant, GLL, RNGLR) replace resizebox with ajustbox. Use ajustbox with following parameters `\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight} ... \end{ajustbox}`. Generalize existing ajustbox wrapper function to use it with and without max totalheight limit.
+273. For GLL and RNGLR Tikz-based SPPF rendering use down indices in the following nodes. For intermediate nodes use 'I\_{m,p}' instead of 'I(m,p)'. For ranges in itermediate and range nodes use '[s_i,v_j] \\to [s_k,v_l]' instead of '[si,vj] \\to [sk,vk]'
 
 ## Scope decisions
 
-- "tikz-based SPPF visualization" = the trailing `SPPF (Shared Packed Parse Forest)`
-  section of the merged summary, built by `SummaryTeX.sppfSection`
-  (`src/FLPQ.Printers/SummaryTeX.fs:384`). In TikZ mode it currently wraps
-  `sppf.tikz.tex` with `wrapTikzCenter` (resizebox `\resizebox{0.98\textwidth}{!}`).
-  This is the single SPPF placement for all four algorithms — CYK, Valiant, GLL and
-  RNGLR all reach it via `buildContent` → `sppfSection`. Changing it once covers all
-  four.
-- "existing ajustbox wrapper function" = `SummaryTeX.wrapTikzAdjustbox`
-  (`src/FLPQ.Printers/SummaryTeX.fs:55`). It is generalized to take a leading
-  `limitHeight: bool`: when true the options are
-  `max width=\textwidth, max totalheight=\textheight`; when false they stay
-  `max width=\textwidth` (today's behavior).
-- The SPPF section uses the generalized wrapper with `limitHeight = true`.
-- Every existing `wrapTikzAdjustbox` call site passes `false`, so its output is
-  byte-identical to today: ext-RSM head (`headerSection`), LL/LR stack step
-  (`stackStepSection`), GLL per-step GSS+RSM (`gllStepSection`), RNGLR per-step GSS
-  (`rnglrStepSection`).
-- DOT mode is unchanged: `sppfSection` still falls back to the dot-compiled
-  `dot_pdfs/sppf.pdf` via `\includegraphics`.
-- The standalone `sppf.tikz.tex` artifact is a bare `tikzpicture` (no wrapper) and is
-  not touched — only the merged-summary wrapping changes.
-- Out of scope: the other resizebox figures (LR automaton, GLL input string) keep
-  `wrapTikzCenter`; the task scopes the migration to SPPF only.
+- "GLL and RNGLR Tikz-based SPPF rendering" = `SppfTikz.toTikz`
+  (`src/FLPQ.Printers/SppfTikz.fs:11`). It is the single TikZ SPPF renderer for both
+  algorithms: `GllRunner.fs:56` and `RnglrRunner.fs:57` are its only call sites.
+  Changing it once covers GLL and RNGLR.
+- "down indices" = subscript (math-mode) indices. `_` is invalid in LaTeX text mode,
+  so the subscripted parts must live inside math spans:
+  - range node label: `$[s_{i},v_{j}]\to[s_{k},v_{l}]$` (one math span; today it is
+    `[si,vj]$\to$[sk,vk]` with only the arrow in math mode)
+  - intermediate node label: `$I_{m,p}$ @ $[s_{i},v_{j}]\to[s_{k},v_{l}]$`
+    (`@` stays in text mode between two math spans; today it is `I(m,p) @[si,vj]$\to$[sk,vk]`)
+- Braces around the numeric index (`s_{12}`, not `s_12`) so multi-digit positions
+  subscript correctly.
+- Out of scope: `SppfDot.fs` (DOT renderer — plain-text labels with Unicode arrow,
+  different format by design), `BasicSppfTikz.fs` (CYK/Valiant basic SPPF — different
+  node types, no range/intermediate nodes), all per-step GSS/RSM/input figures.
+- No public API change: same function signatures, only the produced label strings
+  change.
 
-## Reuse analysis
+## Reuse analysis (reusing skill checklist)
 
-- **Reused:** `SummaryTeX.wrapTikzAdjustbox` (generalized in place, not duplicated);
-  `CliSummaryTests.runWithSummary` / `runWithSummaryEBNF` / `mergedTexPath` helpers and
-  the existing fact patterns; the TikZ-mode merged-summary compilation facts in
-  `TexCompilationTests.fs` (`GLL/RNGLR merged summary TeX with tikz compiles with lualatex`) — they compile the new SPPF wrapping end-to-end without modification.
-- **New:** the `limitHeight` flag on `wrapTikzAdjustbox`; one shared assertion helper
-  plus four facts (one per algorithm) for the SPPF max-totalheight adjustbox;
-  `summary-tex.md` updates.
+- Q1/Q3: no new module, type, or helper needed beyond a local `rangeLabel` function
+  inside `toTikz` — the range notation is duplicated in the `SppfRange` and
+  `SppfIntermediate` match arms; extracting one local keeps a single source of truth
+  for the range format (Q5).
+- Q2: no developer doc describes the SppfTikz label format (verified by grep over
+  `docs/`; task 269 changed these same labels without docs), so no doc update is
+  required. No API change → no hub/architecture doc update.
+- Tests reuse the existing SPPF construction pattern from
+  `tests/FLPQ.Printers.Tests/TexCompilationTests.fs:820-827` (ANBN "classic" grammar
+  `S -> a S b | eps`, input `aabb`, GLL path index → `Sppf.buildSppfFromExtendedRsm`).
+  That SPPF contains both node kinds: range nodes (root + packed alternatives) and
+  intermediate nodes (four, from the two `a S b` derivations).
 
-### S1: Generalize wrapTikzAdjustbox with a max-totalheight flag [done — 17ffd33]
+## Subtasks
 
-**Code:**
+### S1: Render SPPF range/intermediate labels with subscript indices [done — d65fb8b]
 
-- `src/FLPQ.Printers/SummaryTeX.fs`:
-  - Change `wrapTikzAdjustbox (tikz: string)` to
-    `wrapTikzAdjustbox (limitHeight: bool) (tikz: string)`. When `limitHeight` is true
-    the adjustbox options are `max width=\textwidth, max totalheight=\textheight`;
-    otherwise `max width=\textwidth`. Update the doc comment to describe the flag.
-  - Update every existing call site to pass `false`:
-    - ext-RSM head (`headerSection`, ~line 168): point-free `wrapTikzAdjustbox` becomes
-      `(fun t -> wrapTikzAdjustbox false t)`.
-    - LL/LR stack step (`stackStepSection`, ~line 243): `wrapTikzAdjustbox false tikz`.
-    - GLL per-step GSS+RSM (`gllStepSection`, ~lines 313–314):
-      `wrapTikzAdjustbox false gssTikz` / `wrapTikzAdjustbox false rsmTikz`.
-    - RNGLR per-step GSS (`rnglrStepSection`, ~line 370): `wrapTikzAdjustbox false gssTikz`.
+**Code:** `src/FLPQ.Printers/SppfTikz.fs` — in `toTikz`:
 
-**Tests:**
+- add local `rangeLabel fs fp ts tp = sprintf "$[s_{%d},v_{%d}]\\to[s_{%d},v_{%d}]$" fs fp ts tp`
+- `SppfRange` arm → `rangeLabel fs fp ts tp`
+- `SppfIntermediate` arm → `sprintf "$I_{%d,%d}$ @ %s" s p (rangeLabel fs fp ts tp)`
 
-- No new tests (behavior is unchanged for every existing call site). The existing
-  adjustbox facts must keep passing unmodified: `LL summary default mode embeds step stack-trees as inline TikZ`, `SLR(1) summary step stack-trees use adjustbox scaling`,
-  `GLL summary wraps each step GSS and RSM figure in adjustbox`, `RNGLR summary wraps each step GSS figure in adjustbox`.
+**Tests:** `tests/FLPQ.Printers.Tests/TexCompilationTests.fs:833` — the assertion
+`Assert.Contains(@"$\to$", tikz)` is stale after this change (the arrow now sits
+inside a larger math span, no standalone `$\to$`). Replace it with assertions for
+the new format: `Assert.Contains(@"$[s_{", tikz)` and
+`Assert.Contains(@"\to[s_{", tikz)`. The same test compiles the output with lualatex,
+which verifies the math mode is well-formed end-to-end.
 
-**Docs:**
-
-- `docs/developer/summary-tex.md`: update the LaTeX-helper signature to
-  `val wrapTikzAdjustbox: bool -> string -> string` and note that the flag adds
-  `max totalheight=\textheight` when true.
+**Docs:** none — no doc describes this label format; no API change (see scope/reuse).
 
 **Spec:**
 
-- The flag is a leading (curried) parameter, so the one point-free call site
-  (`maybe "ext_rsm.tikz.tex" ... wrapTikzAdjustbox`) must be wrapped in a lambda.
-- With `limitHeight = false` the emitted TeX is byte-identical to today's output — this
-  subtask is a pure refactor with no behavior change.
-- `wrapTikzCenter` is untouched here (still used by the LR automaton and GLL input
-  string).
+- Range node label renders as `$[s_{i},v_{j}]\to[s_{k},v_{l}]$` where i,j,k,l are the
+  from-state, from-pos, to-state, to-pos of the `SppfRange` node.
+- Intermediate node label renders as `$I_{m,p}$ @ $[s_{i},v_{j}]\to[s_{k},v_{l}]$`
+  where m,p are the state and position and i,j,k,l the from/to range of the
+  `SppfIntermediate` node.
+- All other node labels (terminal, nonterminal, epsilon) and edge labels unchanged.
+- The whole rendered picture must still compile with lualatex via
+  `tex_tikz_template.tex`.
 
-### S2: Switch the SPPF section from resizebox to adjustbox with max totalheight [done — 9324c94]
+### S2: Add SppfTikz unit tests for the new label format [done — b497bde]
 
-**Code:**
+**Code:** none.
 
-- `src/FLPQ.Printers/SummaryTeX.fs`:
-  - `sppfSection` (TikZ branch, ~line 390): replace `wrapTikzCenter tikz` with
-    `wrapTikzAdjustbox true tikz`.
-  - Update the `sppfSection` doc comment to state that the TikZ figure is wrapped in an
-    adjustbox limited to `\textwidth` and `\textheight`.
+**Tests:** new `tests/FLPQ.Printers.Tests/SppfTikzTests.fs` (registered in
+`tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj` Compile items, after
+`BasicSppfDotTests.fs`). Build the SPPF once (ANBN "classic", input `aabb`, same
+pattern as `TexCompilationTests.fs:820-827`) and render with
+`SppfTikz.toTikz string string`. Facts:
 
-**Tests:**
+- `range nodes use math-mode subscript indices` — the output matches the regex
+  `\$\[s_\{\d+\},v_\{\d+\}\]\\to\[s_\{\d+\},v_\{\d+\}\]\$` (at least one range node).
+- `intermediate nodes use I_{m,p} with math-mode subscript indices` — the output
+  matches `\$I_\{\d+,\d+\}\$ @ \$\[s_\{\d+\},v_\{\d+\}\]\\to\[s_\{\d+\},v_\{\d+\}\]\$`
+  (at least one intermediate node; the aabb SPPF has four).
+- `old label formats are absent` — the output contains neither `I(` nor the
+  brace-less range form `[s<digit>,v<digit>]` (regex `\[s\d+,v\d+\]`).
 
-- `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`:
-  - New shared helper `assertSppfUsesMaxTotalHeightAdjustbox (outDir) (algorithm)` that
-    reads the merged TeX and asserts it contains
-    `\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}`. Only the
-    SPPF section uses this variant, so the assertion is precise.
-  - Four new facts (TikZ mode), one per algorithm: CYK (`runWithSummary "CYK" false`),
-    Valiant (`runWithSummary "Valiant" false`), GLL and RNGLR
-    (`runWithSummaryEBNF ... "S -> a S b | eps" "a a b b"`).
-- Existing facts that must keep passing: the TikZ-mode merged-summary compilation facts
-  in `TexCompilationTests.fs` (they compile the new SPPF wrapping), and the GLL/RNGLR
-  per-step adjustbox facts — their needle `\begin{adjustbox}{max width=\textwidth}` does
-  not match the SPPF variant (the closing brace differs from a comma), so counts are
-  unaffected.
-
-**Docs:**
-
-- `docs/developer/summary-tex.md`: update the Design Decisions table — the SPPF section
-  now uses `wrapTikzAdjustbox true` (adjustbox, max width + max totalheight) instead of
-  `wrapTikzCenter` (resizebox); remove SPPF from the `wrapTikzCenter` row's scope and
-  from the "Remaining resizebox inclusions" note.
+**Docs:** none.
 
 **Spec:**
 
-- The DOT branch of `sppfSection` is unchanged (`\includegraphics` for
-  `dot_pdfs/sppf.pdf`).
-- `max totalheight=\textheight` keeps tall SPPF figures within the page height,
-  complementing the existing max-width shrink; adjustbox is shrink-only, so small
-  figures are never upscaled and node font metrics are preserved.
+- Tests are plain xunit facts (no TeX category, no lualatex) — fast regression on
+  the exact label strings; lualatex compilation is already covered by S1's existing
+  test.
+- The regexes must be F# verbatim strings with doubled backslashes for the literal
+  `\to` and escaped `\$`, `\[`, `\]`, `\{`, `\}` as needed.
+
+## Verification
+
+- `dotnet build` + full test suite (quality gates).
+- TeX-category tests compile the new labels with lualatex: `SPPF tikz compiles with lualatex`, GLL and RNGLR merged-summary compilation tests.
