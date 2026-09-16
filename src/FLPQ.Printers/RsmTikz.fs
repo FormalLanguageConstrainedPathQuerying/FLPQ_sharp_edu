@@ -42,7 +42,7 @@ module RsmTikz =
         AutomatonTikz.tikzHeaderWithOptions
             (sprintf
                 "%s, components go down left aligned, component sep=1.5cm"
-                (AutomatonTikz.layeredGraphOptions "circle"))
+                (AutomatonTikz.layeredGraphOptions "circle" AutomatonTikz.defaultGrowDirection))
             sb
 
         let stateInfo = rsm.StateInfo

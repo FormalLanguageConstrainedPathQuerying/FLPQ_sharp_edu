@@ -1,8 +1,10 @@
 namespace FLPQ.Printers
 
 open System
+open System.Globalization
 open System.IO
 open System.Diagnostics
+open System.Text.Json
 
 /// External tool wrappers for compiling Dot and TeX artifacts.
 /// Reused by both the test suite and the CLI summary generator.
@@ -124,6 +126,46 @@ module ExternalTools =
               NodeLabels = List.rev nodeLabels
               EdgeLabels = List.rev edgeLabels
               NodeFillColors = List.rev nodeFillColors }
+        finally
+            File.Delete(tempFile)
+
+    /// Parsed node positions from Graphviz `-Tjson` output: node name -> (x, y).
+    /// Throws if `dot` returns a non-zero exit code. Used to verify layered layouts
+    /// (e.g. that nodes constrained to the same rank share an x-coordinate).
+    let compileDotStringToNodePositions (dot: string) : Map<string, float * float> =
+        let tempFile = Path.GetTempFileName()
+        File.WriteAllText(tempFile, dot)
+
+        try
+            let r = runProcess "dot" ("-Tjson " + tempFile) None
+
+            if r.ExitCode <> 0 then
+                failwithf "dot -Tjson node-position extraction failed (exit %d): %s" r.ExitCode r.Stderr
+
+            let doc = JsonDocument.Parse(r.Stdout)
+            let positions = ResizeArray<(string * float * float)>()
+
+            let rootProps =
+                doc.RootElement.EnumerateObject()
+                |> Seq.map (fun p -> (p.Name, p.Value))
+                |> Map.ofSeq
+
+            // An empty graph has no "objects" array; treat it as having no positioned nodes.
+            if Map.containsKey "objects" rootProps then
+                for obj in rootProps.["objects"].EnumerateArray() do
+                    let props =
+                        obj.EnumerateObject() |> Seq.map (fun p -> (p.Name, p.Value)) |> Map.ofSeq
+
+                    if Map.containsKey "name" props && Map.containsKey "pos" props then
+                        let name: string = props.["name"].GetString()
+                        let coords: string[] = props.["pos"].GetString().Split(',')
+
+                        if coords.Length >= 2 then
+                            let x: float = Double.Parse(coords.[0], CultureInfo.InvariantCulture)
+                            let y: float = Double.Parse(coords.[1], CultureInfo.InvariantCulture)
+                            positions.Add((name, x, y))
+
+            positions |> Seq.map (fun (n, x, y) -> (n, (x, y))) |> Map.ofSeq
         finally
             File.Delete(tempFile)
 

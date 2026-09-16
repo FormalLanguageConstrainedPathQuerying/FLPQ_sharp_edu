@@ -116,6 +116,7 @@ let ``toDotFromSets stored-pop vertex gets orange fill`` () =
             Set.empty
             (set [ 2 ])
             (Some 0)
+            None
 
     Assert.Contains("fillcolor=orange", dot)
     Assert.Contains("fillcolor=lightblue", dot)
@@ -141,6 +142,41 @@ let ``toDotFromSets current vertex takes priority over stored-pop`` () =
             Set.empty
             (set [ 0 ])
             (Some 0)
+            None
 
     Assert.Contains("fillcolor=lightblue", dot)
     Assert.DoesNotContain("fillcolor=orange", dot)
+
+[<Fact>]
+let ``toDotFromSets with positionOf emits one rank=same subgraph per position`` () =
+    // Positions via idx/2: {v0,v1} at position 0, {v2,v3} at position 1.
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 1; 2; 3 ])
+            (set [ (1, 0); (3, 2) ])
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            (Some(fun idx -> idx / 2))
+
+    Assert.Contains("{rank=same; v0; v1;}", dot)
+    Assert.Contains("{rank=same; v2; v3;}", dot)
+
+[<Fact>]
+let ``toDotFromSets without positionOf emits no rank=same subgraph`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 1 ])
+            (set [ (1, 0) ])
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            None
+
+    Assert.DoesNotContain("rank=same", dot)

@@ -43,7 +43,7 @@
 ### Visual Style
 
 - Default shape: `circle` (parametrizable — `rectangle` for LR automata)
-- Layout: `layered layout, grow'=right, level sep=2cm, sibling sep=1.5cm`
+- Layout: `layered layout, <grow direction>, level sep=2cm, sibling sep=1.5cm`. The grow direction is parameterized by `AutomatonTikz.layeredGraphOptions shape growDirection`: the default is `defaultGrowDirection = "grow'=right"` (used by NFA/DFA/RSM/input-graph renderers); the GSS renderer selects `gssLayeredGrowDirection = "grow=left"` when it constrains input positions to layers, because pgf's same-layer cluster chaining reverses the orientation under the default grow direction.
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
 - Loop edges: `s%d ->["label",loop above] s%d`

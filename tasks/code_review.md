@@ -1,5 +1,29 @@
 # Code Review Report
 
+## Task 275 Review (2026-09-15)
+
+Scope: `src/FLPQ.Printers/AutomatonTikz.fs` (`layeredGraphOptions` gains a grow-direction argument; new `defaultGrowDirection` / `gssLayeredGrowDirection` constants), `src/FLPQ.Printers/GssDot.fs` + `GssTikz.fs` (trailing opt-in `positionOf: (int -> int) option`; per-position `{rank=same; ...}` / `{ [same layer] ... }` emission; TikZ switches to `grow=left` when layers are active), `src/FLPQ.Printers/RnglrStepVisualizer.fs` (passes `Some (fun idx -> snd (vertexInfo idx))`), `src/FLPQ.Printers/GllStepVisualizer.fs` + `RsmTikz.fs` (call sites updated to the new signatures / default grow direction), `src/FLPQ.Printers/ExternalTools.fs` (new `compileDotStringToNodePositions`), tests (`GssDotTests`, `ExternalToolsTests`, `RnglrStepVisualizationTests` + golden `rnglr_gss_aaa_last.dot`), docs (`automaton-viz.md`, `rnglr.md`, `external-tools.md`).
+
+**Findings resolved this review:**
+
+- §23 (naming semantics) / correctness — `GllStepVisualizer.fs` first `gssTikz` edge-label printer computed the target vertex as a state (`v2 = to_ / vertexCount`) instead of a vertex (`v2 = to_ % vertexCount`), corrupting GLL GSS TikZ edge labels. The other three printers in the file already used `%`; this was an accidental edit made while adding the `positionOf=None` arguments. Restored to `%` so all four are consistent and `rangeToTeX` receives `(fromState, fromVertex, toState, toVertex)`.
+- §9 (separation / consistency) — `GssTikz.fs` same-layer grouping used `allVertices` (active + edge-referenced), which omits a current vertex not already among them; such a vertex is still drawn and would float outside its position layer. `GssDot` groups over `renderedVertices`, which includes the current vertex. The TikZ grouping now uses `allVertices` plus the current vertex, mirroring DOT so every drawn node lands in exactly one position layer.
+
+**Verified:** build 0 warnings / 0 errors; full suite 967 passed / 0 failed / 0 skipped across all six projects (RPQ 27, GraphAnalysis 33, LinearAlgebra 51, Cli 159, Printers 192, Languages 505) — `FLPQ.Cli.Tests` exercises the GLL runner affected by finding 1 and passes; FSharpLint 0 warnings on FLPQ.Printers; COMMIT_GATE: PASS.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — `defaultGrowDirection`, `gssLayeredGrowDirection`, `layeredGraphOptions`, and `compileDotStringToNodePositions` carry doc comments; the `positionOf` parameter is documented on both `toDotFromSets` and `toTikzFromSets` with the "why" (pgf same-layer cluster chaining reverses orientation under the default grow direction, hence `grow=left`).
+- §13 (no duplication) — the per-position grouping idiom (`Seq.groupBy posFn |> Map.ofSeq`) is a one-liner reused in both renderers; the emission differs by format (`; ` vs `, `, subgraph syntax) so no shared helper is warranted. The test's `renderRnglr`/`renderViz` split reuses the registry grammar rather than duplicating it.
+- §15/§16 (test fidelity / Fact vs Property) — the new facts assert real properties: DOT coordinate test checks same-position nodes share one x, columns strictly decrease with position, and position 0 is rightmost; TikZ structural test parses each `{ [same layer] ... }` collection and compares it to the per-position grouping of independently-declared nodes. Deterministic, correctly `[<Fact>]`; no stubs or tautologies.
+- §19 (test coverage) — `GssDot`, `ExternalTools`, and the RNGLR step visualizer all retain dedicated correspondents; the new golden locks the non-trivial multi-position DOT format.
+- §20 (documentation completeness) — `automaton-viz.md` (grow-direction parameterization), `rnglr.md` (position-layering design decision + orientation note), and `external-tools.md` (`compileDotStringToNodePositions`) are updated in place; no new module, so no hub/architecture change needed.
+- §21 (book traceability) — the layering is a rendering concern; the doc comments and `rnglr.md` row explain the pgf orientation rationale rather than citing an algorithm listing, consistent with other visualization tasks.
+
+**No blocking findings.** Second pass over the changed surface (both renderers, all four GLL edge-label printers, the new position parser, both test files, the golden, and the three docs) found zero additional problems.
+
+---
+
 ## Task 274 Review (2026-09-14)
 
 Scope: `src/FLPQ.Languages/Rnglr.fs` (level driver reordered to canonical reduce-then-shift: round loop and `shifted` HashSet removed; `reduceAtLevel` now returns `unit`; `processReduction` return simplified from `bool * int option` to `bool`, dropping the consumer-less `newVertexGotoTarget` component and the `existedBefore` lookup), `docs/developer/rnglr.md` (canonical order described throughout; "Rounds" design-decision row removed; Scott & Johnstone 2006 added to Book Reference).

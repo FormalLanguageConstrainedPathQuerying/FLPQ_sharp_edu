@@ -94,6 +94,9 @@ module GssDot =
     /// Renders GSS from vertex and edge sets directly (without full GSS struct).
     /// Used for step visualization where only active elements are known.
     /// storedPopVertices get filled with orange (stored pops handling triggered at these vertices).
+    /// When positionOf is Some, every vertex is constrained to the rank of its input position
+    /// (one {rank=same; ...} subgraph per position), so all nodes at the same input position share
+    /// a layer while the left-to-right global layout (position 0 rightmost) is preserved.
     let toDotFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -103,6 +106,7 @@ module GssDot =
         (highlightedEdges: Set<int * int>)
         (storedPopVertices: Set<int>)
         (currentVertex: int option)
+        (positionOf: (int -> int) option)
         : string =
         let sb = StringBuilder()
 
@@ -182,6 +186,22 @@ module GssDot =
                     sprintf "label=\"%s\"" label
 
             sb.AppendLine(sprintf "  v%d -> v%d [%s];" fromIdx toIdx attrs) |> ignore
+
+        // Constrain all vertices at the same input position to the same rank (layer).
+        match positionOf with
+        | Some posFn ->
+            let byPosition = renderedVertices |> Seq.groupBy posFn |> Map.ofSeq
+
+            for position in Seq.sort byPosition.Keys do
+                let idList =
+                    byPosition.[position]
+                    |> Seq.sort
+                    |> Array.ofSeq
+                    |> Array.map (sprintf "v%d")
+                    |> String.concat "; "
+
+                sb.AppendLine(sprintf "  {rank=same; %s;}" idList) |> ignore
+        | None -> ()
 
         sb.AppendLine("}") |> ignore
         sb.ToString()

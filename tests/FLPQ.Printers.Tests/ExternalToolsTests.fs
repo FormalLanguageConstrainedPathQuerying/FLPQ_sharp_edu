@@ -18,6 +18,21 @@ let ``compileDotStringToInfo parses a simple graph`` () =
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
+let ``compileDotStringToNodePositions returns distinct coordinates per node`` () =
+    let dot = "digraph G {\n  rankdir=LR;\n  a -> b;\n}\n"
+
+    let positions = ExternalTools.compileDotStringToNodePositions dot
+    Assert.Equal(2, Map.count positions)
+    Assert.True(Map.containsKey "a" positions)
+    Assert.True(Map.containsKey "b" positions)
+
+    // In a left-to-right layout the source (a) is placed left of the target (b).
+    let ax = fst (Map.find "a" positions)
+    let bx = fst (Map.find "b" positions)
+    Assert.True(ax < bx)
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``compileDotString returns true for valid dot`` () =
     let dot = "digraph G { a -> b }"
     Assert.True(ExternalTools.compileDotString dot)

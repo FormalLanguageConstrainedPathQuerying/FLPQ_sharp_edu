@@ -12,6 +12,10 @@ module GssTikz =
     /// highlightedVertices get filled with yellow!20, highlightedEdges are red.
     /// The currentVertex (if specified) gets fill=lightblue!20.
     /// storedPopVertices get filled with orange!30 (stored pops handling triggered).
+    /// When positionOf is Some, every vertex is constrained to the layer of its input position
+    /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
+    /// so that input position 0 stays rightmost: pgf's same-layer cluster chaining reverses the
+    /// orientation under the default grow direction.
     let toTikzFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -23,10 +27,16 @@ module GssTikz =
         (currentVertex: int option)
         (shape: string)
         (skipEscaping: bool)
+        (positionOf: (int -> int) option)
         : string =
         let sb = StringBuilder()
 
-        AutomatonTikz.tikzHeader shape sb
+        let growDirection =
+            match positionOf with
+            | Some _ -> AutomatonTikz.gssLayeredGrowDirection
+            | None -> AutomatonTikz.defaultGrowDirection
+
+        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.layeredGraphOptions shape growDirection) sb
 
         let allVertices =
             let fromEdges =
@@ -92,6 +102,24 @@ module GssTikz =
             else
                 sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
+
+        // Constrain all vertices at the same input position to the same layer. The grouping covers
+        // every drawn vertex (allVertices plus the current vertex when it is not already among
+        // them), mirroring GssDot's renderedVertices so no node is left outside its position layer.
+        let groupedVertices =
+            match currentVertex with
+            | Some cv -> Set.add cv allVertices
+            | None -> allVertices
+
+        match positionOf with
+        | Some posFn ->
+            let byPosition = groupedVertices |> Set.toSeq |> Seq.groupBy posFn |> Map.ofSeq
+
+            for position in Seq.sort byPosition.Keys do
+                let idList = byPosition.[position] |> Seq.map (sprintf "v%d") |> String.concat ", "
+
+                sb.AppendLine(sprintf "    { [same layer] %s };" idList) |> ignore
+        | None -> ()
 
         AutomatonTikz.tikzFooter sb
         sb.ToString()

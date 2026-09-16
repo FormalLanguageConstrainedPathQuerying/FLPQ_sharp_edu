@@ -98,9 +98,17 @@ module AutomatonTikz =
                     |> ignore
                 | _ -> ()
 
-    /// Common options for a left-to-right layered graph drawing.
-    let layeredGraphOptions (shape: string) : string =
-        sprintf "layered layout, nodes={draw, %s}, grow'=right, level sep=2cm, sibling sep=1.5cm" shape
+    /// Default grow direction for a left-to-right layered drawing (sources on the left).
+    let defaultGrowDirection = "grow'=right"
+
+    /// Grow direction that keeps input position 0 on the right when same-layer constraints are
+    /// present. pgf chains same-layer clusters in declaration order with minimum_levels=1, which
+    /// reverses the orientation under the default grow direction; `grow=left` restores it.
+    let gssLayeredGrowDirection = "grow=left"
+
+    /// Common options for a layered graph drawing with the given grow direction.
+    let layeredGraphOptions (shape: string) (growDirection: string) : string =
+        sprintf "layered layout, nodes={draw, %s}, %s, level sep=2cm, sibling sep=1.5cm" shape growDirection
 
     /// Opens a tikzpicture with a single \graph using the given graph options.
     let tikzHeaderWithOptions (graphOptions: string) (sb: StringBuilder) : unit =
@@ -110,7 +118,7 @@ module AutomatonTikz =
 
     /// Opens a tikzpicture with a single left-to-right layered graph of the given node shape.
     let tikzHeader (shape: string) (sb: StringBuilder) : unit =
-        tikzHeaderWithOptions (layeredGraphOptions shape) sb
+        tikzHeaderWithOptions (layeredGraphOptions shape defaultGrowDirection) sb
 
     let tikzFooter (sb: StringBuilder) : unit =
         sb.AppendLine("  };") |> ignore

@@ -167,6 +167,7 @@ module GllStepVisualizer =
                 step.NewGssEdges
                 step.StoredPopVertices
                 step.CurrentGssIdx
+                None
 
         let gssTikz =
             GssTikz.toTikzFromSets
@@ -188,6 +189,7 @@ module GllStepVisualizer =
                 step.CurrentGssIdx
                 "rectangle, rounded corners"
                 true
+                None
 
         let rsmDot =
             let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
@@ -247,6 +249,7 @@ module GllStepVisualizer =
                 Set.empty
                 Set.empty
                 None
+                None
 
         let gssTikz =
             GssTikz.toTikzFromSets
@@ -268,6 +271,7 @@ module GllStepVisualizer =
                 None
                 "rectangle, rounded corners"
                 true
+                None
 
         let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
 

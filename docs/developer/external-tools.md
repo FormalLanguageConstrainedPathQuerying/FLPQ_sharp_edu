@@ -38,9 +38,14 @@ Parsed information from Graphviz `-Tplain` output. Used by visualization tests t
 
 ```fsharp
 val compileDotStringToInfo : string -> DotInfo
+val compileDotStringToNodePositions : string -> Map<string, float * float>
 val compileDotString : string -> bool
 val compileDotFileToPdf : dotPath:string -> pdfPath:string -> bool
 ```
+
+`compileDotStringToNodePositions` parses Graphviz `-Tjson` output into a map of node name to its
+`(x, y)` coordinates. Used by layout tests to verify layered arrangements (e.g. that nodes
+constrained to the same rank share an x-coordinate and that a column ordering is preserved).
 
 ### TeX Compilation
 

@@ -56,6 +56,7 @@ module RnglrStepVisualizer =
                 step.NewGssEdges
                 step.PassingReductionVertices
                 None
+                (Some(fun idx -> snd (vertexInfo idx)))
 
         let gssTikz =
             GssTikz.toTikzFromSets
@@ -82,6 +83,7 @@ module RnglrStepVisualizer =
                 None
                 "circle"
                 false
+                (Some(fun idx -> snd (vertexInfo idx)))
 
         let activeActions =
             let shifts =
