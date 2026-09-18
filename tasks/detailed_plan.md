@@ -26,6 +26,8 @@
 
 ### S1: Raise thresholds in hard gate and update docs
 
+Status: done (commit 97a5234)
+
 **Code:** `tools/hard_gate.py` — `PER_PROJECT_THRESHOLD` 85.0 → 90.0,
 `TOTAL_THRESHOLD` 90.0 → 95.0; docstring line 9 ("per-project >= 90% line,
 total >= 95% line"). No new logic.
@@ -46,6 +48,8 @@ and leave unchanged.
   values unchanged, only threshold text updated).
 
 ### S2: FLPQ.Languages — Sppf.fs validator and edge-case tests
+
+Status: done (commit df62663)
 
 **Code:** None (tests only).
 **Tests:** New file `tests/FLPQ.Languages.Tests/SppfValidatorTests.fs`
@@ -82,6 +86,8 @@ from `SppfPropertyTests.fs`):
   children") so regressions in messages are caught.
 
 ### S3: FLPQ.Languages — BasicSppf.fs coverage tests
+
+Status: done (commit 63bb72b)
 
 **Code:** None (tests only).
 **Tests:** Extend `tests/FLPQ.Languages.Tests/BasicSppfTests.fs` (reuse
@@ -121,7 +127,10 @@ from `SppfPropertyTests.fs`):
 
 ### S4: FLPQ.Languages — PathIndex, RSM, GllTypes edge tests
 
+Status: done (commit 9db2e8a)
+
 **Code:** None (tests only).
+
 **Tests:** Extend `tests/FLPQ.Languages.Tests/GllTests.fs` or add
 `PathIndexInvariantTests.fs`:
 
@@ -152,7 +161,10 @@ from `SppfPropertyTests.fs`):
 
 ### S5: FLPQ.Languages — EbnfParser, Grammar, FirstFollow, Cyk, Valiant edge tests
 
+Status: done (commit a21befb)
+
 **Code:** None (tests only).
+
 **Tests:** Extend `EbnfParserTests.fs`, `GrammarTests.fs`,
 `FirstFollowTests.fs`, `CykTests.fs`, `ValiantTests.fs`:
 
@@ -191,6 +203,8 @@ from `SppfPropertyTests.fs`):
 
 ### S6: FLPQ.Languages — LRParser conflicts, Rnglr passing reductions, Gll/RnglrLR branches
 
+Status: done (commit e3be7e2)
+
 **Code:** None (tests only).
 **Tests:** Extend `LRParserTests.fs`, `RnglrTests.fs`, `GllTests.fs`:
 
@@ -224,6 +238,8 @@ from `SppfPropertyTests.fs`):
   it in Design Notes with the reason (do not skip silently).
 
 ### S7: FLPQ.Printers — TeX table renderers (MatrixTeX, RnglrTableTeX, LR/LL/ParsingTable, ValiantTeX, small gaps)
+
+Status: done (commit 30817b2)
 
 **Code:** None (tests only).
 **Tests:** Extend `MatrixTeXTests.fs`, add `RnglrTableTexTests.fs` section in
@@ -260,6 +276,8 @@ existing file, extend `LRTableTeXGoldenTests.fs`, `LLTableTeXGoldenTests.fs`,
 
 ### S8: FLPQ.Printers — SummaryTeX and ExternalTools coverage tests
 
+Status: done (commit 2fad9e1)
+
 **Code:** None (tests only).
 **Tests:** Extend `TexCompilationTests.fs` / add `SummaryTexSectionTests.fs`,
 extend `ExternalToolsTests.fs`:
@@ -291,6 +309,8 @@ extend `ExternalToolsTests.fs`:
   compile per test, reuse compiled artifacts where the existing helpers allow).
 
 ### S9: FLPQ.Cli and FLPQ.RPQ coverage tests
+
+Status: done (commit 6892ef6)
 
 **Code:** None (tests only).
 **Tests:** Extend `HelpersTests.fs`, `SummaryTests.fs`, runner test files,
@@ -331,6 +351,8 @@ extend `ExternalToolsTests.fs`:
 
 ### S10: Final coverage verification and gap closure
 
+Status: done (verification only, no code changes)
+
 **Code:** None unless a project is still below threshold — then add the
 specific missing tests identified by the fresh per-file uncovered report.
 **Tests:** Full-solution coverage run (all 6 test projects + merge, same
@@ -346,6 +368,13 @@ with the same counting logic as `hard_gate.py:run_coverage_gate`.
   STOP and report per the blocked-work protocol — do not lower thresholds).
 - All existing tests must still pass (0 failed, 0 skipped) in every project.
 
+**Result:** all 1175 tests pass (Cli 171, GraphAnalysis 33, Languages 619,
+LinearAlgebra 51, Printers 266, RPQ 35). Merged coverage with the gate's
+counting logic: FLPQ.Languages 98.0%, FLPQ.Printers 99.6%,
+FLPQ.LinearAlgebra 100.0%, FLPQ.GraphAnalysis 100.0%, FLPQ.RPQ 98.6%,
+FLPQ.Cli 98.7%; TOTAL 98.6% (13690/13880). Every project ≥ 90% and total ≥
+95% — acceptance met, no gap closure needed.
+
 ## Reuse notes
 
 - `FLPQ.TestUtilities`: `LanguageRegistry` (grammars), `Generators`,
@@ -356,3 +385,159 @@ with the same counting logic as `hard_gate.py:run_coverage_gate`.
 - Existing per-area test files are extended, not duplicated; new files only
   where no natural home exists (`SppfValidatorTests.fs`,
   `SummaryTexSectionTests.fs`).
+
+## Design Notes (discovered during implementation)
+
+### S6: The accept state is not a singleton — unit productions create accept-state conflicts
+
+The initial analysis assumed the LR accept state always contains exactly
+`{[S' -> S .]}` because S' appears only in the augmented rule. That is wrong:
+a unit production `B -> S` with B reachable from the start symbol puts item
+`[B -> . S]` into the initial state, and `goto(I0, S)` then contains the
+completed item `[B -> S .]` alongside `[S' -> S .]`. Empirically (grammar
+`S -> A; A -> S`, augmented with `S' -> S`):
+
+- LR0/SLR1/CLR all record `ReduceReduce(1, Epsilon, 2, -1)`: the non-augmented
+  item is processed first (F# Set order: "A" < "S'"), adds Reduce at
+  (acceptState, Epsilon), and the augmented item hits the
+  `Some(LRAction.Reduce _)` branch (LRParser.fs:295/345/400).
+- With grammar `S -> Z; Z -> S` ("Z" > "S'", augmented item processed first):
+  LR0/SLR1 record `ShiftReduce(2, Epsilon, -1, 2)` via the
+  `Some LRAction.Accept` branch (LRParser.fs:314/368); CLR hits
+  `| _ -> failwith "Unexpected"` (LRParser.fs:418) because its conflict match
+  handles only Shift/Reduce.
+
+Tests in `AcceptStateConflicts` (LRParserTests.fs) pin all six branches,
+including the CLR failwith as current behavior. The plan's "dangling-else →
+line 257" expectation was also incorrect: populateShiftGoto cannot see Reduce
+entries (the action map holds only Shift entries while it runs), so the
+dangling-else ShiftReduce is recorded at line 312 instead — already covered by
+existing tests.
+
+### S6: Unreachable defensive branches excluded from coverage targets
+
+The following lines are unreachable by construction; each is traceable to a
+concrete invariant:
+
+- `LRParser.fs:257/259` (populateShiftGoto Reduce/Accept matches): when
+  populateShiftGoto runs, the action map contains only Shift entries added by
+  that same function, so those matches cannot fire.
+- `LRParser.fs:258` (duplicate Shift): requires two distinct target states for
+  the same (state, terminal) — impossible because buildAutomaton deduplicates
+  item sets and goto is a function.
+- `LRParser.fs:262`: items are built with Rhs.toNonEpsilonList, so Epsilon and
+  AEpsilon never appear as transition labels.
+- `LRParser.fs:293/397` (ShiftReduce on Epsilon in the accept branch): no
+  Shift entry can exist at (state, Epsilon) — populateShiftGoto adds shifts
+  only for terminal symbols.
+- `LRParser.fs:296/401` (Accept already present): only the single augmented
+  completed item adds Accept, and an F# Set cannot hold duplicate items.
+- `LRParser.fs:420`: requires two distinct completed items with identical Lhs
+  and lookahead in one state — impossible for a Set of items.
+- `LRParser.fs:504-505`: dead code — when lookahead = Epsilon the tryFind at
+  line 476 and line 502 are identical lookups, so if 476 is None then 502 is
+  necessarily None.
+- `RnglrLR.fs:27` / `Rnglr.fs:31`: AEpsilon labels are stripped during block
+  reconstruction (only ATerm labels are copied).
+- `RnglrLR.fs:50/93/110`: item.BlockNonterminal is always a key of
+  blockTransitions — items are created only via closure (requires
+  blockStartStates) and goto (preserves the nonterminal).
+- `RnglrLR.fs:171/175/176`: Dfa.move returns None for a getSymbols symbol only
+  if that symbol has no transition, but buildAutomaton adds a transition for
+  every getSyms symbol; getSymbols never yields Epsilon (block keys are T/N).
+- `Rnglr.fs:133`: item.BlockNonterminal is always a key of blockMap.
+- `Rnglr.fs:139/231`: toRsmSym(Epsilon) — GSS edges carry only T/N labels.
+- `Rnglr.fs:261/304/343`: stored states are deposited only at Rnglr.fs:217-222
+  with invData.Nonterminal, and blockMap / invBlockData are both built from the
+  same blocks list (lines 75-76, 88-101); getReduceNtWithStates filters by
+  blockMap. Hence every stored/reduce nonterminal is always a key of
+  invBlockData and the None/false branches are unreachable defensive code.
+- `Gll.fs:141`: RSM.startBlock throws first when StartBlock is missing from
+  BlockStart, so the inner guard is dead.
+- `Gll.fs:225`: StoredPops only ever contains NonEmptyRange — recognizedRange
+  is a NonEmptyRange whenever myNt is in blockStart.
+- `Gll.fs:300/314`: the descriptor's own block (myNt) is always in blockStart.
+- `Gll.fs:474`: onStep is always called with Some(idx).
+
+### S6: Rnglr passing-reduction shift path requires a non-path input graph
+
+Rnglr.fs:327-342 (shiftNode consuming stored states) fires only when a shift
+edge re-targets a GSS vertex that already holds stored states. On a path graph
+this is impossible: stored states are deposited at earlier vertices whose shift
+pass has already run, and the driver guard `if v < vertexCount - 1`
+(Rnglr.fs:313) skips shifts at the last vertex. The test therefore uses a
+self-loop on 'a' at vertex 1 (grammar S -> A B | A S; A -> a E; B -> b E;
+E -> eps), which re-enters the in-progress-A GSS vertex during the same level's
+shift pass. Lines 331/339 have no sequence points (match-case label / blank
+line) and do not count toward coverage; line 343 is the unreachable defensive
+branch documented above.
+
+### S7: Unreachable defensive branches and compiler artifacts excluded from coverage targets
+
+The following lines cannot be covered by any test; each is traceable to a
+concrete invariant or compiler behavior:
+
+- `MatrixTeX.fs:144-145` (empty `opts` guard in block options): both arms of
+  the SubmatrixBlockLabel match add exactly two options (`draw=...`,
+  `fill=...`), so `opts.Count = 0` is impossible.
+- `RsmDot.fs:68/72` (AEpsilon matches in blockToSubgraph): blockToSubgraph
+  only ever receives blocks reconstructed by RSM.blocks, and reconstructBlock
+  (RSM.fs:157-161) copies only ATerm labels into the block DFA — AEpsilon
+  labels in the flat transition matrix are dropped during reconstruction, so
+  these match arms can never fire. In contrast, extendedRsmToDot iterates the
+  flat matrix directly, so its AEpsilon arms (178/182) are reachable and are
+  covered by a hand-built ExtendedRSM test.
+- `AutomatonTikz.fs:102/107` (module-level lets defaultGrowDirection /
+  gssLayeredGrowDirection): the F# compiler constant-folds these at every use
+  site. The module storage class `$AutomatonTikz` holds no value fields (only
+  the `init@` guard) and the public property getters return folded constants
+  with no sequence points; the PDB keeps dead sequence points in the startup
+  code .cctor, so dotnet-coverage reports the lines as instrumented but they
+  can never execute. The values are pinned by output assertions instead:
+  AutomatonVisualizationTests.fs:161 (`grow'=right` in NFA tikz) and
+  RnglrStepVisualizationTests.fs:187-188 (`grow=left` in GSS tikz).
+
+### S7: GllStepVisualizer edge rendering is reachable through renderInit
+
+The plan listed GllStepVisualizer 241-245/261-265 as gaps; an earlier draft
+assumed them unreachable. They live in the edge-rendering path of `renderInit`,
+which is public: a hand-built GLLParsingStep with non-empty ActiveGssEdges
+covers them (TexCompilationTests.fs) without source changes.
+
+### S8: Unreachable defensive branches excluded from coverage targets
+
+- `ExternalTools.fs:121` (edge-count else branch in compileDotStringToInfo):
+  Graphviz `-Tplain` always emits exactly numPts\*2 coordinate tokens followed
+  by the style and color tokens, so `rest.Length >= numPts * 2 + 2` holds for
+  every valid dot output; the defensive else can never fire.
+- `ExternalTools.fs:238-239` (cleanup `with _ -> ()` in
+  compileTexStringWithTemplateLog): tempDir is created by the function itself
+  under a random name and contains only test.tex plus lualatex output files,
+  all of which are always deletable; no test can inject an undeletable entry.
+- `ExternalTools.fs:267` (stderr echo in compileTexFile): lualatex writes all
+  diagnostics to stdout/log and never to stderr — verified empirically across
+  four failure modes (undefined control sequence, Lua error, empty input,
+  read-only output directory), so the non-empty-stderr branch cannot fire.
+
+### S9: Unreachable defensive branches excluded from coverage targets
+
+- `Helpers.fs:106/125/144/163/182/201` (failwithf arms of the six
+  find\*Template functions): each candidate list ends with
+  `<AppContext.BaseDirectory>/../../../../../data/<name>`, which from the test
+  binary directory (`tests/FLPQ.Cli.Tests/bin/<config>/<tfm>/`) always resolves
+  to the repository `data/` directory. All six templates exist there, so
+  `List.tryFind File.Exists` always succeeds and the failwithf arms cannot fire
+  in tests (the plan's SetCurrentDirectory approach cannot work for this
+  reason).
+- `Program.fs:41` (summary failure → exit code 1): buildSummary returns false
+  only when dot compilation of a .dot file under vizDir fails
+  (Summary.fs:39/53). The runners generate every .dot file through
+  FLPQ.Printers, which always emits syntactically valid dot, so via runCli
+  buildSummary never fails.
+- `BelyaninRPQ.fs:24` (vCount = 0 → empty array in runSingleSource): evaluate
+  derives vCount from the graph NFA's state count and iterates over its start
+  states; an NFA with zero states has no start states, so the loop body never
+  runs and runSingleSource is never invoked with vCount = 0.
+- `GraphReader.fs:19` (empty-line None arm in parseLine): parseLine is private
+  and its only caller, parseGraph, filters empty lines out before calling it
+  (Array.filter s.Length > 0), so the guard can never fire.
