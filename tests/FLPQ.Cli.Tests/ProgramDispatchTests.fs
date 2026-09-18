@@ -98,3 +98,26 @@ let ``SLR1 runs successfully`` () =
 let ``CYK runs successfully`` () =
     let code = runAlgorithm "CYK" (TestGrammarFiles.exampleGrammar ()) exampleInput
     Assert.Equal(0, code)
+
+[<Fact>]
+let ``main delegates to runCli`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "ValiantModified"
+           "-g"
+           TestGrammarFiles.exampleGrammar ()
+           "-i"
+           exampleInput
+           "-o"
+           outDir |]
+
+    let code = Program.main args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)

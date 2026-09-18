@@ -17,11 +17,7 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
     let tokens = Tokenizer.tokenizeTerminals input
     let trace = Cyk.parseWithSppfTrace Grammar.freshStringNonterminal grammar tokens
 
-    let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-
-    Directory.CreateDirectory tmpDir |> ignore
-
-    try
+    TestHelpers.withTempDir (fun tmpDir ->
         File.WriteAllText(
             Path.Combine(tmpDir, "input.tex"),
             TeXRenderer.inputRow (SymbolTeX.terminalContent string) tokens -1
@@ -32,7 +28,10 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
             GrammarTeX.grammarToTeXWithNumbers string string grammar
         )
 
-        File.WriteAllText(Path.Combine(tmpDir, "grammar_cnf.tex"), GrammarTeX.grammarToTeXWithNumbers string string cnf)
+        File.WriteAllText(
+            Path.Combine(tmpDir, "grammar_cnf.tex"),
+            GrammarTeX.grammarToTeXWithNumbers string string cnf
+        )
 
         for idx in 0 .. trace.Length - 1 do
             let step = trace.[idx]
@@ -65,12 +64,7 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
 
         let template = File.ReadAllText templatePath
 
-        template.Replace("__ALGORITHM__", "CYK").Replace("__CONTENT__", content)
-    finally
-        try
-            Directory.Delete(tmpDir, true)
-        with _ ->
-            ()
+        template.Replace("__ALGORITHM__", "CYK").Replace("__CONTENT__", content))
 
 type ``CYK summary golden tests``() =
 
@@ -86,3 +80,18 @@ type ``CYK summary golden tests``() =
             generateCykSummaryTex LanguageRegistry.ArithExpr.Grammars.[1].Text "x add x"
 
         verifyGolden "cyk_grammar7_xplusx_summary.tex" tex
+
+    [<Fact>]
+    member _.``sppfTableToTeXAsNt renders nonterminal names without entry tuples``() =
+        let entry: SppfParsingEntry<string> =
+            { Nt = Nonterminal "A"
+              SplitPoint = 1
+              ProdIdx = 0 }
+
+        let table =
+            FLPQ.LinearAlgebra.Matrix.create 2 2 (fun i j -> if i = 0 && j = 1 then set [ entry ] else Set.empty)
+
+        let tex = CykTeX.sppfTableToTeXAsNt string table
+
+        Assert.Contains(@"\{A\}", tex)
+        Assert.DoesNotContain("(A, 1, 0)", tex)

@@ -510,3 +510,116 @@ module ConflictBehaviorTests =
                 Assert.True(s >= 0 && s < autStateCount, $"Invalid state {s}")
                 Assert.True(toIdx >= 0 && toIdx < autStateCount, $"Invalid shiftTo {toIdx}")
             | LRConflict.ReduceReduce(state = s) -> Assert.True(s >= 0 && s < autStateCount, $"Invalid state {s}")
+
+module EoiAndGotoEdgeCases =
+
+    let private assertAcceptAtFinalStates (table: LRTable<string, string>) =
+        match table.Automaton with
+        | LRAutomaton.LR0 dfa ->
+            for f in Set.toList dfa.FinalStates do
+                Assert.Equal(LRAction.Accept, Map.find (f, Symbol.Epsilon) table.Action)
+        | _ -> Assert.Fail("Expected LR0 automaton")
+
+    [<Fact>]
+    let ``buildLR0Table with eoiSymbol = Epsilon keeps a single Accept entry`` () =
+        // With eoiSymbol = Symbol.Epsilon the eoi lookup (LRParser.fs:299) finds the
+        // Accept entry just added at (acceptState, Epsilon) — the `Some _ -> ()` branch.
+        let table = LRParser.buildLR0Table augGrammar3 Symbol.Epsilon
+
+        assertAcceptAtFinalStates table
+        Assert.True(LRParser.parse augGrammar3 table [ Terminal "a" ] |> Option.isSome)
+
+    [<Fact>]
+    let ``buildSLR1Table with eoiSymbol = Epsilon keeps a single Accept entry`` () =
+        // Same branch in the SLR(1) builder (LRParser.fs:349).
+        let table = LRParser.buildSLR1Table augGrammar3 Symbol.Epsilon
+
+        assertAcceptAtFinalStates table
+        Assert.True(LRParser.parse augGrammar3 table [ Terminal "a" ] |> Option.isSome)
+
+    [<Fact>]
+    let ``parseWithSteps throws Goto not found when GoTo lacks the reduce target`` () =
+        // Hand-built table: state 1 reduces rule 2 (S -> a) but the GoTo map has no entry
+        // for (0, S), so the goto lookup after the reduction fails (LRParser.fs:492).
+        let table =
+            { Action =
+                Map.ofList
+                    [ ((0, Symbol.T(Terminal "a")), LRAction.Shift 1)
+                      ((1, Symbol.Epsilon), LRAction.Reduce 2) ]
+              GoTo = Map.empty
+              Conflicts = []
+              Automaton = LRAutomaton.LR0(LRAutomaton.buildLR0 augGrammar3) }
+
+        TestHelpers.assertThrows "Goto not found" (fun () ->
+            LRParser.parseWithSteps augGrammar3 table [ Terminal "a" ] |> ignore)
+
+module AcceptStateConflicts =
+
+    // A unit production B -> S with B reachable from the start symbol puts the completed
+    // item [B -> S .] into the accept state (goto of the initial state on S), so the accept
+    // state is not a singleton. Which conflict branch fires depends on the F# Set iteration
+    // order of the two completed items, i.e. on the Lhs name: "A" < "S'" processes
+    // [A -> S .] first (ReduceReduce), while "Z" > "S'" processes the augmented item first
+    // (ShiftReduce, or failwith in the CLR builder).
+
+    let private buildAug (text: string) : Grammar<string, string> =
+        LRAutomaton.augmentGrammar (Nonterminal "S'") (Grammar.parseGrammar text)
+
+    [<Fact>]
+    let ``LR0 records ReduceReduce when a unit production completes in the accept state`` () =
+        // S -> A; A -> S: [A -> S .] is processed first and adds Reduce, so the augmented
+        // item hits the Some(LRAction.Reduce _) branch (LRParser.fs:295).
+        let table = LRParser.buildLR0Table LrConflictFixture.augmented Symbol.Epsilon
+
+        Assert.Equal<LRConflict<string, string> list>(
+            [ LRConflict.ReduceReduce(1, Symbol.Epsilon, 2, -1) ],
+            table.Conflicts
+        )
+
+    [<Fact>]
+    let ``SLR1 records ReduceReduce when a unit production completes in the accept state`` () =
+        // Same item order through the SLR(1) builder (LRParser.fs:345).
+        let table = LRParser.buildSLR1Table LrConflictFixture.augmented Symbol.Epsilon
+
+        Assert.Equal<LRConflict<string, string> list>(
+            [ LRConflict.ReduceReduce(1, Symbol.Epsilon, 2, -1) ],
+            table.Conflicts
+        )
+
+    [<Fact>]
+    let ``CLR1 records ReduceReduce when a unit production completes in the accept state`` () =
+        // Same item order through the CLR(1) builder (LRParser.fs:400).
+        let table = LRParser.buildCLR1Table LrConflictFixture.augmented
+
+        Assert.Equal<LRConflict<string, string> list>(
+            [ LRConflict.ReduceReduce(1, Symbol.Epsilon, 2, -1) ],
+            table.Conflicts
+        )
+
+    [<Fact>]
+    let ``LR0 records ShiftReduce when the augmented item is processed first`` () =
+        // S -> Z; Z -> S: "S'" < "Z", so the augmented item adds Accept before [Z -> S .]
+        // is processed; the reduce loop then hits the Some LRAction.Accept branch
+        // (LRParser.fs:314).
+        let table = LRParser.buildLR0Table (buildAug "S -> Z\nZ -> S") Symbol.Epsilon
+
+        Assert.Equal<LRConflict<string, string> list>(
+            [ LRConflict.ShiftReduce(2, Symbol.Epsilon, -1, 2) ],
+            table.Conflicts
+        )
+
+    [<Fact>]
+    let ``SLR1 records ShiftReduce when the augmented item is processed first`` () =
+        // Same item order through the SLR(1) builder (LRParser.fs:368).
+        let table = LRParser.buildSLR1Table (buildAug "S -> Z\nZ -> S") Symbol.Epsilon
+
+        Assert.Equal<LRConflict<string, string> list>(
+            [ LRConflict.ShiftReduce(2, Symbol.Epsilon, -1, 2) ],
+            table.Conflicts
+        )
+
+    [<Fact>]
+    let ``CLR1 throws Unexpected when the augmented item is processed first`` () =
+        // Same item order through the CLR(1) builder: existing = Accept falls into the
+        // `| _ -> failwith "Unexpected"` branch (LRParser.fs:418).
+        TestHelpers.assertThrows "Unexpected" (fun () -> LRParser.buildCLR1Table (buildAug "S -> Z\nZ -> S") |> ignore)

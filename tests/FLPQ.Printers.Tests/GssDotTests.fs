@@ -180,3 +180,60 @@ let ``toDotFromSets without positionOf emits no rank=same subgraph`` () =
             None
 
     Assert.DoesNotContain("rank=same", dot)
+
+[<Fact>]
+let ``toDotFromSets renders the current vertex even when absent from all active sets`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
+            (Some 5)
+            None
+
+    Assert.Contains("v5 [", dot)
+    Assert.Contains("fillcolor=lightblue", dot)
+
+
+module GssTikzTests =
+
+    [<Fact>]
+    let ``toTikzFromSets renders the current vertex even when absent from all active sets`` () =
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                (Some 3)
+                "circle"
+                false
+                None
+
+        Assert.Contains("v3 [as={3}, fill=lightblue!20];", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets edge with empty label renders a bare edge and a bare loop`` () =
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "")
+                (set [ 0; 1 ])
+                (set [ (0, 1); (0, 0) ])
+                Set.empty
+                Set.empty
+                Set.empty
+                None
+                "circle"
+                false
+                None
+
+        Assert.Contains("v0 -> v1;", tikz)
+        Assert.Contains("v0 ->[loop above] v0;", tikz)

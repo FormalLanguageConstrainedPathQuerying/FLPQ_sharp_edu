@@ -878,3 +878,24 @@ module ModifiedValiantTraceStructureTests =
                                   yield (i, j + 1) ]
 
                 Set.ofList changed = Set.ofList expectedChanged
+
+
+module ValiantEdgeTests =
+
+    // Note: completeLayerModified's empty-mList branch (Valiant.fs:387) is
+    // unreachable through the public API — every call site passes a non-empty
+    // submatrix list or guards with List.isEmpty.
+
+    [<Fact>]
+    let ``Valiant parseWithSppfInfo with empty input returns 0x0 matrix`` () =
+        let table = Valiant.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 []
+        Assert.Equal(0, Matrix.rows table)
+
+    [<Fact>]
+    let ``Valiant parseWithSppfTable with empty input reports epsilon acceptance`` () =
+        // grammar1 (S -> a S b S | eps) accepts the empty string.
+        let table, accepted =
+            Valiant.parseWithSppfTable Grammar.freshStringNonterminal grammar1 []
+
+        Assert.Equal(0, Matrix.rows table)
+        Assert.True(accepted)

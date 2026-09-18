@@ -297,6 +297,7 @@ module LanguageRegistry =
               [ Terminal "b"; Terminal "b" ]
               [ Terminal "a"; Terminal "b"; Terminal "b" ]
               [ Terminal "a"; Terminal "b"; Terminal "b"; Terminal "a" ]
+              [ Terminal "a"; Terminal "a"; Terminal "b" ]
               [ Terminal "b" ]
               [ Terminal "a" ]
               [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "b"; Terminal "a" ] ]
@@ -880,9 +881,22 @@ module LanguageRegistry =
                   DoesNotCoverFullLanguage = false }
                 "two-rule simple grammar S -> a B, B -> b; used in FirstFollow and LL visualization tests"
 
+        let threeRule =
+            mkEntry
+                "threeRule"
+                "S -> A B\nA -> a\nB -> b"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = false
+                  IsInCnf = true
+                  IsRsmDerived = false
+                  DoesNotCoverFullLanguage = false }
+                "three-rule grammar S -> A B, A -> a, B -> b; used in RnglrTableTeX header tests"
+
         { Name = "SingleAB ({ab})"
           Description = "L = {ab}"
-          Grammars = [ singleRule; twoRule ]
+          Grammars = [ singleRule; twoRule; threeRule ]
           AcceptStrings = [ [ Terminal "a"; Terminal "b" ] ]
           RejectStrings =
             [ []

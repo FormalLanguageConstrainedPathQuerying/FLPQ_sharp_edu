@@ -1,5 +1,7 @@
 module EbnfParserTests
 
+open System
+open System.IO
 open Xunit
 open FsCheck.Xunit
 open FLPQ.Languages
@@ -341,3 +343,84 @@ module EbnfPropertyTests =
                 Grammar.freshStringNonterminal
                 g2
                 (Tokenizer.tokenizeTerminals s)
+
+
+module RegexpToStringTests =
+
+    let private tp (Terminal t) = t
+    let private np (Nonterminal n) = n
+
+    [<Fact>]
+    let ``Regexp.toString renders all seven variants with nested composition`` () =
+        // Covers REps, REmpty, RTerm, RNonterm, RSeq, RAlt, RStar in one expression.
+        let r: Regexp<string, string> =
+            RAlt(RSeq(RTerm(Terminal "a"), RStar(RNonterm(Nonterminal "B"))), RAlt(REps, REmpty))
+
+        Assert.Equal("(a (B)*) | eps | ∅", Regexp.toString tp np r)
+
+    [<Fact>]
+    let ``Regexp.derive of REmpty is REmpty`` () =
+        Assert.Equal<Regexp<string, string>>(REmpty, Regexp.derive REmpty (RsmSymbol.RTerm(Terminal "a")))
+
+
+module EbnfErrorPathTests =
+
+    [<Fact>]
+    let ``parseEbnf rejects unexpected character`` () =
+        TestHelpers.assertThrows "Unexpected character '@'" (fun () -> EbnfParser.parseEbnf "S -> a @")
+
+    [<Fact>]
+    let ``parseEbnf rejects unbalanced parenthesis`` () =
+        TestHelpers.assertThrows "Expected ')'" (fun () -> EbnfParser.parseEbnf "S -> (a")
+
+    [<Fact>]
+    let ``parseEbnf rejects star at atom position`` () =
+        TestHelpers.assertThrows "Unexpected token" (fun () -> EbnfParser.parseEbnf "S -> * a")
+
+    [<Fact>]
+    let ``parseEbnf rejects extra token after rule`` () =
+        TestHelpers.assertThrows "after rule" (fun () -> EbnfParser.parseEbnf "S -> a )")
+
+    [<Fact>]
+    let ``parseEbnf rejects lowercase left-hand side`` () =
+        TestHelpers.assertThrows "Invalid rule format" (fun () -> EbnfParser.parseEbnf "s -> a")
+
+
+module RsmBuilderFileTests =
+
+    [<Fact>]
+    let ``parseEbnfFile reads rules from file`` () =
+        TestHelpers.withTempDir (fun dir ->
+            let path = Path.Combine(dir, "grammar.ebnf")
+            File.WriteAllText(path, "S -> a b")
+
+            let rules = EbnfParser.parseEbnfFile path
+            Assert.Equal<(Nonterminal<string> * Regexp<string, string>) list>(EbnfParser.parseEbnf "S -> a b", rules))
+
+    [<Fact>]
+    let ``buildRSMFromFile builds RSM from file`` () =
+        TestHelpers.withTempDir (fun dir ->
+            let path = Path.Combine(dir, "grammar.ebnf")
+            File.WriteAllText(path, "S -> a b")
+
+            let rsm = RsmBuilder.buildRSMFromFile path
+            Assert.Equal(Nonterminal "S", rsm.StartBlock)
+            Assert.Equal(3, rsm.StateCount)
+            Assert.Equal<int>(set [ 2 ], rsm.FinalStates))
+
+    [<Fact>]
+    let ``buildRSM builds RSM from grouped rules`` () =
+        let rules = EbnfParser.parseEbnf "S -> a b"
+        let rsm = RsmBuilder.buildRSM (EbnfParser.groupRules rules)
+        Assert.Equal(Nonterminal "S", rsm.StartBlock)
+        Assert.Equal(3, rsm.StateCount)
+        Assert.Equal<int>(set [ 2 ], rsm.FinalStates)
+
+    [<Fact>]
+    let ``buildRSMWithStart rejects empty grammar`` () =
+        TestHelpers.assertThrows "at least one rule" (fun () ->
+            RsmBuilder.buildRSMWithStart Map.empty (Nonterminal "S"))
+
+    [<Fact>]
+    let ``buildRSMFromText rejects empty text`` () =
+        TestHelpers.assertThrows "at least one rule" (fun () -> RsmBuilder.buildRSMFromText "")

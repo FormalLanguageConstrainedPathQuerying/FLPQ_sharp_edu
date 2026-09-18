@@ -63,3 +63,70 @@ type ``Matrix TeX golden tests``() =
 
         let tex = MatrixTeX.toTeX false false string m
         verifyGolden "matrix_4x4_identity_pattern.tex" (wrapInTemplate templatePath tex)
+
+
+module MatrixBlockHighlightTests =
+
+    [<Fact>]
+    let ``toTeXStyled renders Submatrix blocks with per-index colors via \Block`` () =
+        let m = Matrix.create 3 3 (fun i j -> sprintf "c%d%d" i j)
+
+        let blocks: Matrix.SubmatrixBlock list =
+            [ { StartRow = 0
+                StartCol = 0
+                RowCount = 2
+                ColCount = 2
+                Label = Matrix.Submatrix 0 }
+              { StartRow = 1
+                StartCol = 1
+                RowCount = 2
+                ColCount = 2
+                Label = Matrix.Submatrix 1 }
+              // index 12 wraps around the 10-color palette to green
+              { StartRow = 0
+                StartCol = 1
+                RowCount = 1
+                ColCount = 1
+                Label = Matrix.Submatrix 12 } ]
+
+        let tex = MatrixTeX.toTeXStyled false false string m [] blocks None None false false
+
+        Assert.Contains(@"\Block[draw=red,fill=red!20]{2-2}", tex)
+        Assert.Contains(@"\Block[draw=blue,fill=blue!20]{2-2}", tex)
+        Assert.Contains(@"\Block[draw=green,fill=green!20]{1-1}", tex)
+
+    [<Fact>]
+    let ``toTeXStyled renders CurrentStepSubmatrix block with red outline`` () =
+        let m = Matrix.create 2 2 (fun i j -> sprintf "c%d%d" i j)
+
+        let blocks: Matrix.SubmatrixBlock list =
+            [ { StartRow = 0
+                StartCol = 0
+                RowCount = 2
+                ColCount = 2
+                Label = Matrix.CurrentStepSubmatrix } ]
+
+        let tex = MatrixTeX.toTeXStyled false false string m [] blocks None None false false
+
+        Assert.Contains(@"\Block[draw=red,fill=red!10]{2-2}", tex)
+
+    [<Fact>]
+    let ``toTeXStyled block overlapping a highlighted cell nests \cellcolor inside \Block`` () =
+        let m = Matrix.create 3 3 (fun i j -> sprintf "c%d%d" i j)
+
+        let blocks: Matrix.SubmatrixBlock list =
+            [ { StartRow = 0
+                StartCol = 0
+                RowCount = 2
+                ColCount = 2
+                Label = Matrix.Submatrix 0 } ]
+
+        let highlights: Matrix.Highlight list =
+            [ { Row = 0
+                Col = 0
+                Label = Matrix.CurrentCell } ]
+
+        let tex =
+            MatrixTeX.toTeXStyled false false string m highlights blocks None None false false
+
+        Assert.Contains(@"\Block[draw=red,fill=red!20]{2-2}{\cellcolor{yellow}{c00}}", tex)

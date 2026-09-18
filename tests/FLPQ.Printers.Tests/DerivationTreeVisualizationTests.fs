@@ -63,6 +63,27 @@ let ``LR parser tree dot compiles`` () =
         Assert.True(info.EdgeCount > 0)
     | None -> Assert.Fail("Failed to parse")
 
+/// Tree S -> a b: pre-order ids n1 (S), n2 (a, path [0]), n3 (b, path [1]).
+let private abTree =
+    Node(Nonterminal "S", [ Leaf(Symbol.T(Terminal "a")); Leaf(Symbol.T(Terminal "b")) ])
+
+/// Stack with one valid leaf (path [0]) and one whose path does not exist in the tree.
+let private stackWithUnknownPath =
+    [ { Tree = Leaf(Symbol.T(Terminal "a"))
+        Path = [ 0 ] }
+      { Tree = Leaf(Symbol.T(Terminal "b"))
+        Path = [ 99 ] } ]
+
+[<Fact>]
+let ``toDotWithLLStack ignores stack leaves with unknown paths`` () =
+    let dot = DerivationTreeDot.toDotWithLLStack string abTree stackWithUnknownPath
+    Assert.Contains("{rank=same; n2}", dot)
+
+[<Fact>]
+let ``toTikzWithLLStack ignores stack leaves with unknown paths`` () =
+    let tikz = DerivationTreeTikz.toTikzWithLLStack string abTree stackWithUnknownPath
+    Assert.Contains("{ [same layer] n2 };", tikz)
+
 
 module DerivationTreeGoldenTests =
 

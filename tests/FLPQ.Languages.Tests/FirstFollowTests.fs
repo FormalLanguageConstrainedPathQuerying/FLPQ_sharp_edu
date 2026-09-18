@@ -3,6 +3,7 @@ module FirstFollowTests
 open Xunit
 open FsCheck
 open FsCheck.Xunit
+open FSharpPlus.Data
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
@@ -161,3 +162,23 @@ module PropertyTests =
                 not (Set.isEmpty computedFirst)
                 || Set.isEmpty derived
                    && (Set.isEmpty derived || Set.isSubset derived computedFirst)))
+
+
+module FirstFollowEdgeTests =
+
+    [<Fact>]
+    let ``firstK handles epsilon symbol and undefined nonterminal in right-hand side`` () =
+        // Manually constructed grammar: S -> a eps (Symbol.Epsilon inside Symbols)
+        // and T -> b U where U is undefined (missing from firstMap). Exercises the
+        // Symbol.Epsilon loop arm and the missing-nonterminal arm of firstOfSymbols.
+        let g: Grammar<string, string> =
+            { Rules =
+                [ { Lhs = Nonterminal "S"
+                    Rhs = Symbols(NonEmptyList.ofList [ Symbol.T(Terminal "a"); Symbol.Epsilon ]) }
+                  { Lhs = Nonterminal "T"
+                    Rhs = Symbols(NonEmptyList.ofList [ Symbol.T(Terminal "b"); Symbol.N(Nonterminal "U") ]) } ]
+              Start = Nonterminal "S" }
+
+        let firstMap = FirstFollow.firstK g 2
+        Assert.True(Set.contains [ Symbol.T(Terminal "a") ] (Map.find (Nonterminal "S") firstMap))
+        Assert.True(Set.contains [ Symbol.T(Terminal "b") ] (Map.find (Nonterminal "T") firstMap))

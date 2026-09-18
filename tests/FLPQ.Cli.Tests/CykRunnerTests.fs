@@ -4,10 +4,21 @@ open System.IO
 open Xunit
 open FLPQ.Cli
 open FLPQ.Cli.Tests
+open FLPQ.TestUtilities
 
 let private baseDir = System.AppContext.BaseDirectory
 
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
+
+// Dyck1 reject string "a a b" from the registry; its final CYK step has no highlights.
+let private dyck1RejectAab =
+    LanguageRegistry.Dyck1.RejectStrings
+    |> List.find (fun tokens ->
+        tokens = [ FLPQ.Languages.Terminal "a"
+                   FLPQ.Languages.Terminal "a"
+                   FLPQ.Languages.Terminal "b" ])
+    |> List.map (fun (FLPQ.Languages.Terminal t) -> t)
+    |> String.concat " "
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -83,4 +94,35 @@ let ``runCyk with useDot=true produces sppf.dot`` () =
     let sppfDot = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists sppfDot, "sppf.dot missing")
     Assert.True(FileInfo(sppfDot).Length > 0L)
+    Directory.Delete(outDir, true)
+
+[<Theory>]
+[<InlineData(true)>]
+[<InlineData(false)>]
+let ``runCyk renders step tables for empty-highlight steps`` (noSppfTable: bool) =
+    // Input "a a b" is rejected by Dyck1; its final CYK step has no highlights,
+    // exercising the empty-highlight arm of both table renderers.
+    let outDir =
+        RunnerTestHelpers.runWithInput CykRunner.runCyk dyck1RejectAab noSppfTable
+
+    let stepDirs =
+        Directory.GetDirectories outDir
+        |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
+
+    Assert.NotEmpty(stepDirs)
+
+    if noSppfTable then
+        // AsNt cells render nonterminal names only.
+        for stepDir in stepDirs do
+            let tableTex = File.ReadAllText(Path.Combine(stepDir, "table.tex"))
+            Assert.DoesNotContain("(", tableTex)
+    else
+        // Plain cells render (Nt, splitPoint, prodIdx) tuples; span-1 cells are
+        // filled for this input, so at least one step shows tuples.
+        let hasTuples =
+            stepDirs
+            |> Array.exists (fun d -> File.ReadAllText(Path.Combine(d, "table.tex")).Contains("("))
+
+        Assert.True(hasTuples, "expected (Nt, splitPoint, prodIdx) tuples in plain tables")
+
     Directory.Delete(outDir, true)

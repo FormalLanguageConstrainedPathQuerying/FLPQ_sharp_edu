@@ -1,6 +1,7 @@
 namespace FLPQ.TestUtilities
 
 open System.Collections.Generic
+open System.IO
 open FSharpPlus.Data
 open FsCheck
 open FLPQ.Languages
@@ -8,6 +9,31 @@ open FLPQ.LinearAlgebra
 open FLPQ.GraphAnalysis
 
 module TestHelpers =
+
+    /// Runs `f` inside a fresh temp directory and removes the directory afterwards.
+    let withTempDir (f: string -> 'a) : 'a =
+        let dir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+        Directory.CreateDirectory dir |> ignore
+
+        try
+            f dir
+        finally
+            try
+                Directory.Delete(dir, true)
+            with ex ->
+                eprintfn "Warning: failed to clean up temp dir %s: %s" dir ex.Message
+
+    /// Asserts that code throws an exception whose message contains the given substring.
+    let assertThrows (messagePart: string) (code: unit -> 'a) : unit =
+        let exn =
+            try
+                code () |> ignore
+                null
+            with e ->
+                e
+
+        global.Xunit.Assert.NotNull(exn)
+        global.Xunit.Assert.Contains(messagePart, exn.Message)
 
     let assertPathIndexInvariant
         (source: string)

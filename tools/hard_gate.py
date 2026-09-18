@@ -6,7 +6,7 @@ Sequence:
   2. Format: dotnet fantomas . --check
   3. Build: dotnet build FLPQ.slnx -c Debug
   4. Tests: dotnet test per project with per-project coverage collection, then merge
-  5. Coverage gate: per-project >= 85% line, total >= 90% line
+  5. Coverage gate: per-project >= 90% line, total >= 95% line
   6. Lint: dotnet-fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
@@ -37,8 +37,8 @@ from common import (
 OUTPUT_FILE = "tmp/hard-gate.txt"
 SOLUTION = "FLPQ.slnx"
 
-PER_PROJECT_THRESHOLD = 85.0
-TOTAL_THRESHOLD = 90.0
+PER_PROJECT_THRESHOLD = 90.0
+TOTAL_THRESHOLD = 95.0
 
 
 def _now() -> str:

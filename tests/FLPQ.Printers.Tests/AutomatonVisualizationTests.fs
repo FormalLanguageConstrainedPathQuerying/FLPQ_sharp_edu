@@ -291,6 +291,52 @@ let ``LR(0) automaton Tikz has correct number of states`` () =
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
+[<Fact>]
+let ``NFA dot with terminal and epsilon on the same edge renders both`` () =
+    let aut =
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 } ]
+            (Set.ofList [ (0, 1) ])
+            (set [ 0 ])
+            (set [ 1 ])
+
+    let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
+
+    Assert.Contains(@"label=""a""", dot)
+    Assert.Contains(@"label=""ε"", style=dotted", dot)
+
+[<Fact>]
+let ``NFA dot with epsilon-only edge renders no solid edge`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [] (Set.ofList [ (0, 1) ]) (set [ 0 ]) (set [ 1 ])
+
+    let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
+
+    let edgeLines = dot.Split('\n') |> Array.filter (fun l -> l.Contains("->"))
+    let _edge = Assert.Single edgeLines
+    Assert.Contains(@"label=""ε"", style=dotted", dot)
+
+[<Fact>]
+let ``tikz edge with empty label renders a bare edge and a bare loop`` () =
+    let aut =
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 0 }; { From = 0; Label = 'b'; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz (fun _ -> "") (fun _i s -> s) "circle" aut
+
+    Assert.Contains("s0 ->[loop above] s0;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
+
+[<Fact>]
+let ``renderLR1StateContent with empty item set renders only the state header`` () =
+    let content = LRAutomatonTikz.renderLR1StateContent string string 0 Set.empty
+    Assert.Equal(@"\text{State 0}\\", content)
+
 
 module DotParseabilityPropertyTests =
 

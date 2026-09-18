@@ -4,10 +4,18 @@ open System.IO
 open Xunit
 open FLPQ.Cli
 open FLPQ.Cli.Tests
+open FLPQ.TestUtilities
 
 let private baseDir = System.AppContext.BaseDirectory
 
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
+
+// Dyck1 reject string "a" from the registry; the Valiant trace is empty for it.
+let private dyck1RejectA =
+    LanguageRegistry.Dyck1.RejectStrings
+    |> List.find (fun tokens -> tokens = [ FLPQ.Languages.Terminal "a" ])
+    |> List.map (fun (FLPQ.Languages.Terminal t) -> t)
+    |> String.concat " "
 
 let private runRunner () : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -160,3 +168,24 @@ let ``runValiantModified with noSppfTable=true renders nonterminal names only`` 
         Assert.DoesNotContain("(", tableTex)
 
     Directory.Delete(outDir, true)
+
+let private assertNoStepDirs (outDir: string) =
+    let stepDirs =
+        Directory.GetDirectories outDir
+        |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
+
+    Assert.Empty(stepDirs)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runValiant with a non-derivable single token writes no step directories`` () =
+    // The Valiant trace is empty for input "a", exercising the empty-trace branch.
+    RunnerTestHelpers.runWithInput ValiantRunner.runValiant dyck1RejectA false
+    |> assertNoStepDirs
+
+[<Fact>]
+let ``runValiantModified with an empty input writes no step directories`` () =
+    // The modified Valiant trace is non-empty for any token, so only the empty
+    // input exercises the empty-trace branch.
+    RunnerTestHelpers.runWithInput ValiantRunner.runValiantModified "" false
+    |> assertNoStepDirs

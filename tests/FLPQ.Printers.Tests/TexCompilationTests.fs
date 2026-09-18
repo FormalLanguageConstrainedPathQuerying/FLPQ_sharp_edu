@@ -485,6 +485,53 @@ let ``GLL new descriptors empty set TeX compiles`` () =
     Assert.Contains(@"\emptyset", tex)
     Assert.True(ExternalTools.compileTexStringWithTemplate colorTemplatePath tex)
 
+/// renderInit is the public entry for the initial-step rendering; feeding it a step snapshot
+/// with active GSS edges exercises the (state, vertex) edge-label printers.
+[<Fact>]
+let ``renderInit renders GSS edges from the step snapshot`` () =
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.AOrEps "ebnfAlt").Rsm
+
+    let freshStart = Nonterminal "S'"
+    let graph = GLL.stringToGraph [ "a" ]
+    let vertexCount = Graph.vertexCount graph
+    let ersm = ExtendedRSM.create freshStart rsm
+
+    let step: GLLParsingStep<string, string> =
+        { Queue = []
+          ActiveGssVertices = set [ 0; 1 ]
+          ActiveGssEdges = set [ (0, 1) ]
+          NewGssVertices = Set.empty
+          NewGssEdges = Set.empty
+          PathIndexMatrix = Matrix.create (2 * vertexCount) (2 * vertexCount) (fun _ _ -> Set.empty)
+          ChangedCells = Set.empty
+          InputPosition = 0
+          CurrentGssIdx = None
+          CurrentDescriptor = None
+          HandledDescriptors = Set.empty
+          NewDescriptors = Set.empty
+          AttemptedDescriptors = Set.empty
+          StoredPopVertices = Set.empty }
+
+    let pathIndex: PathIndex<string, string> =
+        { Matrix = step.PathIndexMatrix
+          StateCount = 2
+          VertexCount = vertexCount }
+
+    let viz =
+        GllStepVisualizer.renderInit
+            (SymbolTeX.toLaTeX string string)
+            string
+            string
+            ersm
+            step
+            pathIndex
+            vertexCount
+            graph
+
+    // Edge (0,1) decomposes to (state 0, vertex 0) -> (state 0, vertex 1) for vertexCount = 2.
+    Assert.Contains("0,0 → 0,1", viz.GssDot)
+    Assert.Contains(@"R^{0,0}_{0,1}", viz.GssTikz)
+
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``Derivation tree dot compiles with graphviz`` () =
@@ -523,95 +570,94 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
             vertexCount
             graph
 
-    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
+    TestHelpers.withTempDir (fun tempDir ->
+        let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
 
-    if Directory.Exists tempDir then
-        Directory.Delete(tempDir, true)
+        Directory.CreateDirectory(dotPdfDir) |> ignore
 
-    Directory.CreateDirectory(tempDir) |> ignore
-    Directory.CreateDirectory(dotPdfDir) |> ignore
+        let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
+        File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
 
-    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
-    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
+        ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
+        |> ignore
 
-    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
-    |> ignore
+        File.Delete(Path.Combine(tempDir, "_stub.dot"))
 
-    File.Delete(Path.Combine(tempDir, "_stub.dot"))
+        for idx in 0 .. vizSteps.Length - 1 do
+            let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+            Directory.CreateDirectory(stepDir) |> ignore
+            File.WriteAllText(Path.Combine(stepDir, "queue.tex"), vizSteps.[idx].Queue)
+            File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
+            File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
+            File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
+            File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+            File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
+            File.WriteAllText(Path.Combine(stepDir, "rsm.dot"), vizSteps.[idx].RsmDot)
+            File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
+            File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_rsm.pdf" idx), true)
+            File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
 
-    for idx in 0 .. vizSteps.Length - 1 do
-        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
-        Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "queue.tex"), vizSteps.[idx].Queue)
-        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
-        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
-        File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
-        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
-        File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
-        File.WriteAllText(Path.Combine(stepDir, "rsm.dot"), vizSteps.[idx].RsmDot)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_rsm.pdf" idx), true)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
+        File.WriteAllText(Path.Combine(tempDir, "input.dot"), InputGraphDot.toDot string graph None)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "input.pdf"), true)
 
-    File.WriteAllText(Path.Combine(tempDir, "input.dot"), InputGraphDot.toDot string graph None)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "input.pdf"), true)
+        File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+        // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
+        File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
 
-    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
-    // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
-    File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
+        let rsmPdfs = [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
 
-    let rsmPdfs = [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
+        let gllStepTemplatePath =
+            [ Path.Combine("data", "GLL_step_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "GLL_step_template.tex"
+              ) ]
+            |> List.tryFind File.Exists
+            |> Option.defaultWith (fun () ->
+                failwithf
+                    "Could not locate GLL_step_template.tex. Tried: %A"
+                    [ Path.Combine("data", "GLL_step_template.tex")
+                      Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex") ])
 
-    let gllStepTemplatePath =
-        [ Path.Combine("data", "GLL_step_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "GLL_step_template.tex") ]
-        |> List.tryFind File.Exists
-        |> Option.defaultWith (fun () ->
-            failwithf
-                "Could not locate GLL_step_template.tex. Tried: %A"
-                [ Path.Combine("data", "GLL_step_template.tex")
-                  Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex") ])
+        let gllStepTemplate = File.ReadAllText gllStepTemplatePath
 
-    let gllStepTemplate = File.ReadAllText gllStepTemplatePath
+        let content =
+            SummaryTeX.buildContent
+                "GLL"
+                SummaryTeX.SummaryKind.GLL
+                tempDir
+                vizSteps.Length
+                None
+                None
+                rsmPdfs
+                gllStepTemplate
+                ""
+                ""
+                ""
+                false
+            |> String.concat "\n"
 
-    let content =
-        SummaryTeX.buildContent
-            "GLL"
-            SummaryTeX.SummaryKind.GLL
-            tempDir
-            vizSteps.Length
-            None
-            None
-            rsmPdfs
-            gllStepTemplate
-            ""
-            ""
-            ""
-            false
-        |> String.concat "\n"
+        let summaryTemplatePath =
+            Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
 
-    let summaryTemplatePath =
-        Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
+        let template = File.ReadAllText summaryTemplatePath
 
-    let template = File.ReadAllText summaryTemplatePath
+        let fullTex =
+            template.Replace("__ALGORITHM__", "GLL").Replace("__CONTENT__", content)
 
-    let fullTex =
-        template.Replace("__ALGORITHM__", "GLL").Replace("__CONTENT__", content)
+        let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+        File.WriteAllText(mergedTexPath, fullTex)
 
-    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
-    File.WriteAllText(mergedTexPath, fullTex)
-
-    try
-        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir)
-    finally
-        try
-            Directory.Delete(tempDir, true)
-        with _ ->
-            ()
+        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir))
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -635,93 +681,92 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
     let vizSteps =
         RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex graph
 
-    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
-    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
+    TestHelpers.withTempDir (fun tempDir ->
+        let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
 
-    if Directory.Exists tempDir then
-        Directory.Delete(tempDir, true)
+        Directory.CreateDirectory(dotPdfDir) |> ignore
 
-    Directory.CreateDirectory(tempDir) |> ignore
-    Directory.CreateDirectory(dotPdfDir) |> ignore
+        let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
+        File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
 
-    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
-    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
+        ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
+        |> ignore
 
-    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
-    |> ignore
+        File.Delete(Path.Combine(tempDir, "_stub.dot"))
 
-    File.Delete(Path.Combine(tempDir, "_stub.dot"))
+        for idx in 0 .. vizSteps.Length - 1 do
+            let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+            Directory.CreateDirectory(stepDir) |> ignore
+            File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
+            File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+            File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
+            File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
+            File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
+            File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
 
-    for idx in 0 .. vizSteps.Length - 1 do
-        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
-        Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "gss.dot"), vizSteps.[idx].GssDot)
-        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
-        File.WriteAllText(Path.Combine(stepDir, "input.dot"), vizSteps.[idx].Input)
-        File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_gss.pdf" idx), true)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, sprintf "step_%d_input.pdf" idx), true)
+        File.WriteAllText(
+            Path.Combine(tempDir, "rnglr_table.tex"),
+            RnglrTableTeX.tableToTeXTabularOnly string string lrTable
+        )
 
-    File.WriteAllText(
-        Path.Combine(tempDir, "rnglr_table.tex"),
-        RnglrTableTeX.tableToTeXTabularOnly string string lrTable
-    )
+        File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
+        // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
+        File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
 
-    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
-    // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
-    File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
+        let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
 
-    let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+        let rnglrStepTemplatePath =
+            [ Path.Combine("data", "RNGLR_step_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "RNGLR_step_template.tex"
+              ) ]
+            |> List.tryFind File.Exists
+            |> Option.defaultWith (fun () ->
+                failwithf
+                    "Could not locate RNGLR_step_template.tex. Tried: %A"
+                    [ Path.Combine("data", "RNGLR_step_template.tex")
+                      Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex") ])
 
-    let rnglrStepTemplatePath =
-        [ Path.Combine("data", "RNGLR_step_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", "RNGLR_step_template.tex") ]
-        |> List.tryFind File.Exists
-        |> Option.defaultWith (fun () ->
-            failwithf
-                "Could not locate RNGLR_step_template.tex. Tried: %A"
-                [ Path.Combine("data", "RNGLR_step_template.tex")
-                  Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex") ])
+        let rnglrStepTemplate = File.ReadAllText rnglrStepTemplatePath
 
-    let rnglrStepTemplate = File.ReadAllText rnglrStepTemplatePath
+        let content =
+            SummaryTeX.buildContent
+                "RNGLR"
+                SummaryTeX.SummaryKind.RNGLR
+                tempDir
+                vizSteps.Length
+                None
+                None
+                rsmPdfs
+                ""
+                rnglrStepTemplate
+                ""
+                ""
+                false
+            |> String.concat "\n"
 
-    let content =
-        SummaryTeX.buildContent
-            "RNGLR"
-            SummaryTeX.SummaryKind.RNGLR
-            tempDir
-            vizSteps.Length
-            None
-            None
-            rsmPdfs
-            ""
-            rnglrStepTemplate
-            ""
-            ""
-            false
-        |> String.concat "\n"
+        let summaryTemplatePath =
+            Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
 
-    let summaryTemplatePath =
-        Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
+        let template = File.ReadAllText summaryTemplatePath
 
-    let template = File.ReadAllText summaryTemplatePath
+        let fullTex =
+            template.Replace("__ALGORITHM__", "RNGLR").Replace("__CONTENT__", content)
 
-    let fullTex =
-        template.Replace("__ALGORITHM__", "RNGLR").Replace("__CONTENT__", content)
+        let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+        File.WriteAllText(mergedTexPath, fullTex)
 
-    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
-    File.WriteAllText(mergedTexPath, fullTex)
-
-    try
-        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir)
-    finally
-        try
-            Directory.Delete(tempDir, true)
-        with _ ->
-            ()
+        Assert.True(ExternalTools.compileTexFile mergedTexPath tempDir))
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -859,87 +904,75 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
             vertexCount
             graph
 
-    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    TestHelpers.withTempDir (fun tempDir ->
+        for idx in 0 .. vizSteps.Length - 1 do
+            let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+            Directory.CreateDirectory(stepDir) |> ignore
+            File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
+            File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
+            File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+            File.WriteAllText(Path.Combine(stepDir, "gss.tikz.tex"), vizSteps.[idx].GssTikz)
+            File.WriteAllText(Path.Combine(stepDir, "input.tikz.tex"), vizSteps.[idx].InputTikz)
+            File.WriteAllText(Path.Combine(stepDir, "rsm.tikz.tex"), vizSteps.[idx].RsmTikz)
 
-    if Directory.Exists tempDir then
-        Directory.Delete(tempDir, true)
+        File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+        File.WriteAllText(Path.Combine(tempDir, "input.tikz.tex"), InputGraphTikz.toTikz string graph None)
+        File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
 
-    Directory.CreateDirectory(tempDir) |> ignore
+        let gllStepTikzTemplatePath =
+            [ Path.Combine("data", "GLL_step_tikz_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_tikz_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "GLL_step_tikz_template.tex"
+              ) ]
+            |> List.tryFind File.Exists
+            |> Option.defaultWith (fun () -> failwith "Could not locate GLL_step_tikz_template.tex")
 
-    for idx in 0 .. vizSteps.Length - 1 do
-        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
-        Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "descriptors_table.tex"), vizSteps.[idx].DescriptorsTable)
-        File.WriteAllText(Path.Combine(stepDir, "new_descriptors.tex"), vizSteps.[idx].NewDescriptors)
-        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
-        File.WriteAllText(Path.Combine(stepDir, "gss.tikz.tex"), vizSteps.[idx].GssTikz)
-        File.WriteAllText(Path.Combine(stepDir, "input.tikz.tex"), vizSteps.[idx].InputTikz)
-        File.WriteAllText(Path.Combine(stepDir, "rsm.tikz.tex"), vizSteps.[idx].RsmTikz)
+        let gllStepTikzTemplate = File.ReadAllText gllStepTikzTemplatePath
 
-    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
-    File.WriteAllText(Path.Combine(tempDir, "input.tikz.tex"), InputGraphTikz.toTikz string graph None)
-    File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
+        // Tikz mode: the head RSM figure comes from ext_rsm.tikz.tex (no PDF entries),
+        // and SPPF is rendered by the trailing sppfSection from sppf.tikz.tex.
+        let sppf = Sppf.buildSppfFromExtendedRsm pathIndex ersm.ExtendedRsm vertexCount
+        File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
 
-    let gllStepTikzTemplatePath =
-        [ Path.Combine("data", "GLL_step_tikz_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "GLL_step_tikz_template.tex")
-          Path.Combine(
-              System.AppContext.BaseDirectory,
-              "..",
-              "..",
-              "..",
-              "..",
-              "..",
-              "data",
-              "GLL_step_tikz_template.tex"
-          ) ]
-        |> List.tryFind File.Exists
-        |> Option.defaultWith (fun () -> failwith "Could not locate GLL_step_tikz_template.tex")
+        let rsmPdfs: (string * string) list = []
 
-    let gllStepTikzTemplate = File.ReadAllText gllStepTikzTemplatePath
+        let content =
+            SummaryTeX.buildContent
+                "GLL"
+                SummaryTeX.SummaryKind.GLL
+                tempDir
+                vizSteps.Length
+                None
+                None
+                rsmPdfs
+                ""
+                ""
+                gllStepTikzTemplate
+                ""
+                true
+            |> String.concat "\n"
 
-    // Tikz mode: the head RSM figure comes from ext_rsm.tikz.tex (no PDF entries),
-    // and SPPF is rendered by the trailing sppfSection from sppf.tikz.tex.
-    let sppf = Sppf.buildSppfFromExtendedRsm pathIndex ersm.ExtendedRsm vertexCount
-    File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
+        // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
+        Assert.Contains("components go down left aligned", content)
 
-    let rsmPdfs: (string * string) list = []
+        let template =
+            File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))
 
-    let content =
-        SummaryTeX.buildContent
-            "GLL"
-            SummaryTeX.SummaryKind.GLL
-            tempDir
-            vizSteps.Length
-            None
-            None
-            rsmPdfs
-            ""
-            ""
-            gllStepTikzTemplate
-            ""
-            true
-        |> String.concat "\n"
+        let fullTex =
+            template.Replace("__ALGORITHM__", "GLL").Replace("__CONTENT__", content)
 
-    // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
-    Assert.Contains("components go down left aligned", content)
+        let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+        File.WriteAllText(mergedTexPath, fullTex)
 
-    let template =
-        File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))
-
-    let fullTex =
-        template.Replace("__ALGORITHM__", "GLL").Replace("__CONTENT__", content)
-
-    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
-    File.WriteAllText(mergedTexPath, fullTex)
-
-    try
-        Assert.True(ExternalTools.compileTexFileTwice mergedTexPath tempDir)
-    finally
-        try
-            Directory.Delete(tempDir, true)
-        with _ ->
-            ()
+        Assert.True(ExternalTools.compileTexFileTwice mergedTexPath tempDir))
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -964,102 +997,90 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
     let vizSteps =
         RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex graph
 
-    let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    TestHelpers.withTempDir (fun tempDir ->
+        let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
+        Directory.CreateDirectory(dotPdfDir) |> ignore
 
-    if Directory.Exists tempDir then
-        Directory.Delete(tempDir, true)
+        let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
+        File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
 
-    Directory.CreateDirectory(tempDir) |> ignore
+        ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
+        |> ignore
 
-    let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
-    Directory.CreateDirectory(dotPdfDir) |> ignore
+        File.Delete(Path.Combine(tempDir, "_stub.dot"))
 
-    let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
-    File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
 
-    ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
-    |> ignore
+        for idx in 0 .. vizSteps.Length - 1 do
+            let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
+            Directory.CreateDirectory(stepDir) |> ignore
+            File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
+            File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
+            File.WriteAllText(Path.Combine(stepDir, "gss.tikz.tex"), vizSteps.[idx].GssTikz)
+            File.WriteAllText(Path.Combine(stepDir, "input.tikz.tex"), vizSteps.[idx].InputTikz)
 
-    File.Delete(Path.Combine(tempDir, "_stub.dot"))
+        File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
 
-    File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+        File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
 
-    for idx in 0 .. vizSteps.Length - 1 do
-        let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
-        Directory.CreateDirectory(stepDir) |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "path_index.tex"), vizSteps.[idx].PathIndex)
-        File.WriteAllText(Path.Combine(stepDir, "lr_table.tex"), vizSteps.[idx].LrTable)
-        File.WriteAllText(Path.Combine(stepDir, "gss.tikz.tex"), vizSteps.[idx].GssTikz)
-        File.WriteAllText(Path.Combine(stepDir, "input.tikz.tex"), vizSteps.[idx].InputTikz)
+        File.WriteAllText(
+            Path.Combine(tempDir, "rnglr_table.tex"),
+            RnglrTableTeX.tableToTeXTabularOnly string string lrTable
+        )
 
-    File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
+        let rnglrStepTikzTemplatePath =
+            [ Path.Combine("data", "RNGLR_step_tikz_template.tex")
+              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_tikz_template.tex")
+              Path.Combine(
+                  System.AppContext.BaseDirectory,
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "..",
+                  "data",
+                  "RNGLR_step_tikz_template.tex"
+              ) ]
+            |> List.tryFind File.Exists
+            |> Option.defaultWith (fun () -> failwith "Could not locate RNGLR_step_tikz_template.tex")
 
-    File.WriteAllText(Path.Combine(tempDir, "ext_rsm.tikz.tex"), RsmTikz.extendedRsmToTikz string string ersm None)
+        let rnglrStepTikzTemplate = File.ReadAllText rnglrStepTikzTemplatePath
 
-    File.WriteAllText(
-        Path.Combine(tempDir, "rnglr_table.tex"),
-        RnglrTableTeX.tableToTeXTabularOnly string string lrTable
-    )
+        // Tikz mode: SPPF is rendered by the trailing sppfSection from sppf.tikz.tex;
+        // the RSM figure stays a header PDF entry (rsm_blocks.dot is always written).
+        let sppf =
+            Sppf.buildSppfFromExtendedRsm pathIndex (ExtendedRSM.extRsm ersm) vertexCount
 
-    let rnglrStepTikzTemplatePath =
-        [ Path.Combine("data", "RNGLR_step_tikz_template.tex")
-          Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_tikz_template.tex")
-          Path.Combine(
-              System.AppContext.BaseDirectory,
-              "..",
-              "..",
-              "..",
-              "..",
-              "..",
-              "data",
-              "RNGLR_step_tikz_template.tex"
-          ) ]
-        |> List.tryFind File.Exists
-        |> Option.defaultWith (fun () -> failwith "Could not locate RNGLR_step_tikz_template.tex")
+        File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
 
-    let rnglrStepTikzTemplate = File.ReadAllText rnglrStepTikzTemplatePath
+        let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
 
-    // Tikz mode: SPPF is rendered by the trailing sppfSection from sppf.tikz.tex;
-    // the RSM figure stays a header PDF entry (rsm_blocks.dot is always written).
-    let sppf =
-        Sppf.buildSppfFromExtendedRsm pathIndex (ExtendedRSM.extRsm ersm) vertexCount
+        let content =
+            SummaryTeX.buildContent
+                "RNGLR"
+                SummaryTeX.SummaryKind.RNGLR
+                tempDir
+                vizSteps.Length
+                None
+                None
+                rsmPdfs
+                ""
+                ""
+                ""
+                rnglrStepTikzTemplate
+                true
+            |> String.concat "\n"
 
-    File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
+        // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
+        Assert.Contains("components go down left aligned", content)
 
-    let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+        let template =
+            File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))
 
-    let content =
-        SummaryTeX.buildContent
-            "RNGLR"
-            SummaryTeX.SummaryKind.RNGLR
-            tempDir
-            vizSteps.Length
-            None
-            None
-            rsmPdfs
-            ""
-            ""
-            ""
-            rnglrStepTikzTemplate
-            true
-        |> String.concat "\n"
+        let fullTex =
+            template.Replace("__ALGORITHM__", "RNGLR").Replace("__CONTENT__", content)
 
-    // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
-    Assert.Contains("components go down left aligned", content)
+        let mergedTexPath = Path.Combine(tempDir, "merged.tex")
+        File.WriteAllText(mergedTexPath, fullTex)
 
-    let template =
-        File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))
-
-    let fullTex =
-        template.Replace("__ALGORITHM__", "RNGLR").Replace("__CONTENT__", content)
-
-    let mergedTexPath = Path.Combine(tempDir, "merged.tex")
-    File.WriteAllText(mergedTexPath, fullTex)
-
-    try
-        Assert.True(ExternalTools.compileTexFileTwice mergedTexPath tempDir)
-    finally
-        try
-            Directory.Delete(tempDir, true)
-        with _ ->
-            ()
+        Assert.True(ExternalTools.compileTexFileTwice mergedTexPath tempDir))

@@ -1,5 +1,6 @@
 module RPQTests
 
+open System.IO
 open Xunit
 open FsCheck
 open FsCheck.Xunit
@@ -166,6 +167,74 @@ let ``Kronecker: multiple sources, only one connects`` () =
     let result = KroneckerRPQ.evaluate dfa nfa
     Assert.True(result.[0, 2])
     Assert.False(result.[1, 2])
+
+// --- Edge-case tests (task 276) ---
+
+[<Fact>]
+let ``GraphReader: empty text yields an empty NFA`` () =
+    let g = GraphReader.parseGraph ""
+    Assert.Equal(0, Nfa.stateCount g)
+    Assert.True(Set.isEmpty g.StartStates)
+
+[<Fact>]
+let ``GraphReader: line with wrong part count throws`` () =
+    TestHelpers.assertThrows "Invalid graph line" (fun () -> GraphReader.parseGraph "0 a" |> ignore)
+
+[<Fact>]
+let ``GraphReader: parseGraphFile reads the graph from a file`` () =
+    let path = Path.GetTempFileName()
+    File.WriteAllText(path, "0 a 1")
+
+    try
+        let g = GraphReader.parseGraphFile path
+        Assert.Equal(2, Nfa.stateCount g)
+        Assert.True(g.Transitions.[0, 1].IsSome)
+    finally
+        File.Delete(path)
+
+[<Fact>]
+let ``Belyanin: epsilon transitions are skipped in the per-label loop`` () =
+    // Vertex 2 is reachable from vertex 1 only via an epsilon edge. Belyanin's
+    // per-label loop skips AEpsilon (BelyaninRPQ.runSingleSource), so vertex 2
+    // must not be reached while vertex 1 is reached via "a".
+    let nfa =
+        Nfa.fromTransitions
+            [ 0; 1; 2 ]
+            [ { From = 0; Label = "a"; To = 1 } ]
+            (Set.ofList [ (1, 2) ])
+            (Set.ofArray [| 0 |])
+            Set.empty
+
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 [ 1 ]
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.True(result.[0, 1])
+    Assert.False(result.[0, 2], "vertex reachable only via an epsilon edge must not be reached")
+
+[<Fact>]
+let ``Kronecker: empty graph yields an empty matrix`` () =
+    let nfa = Nfa.fromTransitions [] [] Set.empty Set.empty Set.empty
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 [ 1 ]
+    let result = KroneckerRPQ.evaluate dfa nfa
+    Assert.Equal(0, Matrix.rows result)
+    Assert.Equal(0, Matrix.cols result)
+
+[<Fact>]
+let ``Arroyuelo: REmpty query yields the zero matrix`` () =
+    let nfa = nfaWithSources [ { From = 0; Label = "a"; To = 1 } ] [ 0 ]
+    let result = ArroyueloRPQ.evaluate nfa Regexp.REmpty
+    Assert.False(result.[0, 1])
+
+[<Fact>]
+let ``Arroyuelo: terminal absent from the graph yields the zero matrix`` () =
+    let nfa = nfaWithSources [ { From = 0; Label = "a"; To = 1 } ] [ 0 ]
+    let result = ArroyueloRPQ.evaluate nfa (Regexp.RTerm(Terminal "b"))
+    Assert.False(result.[0, 1])
+
+[<Fact>]
+let ``Arroyuelo: nonterminal query yields the zero matrix`` () =
+    let nfa = nfaWithSources [ { From = 0; Label = "a"; To = 1 } ] [ 0 ]
+    let result = ArroyueloRPQ.evaluate nfa (Regexp.RNonterm(Nonterminal "X"))
+    Assert.False(result.[0, 1])
 
 // --- Cross-algorithm property-based tests (task 63, updated for task 64) ---
 

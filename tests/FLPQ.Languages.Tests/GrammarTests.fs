@@ -484,3 +484,40 @@ module NumberingTests =
 
         for (number, rule) in numbered do
             Assert.Equal(rule, Map.find number map)
+
+
+module GrammarEdgeTests =
+
+    [<Fact>]
+    let ``Rhs.length of epsilon right-hand side is zero`` () = Assert.Equal(0, Rhs.length EpsilonRhs)
+
+    [<Fact>]
+    let ``parseGrammar rejects line without arrow`` () =
+        TestHelpers.assertThrows "Invalid rule format" (fun () -> Grammar.parseGrammar "S a b")
+
+    [<Fact>]
+    let ``toCnf handles epsilon symbol inside right-hand side`` () =
+        // Manually constructed grammar: S -> A eps (Symbol.Epsilon inside Symbols,
+        // A undefined) and T -> eps-as-symbol. Exercises the Symbol.Epsilon arms of
+        // computeGenerating's initial filter and fixpoint loop.
+        let g: Grammar<string, string> =
+            { Rules =
+                [ { Lhs = Nonterminal "S"
+                    Rhs = Symbols(NonEmptyList.ofList [ Symbol.N(Nonterminal "A"); Symbol.Epsilon ]) }
+                  { Lhs = Nonterminal "T"
+                    Rhs = Symbols(NonEmptyList.ofList [ Symbol.Epsilon ]) } ]
+              Start = Nonterminal "S" }
+
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
+        Assert.Equal(Nonterminal "S", cnf.Start)
+
+        // CNF eliminates epsilon: no rule may contain Symbol.Epsilon.
+        let hasEpsilonSymbol =
+            cnf.Rules
+            |> List.exists (fun r ->
+                Rhs.toListWithEpsilon r.Rhs
+                |> List.exists (function
+                    | Symbol.Epsilon -> true
+                    | _ -> false))
+
+        Assert.False(hasEpsilonSymbol, "CNF rules must not contain Symbol.Epsilon")

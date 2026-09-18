@@ -68,11 +68,13 @@ module RnglrStepVisualizer =
                     | Some symbols ->
                         symbols
                         |> NonEmptySet.toSeq
+                        // Escape only the printer-produced names; the epsilon label
+                        // is math-mode TeX and must not be escaped (as in RsmTikz).
                         |> Seq.map (fun sym ->
                             match sym with
-                            | Symbol.T(Terminal t) -> terminals t
-                            | Symbol.N(Nonterminal nt) -> nonterminals nt
-                            | Symbol.Epsilon -> "\\varepsilon")
+                            | Symbol.T(Terminal t) -> AutomatonTikz.escapeLatex (terminals t)
+                            | Symbol.N(Nonterminal nt) -> AutomatonTikz.escapeLatex (nonterminals nt)
+                            | Symbol.Epsilon -> "$\\varepsilon$")
                         |> String.concat ", "
                     | None -> "")
                 step.ActiveGssVertices
@@ -82,7 +84,7 @@ module RnglrStepVisualizer =
                 step.PassingReductionVertices
                 None
                 "circle"
-                false
+                true
                 (Some(fun idx -> snd (vertexInfo idx)))
 
         let activeActions =

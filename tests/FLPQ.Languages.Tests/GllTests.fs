@@ -142,3 +142,88 @@ module GllEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =
         ParsingTestCases.Runners.runEpsilonTests accepts (fun g input -> not (accepts g input))
+
+module GllMalformedRsm =
+
+    let private run (rsm: RSM<string, string>) (input: string list) : bool =
+        let freshStart = Nonterminal "S'"
+        let ersm = ExtendedRSM.create freshStart rsm
+        let graph = GLL.stringToGraph input
+        let pi = GLL.buildPathIndex freshStart ersm graph
+        PathIndex.isAccepted pi ersm (Graph.vertexCount graph)
+
+    [<Fact>]
+    let ``GLL skips dangling nonterminal call without a block`` () =
+        // S: 0 --N(A)--> 1 --N(GHOST)--> 2f; A: 3 --a--> 4f. GHOST has no block, so the
+        // call at S state 1 hits the `blockStart.TryGetValue -> false` branch (Gll.fs:208).
+        let ntS = Nonterminal "S"
+        let ntA = Nonterminal "A"
+        let ntGhost = Nonterminal "GHOST"
+
+        let rsm =
+            RsmFixtures.mkRsm
+                [| { BlockNonterminal = ntS
+                     LocalState = 0
+                     IsFinal = false }
+                   { BlockNonterminal = ntS
+                     LocalState = 1
+                     IsFinal = false }
+                   { BlockNonterminal = ntS
+                     LocalState = 2
+                     IsFinal = true }
+                   { BlockNonterminal = ntA
+                     LocalState = 0
+                     IsFinal = false }
+                   { BlockNonterminal = ntA
+                     LocalState = 1
+                     IsFinal = true } |]
+                [ { From = 0
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm ntA)
+                    To = 1 }
+                  { From = 1
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm ntGhost)
+                    To = 2 }
+                  { From = 3
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal "a"))
+                    To = 4 } ]
+                [ (ntS, 0); (ntA, 3) ]
+                [ 2; 4 ]
+                ntS
+
+        Assert.False(run rsm [ "a" ])
+
+    [<Fact>]
+    let ``GLL tolerates return state whose block is missing from BlockStart`` () =
+        // S: 0 --N(A)--> 1f but StateInfo.[1].BlockNonterminal = GHOST, which has no
+        // BlockStart entry. The return handling hits the `blockStart.TryGetValue -> false`
+        // branch (Gll.fs:370) and the final-state handler hits the NonEmptyRange fallback
+        // (Gll.fs:309). Range bookkeeping still completes, so the input is accepted.
+        let ntS = Nonterminal "S"
+        let ntA = Nonterminal "A"
+        let ntGhost = Nonterminal "GHOST"
+
+        let rsm =
+            RsmFixtures.mkRsm
+                [| { BlockNonterminal = ntS
+                     LocalState = 0
+                     IsFinal = false }
+                   { BlockNonterminal = ntGhost
+                     LocalState = 1
+                     IsFinal = true }
+                   { BlockNonterminal = ntA
+                     LocalState = 0
+                     IsFinal = false }
+                   { BlockNonterminal = ntA
+                     LocalState = 1
+                     IsFinal = true } |]
+                [ { From = 0
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm ntA)
+                    To = 1 }
+                  { From = 2
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal "a"))
+                    To = 3 } ]
+                [ (ntS, 0); (ntA, 2) ]
+                [ 1; 3 ]
+                ntS
+
+        Assert.True(run rsm [ "a" ])

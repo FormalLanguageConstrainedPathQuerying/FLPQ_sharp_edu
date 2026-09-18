@@ -72,3 +72,29 @@ type ``LR table TeX golden tests``() =
     [<Fact>]
     member _.``CLR(1) table for grammar7``() =
         verifyGolden "clr1_grammar7_table.tex" Grammars.texClr1Grammar7
+
+
+type ``LR table TeX conflict and degenerate tests``() =
+
+    [<Fact>]
+    member _.``ReduceReduce conflict renders both reduce actions in one cell``() =
+        // Grammar `S -> A; A -> S` yields a ReduceReduce conflict in the accept state
+        // (see AcceptStateConflicts in FLPQ.Languages.Tests): both completed items
+        // reduce on Epsilon.
+        let tex =
+            LRTableTeX.tableToTeX
+                (SymbolTeX.toLaTeX string string)
+                LrConflictFixture.augmented
+                LrConflictFixture.lr0Table
+
+        Assert.Contains(@"$r_2$, $r_-1$", tex)
+
+    [<Fact>]
+    member _.``grammar without nonterminals renders an empty goto column spec``() =
+        let emptyG: Grammar<string, string> = { Rules = []; Start = Nonterminal "S" }
+        let aug = LRAutomaton.augmentGrammar (Nonterminal "S'") emptyG
+        let table = LRParser.buildLR0Table aug Symbol.Epsilon
+
+        let tex = LRTableTeX.tableToTeX (SymbolTeX.toLaTeX string string) aug table
+
+        Assert.Contains(@"\begin{tabular}{ c || c ||  }", tex)

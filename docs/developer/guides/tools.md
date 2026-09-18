@@ -144,8 +144,8 @@ Step 4-9/12 (Tests):
   Step 9/12 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
   Test gate: PASS
 Step 10/12 (Coverage):
-  FLPQ.Languages: 91.2% (4444/4874) — PASS
-  TOTAL: 91.8% (7695/8380) (threshold 90%) — PASS
+  FLPQ.Languages: 96.8% (4718/4874) — PASS
+  TOTAL: 97.6% (8181/8380) (threshold 95%) — PASS
   Coverage gate: PASS
 Step 11-12/12 (Lint):
   Step 11/12 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
@@ -171,8 +171,8 @@ Step 4-9/10 (Tests):
   Step 9/10 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
   Test gate: PASS
 Step 10/10 (Coverage):
-  FLPQ.Languages: 91.2% (4444/4874) — PASS
-  TOTAL: 91.8% (7695/8380) (threshold 90%) — PASS
+  FLPQ.Languages: 96.8% (4718/4874) — PASS
+  TOTAL: 97.6% (8181/8380) (threshold 95%) — PASS
   Coverage gate: PASS
 Lint: SKIP (no changed .fs files)
 
@@ -195,8 +195,8 @@ Step 4-9/12 (Tests):
   Test gate: PASS
 Step 10/12 (Coverage):
   FLPQ.Languages: 91.2% (4444/4874) — PASS
-  FLPQ.Cli: 55.0% (438/796) — BLOCKED (below 85%)
-  TOTAL: 91.8% (7695/8380) (threshold 90%) — PASS
+  FLPQ.Cli: 55.0% (438/796) — BLOCKED (below 90%)
+  TOTAL: 88.4% (7408/8380) (threshold 95%) — BLOCKED (below 95%)
   Coverage gate: BLOCKED
 Step 11-12/12 (Lint):
   Step 11/12 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS

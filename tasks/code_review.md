@@ -1,5 +1,52 @@
 # Code Review Report
 
+## Task 276 Review (2026-09-18)
+
+Scope: full branch diff vs dev — coverage tests S1–S10 across all six test projects plus `FLPQ.TestUtilities` (new `LrConflictFixture`, `RsmFixtures`, `withTempDir` helper, registry additions), `tools/hard_gate.py` (line-coverage thresholds 85/90 → 90/95), `docs/developer/guides/tools.md` (example outputs), and one src fix in `src/FLPQ.Printers/RnglrStepVisualizer.fs` (epsilon edge-label escaping).
+
+**Findings resolved this review:**
+
+Round 1 (20 findings):
+
+- §9/§23 (correctness) — `RnglrStepVisualizer.fs` double-escaped epsilon edge labels into literal `\textbackslash varepsilon` text; the printer now pre-escapes via `AutomatonTikz.escapeLatex`, emits `$\varepsilon$` for `AEpsilon`, and calls `GssTikz.toTikzFromSets` with `skipEscaping = true`, mirroring the RsmTikz math-mode-label convention.
+- §13 (no duplication) — ten temp-dir try/finally copies in `ExternalToolsTests` plus a private copy in `SummaryTexSectionTests` consolidated into shared `TestHelpers.withTempDir`; four hand-built RSMs (GllTests ×2, RnglrTests, RsmDotTests) replaced by shared `RsmFixtures.mkRsm`; the LR conflict grammar duplicated across `LRTableTeXGoldenTests` and three `LRParserTests` facts replaced by shared `LrConflictFixture`.
+- §15 (test fidelity) — weak assertions strengthened: EbnfParserTests file tests asserted only list length / `StateCount > 0`, now assert content equality and the concrete RSM shape of "S -> a b" (StartBlock S, 3 states, final {2}); the toCnf epsilon test now asserts no `Symbol.Epsilon` survives in CNF rules; the Belyanin epsilon test now uses a vertex reachable only via an epsilon edge and asserts it is not reached.
+- §13/§15 — duplicated runner-input helpers and four near-identical runner tests in CykRunnerTests/ValiantRunnerTests consolidated into shared `RunnerTestHelpers.runWithInput`; the two noSppfTable variants became one parameterized Theory asserting AsNt tables contain no tuples while plain tables do; `Assert.Throws<System.Exception>` replaced by `TestHelpers.assertThrows` with message checks (LRRunnerTests, RPQTests).
+- §20 (documentation) — `tools.md` example coverage numbers were arithmetically infeasible (per-project covered lines exceeded the total); examples now feasible and consistent with `hard_gate.py`'s output format.
+
+Round 2 (12 findings):
+
+- §7 (genericity) — `withTempDir` pinned to `unit`; now `(f: string -> 'a) : 'a`.
+- §4 (tuples ≤ 2) — `RsmFixtures.mkRsm` transitions parameter was a 3-item tuple list; now `Trans<AutomatonLabel<RsmSymbol<string, string>>> list` reusing the existing record, call sites updated.
+- §6 (doc comments) — `LrConflictFixture` public values gained XML docs.
+- §13 — remaining temp-dir copies consolidated: EbnfParserTests `writeTempEbnf`, CykSummaryGoldenTests, and four TexCompilationTests bodies now use `withTempDir`.
+- §14 (language registry) — RnglrTableTexTests inline grammar moved to a new SingleAB "threeRule" registry entry; three BasicSppfTests hardcoded grammars/inputs now from SingleAB; the "a a b" and "a" runner inputs now derived from `Dyck1.RejectStrings` (new `[a; a; b]` entry added).
+- §23 — unused opens removed from RsmDotTests.
+
+Round 3 (1 finding):
+
+- §14 — the new SingleAB "threeRule" entry declared `IsInCnf = false`; all three productions are in CNF form per the documented definition, now `true`.
+
+Gate-driven fix (surfaced by FSharpLint, pre-existing on dev but inside a changed project):
+
+- §4/§13 — `SppfValidatorTests.fs` `mkSppf` took `(int * SppfEdgeLabel * int)` edge tuples (FL0051) and repeated one identical `failwith "expected invariant violation"` message 18 times (FL0072 failwithBadUsage); edges now `Trans<SppfEdgeLabel>` records and each failure message is unique.
+
+**Verified:** build 0 errors; full suite 1175 passed / 0 failed / 0 skipped (Cli 171, GraphAnalysis 33, Languages 619, LinearAlgebra 51, Printers 266, RPQ 35); FSharpLint 0 warnings on the full solution; Fantomas clean; mdformat clean.
+
+**Findings against the constraint sources:**
+
+- §6 (doc comments) — all new public API (`withTempDir`, `mkRsm`, `LrConflictFixture` values, `RunnerTestHelpers.runWithInput`) carries XML docs; the src change keeps its book-reference comment (sec:CFPQ_RNGLR step visualization).
+- §7 (genericity) — no new hardcoded types in algorithm code; the one src change is a printer (presentation layer), where concrete string escaping is inherent.
+- §13 (no duplication) — after consolidation, temp-dir lifecycle exists only in `TestHelpers.withTempDir`, runner-input setup only in `RunnerTestHelpers.runWithInput`, and hand-built RSM/LR-conflict construction only in the two TestUtilities fixtures.
+- §14 (language registry) — all test grammars and accept/reject strings in the changed surface come from the registry; the two new registry entries ("threeRule", Dyck1 `[a; a; b]`) carry verified properties.
+- §15/§16 (test fidelity / Fact vs Property) — every strengthened test asserts a real property of the result (content equality, concrete automaton shape, absence/presence of rendered tuples, unreachable-via-epsilon vertex); deterministic facts stay `[<Fact>]`.
+- §19 (test coverage) — unchanged: every src module retains its correspondent; the src fix is covered by RnglrStepVisualizationTests.
+- §20 (documentation) — `tools.md` examples match the tool's actual output format and thresholds; no new module, so no hub/architecture doc change needed.
+
+**No blocking findings.** The third pass over the round-2 changed surface found one problem (IsInCnf), fixed; the remaining edits (unique failwith messages, property flip) are string-level changes verified by build plus the full suite.
+
+---
+
 ## Task 275 Review (2026-09-15)
 
 Scope: `src/FLPQ.Printers/AutomatonTikz.fs` (`layeredGraphOptions` gains a grow-direction argument; new `defaultGrowDirection` / `gssLayeredGrowDirection` constants), `src/FLPQ.Printers/GssDot.fs` + `GssTikz.fs` (trailing opt-in `positionOf: (int -> int) option`; per-position `{rank=same; ...}` / `{ [same layer] ... }` emission; TikZ switches to `grow=left` when layers are active), `src/FLPQ.Printers/RnglrStepVisualizer.fs` (passes `Some (fun idx -> snd (vertexInfo idx))`), `src/FLPQ.Printers/GllStepVisualizer.fs` + `RsmTikz.fs` (call sites updated to the new signatures / default grow direction), `src/FLPQ.Printers/ExternalTools.fs` (new `compileDotStringToNodePositions`), tests (`GssDotTests`, `ExternalToolsTests`, `RnglrStepVisualizationTests` + golden `rnglr_gss_aaa_last.dot`), docs (`automaton-viz.md`, `rnglr.md`, `external-tools.md`).

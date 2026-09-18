@@ -1,9 +1,11 @@
 module RnglrStepVisualizationTests
 
 open System.IO
+open FSharpPlus.Data
 open Xunit
 open FLPQ.Languages
 open FLPQ.GraphAnalysis
+open FLPQ.LinearAlgebra
 open FLPQ.Printers
 open FLPQ.TestUtilities
 
@@ -239,3 +241,47 @@ let ``RNGLR golden for S->a|SS|SSS input a a a — gss last step`` () =
     let data = renderRnglr tripleA.Rsm [ "a"; "a"; "a" ]
 
     GoldenHelpers.verifyGolden "rnglr_gss_aaa_last.dot" data.GssDots.[data.GssDots.Length - 1]
+
+
+/// Hand-built step: edge (0,1) carries Epsilon + terminal 'a'; edge (1,2) is active but
+/// missing from the edge-symbol map — exercises both arms of the label printers.
+[<Fact>]
+let ``renderStep labels epsilon edges and leaves missing edge symbols empty`` () =
+    let rsm = (LanguageRegistry.findGrammar LanguageRegistry.DoubleA "singleRule").Rsm
+    let freshStart = Nonterminal "S'"
+    let graph = GLL.stringToGraph [ "a" ]
+    let ersm = ExtendedRSM.create freshStart rsm
+    let lrTable = RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
+
+    let step: RnglrParsingStep<string, string> =
+        { ActiveGssVertices = set [ 0; 1 ]
+          ActiveGssEdges = set [ (0, 1); (1, 2) ]
+          ActiveGssEdgeSymbols = Map.ofList [ ((0, 1), NonEmptySet.ofList [ Symbol.Epsilon; Symbol.T(Terminal "a") ]) ]
+          NewGssVertices = set [ 1 ]
+          NewGssEdges = set [ (0, 1) ]
+          PathIndexMatrix = Matrix.create 4 4 (fun _ _ -> Set.empty: Set<PathIndexEntry<string, string>>)
+          ChangedCells = set [ (0, 1) ]
+          InputVertex = 0
+          ActiveShiftTerminals = set [ Terminal "a" ]
+          ActiveReduceNonterminals = set [ Nonterminal "S" ]
+          LevelReductions = Set.empty
+          PassingReductionVertices = Set.empty }
+
+    let pathIndex: PathIndex<string, string> =
+        { Matrix = step.PathIndexMatrix
+          StateCount = 2
+          VertexCount = 2 }
+
+    let vertexInfo (idx: int) = (0, idx % 2)
+
+    let viz =
+        RnglrStepVisualizer.renderStep string string lrTable vertexInfo step pathIndex graph
+
+    // Epsilon symbol appears in both the DOT and TikZ edge labels of edge (0,1);
+    // the TikZ label is math-mode TeX, not escaped literal source (as in RsmTikz).
+    Assert.Contains("ε", viz.GssDot)
+    Assert.Contains("$\\varepsilon$", viz.GssTikz)
+    Assert.DoesNotContain(@"\textbackslash varepsilon", viz.GssTikz)
+
+    // Edge (1,2) has no entry in ActiveGssEdgeSymbols -> empty label.
+    Assert.Contains("v1 -> v2 [label=\"\"];", viz.GssDot)

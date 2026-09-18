@@ -73,3 +73,46 @@ let ``RSM dot highlighted final state keeps double border with lightblue fill`` 
 
         Assert.Contains("peripheries=2", declLine)
         Assert.Contains("fillcolor=lightblue", declLine)
+
+/// Hand-built extended RSM whose flat transition matrix carries an AEpsilon edge
+/// (state 0 -> 1) and whose state 2 belongs to a block nonterminal missing from BlockStart.
+/// The RSM builder never emits epsilon transitions, so this shape is only reachable by hand.
+let private epsExtendedRsm: ExtendedRSM<string, string> =
+    let rsm =
+        RsmFixtures.mkRsm
+            [| { BlockNonterminal = Nonterminal "A"
+                 LocalState = 0
+                 IsFinal = false }
+               { BlockNonterminal = Nonterminal "A"
+                 LocalState = 1
+                 IsFinal = true }
+               { BlockNonterminal = Nonterminal "X"
+                 LocalState = 0
+                 IsFinal = false } |]
+            [ { From = 0
+                Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal "a"))
+                To = 0 }
+              { From = 0
+                Label = AutomatonLabel.AEpsilon
+                To = 1 } ]
+            [ (Nonterminal "A", 0) ]
+            [ 1 ]
+            (Nonterminal "A")
+
+    { OriginalRsm = rsm
+      FreshStart = Nonterminal "S'"
+      ExtendedRsm = rsm }
+
+[<Fact>]
+let ``extendedRsmToDot renders epsilon transitions as dotted edges`` () =
+    let dot = RsmDot.extendedRsmToDot string string epsExtendedRsm None
+    Assert.Contains(@"s0 -> s1 [label=""ε"", style=dotted];", dot)
+
+[<Fact>]
+let ``extendedRsmToDot state whose block is missing from BlockStart is not a start state`` () =
+    let dot = RsmDot.extendedRsmToDot string string epsExtendedRsm None
+
+    let s2Line = dot.Split('\n') |> Array.find (fun l -> l.Trim().StartsWith("s2 ["))
+
+    Assert.DoesNotContain("fillcolor=lightgreen", s2Line)
+    Assert.DoesNotContain("peripheries=2", s2Line)

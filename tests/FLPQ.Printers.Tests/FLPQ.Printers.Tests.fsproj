@@ -16,6 +16,9 @@
     <Compile Include="LRVisualizerTests.fs" />
     <Compile Include="GrammarTeXGoldenTests.fs" />
     <Compile Include="LRTableTeXGoldenTests.fs" />
+    <Compile Include="RnglrTableTexTests.fs" />
+    <Compile Include="ParsingTableTexTests.fs" />
+    <Compile Include="TeXRendererTests.fs" />
     <Compile Include="CykSummaryGoldenTests.fs" />
     <Compile Include="LLStepsGoldenTests.fs" />
     <Compile Include="LRStepsGoldenTests.fs" />
@@ -23,6 +26,7 @@
     <Compile Include="ValiantTraceGoldenTests.fs" />
     <Compile Include="PathIndexTeXTests.fs" />
     <Compile Include="TexCompilationTests.fs" />
+    <Compile Include="SummaryTexSectionTests.fs" />
     <Compile Include="GssDotTests.fs" />
     <Compile Include="GssDotVisualizationTests.fs" />
     <Compile Include="InputGraphDotTests.fs" />

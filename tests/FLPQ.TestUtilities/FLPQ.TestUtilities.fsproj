@@ -11,6 +11,9 @@
     <Compile Include="LanguageRegistry.fs" />
     <Compile Include="TestHelpers.fs" />
     <Compile Include="ParsingTestCases.fs" />
+    <Compile Include="PathIndexFixtures.fs" />
+    <Compile Include="LrConflictFixture.fs" />
+    <Compile Include="RsmFixtures.fs" />
   </ItemGroup>
 
   <ItemGroup>

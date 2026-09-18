@@ -248,6 +248,76 @@ module RnglrPassingReductions =
         let steps = runWithSteps dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
         Assert.True(Set.isEmpty steps.[0].PassingReductionVertices)
 
+    [<Fact>]
+    let ``shift consumes stored states on self-loop input graph`` () =
+        // S -> A B | A S; A -> a E; B -> b E; E -> eps. The LR state reached after A
+        // (S mid-rule plus B, S and A items) shifts 'a' into the in-progress-A state, so a
+        // self-loop on 'a' at vertex 1 re-targets the GSS vertex where the A product BFS
+        // deposited a stored state; the level's shift pass consumes it (Rnglr.fs:327-343).
+        // A path graph can never trigger this: stored states are deposited at earlier
+        // vertices whose shifts already ran, and the driver skips shifts at the last vertex.
+        let rsm = RsmBuilder.buildRSMFromText "S -> A B | A S\nA -> a E\nB -> b E\nE -> eps"
+
+        let graph =
+            let m = Matrix.init 3 3 None
+            m.[0, 1] <- Some "a"
+            m.[1, 2] <- Some "a"
+            m.[1, 1] <- Some "a"
+            Graph.fromEdges [ 0; 1; 2 ] m
+
+        let freshStart = Nonterminal "S'"
+        let ersm = ExtendedRSM.create freshStart rsm
+
+        let steps = Rnglr.buildPathIndexWithSteps freshStart ersm graph |> fun r -> r.Steps
+
+        Assert.True(
+            steps |> List.exists (fun s -> not (Set.isEmpty s.PassingReductionVertices)),
+            "Expected a step with non-empty PassingReductionVertices"
+        )
+
+        // RNGLR and GLL agree on the same input graph; both reject because the input has
+        // no 'b' and S -> A S has no base case.
+        let vc = Graph.vertexCount graph
+
+        let rnglrAccepted =
+            PathIndex.isAccepted (Rnglr.buildPathIndex freshStart ersm graph) ersm vc
+
+        let gllAccepted =
+            PathIndex.isAccepted (GLL.buildPathIndex freshStart ersm graph) ersm vc
+
+        Assert.Equal(gllAccepted, rnglrAccepted)
+        Assert.False(rnglrAccepted)
+
+module RnglrLrTableEdgeCases =
+
+    [<Fact>]
+    let ``buildLR0Table skips dangling nonterminal without a block`` () =
+        // Hand-built RSM: the S block has an N(GHOST) transition but GHOST has no block.
+        // Closure hits the `blockStartStates.TryGetValue -> false` branch (RnglrLR.fs:65).
+        let ntS = Nonterminal "S"
+        let ntGhost = Nonterminal "GHOST"
+
+        let rsm =
+            RsmFixtures.mkRsm
+                [| { BlockNonterminal = ntS
+                     LocalState = 0
+                     IsFinal = false }
+                   { BlockNonterminal = ntS
+                     LocalState = 1
+                     IsFinal = true } |]
+                [ { From = 0
+                    Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm ntGhost)
+                    To = 1 } ]
+                [ (ntS, 0) ]
+                [ 1 ]
+                ntS
+
+        let table = RnglrLR.buildLR0Table rsm
+
+        Assert.Equal(2, Dfa.stateCount table.Automaton)
+        Assert.Equal(1, Map.find (0, ntGhost) table.Goto)
+        Assert.Equal(LRAction.Accept, Map.find (1, Symbol.Epsilon) table.Action)
+
 module RnglrEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =

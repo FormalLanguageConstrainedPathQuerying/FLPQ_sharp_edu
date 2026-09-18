@@ -4,6 +4,7 @@ open System.IO
 open Xunit
 open FLPQ.Cli
 open FLPQ.Cli.Tests
+open FLPQ.TestUtilities
 
 let private baseDir = System.AppContext.BaseDirectory
 
@@ -110,4 +111,21 @@ let ``runLR with CLR1 succeeds`` () =
         |> Array.filter (fun d -> Path.GetFileName(d).StartsWith("step_"))
 
     Assert.NotEmpty(stepDirs)
+    Directory.Delete(outDir, true)
+
+[<Fact>]
+let ``runLR with an unexpected algorithm throws`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    TestHelpers.assertThrows "Unexpected algorithm" (fun () ->
+        LRRunner.runLR (TestGrammarFiles.exampleLRGrammar ()) exampleInput outDir AlgorithmTypes.CYK false
+        |> ignore)
+
+[<Fact>]
+let ``runLR with CLR1 and useDot writes lr_automaton.dot`` () =
+    // Only CLR1 builds an LR1 automaton, exercising the LR1 arm of the dot branch.
+    let outDir = runRunner AlgorithmTypes.CLR1 true
+    let dotPath = Path.Combine(outDir, "lr_automaton.dot")
+    Assert.True(File.Exists dotPath, sprintf "lr_automaton.dot missing in %s" outDir)
+    Assert.True(FileInfo(dotPath).Length > 0L)
     Directory.Delete(outDir, true)

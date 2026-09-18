@@ -341,3 +341,14 @@ module WrapperEquivalenceTests =
                     ntStep.Highlights = sppfStep.Highlights && tablesMatch)
                 trace
                 sppfTrace
+
+
+module CykEdgeTests =
+
+    // Note: Cyk.isAccepted's n=0 branch (Cyk.fs:108) is unreachable through the
+    // public API — parseWithSppfTable guards empty terminals before calling it.
+
+    [<Fact>]
+    let ``CYK parseWithSppfInfo with empty input returns 0x0 matrix`` () =
+        let table = Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 []
+        Assert.Equal(0, Matrix.rows table)
