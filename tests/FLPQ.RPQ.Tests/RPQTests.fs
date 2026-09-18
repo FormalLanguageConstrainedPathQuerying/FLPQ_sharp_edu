@@ -236,6 +236,60 @@ let ``Arroyuelo: nonterminal query yields the zero matrix`` () =
     let result = ArroyueloRPQ.evaluate nfa (Regexp.RNonterm(Nonterminal "X"))
     Assert.False(result.[0, 1])
 
+// --- Branch-coverage edge tests (task 277) ---
+
+[<Fact>]
+let ``Belyanin: graph with vertices but no transitions yields all-false result`` () =
+    let nfa = Nfa.fromTransitions [ 0; 1 ] [] Set.empty (Set.ofArray [| 0 |]) Set.empty
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 [ 1 ]
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.False(result.[0, 0])
+    Assert.False(result.[0, 1])
+
+[<Fact>]
+let ``Belyanin: DFA with no final states yields all-false result`` () =
+    let nfa = nfaWithSources [ { From = 0; Label = "a"; To = 1 } ] [ 0 ]
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 []
+    let result = BelyaninRPQ.evaluate dfa nfa
+    Assert.False(result.[0, 0])
+    Assert.False(result.[0, 1])
+
+[<Fact>]
+let ``GraphReader: whitespace-only lines are ignored`` () =
+    let text = "   \n0 a 1\n\t"
+    let g = GraphReader.parseGraph text
+    Assert.Equal(2, Nfa.stateCount g)
+    Assert.True(Set.ofList [ 0; 1 ] = g.StartStates)
+    Assert.True(g.Transitions.[0, 1].IsSome)
+
+[<Fact>]
+let ``GraphReader: single start vertex on the first line`` () =
+    let text = "1\n0 a 1"
+    let g = GraphReader.parseGraph text
+    Assert.Equal(2, Nfa.stateCount g)
+    Assert.True(Set.ofList [ 1 ] = g.StartStates)
+
+[<Fact>]
+let ``GraphReader: backward edge and non-extending edge`` () =
+    // First edge goes from a higher to a lower vertex (fromV >= toV in the max),
+    // second edge does not extend the maximum vertex seen so far.
+    let text = "2 a 0\n1 b 2"
+    let g = GraphReader.parseGraph text
+    Assert.Equal(3, Nfa.stateCount g)
+    Assert.True(Set.ofList [ 0; 1; 2 ] = g.StartStates)
+    Assert.True(g.Transitions.[2, 0].IsSome)
+    Assert.True(g.Transitions.[1, 2].IsSome)
+
+[<Fact>]
+let ``Kronecker: graph with vertices but no start states yields an empty matrix`` () =
+    let nfa =
+        Nfa.fromTransitions [ 0; 1 ] [ { From = 0; Label = "a"; To = 1 } ] Set.empty Set.empty Set.empty
+
+    let dfa = TestHelpers.buildDfa [ { From = 0; Label = "a"; To = 1 } ] 0 [ 1 ]
+    let result = KroneckerRPQ.evaluate dfa nfa
+    Assert.Equal(0, Matrix.rows result)
+    Assert.Equal(2, Matrix.cols result)
+
 // --- Cross-algorithm property-based tests (task 63, updated for task 64) ---
 
 [<Properties(Arbitrary = [| typeof<RPQGenerators> |])>]

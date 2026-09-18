@@ -6,7 +6,7 @@ Sequence:
   2. Format: dotnet fantomas . --check
   3. Build: dotnet build FLPQ.slnx -c Debug
   4. Tests: dotnet test per project with per-project coverage collection, then merge
-  5. Coverage gate: per-project >= 90% line, total >= 95% line
+  5. Coverage gate: per-project >= 90% line and branch, total >= 95% line and branch
   6. Lint: dotnet-fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
@@ -88,9 +88,29 @@ def detect_changed_projects() -> list[str]:
     return sorted(projects)
 
 
+BRANCH_COVERAGE_RE = re.compile(r"\((\d+)/(\d+)\)")
+
+
+def _gate_status(line_pct: float, branch_pct: float, threshold: float) -> str:
+    """Return PASS or a BLOCKED reason naming the failing metric(s)."""
+    line_fail = line_pct < threshold
+    branch_fail = branch_pct < threshold
+    if line_fail and branch_fail:
+        return f"BLOCKED (line and branch below {threshold:.0f}%)"
+    if line_fail:
+        return f"BLOCKED (line below {threshold:.0f}%)"
+    if branch_fail:
+        return f"BLOCKED (branch below {threshold:.0f}%)"
+    return "PASS"
+
+
 def run_coverage_gate() -> tuple[list[str], list[str], bool]:
-    """Parse coverage data and check thresholds.
-    Returns (per_project_lines, under_threshold_list, total_pass).
+    """Parse line and branch coverage data and check thresholds.
+
+    Line coverage counts `<line>` entries with hits > 0; branch coverage sums
+    the `(n/m)` pair from each line's `condition-coverage` attribute (matching
+    coverlet's package-level branch-rate). Both metrics are gated by the same
+    thresholds. Returns (per_project_lines, under_threshold_list, total_pass).
     """
     source_packages = find_source_packages()
     per_project_lines: list[str] = []
@@ -114,6 +134,8 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
 
     total_covered = 0
     total_valid = 0
+    total_bcovered = 0
+    total_bvalid = 0
     all_ok = True
 
     for pkg in root.findall(".//package"):
@@ -123,48 +145,50 @@ def run_coverage_gate() -> tuple[list[str], list[str], bool]:
 
         pkg_covered = 0
         pkg_valid = 0
+        pkg_bcovered = 0
+        pkg_bvalid = 0
         for cls in pkg.findall(".//class"):
             for line in cls.findall(".//lines/line"):
                 if int(line.attrib.get("hits", 0)) > 0:
                     pkg_covered += 1
                 pkg_valid += 1
+                m = BRANCH_COVERAGE_RE.search(
+                    line.attrib.get("condition-coverage", "")
+                )
+                if m:
+                    pkg_bcovered += int(m.group(1))
+                    pkg_bvalid += int(m.group(2))
 
         total_covered += pkg_covered
         total_valid += pkg_valid
+        total_bcovered += pkg_bcovered
+        total_bvalid += pkg_bvalid
 
-        if pkg_valid > 0:
-            pct = pkg_covered / pkg_valid * 100
-        else:
-            pct = 0.0
+        line_pct = pkg_covered / pkg_valid * 100 if pkg_valid > 0 else 0.0
+        branch_pct = pkg_bcovered / pkg_bvalid * 100 if pkg_bvalid > 0 else 0.0
 
-        status = (
-            "PASS"
-            if pct >= PER_PROJECT_THRESHOLD
-            else f"BLOCKED (below {PER_PROJECT_THRESHOLD:.0f}%)"
-        )
-        if pct < PER_PROJECT_THRESHOLD:
+        status = _gate_status(line_pct, branch_pct, PER_PROJECT_THRESHOLD)
+        if status != "PASS":
             all_ok = False
             under_threshold.append(name)
 
         per_project_lines.append(
-            f"  {name}: {pct:.1f}% ({pkg_covered}/{pkg_valid}) — {status}"
+            f"  {name}: line {line_pct:.1f}% ({pkg_covered}/{pkg_valid}), "
+            f"branch {branch_pct:.1f}% ({pkg_bcovered}/{pkg_bvalid}) — {status}"
         )
 
-    if total_valid > 0:
-        total_pct = total_covered / total_valid * 100
-    else:
-        total_pct = 0.0
-
-    total_status = (
-        "PASS"
-        if total_pct >= TOTAL_THRESHOLD
-        else f"BLOCKED (below {TOTAL_THRESHOLD:.0f}%)"
+    total_line_pct = total_covered / total_valid * 100 if total_valid > 0 else 0.0
+    total_branch_pct = (
+        total_bcovered / total_bvalid * 100 if total_bvalid > 0 else 0.0
     )
-    if total_pct < TOTAL_THRESHOLD:
+
+    total_status = _gate_status(total_line_pct, total_branch_pct, TOTAL_THRESHOLD)
+    if total_status != "PASS":
         all_ok = False
 
     per_project_lines.append(
-        f"  TOTAL: {total_pct:.1f}% ({total_covered}/{total_valid}) "
+        f"  TOTAL: line {total_line_pct:.1f}% ({total_covered}/{total_valid}), "
+        f"branch {total_branch_pct:.1f}% ({total_bcovered}/{total_bvalid}) "
         f"(threshold {TOTAL_THRESHOLD:.0f}%) — {total_status}"
     )
 

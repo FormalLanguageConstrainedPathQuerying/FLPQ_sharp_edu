@@ -144,7 +144,7 @@ Times are baseline estimates for the current codebase and will grow as the proje
 | 2. Format | `dotnet fantomas . --check` | Negligible |
 | 3. Build | `dotnet build FLPQ.slnx` | Builds all projects |
 | 4. Tests | Per-project `dotnet test` with coverage | Printers.Tests is the slowest (TeX compilation) |
-| 5. Coverage | Per-project + total threshold check | Negligible |
+| 5. Coverage | Per-project + total line and branch threshold check | Negligible |
 | 6. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects |
 
 ### File Structure of `tmp/hard-gate.txt`

@@ -82,7 +82,8 @@ Full quality gate for task verification: markdown format → format → build �
 3. Build: `dotnet build FLPQ.slnx -c Debug`
 4. Tests: `dotnet dotnet-coverage collect dotnet test <project> -o tmp/coverage_<project>.cobertura -f cobertura --nologo` for each test project (discovered dynamically via `find_test_packages()`). After all projects, merge coverage files: `dotnet dotnet-coverage merge tmp/coverage_*.cobertura -o tmp/coverage.cobertura -f cobertura` and clean up per-project files.
 5. Coverage gate: parse `tmp/coverage.cobertura` XML
-   - Per-project and total line-coverage thresholds are defined in `hard_gate.py` (`PER_PROJECT_THRESHOLD`, `TOTAL_THRESHOLD`) — the tool is the source of truth for the numbers
+   - Line coverage counts `<line>` entries with `hits > 0`; branch coverage sums the `(n/m)` pair from each line's `condition-coverage` attribute (matches coverlet's package-level `branch-rate`)
+   - Both metrics are gated: per-project and total thresholds are defined in `hard_gate.py` (`PER_PROJECT_THRESHOLD`, `TOTAL_THRESHOLD`) — the tool is the source of truth for the numbers
    - Filters to FLPQ source packages only (excludes `*.Tests` and `FLPQ.TestUtilities`)
 6. Lint: `dotnet-fsharplint lint` on each project with modified `.fs` files (detected via `detect_changes.py` logic). Uses `DOTNET_ROOT` from environment or `/usr/lib/dotnet`. If no `.fs` files changed, lint is skipped (not counted as a step).
 
@@ -144,8 +145,8 @@ Step 4-9/12 (Tests):
   Step 9/12 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
   Test gate: PASS
 Step 10/12 (Coverage):
-  FLPQ.Languages: 96.8% (4718/4874) — PASS
-  TOTAL: 97.6% (8181/8380) (threshold 95%) — PASS
+  FLPQ.Languages: line 96.8% (4718/4874), branch 95.1% (1930/2030) — PASS
+  TOTAL: line 97.6% (8181/8380), branch 96.2% (3820/3970) (threshold 95%) — PASS
   Coverage gate: PASS
 Step 11-12/12 (Lint):
   Step 11/12 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS
@@ -171,8 +172,8 @@ Step 4-9/10 (Tests):
   Step 9/10 FLPQ.RPQ.Tests: OK (0 failed, 0 skipped)
   Test gate: PASS
 Step 10/10 (Coverage):
-  FLPQ.Languages: 96.8% (4718/4874) — PASS
-  TOTAL: 97.6% (8181/8380) (threshold 95%) — PASS
+  FLPQ.Languages: line 96.8% (4718/4874), branch 95.1% (1930/2030) — PASS
+  TOTAL: line 97.6% (8181/8380), branch 96.2% (3820/3970) (threshold 95%) — PASS
   Coverage gate: PASS
 Lint: SKIP (no changed .fs files)
 
@@ -194,9 +195,9 @@ Step 4-9/12 (Tests):
   ...
   Test gate: PASS
 Step 10/12 (Coverage):
-  FLPQ.Languages: 91.2% (4444/4874) — PASS
-  FLPQ.Cli: 55.0% (438/796) — BLOCKED (below 90%)
-  TOTAL: 88.4% (7408/8380) (threshold 95%) — BLOCKED (below 95%)
+  FLPQ.Languages: line 91.2% (4444/4874), branch 93.4% (1896/2030) — PASS
+  FLPQ.Cli: line 55.0% (438/796), branch 82.1% (128/156) — BLOCKED (line and branch below 90%)
+  TOTAL: line 88.4% (7408/8380), branch 91.0% (3612/3970) (threshold 95%) — BLOCKED (line and branch below 95%)
   Coverage gate: BLOCKED
 Step 11-12/12 (Lint):
   Step 11/12 src/FLPQ.Languages/FLPQ.Languages.fsproj: 0 warnings — PASS

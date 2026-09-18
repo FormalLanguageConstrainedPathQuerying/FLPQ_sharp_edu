@@ -1,12 +1,17 @@
+// The runner prints its status line to the process-global Console.Out; both
+// capturing test modules share this collection so their Console.SetOut calls
+// never interleave.
+[<Xunit.Collection("ConsoleCapture")>]
 module GllRunnerTests
 
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 
 let private baseDir = System.AppContext.BaseDirectory
 
-let private runGllRunner (grammarText: string) (inputText: string) : string =
+let private runGllRunner (grammarText: string) (inputText: string) : string * string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
     let inputFile = Path.Combine(tmpDir, "input.txt")
@@ -14,8 +19,11 @@ let private runGllRunner (grammarText: string) (inputText: string) : string =
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    GllRunner.runGll grammarFile inputFile outDir true
-    outDir
+
+    let output =
+        RunnerTestHelpers.withCapturedOutput (fun () -> GllRunner.runGll grammarFile inputFile outDir true)
+
+    outDir, output
 
 let private cleanup (outDir: string) =
     let parent = Path.GetDirectoryName(outDir)
@@ -27,7 +35,7 @@ let private cleanup (outDir: string) =
 
 [<Fact>]
 let ``runGll produces grammar_original.tex`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "grammar_original.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -35,7 +43,7 @@ let ``runGll produces grammar_original.tex`` () =
 
 [<Fact>]
 let ``runGll produces grammar_ebnf.tex`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "grammar_ebnf.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -43,7 +51,7 @@ let ``runGll produces grammar_ebnf.tex`` () =
 
 [<Fact>]
 let ``runGll produces input.dot`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "input.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -51,7 +59,7 @@ let ``runGll produces input.dot`` () =
 
 [<Fact>]
 let ``runGll produces rsm_blocks.dot`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "rsm_blocks.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -59,7 +67,7 @@ let ``runGll produces rsm_blocks.dot`` () =
 
 [<Fact>]
 let ``runGll produces path_index.tex`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "path_index.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -67,7 +75,7 @@ let ``runGll produces path_index.tex`` () =
 
 [<Fact>]
 let ``runGll produces sppf.dot`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -75,7 +83,7 @@ let ``runGll produces sppf.dot`` () =
 
 [<Fact>]
 let ``runGll handles ambiguous grammar with S -> S S production`` () =
-    let outDir = runGllRunner "S -> a S b | S S | eps" "a b"
+    let (outDir, _) = runGllRunner "S -> a S b | S S | eps" "a b"
     let f = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -83,7 +91,7 @@ let ``runGll handles ambiguous grammar with S -> S S production`` () =
 
 [<Fact>]
 let ``runGll produces step visualization with descriptors table`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
     let step0Dir = Path.Combine(outDir, "step_0")
 
     Assert.True(File.Exists(Path.Combine(step0Dir, "queue.tex")))
@@ -99,7 +107,7 @@ let ``runGll produces step visualization with descriptors table`` () =
 
 [<Fact>]
 let ``runGll step 0 GSS dot has no highlighted vertex`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
     let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
 
     if File.Exists gssDot then
@@ -111,7 +119,7 @@ let ``runGll step 0 GSS dot has no highlighted vertex`` () =
 
 [<Fact>]
 let ``runGll step 0 descriptors table has no highlighted row`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
     let table = Path.Combine(outDir, "step_0", "descriptors_table.tex")
 
     if File.Exists table then
@@ -122,7 +130,7 @@ let ``runGll step 0 descriptors table has no highlighted row`` () =
 
 [<Fact>]
 let ``runGll step 0 input DOT has no highlighted vertex`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
     let inputDot = Path.Combine(outDir, "step_0", "input.dot")
 
     if File.Exists inputDot then
@@ -133,7 +141,7 @@ let ``runGll step 0 input DOT has no highlighted vertex`` () =
 
 [<Fact>]
 let ``runGll non-init step GSS dot has current vertex highlighted`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let stepName = System.IO.Path.GetFileName(stepDir)
@@ -155,7 +163,7 @@ let ``runGll non-init step GSS dot has current vertex highlighted`` () =
 
 [<Fact>]
 let ``runGll non-init step descriptors table has current descriptor highlighted`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let stepName = System.IO.Path.GetFileName(stepDir)
@@ -177,7 +185,7 @@ let ``runGll non-init step descriptors table has current descriptor highlighted`
 
 [<Fact>]
 let ``runGll non-init step input DOT has current vertex highlighted`` () =
-    let outDir = runGllRunner "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunner "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let stepName = System.IO.Path.GetFileName(stepDir)
@@ -203,7 +211,7 @@ let private reentryGrammar = "S -> A | B\nA -> a\nB -> C\nC -> A"
 
 [<Fact>]
 let ``runGll stored-pops step highlights GSS vertex orange (dot mode)`` () =
-    let outDir = runGllRunner reentryGrammar "a"
+    let (outDir, _) = runGllRunner reentryGrammar "a"
 
     let mutable foundOrange = false
 
@@ -224,7 +232,7 @@ let ``runGll stored-pops step highlights GSS vertex orange (dot mode)`` () =
 
 [<Fact>]
 let ``runGll stored-pops step 0 has no orange highlight (dot mode)`` () =
-    let outDir = runGllRunner reentryGrammar "a"
+    let (outDir, _) = runGllRunner reentryGrammar "a"
     let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
 
     if File.Exists gssDot then
@@ -236,7 +244,7 @@ let ``runGll stored-pops step 0 has no orange highlight (dot mode)`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``runGll input DOT compiles with graphviz`` () =
-    let outDir = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
 
     let checkInputDot path =
         let content = File.ReadAllText path
@@ -252,7 +260,7 @@ let ``runGll input DOT compiles with graphviz`` () =
 
     cleanup outDir
 
-let private runGllRunnerTikz (grammarText: string) (inputText: string) : string =
+let private runGllRunnerTikz (grammarText: string) (inputText: string) : string * string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
     let inputFile = Path.Combine(tmpDir, "input.txt")
@@ -260,12 +268,15 @@ let private runGllRunnerTikz (grammarText: string) (inputText: string) : string 
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    GllRunner.runGll grammarFile inputFile outDir false
-    outDir
+
+    let output =
+        RunnerTestHelpers.withCapturedOutput (fun () -> GllRunner.runGll grammarFile inputFile outDir false)
+
+    outDir, output
 
 [<Fact>]
 let ``runGll stored-pops step highlights GSS vertex orange (tikz mode)`` () =
-    let outDir = runGllRunnerTikz reentryGrammar "a"
+    let (outDir, _) = runGllRunnerTikz reentryGrammar "a"
 
     let mutable foundOrange = false
 
@@ -286,7 +297,7 @@ let ``runGll stored-pops step highlights GSS vertex orange (tikz mode)`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces input.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -294,7 +305,7 @@ let ``runGll tikz mode produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces ext_rsm.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -302,7 +313,7 @@ let ``runGll tikz mode produces ext_rsm.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces sppf.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "sppf.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -310,7 +321,7 @@ let ``runGll tikz mode produces sppf.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces gss.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "step_0", "gss.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -318,7 +329,7 @@ let ``runGll tikz mode step 0 produces gss.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces input.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -326,7 +337,7 @@ let ``runGll tikz mode step 0 produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces rsm.tikz.tex`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "step_0", "rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -334,7 +345,7 @@ let ``runGll tikz mode step 0 produces rsm.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 gss tikz has no highlighted vertex`` () =
-    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
     let gssTikz = Path.Combine(outDir, "step_0", "gss.tikz.tex")
 
     if File.Exists gssTikz then
@@ -346,7 +357,7 @@ let ``runGll tikz mode step 0 gss tikz has no highlighted vertex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 input tikz has no highlighted vertex`` () =
-    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
     let inputTikz = Path.Combine(outDir, "step_0", "input.tikz.tex")
 
     if File.Exists inputTikz then
@@ -357,7 +368,7 @@ let ``runGll tikz mode step 0 input tikz has no highlighted vertex`` () =
 
 [<Fact>]
 let ``runGll tikz mode non-init step gss tikz has current vertex highlighted`` () =
-    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let stepName = System.IO.Path.GetFileName(stepDir)
@@ -379,7 +390,7 @@ let ``runGll tikz mode non-init step gss tikz has current vertex highlighted`` (
 
 [<Fact>]
 let ``runGll tikz mode non-init step input tikz has current vertex highlighted`` () =
-    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let stepName = System.IO.Path.GetFileName(stepDir)
@@ -401,7 +412,7 @@ let ``runGll tikz mode non-init step input tikz has current vertex highlighted``
 
 [<Fact>]
 let ``runGll tikz mode gss uses rounded rectangle shape`` () =
-    let outDir = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
+    let (outDir, _) = runGllRunnerTikz "S -> a | S S | S S S" "a a a"
 
     for stepDir in Directory.GetDirectories(outDir, "step_*") do
         let gssTikz = Path.Combine(stepDir, "gss.tikz.tex")
@@ -414,7 +425,7 @@ let ``runGll tikz mode gss uses rounded rectangle shape`` () =
 
 [<Fact>]
 let ``runGll tikz mode gss edges use R-based range notation`` () =
-    let outDir = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
 
     let mutable foundEdges = false
 
@@ -432,5 +443,13 @@ let ``runGll tikz mode gss edges use R-based range notation`` () =
                     foundEdges <- true
 
     Assert.True(foundEdges, "Expected R-based range notation R^{...}_{...} on GSS edges")
+
+    cleanup outDir
+
+[<Fact>]
+let ``runGll reports Rejected status for unbalanced input`` () =
+    let (outDir, output) = runGllRunner "S -> a S b | eps" "a a a"
+
+    Assert.Contains("GLL: Rejected", output)
 
     cleanup outDir

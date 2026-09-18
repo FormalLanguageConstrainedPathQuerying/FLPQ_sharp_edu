@@ -1,5 +1,26 @@
 # Code Review Report
 
+## Task 277 Review (2026-09-18)
+
+Scope: `tools/hard_gate.py` (S1 — branch-coverage parsing via each line's `condition-coverage="(n/m)"`, new `_gate_status` helper gating line and branch per project and total), `tests/FLPQ.Cli.Tests/` (S2 — new `RunnerTestHelpers.withCapturedOutput` stdout-capture helper, the four runner helpers now return `(outDir, capturedOutput)`, two new Rejected-status facts, shared `[<Xunit.Collection("ConsoleCapture")>]`), `tests/FLPQ.RPQ.Tests/RPQTests.fs` (S3 — six edge-case facts for Belyanin/GraphReader/Kronecker), and docs (`docs/developer/guides/tools.md` step-5 description + three example outputs, `.opencode/skills/quality-gates/SKILL.md` coverage row).
+
+**Findings resolved this review:** none. A full pass over the changed surface (tool, both test modules, docs) found zero problems against the constraint sources; no fix commit was required.
+
+**Verified:** hard gate `STATUS: PASS` (all 12 steps) — build 0 errors; all six test projects 0 failed / 0 skipped; coverage gate PASS on every project for both line and branch (FLPQ.RPQ branch 90.2% (184/204), FLPQ.Cli branch 92.3% (144/156), TOTAL line 98.6% / branch 96.6% (3864/4000)); FSharpLint 0 warnings on the two changed test projects; Fantomas clean; mdformat clean.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — the runner helpers' new return type is a 2-item tuple `string * string` (outDir, captured output); no larger tuples introduced.
+- §6 (doc comments) — the new public helper `RunnerTestHelpers.withCapturedOutput` carries an XML doc comment; the per-module runner helpers remain `private` (consistent with the files' existing convention).
+- §13 (no duplication) — stdout capture exists only in `withCapturedOutput` and is reused by all four runner helpers; no temp-dir or capture logic is duplicated. The four per-module runner helpers differ only in the runner function and dot/tikz flag and write arbitrary grammar text, so they correctly do not collapse into `runWithInput` (which is fixed to the example grammar).
+- §15/§16 (test fidelity / Fact vs Property) — every new test asserts a real property: the two Rejected facts assert the exact status substring (`GLL: Rejected` / `RNGLR: Rejected`) in captured output; the six RPQ facts assert concrete matrix values, state counts, start-state sets, transition presence, and matrix dimensions. All are deterministic `[<Fact>]` with hardcoded inputs (no FsCheck), which is correct for edge-case branch coverage.
+- §19 (test coverage) — unchanged: no new src module; the branch-coverage task adds tests only.
+- §20 (documentation) — `tools.md` step-5 description and all three example outputs are arithmetically consistent (each percentage matches its fraction) and match `hard_gate.py`'s actual output format, including the `_gate_status` BLOCKED-reason wording ("line and branch below N%").
+
+**No blocking findings.** No open items carried over from prior reports.
+
+---
+
 ## Task 276 Review (2026-09-18)
 
 Scope: full branch diff vs dev — coverage tests S1–S10 across all six test projects plus `FLPQ.TestUtilities` (new `LrConflictFixture`, `RsmFixtures`, `withTempDir` helper, registry additions), `tools/hard_gate.py` (line-coverage thresholds 85/90 → 90/95), `docs/developer/guides/tools.md` (example outputs), and one src fix in `src/FLPQ.Printers/RnglrStepVisualizer.fs` (epsilon edge-label escaping).

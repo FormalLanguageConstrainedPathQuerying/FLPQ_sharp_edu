@@ -17,3 +17,17 @@ module RunnerTestHelpers =
         File.WriteAllText(inputFile, inputText)
         runner (TestGrammarFiles.exampleGrammar ()) inputFile outDir false noSppfTable
         outDir
+
+    /// Run action with Console.Out redirected to a string writer (restored in finally)
+    /// and return the captured output. Used to assert on the runner's status line.
+    let withCapturedOutput (action: unit -> unit) : string =
+        let writer = new System.IO.StringWriter()
+        let originalOut = System.Console.Out
+        System.Console.SetOut writer
+
+        try
+            action ()
+        finally
+            System.Console.SetOut originalOut
+
+        writer.ToString()

@@ -1,11 +1,15 @@
+// Shares the ConsoleCapture collection with GllRunnerTests so the two modules'
+// Console.SetOut calls never interleave (Console.Out is process-global).
+[<Xunit.Collection("ConsoleCapture")>]
 module RnglrRunnerTests
 
 open System.IO
 open Xunit
 open FLPQ.Cli
+open FLPQ.Cli.Tests
 open FLPQ.TestUtilities
 
-let private runRnglrRunner (grammarText: string) (inputText: string) : string =
+let private runRnglrRunner (grammarText: string) (inputText: string) : string * string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
     let inputFile = Path.Combine(tmpDir, "input.txt")
@@ -13,8 +17,11 @@ let private runRnglrRunner (grammarText: string) (inputText: string) : string =
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    RnglrRunner.runRnglr grammarFile inputFile outDir true
-    outDir
+
+    let output =
+        RunnerTestHelpers.withCapturedOutput (fun () -> RnglrRunner.runRnglr grammarFile inputFile outDir true)
+
+    outDir, output
 
 let private cleanup (outDir: string) =
     let parent = Path.GetDirectoryName(outDir)
@@ -26,7 +33,7 @@ let private cleanup (outDir: string) =
 
 [<Fact>]
 let ``runRnglr produces grammar_ebnf.tex`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "grammar_ebnf.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -34,7 +41,7 @@ let ``runRnglr produces grammar_ebnf.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces input.tex`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "input.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -42,7 +49,7 @@ let ``runRnglr produces input.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces rnglr_table.tex`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "rnglr_table.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -50,7 +57,7 @@ let ``runRnglr produces rnglr_table.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces rsm_blocks.dot`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "rsm_blocks.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -58,7 +65,7 @@ let ``runRnglr produces rsm_blocks.dot`` () =
 
 [<Fact>]
 let ``runRnglr produces path_index.tex`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "path_index.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -66,7 +73,7 @@ let ``runRnglr produces path_index.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces sppf.dot`` () =
-    let outDir = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -74,7 +81,7 @@ let ``runRnglr produces sppf.dot`` () =
 
 [<Fact>]
 let ``runRnglr produces step visualization files`` () =
-    let outDir = runRnglrRunner "S -> a a" "a a"
+    let (outDir, _) = runRnglrRunner "S -> a a" "a a"
     let step0Dir = Path.Combine(outDir, "step_0")
 
     let expected = [ "gss.dot"; "path_index.tex"; "input.dot"; "lr_table.tex" ]
@@ -86,7 +93,7 @@ let ``runRnglr produces step visualization files`` () =
 
     cleanup outDir
 
-let private runRnglrRunnerTikz (grammarText: string) (inputText: string) : string =
+let private runRnglrRunnerTikz (grammarText: string) (inputText: string) : string * string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
     let inputFile = Path.Combine(tmpDir, "input.txt")
@@ -94,12 +101,15 @@ let private runRnglrRunnerTikz (grammarText: string) (inputText: string) : strin
     Directory.CreateDirectory(tmpDir) |> ignore
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
-    RnglrRunner.runRnglr grammarFile inputFile outDir false
-    outDir
+
+    let output =
+        RunnerTestHelpers.withCapturedOutput (fun () -> RnglrRunner.runRnglr grammarFile inputFile outDir false)
+
+    outDir, output
 
 [<Fact>]
 let ``runRnglr tikz mode produces input.tikz.tex`` () =
-    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -107,7 +117,7 @@ let ``runRnglr tikz mode produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
-    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -115,7 +125,7 @@ let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode produces sppf.tikz.tex`` () =
-    let outDir = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "sppf.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -123,7 +133,7 @@ let ``runRnglr tikz mode produces sppf.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode step 0 produces gss.tikz.tex`` () =
-    let outDir = runRnglrRunnerTikz "S -> a a" "a a"
+    let (outDir, _) = runRnglrRunnerTikz "S -> a a" "a a"
     let f = Path.Combine(outDir, "step_0", "gss.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -131,7 +141,7 @@ let ``runRnglr tikz mode step 0 produces gss.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode step 0 produces input.tikz.tex`` () =
-    let outDir = runRnglrRunnerTikz "S -> a a" "a a"
+    let (outDir, _) = runRnglrRunnerTikz "S -> a a" "a a"
     let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -147,7 +157,7 @@ let private passingReductionInput = "a b"
 
 [<Fact>]
 let ``runRnglr passing-reductions step highlights GSS vertex orange (dot mode)`` () =
-    let outDir = runRnglrRunner passingReductionGrammar passingReductionInput
+    let (outDir, _) = runRnglrRunner passingReductionGrammar passingReductionInput
 
     let mutable foundOrange = false
 
@@ -168,7 +178,7 @@ let ``runRnglr passing-reductions step highlights GSS vertex orange (dot mode)``
 
 [<Fact>]
 let ``runRnglr passing-reductions step 0 has no orange highlight (dot mode)`` () =
-    let outDir = runRnglrRunner passingReductionGrammar passingReductionInput
+    let (outDir, _) = runRnglrRunner passingReductionGrammar passingReductionInput
     let gssDot = Path.Combine(outDir, "step_0", "gss.dot")
 
     if File.Exists gssDot then
@@ -179,7 +189,7 @@ let ``runRnglr passing-reductions step 0 has no orange highlight (dot mode)`` ()
 
 [<Fact>]
 let ``runRnglr passing-reductions step highlights GSS vertex orange (tikz mode)`` () =
-    let outDir = runRnglrRunnerTikz passingReductionGrammar passingReductionInput
+    let (outDir, _) = runRnglrRunnerTikz passingReductionGrammar passingReductionInput
 
     let mutable foundOrange = false
 
@@ -195,5 +205,13 @@ let ``runRnglr passing-reductions step highlights GSS vertex orange (tikz mode)`
                 foundOrange <- foundOrange || content.Contains("fill=orange!30")
 
     Assert.True(foundOrange, "Expected at least one non-init step to highlight a passing-reduction GSS vertex orange")
+
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr reports Rejected status for unbalanced input`` () =
+    let (outDir, output) = runRnglrRunner "S -> a S b | eps" "a a a"
+
+    Assert.Contains("RNGLR: Rejected", output)
 
     cleanup outDir
