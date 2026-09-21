@@ -1,5 +1,30 @@
 # Code Review Report
 
+## Task 278 Review (2026-09-21)
+
+Scope: full branch diff vs dev — `src/FLPQ.Languages/Rnglr.fs` + `RnglrTypes.fs` (per-action substep emission, `RnglrAction`, `triggerLrState` threaded through stored states and `PredecessorInfo`), `src/FLPQ.Printers/RnglrTableTeX.fs` (single-action cell highlight API replacing the multi-cell one) + `RnglrStepVisualizer.fs` (`renderStep` switches on `step.Action`), tests (`RnglrSubsteps` module, visualizer substep facts, new golden `rnglr_lr_table_substep_shift.tex`, regenerated `rnglr_gss_aaa_last.dot`, shared `GoldenHelpers.countOccurrences`), and `docs/developer/rnglr.md`.
+
+**Findings resolved this review:**
+
+- §4 (tuples ≤ 2) — FSharpLint FL0051 on five 3-item tuple expressions in test code: `RnglrTests.fs` `runWithSteps` return value and the three `cases` entries now use private structs `RnglrRun { Result; Ers; Graph }` and `SubstepCase { Name; Rsm; Input }`; `RnglrStepVisualizationTests.fs` reduce-fact extraction now uses private struct `ReduceCells { Nt; TriggerLrState; GotoLrState }`.
+- §23 (naming/idiom) — FSharpLint FL0034 on two redundant lambdas: `Rnglr.fs` `(fun step -> steps.Add step)` → `steps.Add`; `RnglrTests.fs` `Matrix.fold (fun acc cellEqual -> acc && cellEqual) true` → `Matrix.fold ((&&)) true`.
+
+**Verified:** build 0 errors; full suites 626 Languages + 268 Printers passed / 0 failed / 0 skipped; FSharpLint 0 warnings on all four touched projects (`FLPQ.Languages`, `FLPQ.Printers`, `FLPQ.Languages.Tests`, `FLPQ.Printers.Tests` — linted with `.fsproj` arguments, since directory arguments make fsharplint analyze a vacuous `<inline source>`); Fantomas clean; mdformat clean.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — the `StoredStates` 5-item tuple (`Nonterminal * int * int * int * int`) is a type annotation inside `Set<...>`, not a tuple expression; FSharpLint does not flag it and the element order is documented at the type site and in `docs/developer/rnglr.md`. All new tuple *expressions* are ≤ 2 items.
+- §6 (doc comments) — all new public API carries XML docs: `RnglrAction`, `tableToTeXWithActionHighlight` / `...TabularOnly`; the changed `RnglrParsingStep` / `RnglrResult` / `RnglrGSS` docs were updated to the substep semantics. Test-local helpers follow each file's existing convention (doc-less in `GoldenHelpers.fs`, doc-commented in `RnglrTests.fs`).
+- §13 (no duplication) — the old multi-cell highlight tabular builder was deleted, not kept alongside the new one; `buildTabular` now delegates to `buildTabularCore` with an empty highlight set. `countOccurrences` moved from a test-local copy into shared `GoldenHelpers` and is reused by both RNGLR test modules.
+- §15/§16 (test fidelity) — every new fact asserts concrete structure: exact action sequences, per-substep cell counts (`Assert.Equal(1, ...)` / `Assert.Equal(2, ...)`), row/column localization of each highlighted cell via parsed tabular rows, and path-index equality with the step-less `buildPathIndex`. All deterministic `[<Fact>]` with registry grammars — no FsCheck needed.
+- §14 (language registry) — all new test inputs come from registry grammars (DoubleA, APlus `ambiguousWithSingleRule`, Dyck1); no hardcoded RSMs.
+- §20 (documentation) — `docs/developer/rnglr.md` abstract, algorithm emission rule, `RnglrAction` section, type docs, and three new design-decision rows (per-action substeps, `triggerLrState` in stored states, epsilon-only-change non-emission) all match the implemented behavior.
+- §21 (book traceability) — `sec:CFPQ_RNGLR` references retained on `RnglrAction`, `buildPathIndexWithSteps`, and the emission logic; the passing-reduction trigger keeps its `sec:CFPQ_GLR` reference.
+
+**No blocking findings.** No open items carried over from prior reports.
+
+---
+
 ## Task 277 Review (2026-09-18)
 
 Scope: `tools/hard_gate.py` (S1 — branch-coverage parsing via each line's `condition-coverage="(n/m)"`, new `_gate_status` helper gating line and branch per project and total), `tests/FLPQ.Cli.Tests/` (S2 — new `RunnerTestHelpers.withCapturedOutput` stdout-capture helper, the four runner helpers now return `(outDir, capturedOutput)`, two new Rejected-status facts, shared `[<Xunit.Collection("ConsoleCapture")>]`), `tests/FLPQ.RPQ.Tests/RPQTests.fs` (S3 — six edge-case facts for Belyanin/GraphReader/Kronecker), and docs (`docs/developer/guides/tools.md` step-5 description + three example outputs, `.opencode/skills/quality-gates/SKILL.md` coverage row).

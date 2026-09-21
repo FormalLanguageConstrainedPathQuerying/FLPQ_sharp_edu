@@ -13,6 +13,9 @@ let stripQuotes (s: string) =
     else
         s.Replace("\\\"", "\"")
 
+let countOccurrences (haystack: string) (needle: string) : int =
+    haystack.Split(needle, System.StringSplitOptions.None).Length - 1
+
 let vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
 
 let edgeLabelRegex = Regex(@"^\d+,\d+ → \d+,\d+$")

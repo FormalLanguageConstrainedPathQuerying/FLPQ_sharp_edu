@@ -31,9 +31,11 @@ type RnglrGssEdge<'t, 'nt> = { EdgeSymbol: Symbol<'t, 'nt> }
 /// Vertices are created lazily on-demand with sequential IDs (0, 1, 2, ...).
 /// Edges carry the recognized grammar symbol.
 /// storedStates[gssIdx] holds cached intermediate automaton intersection states:
-/// Set of (nonterminal, invState, rangeEndState, rangeEndVertex) tuples for the product construction.
-/// rangeEndState and rangeEndVertex identify the block's final state and its vertex position,
-/// propagated through the BFS to enable correct PIntermediate entry placement at each step.
+/// Set of (nonterminal, invState, rangeEndState, rangeEndVertex, triggerLrState) tuples for the
+/// product construction. rangeEndState and rangeEndVertex identify the block's final state and its
+/// vertex position, propagated through the BFS to enable correct PIntermediate entry placement at
+/// each step. triggerLrState is the LR state that originally triggered the reduction (the row of
+/// the r_A action cell), carried through passing-reduction cascades so each substep can report it.
 /// When a shift creates a new edge from a GSS vertex, its storedStates are consumed and
 /// each tuple is continued via product BFS through the inverted RSM block of nt.
 /// Book reference: sec:CFPQ_RNGLR.
@@ -41,7 +43,7 @@ type RnglrGSS<'t, 'nt when 't: comparison and 'nt: comparison> =
     { VertexLookup: Dictionary<int * int, int>
       VertexInfo: ResizeArray<int * int>
       Edges: Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int>> }
+      StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int * int>> }
 
 module RnglrGSS =
 
@@ -50,7 +52,7 @@ module RnglrGSS =
         { VertexLookup = Dictionary<int * int, int>()
           VertexInfo = ResizeArray<int * int>()
           Edges = Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>()
-          StoredStates = Dictionary<int, Set<Nonterminal<'nt> * int * int * int>>() }
+          StoredStates = Dictionary<int, Set<Nonterminal<'nt> * int * int * int * int>>() }
 
     /// Returns the GSS vertex ID for (lrState, inputVertex), creating it if it does not exist.
     let getOrCreateVertex (gss: RnglrGSS<'t, 'nt>) (lrState: int) (inputVertex: int) : int =
@@ -82,7 +84,7 @@ module RnglrGSS =
         (fromIdx: int)
         (toIdx: int)
         (label: Symbol<'t, 'nt>)
-        : Set<Nonterminal<'nt> * int * int * int> =
+        : Set<Nonterminal<'nt> * int * int * int * int> =
         let edge = { EdgeSymbol = label }
 
         let targets =
@@ -110,7 +112,7 @@ module RnglrGSS =
         states
 
     /// Returns the stored intermediate intersection states for a GSS vertex without clearing them.
-    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int * int * int> =
+    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int * int * int * int> =
         match gss.StoredStates.TryGetValue(gssIdx) with
         | true, s -> s
         | false, _ -> Set.empty
@@ -119,7 +121,7 @@ module RnglrGSS =
     let setStoredStates
         (gss: RnglrGSS<'t, 'nt>)
         (gssIdx: int)
-        (states: Set<Nonterminal<'nt> * int * int * int>)
+        (states: Set<Nonterminal<'nt> * int * int * int * int>)
         : unit =
         gss.StoredStates.[gssIdx] <- states
 
@@ -132,9 +134,19 @@ module RnglrGSS =
                       (kv.Key, edge.EdgeSymbol) ]
         | false, _ -> []
 
-/// A single step snapshot during RNGLR execution.
-/// One step per input position (level): captures the active GSS elements after the level
-/// stabilizes, the path index state, and the shift/reduce activity accumulated over the level.
+/// A single RNGLR action — one visualization substep: exactly one reduce or one shift.
+/// Reduce: (reduced nonterminal, LR state holding the complete item, predecessor LR state
+/// whose Goto is applied for this edge). Shift: (shifted terminal, source LR state).
+/// Book reference: sec:CFPQ_RNGLR.
+[<RequireQualifiedAccess>]
+type RnglrAction<'t, 'nt when 't: comparison and 'nt: comparison> =
+    | Reduce of nt: Nonterminal<'nt> * triggerLrState: int * gotoLrState: int
+    | Shift of terminal: Terminal<'t> * lrState: int
+
+/// A single substep snapshot during RNGLR execution.
+/// One snapshot after exactly one action (one reduce or one shift — one new GSS edge), plus the
+/// initial state (Action = None). NewGssVertices / NewGssEdges differ against the previous
+/// substep; PassingReductionVertices accumulate over this substep only.
 type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
     {
         ActiveGssVertices: Set<int>
@@ -145,15 +157,15 @@ type RnglrParsingStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         PathIndexMatrix: Matrix<Set<PathIndexEntry<'t, 'nt>>>
         ChangedCells: Set<int * int>
         InputVertex: int
-        ActiveShiftTerminals: Set<Terminal<'t>>
-        ActiveReduceNonterminals: Set<Nonterminal<'nt>>
-        LevelReductions: Set<Nonterminal<'nt>>
-        /// GSS vertices (indices) at which passing-reduction handling triggered during this step:
-        /// a new GSS edge was added from the vertex and its stored states were non-empty.
+        /// The action this substep visualizes (None for the initial state).
+        Action: RnglrAction<'t, 'nt> option
+        /// GSS vertices (indices) at which passing-reduction handling triggered during this
+        /// substep: a new GSS edge was added from the vertex and its stored states were non-empty.
         PassingReductionVertices: Set<int>
     }
 
-/// Result of RNGLR path index construction with step-by-step visualization data.
+/// Result of RNGLR path index construction with step-by-step visualization data:
+/// one snapshot per action substep, plus the initial state.
 [<Struct>]
 type RnglrResult<'t, 'nt when 't: comparison and 'nt: comparison> =
     { PathIndex: PathIndex<'t, 'nt>

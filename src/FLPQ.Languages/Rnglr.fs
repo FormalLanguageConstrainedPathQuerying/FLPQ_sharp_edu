@@ -9,10 +9,15 @@ module Rnglr =
 
     [<Struct>]
     type private PredecessorInfo =
-        { GssIdx: int
-          LrState: int
-          Vertex: int
-          Aux: int }
+        {
+            GssIdx: int
+            LrState: int
+            Vertex: int
+            Aux: int
+            /// LR state that originally triggered the reduction (row of the r_A action cell);
+            /// carried through the product BFS and passing-reduction cascades unchanged.
+            TriggerLrState: int
+        }
 
     let private invertRsmTransitions (block: RsmBlock<'t, 'nt>) : Map<int * RsmSymbol<'t, 'nt>, int list> =
         let n = Dfa.stateCount block.Dfa
@@ -44,18 +49,7 @@ module Rnglr =
     let private buildPathIndexCore
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
-        (onStep:
-            Set<int>
-                -> Set<int * int>
-                -> Map<int * int, NonEmptySet<Symbol<'t, 'nt>>>
-                -> Matrix<Set<PathIndexEntry<'t, 'nt>>>
-                -> Set<int * int>
-                -> int
-                -> Set<Terminal<'t>>
-                -> Set<Nonterminal<'nt>>
-                -> Set<Nonterminal<'nt>>
-                -> Set<int>
-                -> unit)
+        (onSubstep: RnglrParsingStep<'t, 'nt> -> unit)
         : PathIndex<'t, 'nt> * ResizeArray<int * int> =
         let extRsm = ersm.ExtendedRsm
         let lrTable = RnglrLR.buildLR0Table extRsm
@@ -138,6 +132,54 @@ module Rnglr =
             | Symbol.N nt -> Some(RsmSymbol.RNonterm nt)
             | Symbol.Epsilon -> None
 
+        let collectActiveGss () : Set<int> * Set<int * int> =
+            GraphHelpers.collectActiveGssForDict gss.Edges
+
+        let collectEdgeSymbols (activeVerts: Set<int>) : Map<int * int, NonEmptySet<Symbol<'t, 'nt>>> =
+            let mutable symbols = Map.empty
+
+            for fromIdx in activeVerts do
+                for (toIdx, sym) in RnglrGSS.outgoingEdges gss fromIdx do
+                    let key = (fromIdx, toIdx)
+
+                    symbols <-
+                        match Map.tryFind key symbols with
+                        | Some existing -> Map.add key (NonEmptySet.add sym existing) symbols
+                        | None -> Map.add key (NonEmptySet.singleton sym) symbols
+
+            symbols
+
+        // Substep emission: one snapshot after exactly one action (one new GSS edge), plus the
+        // initial state. NewGssVertices / NewGssEdges differ against the previous substep;
+        // ChangedCells and PassingReductionVertices accumulate over this substep only.
+        let mutable prevVertices = Set.empty<int>
+        let mutable prevEdges = Set.empty<int * int>
+
+        let emit (action: RnglrAction<'t, 'nt> option) (inputVertex: int) : unit =
+            let activeVerts, activeEdges = collectActiveGss ()
+            let edgeSymbols = collectEdgeSymbols activeVerts
+            let stepChanged = changedCells.Value
+            changedCells.Value <- Set.empty<int * int>
+            let stepPassing = passingReductionVertices.Value
+            passingReductionVertices.Value <- Set.empty<int>
+            let newVertices = Set.difference activeVerts prevVertices
+            let newEdges = Set.difference activeEdges prevEdges
+
+            prevVertices <- activeVerts
+            prevEdges <- activeEdges
+
+            onSubstep
+                { ActiveGssVertices = activeVerts
+                  ActiveGssEdges = activeEdges
+                  ActiveGssEdgeSymbols = edgeSymbols
+                  NewGssVertices = newVertices
+                  NewGssEdges = newEdges
+                  PathIndexMatrix = Matrix.copy pathIndex.Matrix
+                  ChangedCells = stepChanged
+                  InputVertex = inputVertex
+                  Action = action
+                  PassingReductionVertices = stepPassing }
+
         let productBfs (invData: InvBlockData<'t, 'nt>) (starts: PredecessorInfo list) : PredecessorInfo list =
             let visited = HashSet<int * int>()
             let startSet = starts |> List.map (fun p -> (p.GssIdx, p.LrState)) |> set
@@ -207,7 +249,8 @@ module Rnglr =
                                         { GssIdx = nextGss
                                           LrState = nextLrState
                                           Vertex = vNext
-                                          Aux = currInv }
+                                          Aux = currInv
+                                          TriggerLrState = p.TriggerLrState }
                                         :: predecessors
 
                                 let np = (nextGss, nextInv)
@@ -219,13 +262,16 @@ module Rnglr =
                                         RnglrGSS.setStoredStates
                                             gss
                                             nextGss
-                                            (Set.add (invData.Nonterminal, nextInv, endState, endVertex) cur)
+                                            (Set.add
+                                                (invData.Nonterminal, nextInv, endState, endVertex, p.TriggerLrState)
+                                                cur)
 
                                     queue.Enqueue(
                                         { GssIdx = nextGss
                                           LrState = nextInv
                                           Vertex = endState
-                                          Aux = endVertex }
+                                          Aux = endVertex
+                                          TriggerLrState = p.TriggerLrState }
                                     )
                         | None -> ()
                     | None -> ()
@@ -244,7 +290,8 @@ module Rnglr =
                         { GssIdx = gssIdx
                           LrState = finalState
                           Vertex = finalState
-                          Aux = vxInputVertex })
+                          Aux = vxInputVertex
+                          TriggerLrState = vxLrState })
 
                 let preds = productBfs invData starts
 
@@ -253,19 +300,18 @@ module Rnglr =
                         [ { GssIdx = gssIdx
                             LrState = vxLrState
                             Vertex = vxInputVertex
-                            Aux = invData.GlobalOffset + invData.Start } ]
+                            Aux = invData.GlobalOffset + invData.Start
+                            TriggerLrState = vxLrState } ]
                     else
                         []
 
                 preds @ epsPredecessors
             | None -> []
 
-        let mutable stepShiftTerminals = Set.empty<Terminal<'t>>
-        let mutable stepReduceNt = Set.empty<Nonterminal<'nt>>
-        let mutable levelReductions = Set.empty<Nonterminal<'nt>>
-
         /// Applies a single reduction: looks up the goto state, adds the GSS edge labeled with
         /// the reduced nonterminal, and records the epsilon entry for direct epsilon derivations.
+        /// Emits a reduce substep when a new GSS edge is added (triggerLrState is the LR state
+        /// holding the complete item — the row of the r_A action cell).
         /// Returns true when a new GSS edge was added (the dedup key was new).
         let processReduction
             (reduceNt: Nonterminal<'nt>)
@@ -274,6 +320,7 @@ module Rnglr =
             (gssIdxPre: int)
             (vPre: int)
             (vEnd: int)
+            (triggerLrState: int)
             : bool =
             match Map.tryFind (lrStatePre, reduceNt) lrTable.Goto with
             | Some gotoTarget ->
@@ -295,6 +342,8 @@ module Rnglr =
                     if not (Set.isEmpty consumedStates) then
                         passingReductionVertices := Set.add gotoGssIdx !passingReductionVertices
 
+                    emit (Some(RnglrAction.Reduce(reduceNt, triggerLrState, lrStatePre))) vEnd
+
                 match invBlockData.TryGetValue(reduceNt) with
                 | true, invData ->
                     let globalStart = invData.GlobalOffset + invData.Start
@@ -308,7 +357,9 @@ module Rnglr =
 
         /// Shift phase for a single GSS vertex (lrState, v): follows every terminal transition
         /// of the LR table along the input edges from v, creates target vertices at vNext, and
-        /// consumes stored states for passing-reduction continuations.
+        /// consumes stored states for passing-reduction continuations. Emits a shift substep
+        /// after each shift edge creation; cascade reductions emit right after the shift that
+        /// consumed their stored states.
         let shiftNode (lrState: int) (v: int) : unit =
             if v < vertexCount - 1 then
                 for (tVal, vNext) in graphEdges.[v] do
@@ -316,7 +367,6 @@ module Rnglr =
 
                     match Map.tryFind shiftKey lrTable.Action with
                     | Some(LRAction.Shift targetLrState) ->
-                        stepShiftTerminals <- Set.add (Terminal tVal) stepShiftTerminals
                         let shiftGssIdx = RnglrGSS.getOrCreateVertex gss lrState v
                         let targetGssIdx = RnglrGSS.getOrCreateVertex gss targetLrState vNext
 
@@ -326,7 +376,9 @@ module Rnglr =
                         if not (Set.isEmpty consumedStates) then
                             passingReductionVertices := Set.add targetGssIdx !passingReductionVertices
 
-                        for (storedNt, storedInv, storedEndState, storedEndVertex) in consumedStates do
+                        emit (Some(RnglrAction.Shift(Terminal tVal, lrState))) v
+
+                        for (storedNt, storedInv, storedEndState, storedEndVertex, storedTriggerLr) in consumedStates do
                             match Map.tryFind storedNt invBlockData with
                             | Some invData ->
                                 let extPredecessors =
@@ -335,10 +387,18 @@ module Rnglr =
                                         [ { GssIdx = targetGssIdx
                                             LrState = storedInv
                                             Vertex = storedEndState
-                                            Aux = storedEndVertex } ]
+                                            Aux = storedEndVertex
+                                            TriggerLrState = storedTriggerLr } ]
 
                                 for pred in extPredecessors do
-                                    processReduction storedNt storedInv pred.LrState pred.GssIdx pred.Vertex vNext
+                                    processReduction
+                                        storedNt
+                                        storedInv
+                                        pred.LrState
+                                        pred.GssIdx
+                                        pred.Vertex
+                                        vNext
+                                        storedTriggerLr
                                     |> ignore
                             | None -> ()
                     | _ -> ()
@@ -355,49 +415,17 @@ module Rnglr =
 
                 for lrState in RnglrGSS.verticesAt gss v do
                     for (reduceNt, finalRsmState) in getReduceNtWithStates lrState do
-                        stepReduceNt <- Set.add reduceNt stepReduceNt
-                        levelReductions <- Set.add reduceNt levelReductions
                         let gssIdx = RnglrGSS.getOrCreateVertex gss lrState v
                         let predecessors = findPredecessors gssIdx reduceNt
 
                         for pred in predecessors do
                             let newEdge =
-                                processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v
+                                processReduction reduceNt finalRsmState pred.LrState pred.GssIdx pred.Vertex v lrState
 
                             if newEdge then
                                 changed <- true
 
-        let collectActiveGss () : Set<int> * Set<int * int> =
-            GraphHelpers.collectActiveGssForDict gss.Edges
-
-        let collectEdgeSymbols (activeVerts: Set<int>) : Map<int * int, NonEmptySet<Symbol<'t, 'nt>>> =
-            let mutable symbols = Map.empty
-
-            for fromIdx in activeVerts do
-                for (toIdx, sym) in RnglrGSS.outgoingEdges gss fromIdx do
-                    let key = (fromIdx, toIdx)
-
-                    symbols <-
-                        match Map.tryFind key symbols with
-                        | Some existing -> Map.add key (NonEmptySet.add sym existing) symbols
-                        | None -> Map.add key (NonEmptySet.singleton sym) symbols
-
-            symbols
-
-        let stepChanged = changedCells.Value
-        changedCells.Value <- Set.empty<int * int>
-
-        onStep
-            Set.empty
-            Set.empty
-            Map.empty
-            (Matrix.copy pathIndex.Matrix)
-            stepChanged
-            -1
-            Set.empty
-            Set.empty
-            Set.empty
-            Set.empty
+        emit None -1
 
         RnglrGSS.getOrCreateVertex gss 0 0 |> ignore
 
@@ -409,40 +437,10 @@ module Rnglr =
         // specialized to a single input string), Scott & Johnstone 2006 Algorithm 1e PARSE SYMBOL,
         // sec:CFPQ_RNGLR.
         for v in 0 .. vertexCount - 1 do
-            levelReductions <- Set.empty
-
             reduceAtLevel v
 
             for lrState in RnglrGSS.verticesAt gss v do
                 shiftNode lrState v
-
-            let activeVerts, activeEdges = collectActiveGss ()
-
-            let stepChanged = changedCells.Value
-            changedCells.Value <- Set.empty<int * int>
-
-            let edgeSymbols = collectEdgeSymbols activeVerts
-
-            let capturedShifts = stepShiftTerminals
-            let capturedReduces = stepReduceNt
-            let capturedLevel = levelReductions
-            let capturedPassing = passingReductionVertices.Value
-
-            stepShiftTerminals <- Set.empty
-            stepReduceNt <- Set.empty
-            passingReductionVertices.Value <- Set.empty<int>
-
-            onStep
-                activeVerts
-                activeEdges
-                edgeSymbols
-                (Matrix.copy pathIndex.Matrix)
-                stepChanged
-                v
-                capturedShifts
-                capturedReduces
-                capturedLevel
-                capturedPassing
 
         pathIndex, gss.VertexInfo
 
@@ -455,10 +453,10 @@ module Rnglr =
         (ersm: ExtendedRSM<'t, 'nt>)
         (inputGraph: Graph<int, Option<'t>>)
         : PathIndex<'t, 'nt> =
-        buildPathIndexCore ersm inputGraph (fun _ _ _ _ _ _ _ _ _ _ -> ()) |> fst
+        buildPathIndexCore ersm inputGraph ignore |> fst
 
     /// Same algorithm as buildPathIndex, additionally recording one RnglrParsingStep snapshot
-    /// per level (plus the initial state) for step-by-step visualization.
+    /// per action substep (plus the initial state) for step-by-step visualization.
     /// Book reference: sec:CFPQ_RNGLR.
     let buildPathIndexWithSteps
         (freshStart: Nonterminal<'nt>)
@@ -466,43 +464,8 @@ module Rnglr =
         (inputGraph: Graph<int, Option<'t>>)
         : RnglrResult<'t, 'nt> =
         let steps = ResizeArray<RnglrParsingStep<'t, 'nt>>()
-        let mutable prevVertices = Set.empty<int>
-        let mutable prevEdges = Set.empty<int * int>
 
-        let onStep
-            activeVerts
-            activeEdges
-            edgeSymbols
-            piMatrix
-            changedCells
-            inputVertex
-            shiftTerminals
-            reduceNonterminals
-            levelReds
-            passingReductionVertices
-            =
-            let newVertices = Set.difference activeVerts prevVertices
-            let newEdges = Set.difference activeEdges prevEdges
-
-            prevVertices <- activeVerts
-            prevEdges <- activeEdges
-
-            steps.Add(
-                { ActiveGssVertices = activeVerts
-                  ActiveGssEdges = activeEdges
-                  ActiveGssEdgeSymbols = edgeSymbols
-                  NewGssVertices = newVertices
-                  NewGssEdges = newEdges
-                  PathIndexMatrix = piMatrix
-                  ChangedCells = changedCells
-                  InputVertex = inputVertex
-                  ActiveShiftTerminals = shiftTerminals
-                  ActiveReduceNonterminals = reduceNonterminals
-                  LevelReductions = levelReds
-                  PassingReductionVertices = passingReductionVertices }
-            )
-
-        buildPathIndexCore ersm inputGraph onStep
+        buildPathIndexCore ersm inputGraph steps.Add
         |> fun (pi, vertexInfo) ->
             { PathIndex = pi
               Steps = steps.ToArray() |> List.ofArray

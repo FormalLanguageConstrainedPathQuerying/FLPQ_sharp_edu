@@ -7,9 +7,9 @@ digraph GSS {
   v4 [label="4: (3,2)", shape=ellipse];
   v5 [label="5: (2,2)", shape=ellipse];
   v6 [label="6: (1,3)", shape=ellipse];
-  v7 [label="7: (3,3)", shape=ellipse, style=filled, fillcolor=lightyellow];
-  v8 [label="8: (4,3)", shape=ellipse, style=filled, fillcolor=lightyellow];
-  v9 [label="9: (2,3)", shape=ellipse, style=filled, fillcolor=lightyellow];
+  v7 [label="7: (3,3)", shape=ellipse];
+  v8 [label="8: (4,3)", shape=ellipse];
+  v9 [label="9: (2,3)", shape=ellipse];
   v0 [label="0: (0,0)", shape=ellipse];
   v1 -> v0 [label="\"a\""];
   v2 -> v0 [label="S"];
@@ -19,9 +19,9 @@ digraph GSS {
   v6 -> v4 [label="\"a\""];
   v6 -> v5 [label="\"a\""];
   v7 -> v2 [label="S", color=red, penwidth=2.0];
-  v7 -> v5 [label="S", color=red, penwidth=2.0];
-  v8 -> v4 [label="S", color=red, penwidth=2.0];
-  v9 -> v0 [label="S", color=red, penwidth=2.0];
+  v7 -> v5 [label="S"];
+  v8 -> v4 [label="S"];
+  v9 -> v0 [label="S"];
   {rank=same; v0;}
   {rank=same; v1; v2;}
   {rank=same; v3; v4; v5;}

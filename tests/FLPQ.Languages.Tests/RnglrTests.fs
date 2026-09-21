@@ -27,6 +27,26 @@ let private anbn = LanguageRegistry.ANBN
 let private astarBStar = LanguageRegistry.AStarBStar
 let private epsilonOnly = LanguageRegistry.EpsilonOnly
 
+/// The outcome of running RNGLR with step collection: the result (steps + path index),
+/// the extended RSM (for building the LR table), and the input graph.
+[<Struct>]
+type private RnglrRun =
+    { Result: RnglrResult<string, string>
+      Ers: ExtendedRSM<string, string>
+      Graph: Graph<int, Option<string>> }
+
+/// Runs RNGLR with step collection on a registry RSM and a terminal list.
+let private runWithSteps (rsm: RSM<string, string>) (input: Terminal<string> list) : RnglrRun =
+    let startNt = (RSM.startBlock rsm).Nonterminal
+    let rsmFixed = { rsm with StartBlock = startNt }
+    let freshStart = Nonterminal "S'"
+    let graph = TestHelpers.terminalsToGraph input
+    let ersm = ExtendedRSM.create freshStart rsmFixed
+
+    { Result = Rnglr.buildPathIndexWithSteps freshStart ersm graph
+      Ers = ersm
+      Graph = graph }
+
 module RnglrSharedAcceptance =
     let private rnglrCases = ParsingTestCases.AcceptanceCases.allCases
 
@@ -219,24 +239,18 @@ module SppfDotTests =
         Assert.NotEmpty(sppf.RootIndices)
 
 module RnglrPassingReductions =
-    let private runWithSteps
+    let private stepsOf
         (rsm: RSM<string, string>)
         (input: Terminal<string> list)
         : RnglrParsingStep<string, string> list =
-        let startNt = (RSM.startBlock rsm).Nonterminal
-        let rsmFixed = { rsm with StartBlock = startNt }
-        let freshStart = Nonterminal("S'")
-        let graph = TestHelpers.terminalsToGraph input
-        let ersm = ExtendedRSM.create freshStart rsmFixed
-
-        Rnglr.buildPathIndexWithSteps freshStart ersm graph |> fun r -> r.Steps
+        runWithSteps rsm input |> fun run -> run.Result.Steps
 
     [<Fact>]
     let ``passing-reduction vertices tracked for S -> a S b | eps | S S`` () =
         // The concatenation rule S -> S S creates multiple reduction paths at the same
         // input position; a product BFS deposits stored states at an intermediate GSS
         // vertex that a later reduction in the same level consumes.
-        let steps = runWithSteps dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
+        let steps = stepsOf dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
 
         Assert.True(
             steps |> List.exists (fun s -> not (Set.isEmpty s.PassingReductionVertices)),
@@ -245,7 +259,7 @@ module RnglrPassingReductions =
 
     [<Fact>]
     let ``passing-reduction vertices empty at initial step`` () =
-        let steps = runWithSteps dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
+        let steps = stepsOf dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
         Assert.True(Set.isEmpty steps.[0].PassingReductionVertices)
 
     [<Fact>]
@@ -322,3 +336,163 @@ module RnglrEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =
         ParsingTestCases.Runners.runEpsilonTests accepts checkReject
+
+module RnglrSubsteps =
+    let private doubleA = LanguageRegistry.DoubleA
+
+    let private aplusAmbiguous =
+        LanguageRegistry.findGrammar LanguageRegistry.APlus "ambiguousWithSingleRule"
+
+    /// One substep test case: a name for failure messages, a registry RSM, and an input.
+    [<Struct>]
+    type private SubstepCase =
+        { Name: string
+          Rsm: RSM<string, string>
+          Input: Terminal<string> list }
+
+    /// Cases covering a simple input, an ambiguous one (cascade/passing reductions), and a
+    /// nested one.
+    let private cases: SubstepCase list =
+        [ { Name = "DoubleA/aa"
+            Rsm = doubleA.Grammars[0].Rsm
+            Input = [ Terminal "a"; Terminal "a" ] }
+          { Name = "APlus/aaa"
+            Rsm = aplusAmbiguous.Rsm
+            Input = [ Terminal "a"; Terminal "a"; Terminal "a" ] }
+          { Name = "Dyck1/ab"
+            Rsm = dyck1.Grammars[1].Rsm
+            Input = [ Terminal "a"; Terminal "b" ] } ]
+
+    let private lrTableOf (ersm: ExtendedRSM<string, string>) : RnglrTable<string, string> =
+        RnglrLR.buildLR0Table (ExtendedRSM.extRsm ersm)
+
+    [<Fact>]
+    let ``initial substep has no action, vertex -1, and empty GSS`` () =
+        for case in cases do
+            let initial = runWithSteps case.Rsm case.Input |> fun run -> run.Result.Steps.[0]
+            let noAction = initial.Action = None
+            Assert.True(noAction, $"{case.Name}: the initial substep must have no action")
+            Assert.Equal(-1, initial.InputVertex)
+            Assert.True(Set.isEmpty initial.ActiveGssVertices, case.Name)
+            Assert.True(Set.isEmpty initial.ActiveGssEdges, case.Name)
+            Assert.True(Set.isEmpty initial.NewGssVertices, case.Name)
+            Assert.True(Set.isEmpty initial.NewGssEdges, case.Name)
+            Assert.True(Set.isEmpty initial.ChangedCells, case.Name)
+
+    [<Fact>]
+    let ``every non-initial substep carries an action at an input vertex in range`` () =
+        for case in cases do
+            let result = runWithSteps case.Rsm case.Input |> fun run -> run.Result
+            let maxVertex = result.PathIndex.VertexCount - 1
+
+            for step in List.skip 1 result.Steps do
+                Assert.True(step.Action.IsSome, $"{case.Name}: substep without an action")
+                let inRange = step.InputVertex >= 0 && step.InputVertex <= maxVertex
+                Assert.True(inRange, $"{case.Name}: input vertex {step.InputVertex} out of range [0..{maxVertex}]")
+
+    [<Fact>]
+    let ``within each level all reduce substeps precede shift substeps`` () =
+        for case in cases do
+            let result = runWithSteps case.Rsm case.Input |> fun run -> run.Result
+            let byLevel = List.skip 1 result.Steps |> List.groupBy (fun s -> s.InputVertex)
+
+            for level, steps in byLevel do
+                let actions = steps |> List.map (fun s -> s.Action.Value)
+
+                let firstShiftIdx =
+                    actions
+                    |> List.tryFindIndex (function
+                        | RnglrAction.Shift _ -> true
+                        | _ -> false)
+
+                match firstShiftIdx with
+                | Some i ->
+                    let beforeFirstShift = actions |> List.take i
+
+                    let allReducesBeforeShifts =
+                        List.forall
+                            (function
+                            | RnglrAction.Reduce _ -> true
+                            | _ -> false)
+                            beforeFirstShift
+
+                    Assert.True(
+                        allReducesBeforeShifts,
+                        sprintf
+                            "%s: level %d has a non-reduce substep before the first shift: %A"
+                            case.Name
+                            level
+                            actions
+                    )
+                | None -> ()
+
+    [<Fact>]
+    let ``shift substep adds exactly one new GSS edge labeled with the shifted terminal`` () =
+        for case in cases do
+            let result = runWithSteps case.Rsm case.Input |> fun run -> run.Result
+
+            for step in result.Steps do
+                match step.Action with
+                | Some(RnglrAction.Shift(Terminal t, _)) ->
+                    let edgeCount = Set.count step.NewGssEdges
+                    let exactlyOneEdge = edgeCount = 1
+
+                    Assert.True(
+                        exactlyOneEdge,
+                        $"{case.Name}: shift substep must add exactly one new GSS edge, got {edgeCount}"
+                    )
+
+                    let (fromIdx, toIdx) = step.NewGssEdges |> Set.minElement
+                    let symbols = step.ActiveGssEdgeSymbols.[fromIdx, toIdx]
+                    Assert.True(NonEmptySet.contains (Symbol.T(Terminal t)) symbols, case.Name)
+                | _ -> ()
+
+    [<Fact>]
+    let ``reduce substep adds at most one new GSS edge labeled with the reduced nonterminal`` () =
+        for case in cases do
+            let run = runWithSteps case.Rsm case.Input
+            let table = lrTableOf run.Ers
+
+            for step in run.Result.Steps do
+                match step.Action with
+                | Some(RnglrAction.Reduce(nt, _, gotoLrState)) ->
+                    Assert.True(Set.count step.NewGssEdges <= 1, case.Name)
+
+                    for (fromIdx, toIdx) in Set.toSeq step.NewGssEdges do
+                        let symbols = step.ActiveGssEdgeSymbols.[fromIdx, toIdx]
+                        Assert.True(NonEmptySet.contains (Symbol.N nt) symbols, case.Name)
+                        Assert.True(Map.containsKey (gotoLrState, nt) table.Goto, case.Name)
+                | _ -> ()
+
+    [<Fact>]
+    let ``exact substep action sequence for S -> a a on input a a`` () =
+        // LR states of the golden table: 0 = start, 1 = after the first a, 2 = after S (acc),
+        // 3 = reduce S. The reduce's trigger state is 3 (holds the complete item); its goto
+        // cell is (0, S).
+        let result =
+            runWithSteps doubleA.Grammars[0].Rsm [ Terminal "a"; Terminal "a" ]
+            |> fun run -> run.Result
+
+        let actions = result.Steps |> List.map (fun s -> s.Action)
+
+        let expected =
+            [ None
+              Some(RnglrAction.Shift(Terminal "a", 0))
+              Some(RnglrAction.Shift(Terminal "a", 1))
+              Some(RnglrAction.Reduce(Nonterminal "S", 3, 0)) ]
+
+        let matches = actions = expected
+        Assert.True(matches, sprintf "expected action sequence %A, got %A" expected actions)
+
+    let private samePathIndex (a: PathIndex<string, string>) (b: PathIndex<string, string>) : bool =
+        a.StateCount = b.StateCount
+        && a.VertexCount = b.VertexCount
+        && Matrix.map2i (fun _ _ ca cb -> ca = cb) a.Matrix b.Matrix
+           |> Matrix.fold ((&&)) true
+
+    [<Fact>]
+    let ``buildPathIndexWithSteps produces the same path index as buildPathIndex`` () =
+        for case in cases do
+            let run = runWithSteps case.Rsm case.Input
+            let plain = Rnglr.buildPathIndex (Nonterminal "S'") run.Ers run.Graph
+            Assert.True(samePathIndex plain run.Result.PathIndex, $"{case.Name}: path index differs")

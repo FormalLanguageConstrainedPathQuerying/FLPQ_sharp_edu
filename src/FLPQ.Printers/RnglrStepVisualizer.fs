@@ -7,8 +7,9 @@ open FLPQ.LinearAlgebra
 
 module RnglrStepVisualizer =
 
-    /// Rendered artifacts of one RNGLR level step: GSS figure (DOT and TikZ), path index,
-    /// input graph (DOT and TikZ), and the highlighted LR table.
+    /// Rendered artifacts of one RNGLR action substep: GSS figure (DOT and TikZ), path index,
+    /// input graph (DOT and TikZ), and the LR table with the substep's action cell(s)
+    /// highlighted.
     type RnglrVisualizationStep =
         { GssDot: string
           GssTikz: string
@@ -27,7 +28,10 @@ module RnglrStepVisualizer =
         | Symbol.N(Nonterminal nt) -> nonterminalPrinter nt
         | Symbol.Epsilon -> "ε"
 
-    /// Renders a single RNGLR level step into its visualization artifacts.
+    /// Renders a single RNGLR action substep into its visualization artifacts. The LR table
+    /// highlights exactly the cell(s) of the substep's action: shift → the Action cell
+    /// (lrState, terminal) in green; reduce → the Goto cell (gotoLrState, nonterminal) and the
+    /// Action cell (triggerLrState, $) in red; initial state (Action = None) → no highlight.
     let renderStep
         (terminals: 't -> string)
         (nonterminals: 'nt -> string)
@@ -87,22 +91,11 @@ module RnglrStepVisualizer =
                 true
                 (Some(fun idx -> snd (vertexInfo idx)))
 
-        let activeActions =
-            let shifts =
-                step.ActiveShiftTerminals |> Set.map (fun (Terminal t) -> Symbol.T(Terminal t))
-
-            let reduces = step.ActiveReduceNonterminals |> Set.map Symbol.N
-
-            Set.union shifts reduces
-
         let lrTable =
-            RnglrTableTeX.tableToTeXWithHighlightsTabularOnly
-                terminals
-                nonterminals
-                lrTable
-                None
-                activeActions
-                step.LevelReductions
+            match step.Action with
+            | None -> RnglrTableTeX.tableToTeXTabularOnly terminals nonterminals lrTable
+            | Some action ->
+                RnglrTableTeX.tableToTeXWithActionHighlightTabularOnly terminals nonterminals lrTable action
 
         let stepPi =
             { Matrix = step.PathIndexMatrix
@@ -116,7 +109,7 @@ module RnglrStepVisualizer =
           InputTikz = InputGraphTikz.toTikz terminals inputGraph (Some step.InputVertex)
           LrTable = lrTable }
 
-    /// Renders every RNGLR level step into its visualization artifacts.
+    /// Renders every RNGLR action substep into its visualization artifacts.
     let renderSteps
         (terminals: 't -> string)
         (nonterminals: 'nt -> string)

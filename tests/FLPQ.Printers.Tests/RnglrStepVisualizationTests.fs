@@ -16,7 +16,14 @@ type private RnglrVizData =
       PathIndices: string list
       Inputs: string list
       LrTables: string list
+      Actions: RnglrAction<string, string> option list
       PositionOf: int -> int }
+
+[<Struct>]
+type private ReduceCells =
+    { Nt: string
+      TriggerLrState: int
+      GotoLrState: int }
 
 let private renderRnglr (rsm: RSM<string, string>) (input: string list) : RnglrVizData =
     let freshStart = Nonterminal "S'"
@@ -38,6 +45,7 @@ let private renderRnglr (rsm: RSM<string, string>) (input: string list) : RnglrV
       PathIndices = viz |> List.map (fun s -> s.PathIndex)
       Inputs = viz |> List.map (fun s -> s.Input)
       LrTables = viz |> List.map (fun s -> s.LrTable)
+      Actions = rnglrResult.Steps |> List.map (fun s -> s.Action)
       PositionOf = positionOf }
 
 let private renderViz (input: string list) : RnglrVizData =
@@ -62,6 +70,113 @@ let ``RNGLR golden for S->a a input a a — input step 0`` () =
 let ``RNGLR golden for S->a a input a a — lr_table step 0`` () =
     let data = renderViz [ "a"; "a" ]
     GoldenHelpers.verifyGolden "rnglr_lr_table_step0.tex" data.LrTables.[0]
+
+/// Splits the rendered tabular row of the given LR state into cells. Rows are located by their
+/// leading `\hline <state>` marker; cells are separated by " & ".
+let private rowCells (tex: string) (state: int) : string list =
+    let row =
+        tex.Split('\n')
+        |> Seq.tryFind (fun l -> l.StartsWith(sprintf @"\hline %d " state))
+        |> function
+            | Some l -> l
+            | None -> failwithf "no tabular row for state %d" state
+
+    row.Split([| " & " |], System.StringSplitOptions.None) |> List.ofArray
+
+/// The header row cells (state name, terminals, $, nonterminals) of a rendered tabular.
+let private headerCells (tex: string) : string list =
+    let headerLine = tex.Split('\n') |> Seq.find (fun l -> l.EndsWith(@"\\ \hline"))
+    let withoutTerminator = headerLine.Substring(0, headerLine.Length - 9)
+
+    withoutTerminator.Split([| " & " |], System.StringSplitOptions.None)
+    |> Array.map (fun c -> c.Trim())
+    |> List.ofArray
+
+[<Fact>]
+let ``initial substep table has no cell highlights`` () =
+    let data = renderViz [ "a"; "a" ]
+    Assert.Equal((None: RnglrAction<string, string> option), data.Actions.[0])
+    Assert.DoesNotContain(@"\cellcolor", data.LrTables.[0])
+
+[<Fact>]
+let ``shift substep table highlights exactly one green cell on the action row and column`` () =
+    let data = renderViz [ "a"; "a" ]
+
+    let shiftIdx =
+        data.Actions
+        |> List.findIndex (function
+            | Some(RnglrAction.Shift _) -> true
+            | _ -> false)
+
+    let (t, lrState) =
+        match data.Actions.[shiftIdx].Value with
+        | RnglrAction.Shift(Terminal t, s) -> (t, s)
+        | _ -> failwith "expected a shift action"
+
+    let table = data.LrTables.[shiftIdx]
+
+    Assert.Equal(1, GoldenHelpers.countOccurrences table @"\cellcolor{green!20}")
+    Assert.Equal(0, GoldenHelpers.countOccurrences table @"\cellcolor{red!20}")
+
+    let cells = rowCells table lrState
+    let greenCol = cells |> List.findIndex (fun c -> c.Contains @"\cellcolor{green!20}")
+    let expectedCol = headerCells table |> List.findIndex (fun c -> c = string t)
+    Assert.Equal(expectedCol, greenCol)
+
+[<Fact>]
+let ``reduce substep table highlights exactly two red cells: goto row and trigger row $ column`` () =
+    let data = renderViz [ "a"; "a" ]
+
+    let reduceIdx =
+        data.Actions
+        |> List.findIndex (function
+            | Some(RnglrAction.Reduce _) -> true
+            | _ -> false)
+
+    let cells =
+        match data.Actions.[reduceIdx].Value with
+        | RnglrAction.Reduce(Nonterminal nt, triggerLrState, gotoLrState) ->
+            { ReduceCells.Nt = nt
+              TriggerLrState = triggerLrState
+              GotoLrState = gotoLrState }
+        | _ -> failwith "expected a reduce action"
+
+    let table = data.LrTables.[reduceIdx]
+
+    Assert.Equal(2, GoldenHelpers.countOccurrences table @"\cellcolor{red!20}")
+    Assert.Equal(0, GoldenHelpers.countOccurrences table @"\cellcolor{green!20}")
+
+    // The $ column is the last action-part column, right before the goto part; in TeX source
+    // the dollar sign is escaped as \$.
+    let header = headerCells table
+    let dollarCol = header |> List.findIndex (fun c -> c = @"\$")
+    let ntCol = header |> List.findIndex (fun c -> c = cells.Nt)
+
+    let gotoRow = rowCells table cells.GotoLrState
+
+    Assert.True(
+        gotoRow.[ntCol].Contains @"\cellcolor{red!20}",
+        "the red goto cell must sit in the nonterminal column of the goto row"
+    )
+
+    let triggerRow = rowCells table cells.TriggerLrState
+
+    Assert.True(
+        triggerRow.[dollarCol].Contains @"\cellcolor{red!20}",
+        "the red action cell must sit in the $ column of the trigger row"
+    )
+
+[<Fact>]
+let ``RNGLR golden for S->a a input a a — lr_table first shift substep`` () =
+    let data = renderViz [ "a"; "a" ]
+
+    let shiftIdx =
+        data.Actions
+        |> List.findIndex (function
+            | Some(RnglrAction.Shift _) -> true
+            | _ -> false)
+
+    GoldenHelpers.verifyGolden "rnglr_lr_table_substep_shift.tex" data.LrTables.[shiftIdx]
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
@@ -262,9 +377,7 @@ let ``renderStep labels epsilon edges and leaves missing edge symbols empty`` ()
           PathIndexMatrix = Matrix.create 4 4 (fun _ _ -> Set.empty: Set<PathIndexEntry<string, string>>)
           ChangedCells = set [ (0, 1) ]
           InputVertex = 0
-          ActiveShiftTerminals = set [ Terminal "a" ]
-          ActiveReduceNonterminals = set [ Nonterminal "S" ]
-          LevelReductions = Set.empty
+          Action = Some(RnglrAction.Shift(Terminal "a", 0))
           PassingReductionVertices = Set.empty }
 
     let pathIndex: PathIndex<string, string> =
