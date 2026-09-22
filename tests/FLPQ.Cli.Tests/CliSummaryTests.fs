@@ -151,7 +151,12 @@ let ``SLR(1) summary merged TeX compiles with lualatex`` () =
     let outDir = runWithSummary "SLR1" false
     assertMergedTexCompiles outDir "SLR1"
 
-let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputText: string) : string =
+let private runWithSummaryEBNFUseDot
+    (algorithm: string)
+    (grammarText: string)
+    (inputText: string)
+    (useDot: bool)
+    : string =
     let tmpDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     let grammarFile = Path.Combine(tmpDir, "grammar.ebnf")
     let inputFile = Path.Combine(tmpDir, "input.txt")
@@ -160,12 +165,19 @@ let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputT
     File.WriteAllText(grammarFile, grammarText)
     File.WriteAllText(inputFile, inputText)
 
+    let dotFlag = if useDot then [ "--use-dot" ] else []
+
     let args =
-        [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir; "-s" |]
+        Array.append
+            [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir; "-s" |]
+            (Array.ofList dotFlag)
 
     let code = Program.runCli args
     Assert.Equal(0, code)
     outDir
+
+let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputText: string) : string =
+    runWithSummaryEBNFUseDot algorithm grammarText inputText false
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
@@ -264,7 +276,9 @@ let ``RNGLR summary wraps each step GSS figure in adjustbox`` () =
         // Each RNGLR step carries exactly one wrapped figure: GSS (no per-step RSM).
         Assert.Equal(1, countOccurrences sec adjustboxBegin)
 
-    // The head Extended RSM figure contributes exactly one more adjustbox.
+    // The head Extended RSM figure contributes exactly one more width-only adjustbox.
+    // The LR automaton head uses the max-totalheight variant (asserted in
+    // assertMaxTotalHeightAdjustboxCount), which this needle does not match.
     Assert.Equal(1 + sections.Length, countOccurrences content adjustboxBegin)
 
 [<Fact>]
@@ -304,36 +318,76 @@ let ``RNGLR summary contains exactly one SPPF section (trailing)`` () =
     let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
     assertSingleTrailingSppfSection outDir "RNGLR"
 
-// The trailing SPPF section is the only figure wrapped with the max-totalheight
-// adjustbox variant; every other adjustbox (step GSS/RSM, ext-RSM head) uses the
-// width-only variant. Asserting the variant's presence therefore pins the SPPF wrap.
-let private assertSppfUsesMaxTotalHeightAdjustbox (outDir: string) (algorithm: string) =
+// Figures wrapped with the max-totalheight adjustbox variant: the trailing SPPF
+// section in every summary, plus the RNGLR LR automaton head. Every other adjustbox
+// (step GSS/RSM, ext-RSM head) uses the width-only variant.
+let private assertMaxTotalHeightAdjustboxCount (outDir: string) (algorithm: string) (expectedCount: int) =
     let texPath = mergedTexPath outDir algorithm
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
     let content = File.ReadAllText texPath
-    Assert.Contains(@"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}", content)
+
+    let variant =
+        @"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}"
+
+    Assert.Equal(expectedCount, countOccurrences content variant)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``CYK summary SPPF uses adjustbox with max totalheight`` () =
     let outDir = runWithSummary "CYK" false
-    assertSppfUsesMaxTotalHeightAdjustbox outDir "CYK"
+    assertMaxTotalHeightAdjustboxCount outDir "CYK" 1
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``Valiant summary SPPF uses adjustbox with max totalheight`` () =
     let outDir = runWithSummary "Valiant" false
-    assertSppfUsesMaxTotalHeightAdjustbox outDir "Valiant"
+    assertMaxTotalHeightAdjustboxCount outDir "Valiant" 1
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary SPPF uses adjustbox with max totalheight`` () =
     let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
-    assertSppfUsesMaxTotalHeightAdjustbox outDir "GLL"
+    assertMaxTotalHeightAdjustboxCount outDir "GLL" 1
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
-let ``RNGLR summary SPPF uses adjustbox with max totalheight`` () =
+let ``RNGLR summary SPPF and LR automaton use adjustbox with max totalheight`` () =
     let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
-    assertSppfUsesMaxTotalHeightAdjustbox outDir "RNGLR"
+    assertMaxTotalHeightAdjustboxCount outDir "RNGLR" 2
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary orders extended RSM before LR automaton before parsing table`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+
+    let rsmIdx = content.IndexOf("Extended RSM")
+    let autoIdx = content.IndexOf("LR Automaton")
+    let tableIdx = content.IndexOf("RNGLR Parsing Table")
+    Assert.True(rsmIdx >= 0 && autoIdx > rsmIdx && tableIdx > autoIdx)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary tikz mode contains no DOT RSM figure`` () =
+    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    Assert.DoesNotContain("dot_pdfs/rsm_blocks.pdf", content)
+    Assert.DoesNotContain("dot_pdfs/ext_rsm.pdf", content)
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``RNGLR summary dot mode includes extended RSM and LR automaton PDFs`` () =
+    let outDir = runWithSummaryEBNFUseDot "RNGLR" anbnEbnf anbnInput true
+    let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+    Assert.Contains("dot_pdfs/ext_rsm.pdf", content)
+    Assert.Contains("dot_pdfs/lr_automaton.pdf", content)

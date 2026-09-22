@@ -56,11 +56,25 @@ let ``runRnglr produces rnglr_table.tex`` () =
     cleanup outDir
 
 [<Fact>]
-let ``runRnglr produces rsm_blocks.dot`` () =
+let ``runRnglr dot mode produces ext_rsm.dot`` () =
     let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
-    let f = Path.Combine(outDir, "rsm_blocks.dot")
+    let f = Path.Combine(outDir, "ext_rsm.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr dot mode produces lr_automaton.dot`` () =
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "lr_automaton.dot")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr no longer produces rsm_blocks.dot`` () =
+    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    Assert.False(File.Exists(Path.Combine(outDir, "rsm_blocks.dot")))
     cleanup outDir
 
 [<Fact>]
@@ -119,6 +133,14 @@ let ``runRnglr tikz mode produces input.tikz.tex`` () =
 let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
     let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
     let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
+    Assert.True(File.Exists f)
+    Assert.True(FileInfo(f).Length > 0L)
+    cleanup outDir
+
+[<Fact>]
+let ``runRnglr tikz mode produces lr_automaton.tikz.tex`` () =
+    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let f = Path.Combine(outDir, "lr_automaton.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
     cleanup outDir

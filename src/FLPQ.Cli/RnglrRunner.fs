@@ -47,13 +47,30 @@ module RnglrRunner =
             (Path.Combine(outputDir, "rnglr_table.tex"))
             (RnglrTableTeX.tableToTeXTabularOnly string string lrTable)
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "rsm_blocks.dot")) (RsmDot.toDot string string rsm)
-
         Helpers.writeOutputFile (Path.Combine(outputDir, "path_index.tex")) (PathIndexTeX.toTeX string string pathIndex)
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.dot")) (SppfDot.toDot string string sppf)
 
-        if not useDot then
+        if useDot then
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "ext_rsm.dot"))
+                (RsmDot.extendedRsmToDot string string extRsm None)
+
+            // DOT state labels carry the same item lines as the TikZ rendering: a "State N"
+            // header plus one "<nt> : <rsmState>" line per item.
+            let automatonDot =
+                AutomatonDot.dfaToDot
+                    (SymbolTeX.toLaTeX string string)
+                    (fun idx items ->
+                        let lines =
+                            (sprintf "State %d" idx)
+                            :: (items |> Set.toList |> List.map (RnglrAutomatonTikz.renderRnglrItem string))
+
+                        String.concat "\n" lines)
+                    lrTable.Automaton
+
+            Helpers.writeOutputFile (Path.Combine(outputDir, "lr_automaton.dot")) automatonDot
+        else
             Helpers.writeOutputFile (Path.Combine(outputDir, "sppf.tikz.tex")) (SppfTikz.toTikz string string sppf)
 
             Helpers.writeOutputFile
@@ -63,6 +80,10 @@ module RnglrRunner =
             Helpers.writeOutputFile
                 (Path.Combine(outputDir, "ext_rsm.tikz.tex"))
                 (RsmTikz.extendedRsmToTikz string string extRsm None)
+
+            Helpers.writeOutputFile
+                (Path.Combine(outputDir, "lr_automaton.tikz.tex"))
+                (RnglrAutomatonTikz.rnglrAutomatonToTikz (SymbolTeX.toLaTeX string string) string lrTable.Automaton)
 
         let vizSteps =
             RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex inputGraph

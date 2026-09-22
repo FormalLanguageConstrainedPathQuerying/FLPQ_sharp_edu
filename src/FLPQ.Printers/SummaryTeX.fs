@@ -211,15 +211,30 @@ module SummaryTeX =
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
 
-                let tableLines = maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
+                // Mode-aware extended RSM head: TikZ embeds ext_rsm.tikz.tex, DOT includes
+                // the compiled PDF. The plain RSM figure is never part of the RNGLR summary.
+                let extRsmLines =
+                    if useTikz then
+                        extRsmTikzSection
+                    else
+                        rsmPdfs
+                        |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
 
-                let rsmFigureLines =
-                    rsmPdfs
-                    |> List.collect (fun (title, rel) -> [ section title; includePdf rel; "" ])
+                // LR automaton head following the SPPF pattern: TikZ wrapped in an adjustbox
+                // limited to \textwidth and \textheight, DOT includes the compiled PDF.
+                let lrAutomatonLines =
+                    match lrAutomatonTikz with
+                    | Some tikz when useTikz -> [ section "LR Automaton"; wrapTikzAdjustbox true tikz; "" ]
+                    | _ ->
+                        match lrAutomatonPdf with
+                        | Some rel -> [ section "LR Automaton"; includePdf rel; "" ]
+                        | None -> []
+
+                let tableLines = maybe "rnglr_table.tex" "RNGLR Parsing Table" wrapTabularResized
 
                 let pathIndexLines = maybe "path_index.tex" "Path Index" wrapMathResized
 
-                colorLegend @ tableLines @ extRsmTikzSection @ rsmFigureLines @ pathIndexLines
+                colorLegend @ extRsmLines @ lrAutomatonLines @ tableLines @ pathIndexLines
 
         grammar @ algoLines
 

@@ -1,255 +1,218 @@
-# Detailed Plan — Task 278
+# Detailed Plan — Task 279: Improve RNGLR summary
 
 ## Task description (verbatim)
 
-278. Improve RNGLR rendering. For each big step (reductions to fixpoint + one shift) visualize all substeps separately. Substep is an exactly one action: exactly one reduce or one shift. Improve collected data structure with respect to new visualization requirements. Teplate for visualization is exactly the same as existing templste for step. One change: for LR table highlight exactly one cell: cell with action that visualized on this step.
-     **[USER GUIDANCE]**: A reduce substep highlights two cells — the Goto cell (predecessor state, nonterminal) consulted for that edge and the Action cell (triggering state, $) containing the reduce action; still one reduction per substep (one new GSS edge). Output stays flat: each substep is its own step_N directory and summary section (initial state remains step 0); levels with no actions produce nothing.
+279. Improve RNGLR summary. First, remove dot visualization of RSM from tikz-based summary. Check that dot-base summary contains dot-visualized extended RSM, beceuse currently I see not-extended DOT rsm in tikz-based summary, while included tikz visualization is correct: it is for extended RSM. Second: add LR automata visualization at the start of summary. Use ajustbox for LR automata (look at SPPF for example). Order: extended RSM, LR automata, LR table.
 
-## Design decisions (confirmed with the user)
+## Current state (verified by exploration)
 
-- **Substep granularity**: one substep = exactly one new GSS edge — either one
-  reduction edge (one `processReduction` call that passes the dedup check) or one
-  shift edge (one `shiftNode` edge creation). The big step (level: reduce fixpoint +
-  one shift pass) is not rendered as a separate cumulative figure; its substeps are
-  emitted in execution order, so the last substep of a level shows the level's final state.
-- **LR table highlight** (the only template change):
-  - Shift substep: exactly one cell — Action cell `(lrState, terminal)`, `\cellcolor{green!20}`.
-  - Reduce substep: exactly two cells — Goto cell `(gotoLrState, nonterminal)` (the lookup
-    consulted for this edge) and Action cell `(triggerLrState, $)` (contains `r_A`), both
-    `\cellcolor{red!20}`.
-  - Initial step (`Action = None`): no highlight (plain table).
-- **Output structure**: flat — each substep is its own `step_N/` directory and its own
-  summary section via the unchanged `RNGLR_step_template.tex`; initial state stays `step_0`.
-  Levels with no actions produce nothing. `Helpers.writeRnglrStepsVisualization`,
-  `SummaryTeX.rnglrStepSection`, and `RnglrRunner` need no changes.
-- **Trigger LR state**: a reduce substep must know the LR state that holds the complete
-  item (the row of the `r_A` action cell). In the fixpoint loop it is the scanned `lrState`;
-  in passing-reduction cascades (shiftNode) it is the state of the vertex where the stored
-  reduction was originally triggered — not recoverable from the current stored-state tuple,
-  so the tuple gains a fifth component `triggerLrState`.
-- **Emission rule**: emit a substep exactly when a new GSS edge is added. A deduplicated
-  reduction that only adds a fresh PEpsilonNonterminal path-index entry (possible for blocks
-  with start ∈ finals and ≥ 2 finals) does not emit; those cells surface in the next
-  substep's `ChangedCells` (or are absent from step figures if no later substep exists —
-  the final `path_index.tex` file always shows them). Keeps the invariant "substep ⇒ one
-  new GSS edge" exact.
-- **Algorithm behavior is unchanged**: same driver, same dedup, same fixpoint condition
-  (`isNew` only); visualization data collection must not alter the path index or GSS.
+- `RnglrRunner.fs` writes `rsm_blocks.dot` (the **original**, not extended RSM) unconditionally
+  (both modes), and `ext_rsm.tikz.tex` only in TikZ mode. It writes no LR-automaton figure at all.
+- `Summary.fs` RNGLR branch: `RsmPdfs = [("RSM", "dot_pdfs/rsm_blocks.pdf")]` when
+  `rsm_blocks.dot` exists; no LR automaton. So the TikZ-mode summary shows the non-extended DOT
+  RSM next to the correct extended TikZ RSM (the user's complaint), and the DOT-mode summary shows
+  the non-extended RSM.
+- `SummaryTeX.headerSection` RNGLR branch order: Color Legend → RNGLR Parsing Table →
+  `extRsmTikzSection` (TikZ mode only) → `rsmFigureLines` (DOT PDFs, both modes) → Path Index.
+- GLL is already correct and stays untouched: in TikZ mode it writes no `ext_rsm.dot`, so its
+  `rsmPdfs` is empty there; in DOT mode it uses `ext_rsm.pdf`.
+- The RNGLR LR automaton is `lrTable.Automaton : DFA<Symbol<'t,'nt>, Set<RnglrItem<'nt>>>`;
+  no renderer for `RnglrItem` exists anywhere (grep-verified).
+- SPPF adjustbox pattern to mirror: `SummaryTeX.sppfSection` wraps TikZ with
+  `wrapTikzAdjustbox true` (width + height limit) and falls back to `includePdf` in DOT mode.
 
 ## Reuse analysis (reusing skill checklist)
 
-- **Q1/Q3 reuse**: `RnglrStepVisualizer.renderStep/renderSteps`,
-  `Helpers.writeRnglrStepsVisualization`, `SummaryTeX.rnglrStepSection`,
-  `GssDot`/`GssTikz`/`PathIndexTeX`/`InputGraph*` renderers, and the step template are all
-  reused unchanged; only the LR-table rendering inside `renderStep` changes.
-- **Q4 generalize**: `RnglrTableTeX.buildTabular` is generalized into a private
-  `buildTabularCore` taking two highlight sets (action cells, goto cells); the plain
-  `buildTabular` delegates with empty sets — one tabular-building loop instead of two.
-- **Q5 extract**: the per-step snapshot logic (active GSS collection, matrix copy, changed
-  cells, passing vertices, New\* differencing) moves from `buildPathIndexWithSteps.onStep`
-  into a local `emit` in `buildPathIndexCore`, so both `buildPathIndex` (no-op callback)
-  and `buildPathIndexWithSteps` share it.
-- **Removed (superseded)**: `RnglrTableTeX.tableToTeXWithHighlights`,
-  `tableToTeXWithHighlightsTabularOnly`, `buildTabularWithHighlights` — their multi-cell
-  level-based highlighting is replaced by per-action highlighting; no production callers
-  remain after S3. `RnglrParsingStep.ActiveShiftTerminals / ActiveReduceNonterminals / LevelReductions` are replaced by the single `Action` field.
+Reused, not recreated:
 
-## Subtasks
+- `AutomatonDot.dfaToDot` — generic over state content `'s`; used directly for the DOT-mode
+  LR automaton (same as `LRRunner`).
+- `AutomatonTikz.dfaToTikz` — layered-layout TikZ DFA renderer; the new RNGLR wrapper delegates
+  to it (same pattern as `LRAutomatonTikz.lr0AutomatonToTikz`).
+- `LRAutomatonTikz.stateContentToTikzAs` — public math-mode aligned-content wrapper.
+- `RsmDot.extendedRsmToDot` / `RsmTikz.extendedRsmToTikz` — extended-RSM figures (GLL precedent).
+- `SymbolTeX.toLaTeX` — edge-label printer for `Symbol<'t,'nt>`.
+- `SummaryTeX.wrapTikzAdjustbox` / `includePdf` / `maybe` — section wrappers.
+- `Summary.fs` LR-branch file-existence pattern (`lr_automaton.tikz.tex` inline vs
+  `lr_automaton.dot` → PDF) — mirrored for RNGLR.
 
-### S1: Add RnglrAction type and single-action table highlight function [done — 10b6f4f]
+Created new (nothing existing covers it):
 
-**Code:**
+- `RnglrAutomatonTikz` module — the only new code: `RnglrItem` rendering + a typed wrapper over
+  `AutomatonTikz.dfaToTikz`.
 
-- `src/FLPQ.Languages/RnglrTypes.fs`: new `RnglrAction<'t, 'nt>` DU with
-  `[<RequireQualifiedAccess>]`:
-  `Reduce of nt: Nonterminal<'nt> * triggerLrState: int * gotoLrState: int` and
-  `Shift of terminal: Terminal<'t> * lrState: int`. Doc comment: one RNGLR action = one
-  substep; Reduce fields = reduced nonterminal, LR state holding the complete item (row of
-  the r_A action cell), predecessor LR state whose Goto is applied for this edge. Book
-  reference sec:CFPQ_RNGLR.
-- `src/FLPQ.Printers/RnglrTableTeX.fs`: refactor `buildTabular` into private
-  `buildTabularCore (terminalPrinter) (nonterminalPrinter) (table) (actionCells: Set<int * Symbol<'t, 'nt>>) (gotoCells: Set<int * Nonterminal<'nt>>)` —
-  action-part cell gets `\cellcolor{green!20}` when in `actionCells`, goto-part cell gets
-  `\cellcolor{red!20}` when in `gotoCells`; `buildTabular` delegates with empty sets. New
-  public functions (doc comments state the highlight rule + xcolor requirement):
-  - `tableToTeXWithActionHighlight terminals nonterminals table action : string` (center + tabular)
-  - `tableToTeXWithActionHighlightTabularOnly ... : string`
-    Mapping: `Shift(t, s)` → actionCells = {(s, T t)}; `Reduce(a, trig, pred)` →
-    actionCells = {(trig, Epsilon)}, gotoCells = {(pred, a)}. Old multi-cell highlight
-    functions stay until S3.
+## Design decisions
 
-**Tests:** `tests/FLPQ.Printers.Tests/RnglrTableTexTests.fs` — new facts: shift action
-highlights exactly one `\cellcolor{green!20}` cell on the action row/column and no red
-cells; reduce action highlights exactly two `\cellcolor{red!20}` cells (goto row + trigger
-row `$` column) and no green cells; `TabularOnly` has no center wrapper while the wrapped
-variant does.
+- **Item notation**: one `RnglrItem` renders as `<nonterminal> : <rsmState>` (e.g. `S' : 1`).
+  A state's content is a `State N` header line plus one line per item, mirroring
+  `LRAutomatonTikz.renderLR0StateContent`.
+- **DOT-mode automaton labels** carry the same item lines as TikZ (multi-line dot label
+  `State N\n<item>\n...`) — strictly more informative than LR's bare `State N`, same data.
+- **RNGLR header order**: Color Legend → Extended RSM → LR Automaton → RNGLR Parsing Table →
+  Path Index (the user's "extended RSM, LR automata, LR table" order; the legend stays first).
+- **Extended RSM head is mode-aware for RNGLR**: TikZ mode → `ext_rsm.tikz.tex` wrapped in
+  `wrapTikzAdjustbox false` (existing); DOT mode → dot-compiled `ext_rsm.pdf`. The non-extended
+  `rsm_blocks.dot` is no longer written by the RNGLR runner at all.
+- **LR automaton wrap**: TikZ mode → `wrapTikzAdjustbox true` (SPPF-style, width + height limit);
+  DOT mode → `includePdf "dot_pdfs/lr_automaton.pdf"`.
+- **Docs placement**: `RnglrAutomatonTikz` is documented inside the existing grouped
+  `docs/developer/automaton-viz.md` (precedent: `LRAutomatonTikz` lives there, not in its own
+  file), plus hub/architecture entries.
 
-**Docs:** `docs/developer/rnglr.md` — new `RnglrAction` type section (fields + highlight
-mapping) + TOC entry (new public API per the documentation mapping table).
+---
 
-**Spec:**
+### S1: RnglrAutomatonTikz module [done — dfce604]
 
-- Highlight sets are matched per rendered cell: action part iterates terminals then `$`
-  (Symbol.Epsilon); goto part iterates nonterminals — membership test against the sets.
-- Empty highlight sets reproduce today's `buildTabular` byte-for-byte (existing goldens
-  for the plain table must stay green).
+**Code:** New file `src/FLPQ.Printers/RnglrAutomatonTikz.fs` (add to `FLPQ.Printers.fsproj`
+Compile list after `LRAutomatonTikz.fs`):
 
-### S2: Thread the triggering LR state through stored states [done — e6c04bb]
+- `renderRnglrItem (nonterminalPrinter: 'nt -> string) (item: RnglrItem<'nt>) : string` —
+  `<nonterminal> : <rsmState>`; unwraps the `Nonterminal` newtype.
+- `renderRnglrStateContent (nonterminalPrinter: 'nt -> string) (stateIdx: int) (items: Set<RnglrItem<'nt>>) : string` — `\text{State N}\\` header + one `<item> \\` line per
+  item in `Set.toSeq` order, trailing newline trimmed (mirrors `renderLR0StateContent`).
+- `rnglrAutomatonToTikz (labelPrinter: Symbol<'t,'nt> -> string) (nonterminalPrinter: 'nt -> string) (dfa: DFA<Symbol<'t,'nt>, Set<RnglrItem<'nt>>>) : string` —
+  delegates to `AutomatonTikz.dfaToTikz` with `shape = "rectangle"` and state visualizer
+  `LRAutomatonTikz.stateContentToTikzAs (renderRnglrStateContent ...)`.
 
-**Code:**
+**Tests:** New `tests/FLPQ.Printers.Tests/RnglrAutomatonTikzTests.fs` (build the real automaton
+via `ExtendedRSM.create` + `RnglrLR.buildLR0Table` on a registry grammar, e.g. ANBN
+"S -> a S b | eps"):
 
-- `src/FLPQ.Languages/RnglrTypes.fs`: `RnglrGSS.StoredStates` value type becomes the
-  labeled 5-tuple `Nonterminal<'nt> * int * int * int * int` (existing four components +
-  `triggerLrState`); update the type doc comment (component list) and `RnglrGSS.create`.
-- `src/FLPQ.Languages/Rnglr.fs`:
-  - `PredecessorInfo` gains `TriggerLrState: int`.
-  - `productBfs`: dequeued node's `TriggerLrState` is stored in every deposited tuple and
-    copied into every produced predecessor.
-  - `findPredecessors`: starts and `epsPredecessors` get `TriggerLrState = vxLrState`
-    (the LR state of the reduction vertex).
-  - `shiftNode` cascade: destructure the 5-tuple; BFS start gets
-    `TriggerLrState = storedTriggerLr`.
-    No behavior change — the new component is carried but not yet consumed for emission.
+- `[<Fact>]` `renderRnglrItem` renders `<nt> : <state>` exactly.
+- `[<Fact>]` `renderRnglrStateContent` — header line + one line per item, each ending `\\`.
+- `[<Fact>]` `rnglrAutomatonToTikz` — contains `\begin{tikzpicture}`, `rectangle` shape, start
+  state styling (`fill=green!30`), final-state `double`, and terminal/nonterminal edge labels.
+- `[<Fact>] [<Trait("Category", "TeX")>]` rendered automaton compiles with lualatex via
+  `ExternalTools.compileTexStringWithTemplate` + `tex_tikz_template.tex` (pattern from
+  `AutomatonVisualizationTests`).
 
-**Tests:** existing RNGLR suites pass unchanged (acceptance cases, passing-reduction
-tests, SPPF tests) — this is a behavior-preserving refactor; no new assertions possible
-yet (the field is not observable in output).
-
-**Docs:** `docs/developer/rnglr.md` — `RnglrGSS` type section: StoredStates 5-tuple with
-component list including `triggerLrState` (changed public API per the mapping table).
+**Docs:** Extend `docs/developer/automaton-viz.md` (module list, new "RnglrAutomatonTikz Module"
+section with signatures + item notation, See Also); update `docs/developer/FLPQ.Printers.md`
+module table row; add cross-reference in `docs/developer/rnglr.md` See Also.
 
 **Spec:**
 
-- Component order: `(nonterminal, invState, endRsmState, endInputVertex, triggerLrState)`
-  — the existing four keep their positions so the change is a pure extension.
-- `getStoredStates` / `setStoredStates` signatures follow the new tuple type automatically.
+- Module doc comment: RNGLR LR automaton = DFA over RSM symbols whose states hold sets of
+  `RnglrItem`; book reference sec:CFPQ_RNGLR.
+- All public functions carry XML doc comments (FS3569 is WarningsAsErrors in FLPQ.Printers).
+- No new dependencies; file opens only what it uses.
 
-### S3: Per-action substep collection and single-cell rendering [done — b594b88]
+### S2: RnglrRunner output files [done]
 
-**Code:**
+**Code:** `src/FLPQ.Cli/RnglrRunner.fs`:
 
-- `src/FLPQ.Languages/RnglrTypes.fs`: `RnglrParsingStep` — replace
-  `ActiveShiftTerminals`, `ActiveReduceNonterminals`, `LevelReductions` with
-  `Action: RnglrAction<'t, 'nt> option` (None = initial step); update doc comments
-  (substep semantics: snapshot after exactly one action; New\* differ against the previous
-  substep; PassingReductionVertices accumulate over the substep only). Update
-  `RnglrResult.Steps` doc comment (one snapshot per action + initial state).
-- `src/FLPQ.Languages/Rnglr.fs`:
-  - `buildPathIndexCore` callback becomes `onSubstep: RnglrParsingStep<'t, 'nt> -> unit`.
-    Local `emit (action: RnglrAction option) (inputVertex: int)` computes the snapshot:
-    `collectActiveGss`, `collectEdgeSymbols`, matrix copy, take+reset `changedCells`,
-    take+reset `passingReductionVertices`, New\* differencing against previous emit
-    (moved here from `buildPathIndexWithSteps`), then calls `onSubstep`. Move
-    `collectActiveGss` / `collectEdgeSymbols` above the emission points.
-  - `processReduction` gains a `triggerLrState` parameter; when `isNew` it calls
-    `emit (Some (RnglrAction.Reduce (reduceNt, triggerLrState, lrStatePre))) vEnd`;
-    still returns `isNew` (fixpoint condition unchanged).
-  - `shiftNode`: drop `stepShiftTerminals`; after each shift edge creation call
-    `emit (Some (RnglrAction.Shift (Terminal tVal, lrState))) v`; the cascade passes
-    `storedTriggerLr` to `processReduction`.
-  - `reduceAtLevel`: pass `lrState` as `triggerLrState`; drop `stepReduceNt` /
-    `levelReductions` accumulators.
-  - Driver: initial `emit None (-1)` before vertex 0 creation; remove the per-level emit
-    and all level accumulators.
-  - `buildPathIndexWithSteps`: collect via `onSubstep` (no differencing logic left).
-- `src/FLPQ.Printers/RnglrTableTeX.fs`: delete `buildTabularWithHighlights`,
-  `tableToTeXWithHighlights`, `tableToTeXWithHighlightsTabularOnly` (no callers left).
-- `src/FLPQ.Printers/RnglrStepVisualizer.fs`: `renderStep` renders the table as
-  `match step.Action with None -> tableToTeXTabularOnly | Some a -> tableToTeXWithActionHighlightTabularOnly`; update module/function doc comments
-  (substep semantics, highlight rule).
+- Delete the unconditional `rsm_blocks.dot` write (line 50).
+- `useDot` branch: write `ext_rsm.dot` via `RsmDot.extendedRsmToDot string string extRsm None`;
+  write `lr_automaton.dot` via `AutomatonDot.dfaToDot (SymbolTeX.toLaTeX string string) (fun idx items -> "State N" + item lines joined by "\n") lrTable.Automaton` using
+  `RnglrAutomatonTikz.renderRnglrItem` for the item lines.
+- TikZ branch: keep `ext_rsm.tikz.tex`; add `lr_automaton.tikz.tex` via
+  `RnglrAutomatonTikz.rnglrAutomatonToTikz (SymbolTeX.toLaTeX string string) string lrTable.Automaton`.
+
+**Tests:** `tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs`:
+
+- Replace `runRnglr produces rsm_blocks.dot` with `runRnglr dot mode produces ext_rsm.dot`.
+- New `[<Fact>]` `runRnglr dot mode produces lr_automaton.dot` (exists, non-empty).
+- New `[<Fact>]` `runRnglr tikz mode produces lr_automaton.tikz.tex` (exists, non-empty).
+- New `[<Fact>]` `runRnglr no longer produces rsm_blocks.dot` (regression: file absent in both
+  modes — one fact covering the dot-mode helper is enough; assert on the dot run).
+
+**Docs:** `docs/user/cli.md` — RNGLR row of the root-level artifacts table: replace
+`rsm_blocks.dot` with `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), and
+add `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`).
+
+**Spec:**
+
+- File names match the GLL/LR conventions exactly (`ext_rsm.*`, `lr_automaton.*`) so
+  `Summary.compileDotArtifacts` picks them up without changes.
+- DOT state label: first line `State <idx>`, then one `<nt> : <rsmState>` line per item in
+  `Set.toSeq` order, joined with `\n`.
+
+### S3: Summary.fs RNGLR visuals [done]
+
+**Code:** `src/FLPQ.Cli/Summary.fs` — RNGLR branch of the `visuals` match:
+
+- `RsmPdfs = [("Extended RSM", "dot_pdfs/ext_rsm.pdf")]` when `ext_rsm.dot` exists (was
+  `rsm_blocks.dot` / "RSM").
+- LR automaton detection mirroring the LR branch: if `lr_automaton.tikz.tex` exists →
+  `LrAutomatonTikz = Some <content>`, `LrAutomatonPdf = None`; else
+  `LrAutomatonPdf = Some "dot_pdfs/lr_automaton.pdf"` when `lr_automaton.dot` exists.
+
+**Tests:** `tests/FLPQ.Cli.Tests/SummaryTests.fs`:
+
+- `[<Fact>]` `buildSummary for RNGLR includes the extended RSM PDF when ext_rsm.dot exists`
+  (DOT mode; merged TeX contains "Extended RSM").
+- The LR-automaton detection facts (DOT-mode PDF, TikZ-mode embed) were moved to S4: they
+  assert on rendered header output, which only exists after the S4 `SummaryTeX` change.
+
+**Docs:** none new — behavior is documented with the header layout in S4.
+
+**Spec:**
+
+- The `HeaderVisuals` record shape is unchanged; only the RNGLR branch fills it differently.
+- Absent files degrade gracefully (no section), same as the LR branch.
+
+### S4: SummaryTeX RNGLR header layout [done]
+
+**Code:** `src/FLPQ.Printers/SummaryTeX.fs` — RNGLR branch of `headerSection`:
+
+- New local `extRsmLines`: TikZ mode → existing shared `extRsmTikzSection`; DOT mode →
+  `rsmFigureLines` (the `rsmPdfs` includePdf list). This removes the DOT RSM from the TikZ-mode
+  RNGLR summary.
+- New local `lrAutomatonLines`: TikZ mode → `[ section "LR Automaton"; wrapTikzAdjustbox true tikz; "" ]`
+  when `lrAutomatonTikz` is Some (SPPF-style width+height adjustbox); DOT mode →
+  `[ section "LR Automaton"; includePdf rel; "" ]` when `lrAutomatonPdf` is Some.
+- Branch body becomes: `colorLegend @ extRsmLines @ lrAutomatonLines @ tableLines @ pathIndexLines`.
+- GLL branch and all other kinds are untouched.
 
 **Tests:**
 
-- `tests/FLPQ.Printers.Tests/RnglrStepVisualizationTests.fs`: hand-built step literal in
-  `renderStep labels epsilon edges...` updated to the new record shape (give it
-  `Action = Some (RnglrAction.Shift (Terminal "a", 0))`); existing assertions unchanged.
-- `tests/FLPQ.Printers.Tests/RnglrTableTexTests.fs`: delete facts exercising the removed
-  multi-cell API.
-- Goldens: step-0 goldens (`rnglr_gss_step0.dot`, `rnglr_path_index_step0.tex`,
-  `rnglr_input_step0.dot`, `rnglr_lr_table_step0.tex`) must stay byte-identical (initial
-  step is unchanged); regenerate `rnglr_gss_aaa_last.dot` via `CREATE_GOLDEN_FILES=1` and
-  inspect the diff — only New-vertex/New-edge highlighting may differ (last substep vs
-  last level).
+- `tests/FLPQ.Printers.Tests/SummaryTexSectionTests.fs`:
+  - `[<Fact>]` RNGLR header in TikZ mode orders Extended RSM → LR Automaton → RNGLR Parsing
+    Table (write `ext_rsm.tikz.tex` + `rnglr_table.tex`, pass `lrAutomatonTikz = Some`; assert
+    `IndexOf` ordering and the `max totalheight=\textheight` adjustbox on the automaton).
+  - `[<Fact>]` RNGLR header in TikZ mode omits DOT RSM figures even when `rsmPdfs` is non-empty
+    (no `\includegraphics`).
+  - `[<Fact>]` RNGLR header in DOT mode includes the extended RSM PDF and the LR automaton PDF
+    (both includegraphics present, no adjustbox).
+- `tests/FLPQ.Printers.Tests/TexCompilationTests.fs` — update the two RNGLR end-to-end tests:
+  - DOT-mode test: `rsmPdfs = [("Extended RSM", "dot_pdfs/ext_rsm.pdf")]` (stub copy renamed),
+    pass `Some "dot_pdfs/lr_automaton.pdf"` + stub copy so the new section compiles.
+  - TikZ-mode test: `rsmPdfs = []`; write `lr_automaton.tikz.tex` rendered by the new
+    `RnglrAutomatonTikz.rnglrAutomatonToTikz` and pass it as `lrAutomatonTikz`; update the stale
+    comment ("the RSM figure stays a header PDF entry"); assert the automaton adjustbox is
+    present. Both must still compile with lualatex.
+- `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`:
+  - `RNGLR summary wraps each step GSS figure in adjustbox`: the width-only needle count stays
+    `1 + sections.Length` — the LR automaton head uses the max-totalheight variant
+    (`wrapTikzAdjustbox true`, per the code spec above), which the width-only needle
+    (`\begin{adjustbox}{max width=\textwidth}` with closing brace) does not match; update the
+    comment to say so.
+  - `assertSppfUsesMaxTotalHeightAdjustbox` → renamed `assertMaxTotalHeightAdjustboxCount`,
+    parameterized by expected occurrence count — CYK/Valiant/GLL keep 1, RNGLR becomes 2
+    (SPPF + LR automaton); fix the stale "only figure" comment.
+  - New `[<Fact>]` `RNGLR summary orders extended RSM, LR automaton, and parsing table`
+    (IndexOf ordering in the merged TeX).
+  - New `[<Fact>]` `RNGLR summary tikz mode contains no DOT RSM figure` (no
+    `dot_pdfs/rsm_blocks.pdf`, no `dot_pdfs/ext_rsm.pdf`).
+  - New `[<Fact>]` `RNGLR summary dot mode includes extended RSM and LR automaton PDFs` —
+    add a `useDot`-capable EBNF runner helper (existing `runWithSummaryEBNF` delegates with
+    `useDot = false`; new wrapper passes the flag).
+  - Moved from S3 (`tests/FLPQ.Cli.Tests/SummaryTests.fs`):
+    `[<Fact>]` `buildSummary for RNGLR includes the LR automaton PDF when lr_automaton.dot exists`
+    (DOT mode; merged TeX contains "LR Automaton" and `lr_automaton.pdf`) and
+    `[<Fact>]` `buildSummary for RNGLR in tikz mode embeds the LR automaton TikZ` (write a
+    marker `lr_automaton.tikz.tex`; merged TeX contains the marker and an adjustbox, no
+    `lr_automaton.pdf` includegraphics).
 
-**Docs:** `docs/developer/rnglr.md` — `RnglrParsingStep` section: new record shape
-(`Action` field replacing the three activity sets) and substep semantics;
-`buildPathIndexWithSteps` description ("one snapshot per action substep, plus the initial
-state").
-
-**Spec:**
-
-- Emission order within a level: fixpoint reductions in execution order, then shifts in
-  `verticesAt` × outgoing-edge order; cascade reductions interleave right after the shift
-  that consumed their stored states.
-- `InputVertex` of a substep = the level where its edge appears (`vEnd` for reductions,
-  `v` for shifts).
-- `buildPathIndex` (no steps) passes a no-op callback — zero overhead path unchanged in
-  behavior.
-
-### S4: Substep semantics tests [done — 41740c9]
-
-**Code:** none.
-
-**Tests:**
-
-- `tests/FLPQ.Languages.Tests/RnglrTests.fs`, new module `RnglrSubsteps`:
-  - initial step: `Action = None`, `InputVertex = -1`, empty GSS sets, empty ChangedCells;
-  - every non-initial substep has `Action = Some` and `InputVertex` in range;
-  - per-level ordering: within each level all Reduce substeps precede Shift substeps
-    (canonical order — reduce fixpoint before the shift pass);
-  - shift substep: exactly one new GSS edge, its symbol set contains the shifted terminal;
-  - reduce substep: at most one new GSS edge; when present its symbol is the reduced
-    nonterminal and `Map.contains (gotoLrState, nt) lrTable.Goto`;
-  - exact action sequence for `S -> a a` on input `[a; a]`:
-    `[Shift(a, 0); Shift(a, 1); Reduce(S, 3, 0)]` (LR states per the golden table:
-    0 = start, 1 = after first a, 2 = after S, 3 = reduce S);
-  - `buildPathIndexWithSteps ... .PathIndex` equals `buildPathIndex ...` for the same
-    grammar/input (matrix + counts).
-- `tests/FLPQ.Printers.Tests/RnglrStepVisualizationTests.fs`: extend `RnglrVizData` with
-  the action list; new facts: a shift substep's table contains exactly one
-  `\cellcolor{green!20}` on the action row; a reduce substep's table contains exactly two
-  `\cellcolor{red!20}` cells (goto row and trigger row `$` column); the initial step's
-  table contains no `\cellcolor`; new golden `rnglr_lr_table_substep_shift.tex` for the
-  first shift substep of `S -> a a` on `[a; a]`.
-
-**Docs:** none (tests-only subtask — no source changes, so the documentation mapping
-table requires no doc action).
+**Docs:** `docs/developer/summary-tex.md` — Overview bullet 27 (RNGLR DOT-mode head is now
+`ext_rsm.pdf`; TikZ mode never includes a DOT RSM) + new Overview bullet for the RNGLR LR
+automaton section; Design Decisions rows (mode-aware extended-RSM head for RNGLR; SPPF-style
+adjustbox for the RNGLR LR automaton). `docs/developer/FLPQ.Cli.md` — update the abstract's
+summary-head sentence to cover the RNGLR LR automaton and the DOT-mode ext RSM.
 
 **Spec:**
 
-- Row/column localization in TeX: parse tabular rows by their leading `\hline <state>`
-  marker; the `$` column is the last action-part column before the goto part.
-
-### S5: Documentation [done — 3c31e61]
-
-**Code:** none (documentation-only subtask — code gates skipped per AGENTS.md).
-
-**Tests:** none.
-
-**Docs:** `docs/developer/rnglr.md` — the remaining semantic updates that belong to the
-whole task rather than one subtask:
-
-- Abstract: mention per-action substep visualization.
-- Algorithm §2: replace "emit the level's step snapshot" with the emission rule (one
-  snapshot per new GSS edge — reduction or shift — plus the initial state; cascade
-  reductions emit right after their consuming shift).
-- Design decisions: replace "Visualization steps are per-input-position" with the
-  per-action substep decision (flat output, template unchanged except single/two-cell
-  table highlight); add the trigger-LR-state-in-stored-states decision; add the
-  epsilon-only-change attribution edge case.
-
-**Spec:**
-
-- Keep every statement traceable to code identifiers; no new information that is not in
-  the code or this plan.
-
-## Verification
-
-- Per subtask: format + build + affected tests (see `quality-gates` skill).
-- Pre-merge: full hard gate (`python3 tools/hard_gate.py`) must show STATUS: PASS —
-  including line/branch coverage thresholds (new branches in the visualizer/table core
-  are covered by S1/S4 tests).
-- Regenerate RNGLR output for `data/example_input_a_a_a.txt` +
-  `data/example_grammar_a_a_a.bnf` and eyeball: substep count > level count, each
-  `lr_table.tex` highlights one (shift) or two (reduce) cells, final GSS/path index
-  identical to before.
+- Section titles exactly: "Extended RSM", "LR Automaton", "RNGLR Parsing Table" (existing).
+- Missing files degrade gracefully: each of the three sections is independently optional.
+- No signature changes to `headerSection`/`buildContent` — the `lrAutomatonPdf` /
+  `lrAutomatonTikz` / `rsmPdfs` parameters already exist.

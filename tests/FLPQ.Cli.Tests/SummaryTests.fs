@@ -151,3 +151,49 @@ let ``buildSummary for GLL includes the extended RSM PDF when ext_rsm.dot exists
         let merged = Path.Combine(resultDir, "gll", "gll_merged.tex")
         let text = File.ReadAllText merged
         Assert.Contains("Extended RSM", text))
+
+[<Fact>]
+let ``buildSummary for RNGLR includes the extended RSM PDF when ext_rsm.dot exists`` () =
+    withTempDirs (fun (vizDir, resultDir) ->
+        File.WriteAllText(Path.Combine(vizDir, "ext_rsm.dot"), "digraph G { a -> b }")
+
+        let ok =
+            Summary.buildSummary (Helpers.findSummaryTemplate ()) RNGLR vizDir resultDir true
+
+        Assert.True(ok)
+
+        let merged = Path.Combine(resultDir, "rnglr", "rnglr_merged.tex")
+        let text = File.ReadAllText merged
+        Assert.Contains("Extended RSM", text))
+
+[<Fact>]
+let ``buildSummary for RNGLR includes the LR automaton PDF when lr_automaton.dot exists`` () =
+    withTempDirs (fun (vizDir, resultDir) ->
+        File.WriteAllText(Path.Combine(vizDir, "lr_automaton.dot"), "digraph G { a -> b }")
+
+        let ok =
+            Summary.buildSummary (Helpers.findSummaryTemplate ()) RNGLR vizDir resultDir true
+
+        Assert.True(ok)
+
+        let merged = Path.Combine(resultDir, "rnglr", "rnglr_merged.tex")
+        let text = File.ReadAllText merged
+        Assert.Contains("LR Automaton", text)
+        Assert.Contains("lr_automaton.pdf", text))
+
+[<Fact>]
+let ``buildSummary for RNGLR in tikz mode embeds the LR automaton TikZ`` () =
+    withTempDirs (fun (vizDir, resultDir) ->
+        File.WriteAllText(Path.Combine(vizDir, "lr_automaton.tikz.tex"), "AUTOMATONTIKZMARKER")
+
+        let ok =
+            Summary.buildSummary (Helpers.findSummaryTemplate ()) RNGLR vizDir resultDir false
+
+        Assert.True(ok)
+
+        let merged = Path.Combine(resultDir, "rnglr", "rnglr_merged.tex")
+        let text = File.ReadAllText merged
+        Assert.Contains("AUTOMATONTIKZMARKER", text)
+        // The automaton head uses the SPPF-style adjustbox limited to \textheight.
+        Assert.Contains(@"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}", text)
+        Assert.DoesNotContain("lr_automaton.pdf", text))

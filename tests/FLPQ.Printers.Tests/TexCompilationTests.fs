@@ -710,12 +710,13 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
         )
 
         File.WriteAllText(Path.Combine(tempDir, "path_index.tex"), PathIndexTeX.toTeX string string pathIndex)
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "ext_rsm.pdf"), true)
+        File.Copy(stubPdf, Path.Combine(dotPdfDir, "lr_automaton.pdf"), true)
         File.Copy(stubPdf, Path.Combine(dotPdfDir, "sppf.pdf"), true)
         // The trailing SPPF section (sppfSection) includes dot_pdfs/sppf.pdf when sppf.dot exists.
         File.WriteAllText(Path.Combine(tempDir, "sppf.dot"), "digraph SPPF { a }")
 
-        let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+        let rsmPdfs = [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
 
         let rnglrStepTemplatePath =
             [ Path.Combine("data", "RNGLR_step_template.tex")
@@ -745,7 +746,7 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
                 SummaryTeX.SummaryKind.RNGLR
                 tempDir
                 vizSteps.Length
-                None
+                (Some "dot_pdfs/lr_automaton.pdf")
                 None
                 rsmPdfs
                 ""
@@ -998,19 +999,6 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
         RnglrStepVisualizer.renderSteps string string lrTable vertexInfo steps pathIndex graph
 
     TestHelpers.withTempDir (fun tempDir ->
-        let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
-        Directory.CreateDirectory(dotPdfDir) |> ignore
-
-        let stubPdf = Path.Combine(dotPdfDir, "_stub.pdf")
-        File.WriteAllText(Path.Combine(tempDir, "_stub.dot"), "digraph G { a }")
-
-        ExternalTools.compileDotFileToPdf (Path.Combine(tempDir, "_stub.dot")) stubPdf
-        |> ignore
-
-        File.Delete(Path.Combine(tempDir, "_stub.dot"))
-
-        File.Copy(stubPdf, Path.Combine(dotPdfDir, "rsm_blocks.pdf"), true)
-
         for idx in 0 .. vizSteps.Length - 1 do
             let stepDir = Path.Combine(tempDir, sprintf "step_%d" idx)
             Directory.CreateDirectory(stepDir) |> ignore
@@ -1047,13 +1035,18 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
         let rnglrStepTikzTemplate = File.ReadAllText rnglrStepTikzTemplatePath
 
         // Tikz mode: SPPF is rendered by the trailing sppfSection from sppf.tikz.tex;
-        // the RSM figure stays a header PDF entry (rsm_blocks.dot is always written).
+        // the extended RSM and the LR automaton are embedded as TikZ figures in the head.
         let sppf =
             Sppf.buildSppfFromExtendedRsm pathIndex (ExtendedRSM.extRsm ersm) vertexCount
 
         File.WriteAllText(Path.Combine(tempDir, "sppf.tikz.tex"), SppfTikz.toTikz string string sppf)
 
-        let rsmPdfs = [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+        let lrAutomatonTikz =
+            RnglrAutomatonTikz.rnglrAutomatonToTikz (SymbolTeX.toLaTeX string string) string lrTable.Automaton
+
+        File.WriteAllText(Path.Combine(tempDir, "lr_automaton.tikz.tex"), lrAutomatonTikz)
+
+        let rsmPdfs = []
 
         let content =
             SummaryTeX.buildContent
@@ -1062,7 +1055,7 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
                 tempDir
                 vizSteps.Length
                 None
-                None
+                (Some lrAutomatonTikz)
                 rsmPdfs
                 ""
                 ""
@@ -1073,6 +1066,9 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
 
         // The head must embed the extended RSM TikZ figure (blocks stacked top-to-bottom).
         Assert.Contains("components go down left aligned", content)
+
+        // The LR automaton head uses the SPPF-style adjustbox limited to \textheight.
+        Assert.Contains(@"max totalheight=\textheight", content)
 
         let template =
             File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex"))

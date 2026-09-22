@@ -59,6 +59,23 @@ module Summary =
           LrAutomatonTikz: string option
           RsmPdfs: (string * string) list }
 
+    /// LR automaton header artifacts: the TikZ source when lr_automaton.tikz.tex exists,
+    /// otherwise the dot-compiled PDF path when lr_automaton.dot exists.
+    let private lrAutomatonVisuals (vizDir: string) : string option * string option =
+        let autoTikzTex = Path.Combine(vizDir, "lr_automaton.tikz.tex")
+
+        if File.Exists autoTikzTex then
+            None, Some(File.ReadAllText autoTikzTex)
+        elif File.Exists(Path.Combine(vizDir, "lr_automaton.dot")) then
+            Some "dot_pdfs/lr_automaton.pdf", None
+        else
+            None, None
+
+    /// Extended RSM header PDF entry, present when ext_rsm.dot exists.
+    let private extRsmPdfs (vizDir: string) : (string * string) list =
+        [ if File.Exists(Path.Combine(vizDir, "ext_rsm.dot")) then
+              ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
+
     let buildSummary
         (templatePath: string)
         (algo: AlgorithmTypes.Algorithm)
@@ -87,43 +104,23 @@ module Summary =
                 | AlgorithmTypes.LR0
                 | AlgorithmTypes.SLR1
                 | AlgorithmTypes.CLR1 ->
-                    let autoDot = Path.Combine(vizDir, "lr_automaton.dot")
-                    let autoTikzTex = Path.Combine(vizDir, "lr_automaton.tikz.tex")
+                    let (autoPdf, autoTikz) = lrAutomatonVisuals vizDir
 
-                    if File.Exists autoTikzTex then
-                        let tikzContent = File.ReadAllText autoTikzTex
-
-                        { LrAutomatonPdf = None
-                          LrAutomatonTikz = Some tikzContent
-                          RsmPdfs = [] }
-                    else
-                        let autoPdf =
-                            if File.Exists autoDot then
-                                Some "dot_pdfs/lr_automaton.pdf"
-                            else
-                                None
-
-                        { LrAutomatonPdf = autoPdf
-                          LrAutomatonTikz = None
-                          RsmPdfs = [] }
+                    { LrAutomatonPdf = autoPdf
+                      LrAutomatonTikz = autoTikz
+                      RsmPdfs = [] }
                 // SPPF is rendered once, as a trailing section (SummaryTeX.sppfSection),
                 // for all algorithms — never in the header.
                 | AlgorithmTypes.GLL ->
-                    let pdfs =
-                        [ if File.Exists(Path.Combine(vizDir, "ext_rsm.dot")) then
-                              ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
-
                     { LrAutomatonPdf = None
                       LrAutomatonTikz = None
-                      RsmPdfs = pdfs }
+                      RsmPdfs = extRsmPdfs vizDir }
                 | AlgorithmTypes.RNGLR ->
-                    let pdfs =
-                        [ if File.Exists(Path.Combine(vizDir, "rsm_blocks.dot")) then
-                              ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+                    let (autoPdf, autoTikz) = lrAutomatonVisuals vizDir
 
-                    { LrAutomatonPdf = None
-                      LrAutomatonTikz = None
-                      RsmPdfs = pdfs }
+                    { LrAutomatonPdf = autoPdf
+                      LrAutomatonTikz = autoTikz
+                      RsmPdfs = extRsmPdfs vizDir }
                 | _ ->
                     { LrAutomatonPdf = None
                       LrAutomatonTikz = None

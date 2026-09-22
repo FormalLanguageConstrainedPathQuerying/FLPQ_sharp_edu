@@ -1,5 +1,31 @@
 # Code Review Report
 
+## Task 279 Review (2026-09-22)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/RnglrAutomatonTikz.fs` (new: RNGLR LR automaton TikZ renderer), `src/FLPQ.Cli/RnglrRunner.fs` (mode-aware `ext_rsm.*` + `lr_automaton.*` artifacts, `rsm_blocks.dot` removed), `src/FLPQ.Cli/Summary.fs` (RNGLR header visuals: extended RSM PDF + LR automaton detection), `src/FLPQ.Printers/SummaryTeX.fs` (RNGLR head order Color Legend → Extended RSM → LR Automaton → Table → Path Index; SPPF-style adjustbox for the automaton), tests (`RnglrAutomatonTikzTests`, `RnglrRunnerTests`, `SummaryTests`, `SummaryTexSectionTests`, `CliSummaryTests`, both RNGLR end-to-end tests in `TexCompilationTests`), and docs (`automaton-viz.md`, `FLPQ.Printers.md`, `summary-tex.md`, `FLPQ.Cli.md`, `rnglr.md`, `cli.md`).
+
+**Findings resolved this review:**
+
+- §13 (no duplication) — the RNGLR branch of `Summary.fs` duplicated the LR branch's automaton detection (~15 lines of tikz-over-dot file probing), and both GLL/RNGLR branches duplicated the ext_rsm.pdf entry list. Extracted private helpers `lrAutomatonVisuals` (TikZ source when `lr_automaton.tikz.tex` exists, else `dot_pdfs/lr_automaton.pdf` when `lr_automaton.dot` exists) and `extRsmPdfs`; all four match branches now share them. Behavior unchanged; SummaryTests + CliSummaryTests still pass (commit 1ac9e2e).
+
+**Verified:** build 0 errors; FSharpLint 0 warnings on all four touched projects (`FLPQ.Printers`, `FLPQ.Cli` and both test projects — linted with `.fsproj` arguments); Fantomas clean; mdformat clean; targeted suites pass — SummaryTexSectionTests 21, SummaryTests + CliSummaryTests 53, RNGLR Printers tests 38 (including both lualatex end-to-end compiles).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — `lrAutomatonVisuals` returns a 2-item tuple; no larger tuples introduced.
+- §6 (doc comments) — all public API in `RnglrAutomatonTikz` carries XML docs (`renderRnglrItem`, `renderRnglrStateContent`, `rnglrAutomatonToTikz`); the new `Summary.fs` helpers are private with short doc comments, consistent with the file's style.
+- §11 (variants as thin layers) — `RnglrAutomatonTikz` delegates to `AutomatonTikz.dfaToTikz` (shape "rectangle") and reuses `LRAutomatonTikz.stateContentToTikzAs`; the DOT runner labels reuse `renderRnglrItem`, so DOT and TikZ state labels match.
+- §13 (no duplication) — see resolved finding; the remaining 2-line `rsmPdfs |> List.collect ...` pattern shared by the GLL/RNGLR header branches is below the >3-line threshold and stays inline.
+- §14 (language registry) — all new test inputs come from registry grammars (ANBN classic, DoubleA singleRule); no hand-built RSMs.
+- §15/§16 (test fidelity / Fact vs Property) — every new fact asserts a concrete property: per-mode file presence/absence, IndexOf ordering of the head sections, exact adjustbox variant counts (width-only `1 + sections.Length`; max-totalheight 1 for CYK/Valiant/GLL, 2 for RNGLR), includegraphics presence/absence, and lualatex compilation. All deterministic `[<Fact>]`.
+- §19 (test coverage) — the new module `RnglrAutomatonTikz` has a dedicated test file including a lualatex compile fact; every changed behavior (runner artifacts, summary detection, header layout) has a corresponding fact.
+- §20 (documentation) — `automaton-viz.md` gained a RnglrAutomatonTikz section + module row; `summary-tex.md` overview bullets and two design-decision rows; `FLPQ.Cli.md` role paragraph; `cli.md` RNGLR artifact row; `rnglr.md` See Also. All match the implemented behavior.
+- §21 (book traceability) — `RnglrAutomatonTikz.fs` carries `Book reference: sec:CFPQ_RNGLR`; the header layout decisions are documented in `summary-tex.md`.
+
+**No blocking findings.** No open items carried over from prior reports.
+
+---
+
 ## Task 278 Review (2026-09-21)
 
 Scope: full branch diff vs dev — `src/FLPQ.Languages/Rnglr.fs` + `RnglrTypes.fs` (per-action substep emission, `RnglrAction`, `triggerLrState` threaded through stored states and `PredecessorInfo`), `src/FLPQ.Printers/RnglrTableTeX.fs` (single-action cell highlight API replacing the multi-cell one) + `RnglrStepVisualizer.fs` (`renderStep` switches on `step.Action`), tests (`RnglrSubsteps` module, visualizer substep facts, new golden `rnglr_lr_table_substep_shift.tex`, regenerated `rnglr_gss_aaa_last.dot`, shared `GoldenHelpers.countOccurrences`), and `docs/developer/rnglr.md`.

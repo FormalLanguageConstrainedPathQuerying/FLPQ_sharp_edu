@@ -48,7 +48,7 @@ Root-level artifacts per algorithm:
 | **LL** | `grammar_original.tex`, `ll_table.tex` |
 | **LR** | `grammar_original.tex`, `lr_table.tex`, `lr_automaton.tikz.tex` (default, Tikz standalone) or `lr_automaton.dot` (with `--use-dot`) |
 | **GLL** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `rsm_blocks.dot`, `ext_rsm.tikz.tex` (default) or `ext_rsm.dot` (`--use-dot`), `path_index.tex`, `sppf.dot` |
-| **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `rsm_blocks.dot`, `ext_rsm.tikz.tex` (default Tikz mode), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
+| **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 

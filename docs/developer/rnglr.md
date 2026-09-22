@@ -198,3 +198,4 @@ Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, 
 - [PathIndex module](path-index.md) — path index types and operations
 - [RSM module](rsm.md) — Recursive State Machine model
 - [LR parser](lr-parser.md) — standard LR infrastructure (LRAction, automaton construction)
+- [Automaton visualization](automaton-viz.md) — `RnglrAutomatonTikz` renders the RNGLR LR automaton for summaries

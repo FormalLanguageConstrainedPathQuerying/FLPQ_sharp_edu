@@ -10,6 +10,7 @@
     <Compile Include="ExternalToolsTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
+    <Compile Include="RnglrAutomatonTikzTests.fs" />
     <Compile Include="DerivationTreeVisualizationTests.fs" />
     <Compile Include="DerivationTreeTikzTests.fs" />
     <Compile Include="LLVisualizerTests.fs" />

@@ -75,6 +75,56 @@ let ``GLL header in tikz mode omits the input section when input.tikz.tex is abs
         Assert.DoesNotContain("Input String", text))
 
 [<Fact>]
+let ``RNGLR header in tikz mode orders extended RSM before LR automaton before table`` () =
+    TestHelpers.withTempDir (fun dir ->
+        File.WriteAllText(Path.Combine(dir, "ext_rsm.tikz.tex"), "EXTRSMTIKZ")
+        File.WriteAllText(Path.Combine(dir, "rnglr_table.tex"), "RNGLRTABLE")
+
+        let lines =
+            SummaryTeX.headerSection dir SummaryTeX.SummaryKind.RNGLR None (Some "AUTOTIKZ") [] true
+
+        let text = String.concat "\n" lines
+
+        let rsmIdx = text.IndexOf("Extended RSM")
+        let autoIdx = text.IndexOf("LR Automaton")
+        let tableIdx = text.IndexOf("RNGLR Parsing Table")
+        Assert.True(rsmIdx >= 0 && autoIdx > rsmIdx && tableIdx > autoIdx)
+        Assert.Contains(@"max totalheight=\textheight", text))
+
+[<Fact>]
+let ``RNGLR header in tikz mode omits DOT RSM figures even when rsmPdfs is non-empty`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let lines =
+            SummaryTeX.headerSection
+                dir
+                SummaryTeX.SummaryKind.RNGLR
+                None
+                None
+                [ ("RSM", "dot_pdfs/rsm_blocks.pdf") ]
+                true
+
+        let text = String.concat "\n" lines
+        Assert.DoesNotContain("\includegraphics", text))
+
+[<Fact>]
+let ``RNGLR header in dot mode includes the extended RSM and LR automaton PDFs`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let lines =
+            SummaryTeX.headerSection
+                dir
+                SummaryTeX.SummaryKind.RNGLR
+                (Some "dot_pdfs/lr_automaton.pdf")
+                None
+                [ ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
+                false
+
+        let text = String.concat "\n" lines
+
+        Assert.Contains(@"\includegraphics[width=0.9\textwidth,keepaspectratio]{{dot_pdfs/ext_rsm.pdf}}", text)
+        Assert.Contains(@"\includegraphics[width=0.9\textwidth,keepaspectratio]{{dot_pdfs/lr_automaton.pdf}}", text)
+        Assert.DoesNotContain("adjustbox", text))
+
+[<Fact>]
 let ``tableStepSection without table.tex renders only the step header`` () =
     TestHelpers.withTempDir (fun dir ->
         let stepDir = Path.Combine(dir, "step_1")

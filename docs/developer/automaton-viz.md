@@ -1,13 +1,13 @@
 # Automaton Visualization
 
-**Tags:** visualization, automaton, dot, tikz, nfa, dfa, lr, graphviz, graphdrawing
+**Tags:** visualization, automaton, dot, tikz, nfa, dfa, lr, rnglr, graphviz, graphdrawing
 **Kind:** visualization
-**Module:** AutomatonDot, AutomatonTikz, LRAutomatonTikz
+**Module:** AutomatonDot, AutomatonTikz, LRAutomatonTikz, RnglrAutomatonTikz
 **Source:** `src/FLPQ.Printers/`
-**Depends on:** Automaton, LR parser types
+**Depends on:** Automaton, LR parser types, RnglrItem (FLPQ.Languages)
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`). Provides a specialized Tikz renderer for LR automata (`LRAutomatonTikz`) using rectangle shapes and aligned LR-item state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, epsilon transitions (dotted), and loop edges.
+> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, epsilon transitions (dotted), and loop edges.
 
 ## Contents
 
@@ -15,6 +15,7 @@
 - [AutomatonDot Module](#automatonDot-module)
 - [AutomatonTikz Module](#automatonTikz-module)
 - [LRAutomatonTikz Module](#lrautomatonTikz-module)
+- [RnglrAutomatonTikz Module](#rnglrAutomatonTikz-module)
 - [Design Decisions](#design-decisions)
 - [See Also](#see-also)
 
@@ -25,6 +26,7 @@
 | **DOT** | `AutomatonDot` | Standard automaton visualization via Graphviz |
 | **Tikz** | `AutomatonTikz` | Layered layout, parametrizable shapes, enhanced styling |
 | **Tikz (LR)** | `LRAutomatonTikz` | Rectangle states, aligned LR items with state numbers |
+| **Tikz (RNGLR)** | `RnglrAutomatonTikz` | Rectangle states, aligned RSM items (`<nt> : <rsmState>`) with state numbers |
 
 ## AutomatonDot Module
 
@@ -72,6 +74,28 @@ A &\to \alpha \cdot \beta \\
 - State number in `\text{State N}` header, LR items aligned by `&`, dot as `\cdot`, LR(1) lookahead appended after comma
 - Delegates to `AutomatonTikz.dfaToTikz` with `shape = "rectangle"`
 
+## RnglrAutomatonTikz Module
+
+### Functions
+
+- `renderRnglrItem: ('nt -> string) -> RnglrItem<'nt> -> string` — one item as `<nonterminal> : <rsmState>`
+- `renderRnglrStateContent: ('nt -> string) -> int -> Set<RnglrItem<'nt>> -> string` — aligned state content
+- `rnglrAutomatonToTikz: (Symbol<'t,'nt> -> string) -> ('nt -> string) -> DFA<Symbol<'t,'nt>, Set<RnglrItem<'nt>>> -> string`
+
+### State Content Format
+
+```
+$\begin{aligned}
+\text{State N}\\
+S : 1 \\
+A : 0 \\
+\end{aligned}$
+```
+
+- The RNGLR LR automaton is a DFA over RSM symbols whose states hold sets of `RnglrItem` (a block nonterminal and an RSM state within its block) — see [RNGLR module](rnglr.md)
+- Each item renders as `<nonterminal> : <rsmState>`; items appear in set (sorted) order
+- Delegates to `AutomatonTikz.dfaToTikz` with `shape = "rectangle"`, reusing `LRAutomatonTikz.stateContentToTikzAs` for the math-mode aligned wrapper
+
 ## Design Decisions
 
 | Decision | Rationale |
@@ -85,5 +109,6 @@ A &\to \alpha \cdot \beta \\
 
 - [Automaton module](automaton.md) — NFA/DFA types
 - [LR parser](lr-parser.md) — LR automata rendered by LRAutomatonTikz
+- [RNGLR module](rnglr.md) — RNGLR LR automaton rendered by RnglrAutomatonTikz
 - [Derivation tree visualization](derivation-tree-viz.md) — DOT for derivation trees
 - [ExternalTools module](external-tools.md) — Graphviz/lualatex for compilation
