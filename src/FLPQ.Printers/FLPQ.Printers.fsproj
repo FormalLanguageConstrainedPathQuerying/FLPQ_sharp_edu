@@ -20,6 +20,8 @@
     <Compile Include="InputGraphDot.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />
+    <Compile Include="PathSemiringTeX.fs" />
+    <Compile Include="RegexpTeX.fs" />
     <Compile Include="LRAutomatonTikz.fs" />
     <Compile Include="RnglrAutomatonTikz.fs" />
     <Compile Include="SppfTikz.fs" />
@@ -31,6 +33,7 @@
     <Compile Include="GllStepVisualizer.fs" />
     <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="RnglrStepVisualizer.fs" />
+    <Compile Include="ArroyueloStepVisualizer.fs" />
     <Compile Include="CykTeX.fs" />
     <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />
@@ -46,6 +49,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\FLPQ.RPQ\FLPQ.RPQ.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

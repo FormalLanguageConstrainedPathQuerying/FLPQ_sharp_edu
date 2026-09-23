@@ -1,13 +1,13 @@
 # FLPQ.Cli
 
-**Tags:** cli, console, runner, cyk, valiant, ll, lr, gll, rnglr, rpq, summary, tex, dot
+**Tags:** cli, console, runner, cyk, valiant, ll, lr, gll, rnglr, rpq, arroyuelo, summary, tex, dot
 **Kind:** hub
 **Source:** `src/FLPQ.Cli/`
-**Depends on:** FLPQ.Languages, FLPQ.Printers, Argu
+**Depends on:** FLPQ.Languages, FLPQ.Printers, FLPQ.RPQ, Argu
 **Used by:** _(none — top-level application)_
 **Book reference:** _(application — no direct book reference)_
 
-> **Abstract:** Console application for running parsing algorithms (CYK, Valiant standard/modified, LL(k), LR(0)/SLR(1)/CLR(1), GLL, RNGLR) with file-based I/O and step-by-step visualization output to TeX/Dot/Tikz. Supports merged summary PDF generation via the `--summary` flag, compiling all outputs through Graphviz and lualatex. Uses Argu for argument parsing.
+> **Abstract:** Console application for running parsing algorithms (CYK, Valiant standard/modified, LL(k), LR(0)/SLR(1)/CLR(1), GLL, RNGLR) and RPQ algorithms (Arroyuelo) with file-based I/O and step-by-step visualization output to TeX/Dot/Tikz. Supports merged summary PDF generation via the `--summary` flag, compiling all outputs through Graphviz and lualatex. Uses Argu for argument parsing.
 
 ## Contents
 
@@ -20,17 +20,18 @@
 
 - **Type**: F# console application (`net10.0`)
 - **Path**: `src/FLPQ.Cli/`
-- **Dependencies**: `FLPQ.Languages`, `FLPQ.Printers`, Argu
+- **Dependencies**: `FLPQ.Languages`, `FLPQ.Printers`, `FLPQ.RPQ`, Argu
 
 ## Modules
 
 | Module | Source | Documentation |
 | --- | --- | --- |
 | `Program` | `Program.fs` | [CLI console application](../user/cli.md) |
+| `ArroyueloRunner` | `ArroyueloRunner.fs` | [Arroyuelo step visualization](arroyuelo-step-viz.md) — writes the root artifacts (regexp, DFA, graph, result) and one directory per trace step |
 
 ## Role
 
-Command-line interface using Argu for argument parsing. Allows running CYK, Valiant, LL, LR0, SLR1, CLR1 algorithms with file-based I/O and step-by-step visualization output. With the `--summary` (`-s`) flag it also builds a merged TeX document per algorithm, compiles all Dot files to PDF via Graphviz and the merged TeX to PDF via lualatex, replacing the former `run_viz.py` script. The `--use-dot` flag switches LR automaton rendering from the default Tikz back to Graphviz dot. In Tikz mode the GLL and RNGLR summaries embed the full extended RSM figure (`ext_rsm.tikz.tex`, blocks stacked top-to-bottom) at the head of the document, and the RNGLR summary additionally embeds its LR automaton as an adjustbox-wrapped TikZ figure; in DOT mode the head uses the dot-compiled PDFs instead (`ext_rsm.pdf` for GLL/RNGLR, `lr_automaton.pdf` for RNGLR).
+Command-line interface using Argu for argument parsing. Allows running CYK, Valiant, LL, LR0, SLR1, CLR1, GLL, RNGLR algorithms with file-based I/O and step-by-step visualization output. RPQ algorithms take a regexp file (`-r`) and a graph file (`--graph`) instead of grammar/input; `ArroyueloRunner` evaluates the query over the path semiring with a trace and writes the root artifacts plus one directory per regexp tree node (see [Arroyuelo step visualization](arroyuelo-step-viz.md)). The Arroyuelo RPQ summary (`-s`) embeds the color legend, the query regexp, the query DFA, and the input graph in the header, followed by one two-column section per step (see [SummaryTeX module](summary-tex.md)). With the `--summary` (`-s`) flag it also builds a merged TeX document per algorithm, compiles all Dot files to PDF via Graphviz and the merged TeX to PDF via lualatex, replacing the former `run_viz.py` script. The `--use-dot` flag switches LR automaton rendering from the default Tikz back to Graphviz dot. In Tikz mode the GLL and RNGLR summaries embed the full extended RSM figure (`ext_rsm.tikz.tex`, blocks stacked top-to-bottom) at the head of the document, and the RNGLR summary additionally embeds its LR automaton as an adjustbox-wrapped TikZ figure; in DOT mode the head uses the dot-compiled PDFs instead (`ext_rsm.pdf` for GLL/RNGLR, `lr_automaton.pdf` for RNGLR).
 
 ## See Also
 

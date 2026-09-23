@@ -80,3 +80,10 @@ let ``findTikzTemplate returns existing file`` () =
     Assert.True(File.Exists templatePath)
     let content = File.ReadAllText templatePath
     Assert.Contains("\\usepackage{tikz}", content)
+
+[<Fact>]
+let ``findTemplateFile fails with the tried paths when no candidate exists`` () =
+    let ex =
+        Assert.Throws<System.Exception>(fun () -> findTemplateFile "no_such_template_xyz.tex" |> ignore)
+
+    Assert.Contains("no_such_template_xyz.tex", ex.Message)

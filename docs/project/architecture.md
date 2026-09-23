@@ -53,11 +53,25 @@ FLPQ.slnx
 │   │   ├── LRStepVisualizer.fs     # LR parser step-by-step visualization
 │   │   └── ExternalTools.fs        # Graphviz and lualatex wrappers (shared by CLI and tests)
 │   └── FLPQ.RPQ/               # RPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages)
-│       ├── GraphReader.fs          # Graph file reading, returns graph as NFA
-│       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
-│       ├── ArroyueloRPQ.fs         # Arroyuelo's matrix-based RPQ algorithm
-│       └── KroneckerRPQ.fs         # Kronecker product-based RPQ with MS-BFS filtering
-└── tests/
+ │       ├── GraphReader.fs          # Graph file reading, returns graph as NFA
+ │       ├── RpqInput.fs             # RPQ query regexp parsing from EBNF
+ │       ├── PathSemiring.fs         # Path semiring over sets of vertex sequences
+ │       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
+ │       ├── ArroyueloRPQ.fs         # Arroyuelo's matrix-based RPQ algorithm
+ │       └── KroneckerRPQ.fs         # Kronecker product-based RPQ with MS-BFS filtering
+ │   └── FLPQ.Cli/                   # Console application (depends on FLPQ.Languages, FLPQ.Printers, FLPQ.RPQ)
+ │       ├── Program.fs              # Entry point and algorithm dispatch
+ │       ├── AlgorithmTypes.fs       # Algorithm DU and Argu argument type
+ │       ├── Helpers.fs              # Output file writing and template lookup
+ │       ├── CykRunner.fs            # CYK CLI runner
+ │       ├── ValiantRunner.fs        # Valiant (standard/modified) CLI runner
+ │       ├── LLRunner.fs             # LL(k) CLI runner
+ │       ├── LRRunner.fs             # LR(0)/SLR(1)/CLR(1) CLI runner
+ │       ├── GllRunner.fs            # GLL CLI runner
+ │       ├── RnglrRunner.fs          # RNGLR CLI runner
+ │       ├── ArroyueloRunner.fs      # Arroyuelo RPQ CLI runner (regexp + graph input)
+ │       └── Summary.fs              # Merged TeX summary generation (--summary)
+ └── tests/
     ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
     │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
     │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
@@ -75,12 +89,15 @@ FLPQ.slnx
     │   ├── FirstFollowTests.fs           # Tests for FirstFollow
     │   ├── AutomatonTests.fs             # Tests for Automaton
     │   ├── RSMTests.fs                   # Tests for RSM type
-    │   ├── EbnfParserTests.fs            # Tests for EBNF parser
-    │   ├── RsmToGrammarTests.fs          # Tests for RSM to grammar conversion
+     │   ├── EbnfParserTests.fs            # Tests for EBNF parser
+     │   ├── RegexpToDfaTests.fs           # Tests for Regexp.toDfa (derivative DFA construction)
+     │   ├── RsmToGrammarTests.fs          # Tests for RSM to grammar conversion
     │   ├── LLParserTests.fs              # Tests for LL parser
     │   └── LRParserTests.fs              # Tests for LR parser
-    └── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
-        └── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
+     └── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
+         ├── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
+         ├── RpqInputTests.fs              # Tests for RPQ query regexp parsing
+         └── PathSemiringTests.fs          # Tests for the path semiring
     └── FLPQ.Printers.Tests/       # Tests for printers
         ├── ExternalToolsTests.fs        # Tests for Graphviz/lualatex wrappers
         ├── MatrixTeXTests.fs             # Tests for matrix TeX rendering
@@ -98,8 +115,8 @@ FLPQ.slnx
 - **FLPQ.GraphAnalysis** — F# class library (net10.0). Generic graph type, MS-BFS, and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
 - **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
-- **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `lualatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
-- **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms with optional summary PDF generation (`--summary`). Depends on `FLPQ.Languages` and `FLPQ.Printers`.
+- **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `lualatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra`, `FLPQ.Languages`, and `FLPQ.RPQ`.
+- **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms and RPQ algorithms (Arroyuelo) with optional summary PDF generation (`--summary`). Depends on `FLPQ.Languages`, `FLPQ.Printers`, and `FLPQ.RPQ`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.
 - **FLPQ.GraphAnalysis.Tests** — xUnit test project for graph analysis. Uses FsCheck for property-based testing.
 - **FLPQ.Languages.Tests** — xUnit test project for languages. Uses FsCheck for property-based testing. Depends on `FLPQ.Languages` (and transitively on `FLPQ.LinearAlgebra`).

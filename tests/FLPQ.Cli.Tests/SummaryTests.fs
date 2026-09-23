@@ -51,6 +51,10 @@ let ``algorithmToKind for RNGLR is RNGLR`` () =
     Assert.Equal(SummaryTeX.SummaryKind.RNGLR, algorithmToKind RNGLR)
 
 [<Fact>]
+let ``algorithmToKind for ArroyueloRPQ is ArroyueloRPQ`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.ArroyueloRPQ, algorithmToKind ArroyueloRPQ)
+
+[<Fact>]
 let ``algorithmLower for Valiant`` () =
     Assert.Equal("valiant", algorithmLower Valiant)
 
@@ -74,6 +78,10 @@ let ``algorithmLower for GLL`` () = Assert.Equal("gll", algorithmLower GLL)
 [<Fact>]
 let ``algorithmLower for RNGLR`` () =
     Assert.Equal("rnglr", algorithmLower RNGLR)
+
+[<Fact>]
+let ``algorithmLower for ArroyueloRPQ`` () =
+    Assert.Equal("arroyuelorpq", algorithmLower ArroyueloRPQ)
 
 /// Runs `f` inside two fresh temp directories (vizDir, resultDir), removed afterwards.
 let private withTempDirs (f: string * string -> unit) : unit =

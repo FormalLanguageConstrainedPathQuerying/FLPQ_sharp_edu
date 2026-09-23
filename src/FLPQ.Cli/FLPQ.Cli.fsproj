@@ -14,6 +14,7 @@
     <Compile Include="LRRunner.fs" />
     <Compile Include="GllRunner.fs" />
     <Compile Include="RnglrRunner.fs" />
+    <Compile Include="ArroyueloRunner.fs" />
     <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
@@ -21,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\FLPQ.Printers\FLPQ.Printers.fsproj" />
+    <ProjectReference Include="..\FLPQ.RPQ\FLPQ.RPQ.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

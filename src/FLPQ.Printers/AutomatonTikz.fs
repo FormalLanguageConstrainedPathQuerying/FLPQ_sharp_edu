@@ -21,7 +21,14 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
-    let nodeOptions (idx: int) (stateContent: string) (isStart: bool) (isFinal: bool) (shape: string) : string =
+    let nodeOptions
+        (idx: int)
+        (stateContent: string)
+        (isStart: bool)
+        (isFinal: bool)
+        (isHighlighted: bool)
+        (shape: string)
+        : string =
         let parts = ResizeArray<string>()
 
         parts.Add(sprintf "as={%s}" stateContent)
@@ -35,6 +42,11 @@ module AutomatonTikz =
             parts.Add("double distance=1.5pt")
             parts.Add("fill=red!30")
 
+        // Last fill wins in TikZ: a highlighted state renders lightblue whether or not it is
+        // also start (green) or final (red); the final's double ring is kept.
+        if isHighlighted then
+            parts.Add("fill=lightblue!20")
+
         String.concat ", " parts
 
     let private stateDeclarations
@@ -43,6 +55,7 @@ module AutomatonTikz =
         (states: 's list)
         (startStates: Set<int>)
         (finalStates: Set<int>)
+        (highlightedStates: Set<int>)
         (shape: string)
         (sb: StringBuilder)
         : unit =
@@ -51,7 +64,8 @@ module AutomatonTikz =
             let content = stateVisualizer idx state
             let isStart = Set.contains idx startStates
             let isFinal = Set.contains idx finalStates
-            let opts = nodeOptions idx content isStart isFinal shape
+            let isHighlighted = Set.contains idx highlightedStates
+            let opts = nodeOptions idx content isStart isFinal isHighlighted shape
             sb.AppendLine(sprintf "    s%d [%s];" idx opts) |> ignore
 
     let private transitionEdges
@@ -136,9 +150,46 @@ module AutomatonTikz =
 
         tikzHeader shape sb
 
-        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates shape sb
+        stateDeclarations
+            nfa.States.Length
+            stateVisualizer
+            nfa.States
+            nfa.StartStates
+            nfa.FinalStates
+            Set.empty
+            shape
+            sb
+
         transitionEdges labelPrinter nfa.Transitions sb
         epsEdges nfa.Transitions sb
+
+        tikzFooter sb
+        sb.ToString()
+
+    /// Render a DFA as a Tikz tikzpicture using layered layout, with the given states highlighted
+    /// (fill=lightblue!20, overriding the start state's green fill).
+    let dfaToTikzWithHighlights
+        (labelPrinter: 't -> string)
+        (stateVisualizer: int -> 's -> string)
+        (shape: string)
+        (dfa: DFA<'t, 's>)
+        (highlightedStates: Set<int>)
+        : string =
+        let sb = StringBuilder()
+
+        tikzHeader shape sb
+
+        stateDeclarations
+            dfa.States.Length
+            stateVisualizer
+            dfa.States
+            (set [ dfa.StartState ])
+            dfa.FinalStates
+            highlightedStates
+            shape
+            sb
+
+        transitionEdges labelPrinter dfa.Transitions sb
 
         tikzFooter sb
         sb.ToString()
@@ -150,12 +201,4 @@ module AutomatonTikz =
         (shape: string)
         (dfa: DFA<'t, 's>)
         : string =
-        let sb = StringBuilder()
-
-        tikzHeader shape sb
-
-        stateDeclarations dfa.States.Length stateVisualizer dfa.States (set [ dfa.StartState ]) dfa.FinalStates shape sb
-        transitionEdges labelPrinter dfa.Transitions sb
-
-        tikzFooter sb
-        sb.ToString()
+        dfaToTikzWithHighlights labelPrinter stateVisualizer shape dfa Set.empty

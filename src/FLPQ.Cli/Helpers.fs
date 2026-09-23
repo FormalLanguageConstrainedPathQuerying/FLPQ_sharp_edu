@@ -81,121 +81,61 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "gss.tikz.tex")) steps.[idx].GssTikz
                 writeOutputFile (Path.Combine(stepDir, "input.tikz.tex")) steps.[idx].InputTikz
 
+    let writeArroyueloStepsVisualization
+        (outputDir: string)
+        (useDot: bool)
+        (steps: ArroyueloStepVisualizer.ArroyueloVisualizationStep list)
+        =
+        for idx in 0 .. steps.Length - 1 do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
+
+            writeOutputFile (Path.Combine(stepDir, "matrices.tex")) steps.[idx].Matrices
+
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "tree.dot")) steps.[idx].TreeDot
+                writeOutputFile (Path.Combine(stepDir, "graph.dot")) steps.[idx].GraphDot
+            else
+                writeOutputFile (Path.Combine(stepDir, "tree.tikz.tex")) steps.[idx].TreeTikz
+                writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
+
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
         if m.Success then Int32.Parse(m.Groups.[1].Value) else 0
 
-    let findSummaryTemplate () : string =
+    /// Locate a template file in the data directory (CWD-relative), the test output
+    /// directory, or the repository's data directory. Fails with the tried paths when
+    /// none exists.
+    let findTemplateFile (fileName: string) : string =
         let candidates =
-            [ Path.Combine("data", "tex_summary_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "tex_summary_template.tex"
-              ) ]
+            [ Path.Combine("data", fileName)
+              Path.Combine(System.AppContext.BaseDirectory, fileName)
+              Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "data", fileName) ]
 
         match candidates |> List.tryFind File.Exists with
         | Some p -> p
-        | None -> failwithf "Could not locate tex_summary_template.tex. Tried: %A" candidates
+        | None -> failwithf "Could not locate %s. Tried: %A" fileName candidates
+
+    let findSummaryTemplate () : string =
+        findTemplateFile "tex_summary_template.tex"
 
     let findTikzTemplate () : string =
-        let candidates =
-            [ Path.Combine("data", "tex_tikz_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "tex_tikz_template.tex"
-              ) ]
-
-        match candidates |> List.tryFind File.Exists with
-        | Some p -> p
-        | None -> failwithf "Could not locate tex_tikz_template.tex. Tried: %A" candidates
+        findTemplateFile "tex_tikz_template.tex"
 
     let findGllStepTemplate () : string =
-        let candidates =
-            [ Path.Combine("data", "GLL_step_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "GLL_step_template.tex"
-              ) ]
-
-        match candidates |> List.tryFind File.Exists with
-        | Some p -> p
-        | None -> failwithf "Could not locate GLL_step_template.tex. Tried: %A" candidates
+        findTemplateFile "GLL_step_template.tex"
 
     let findRnglrStepTemplate () : string =
-        let candidates =
-            [ Path.Combine("data", "RNGLR_step_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "RNGLR_step_template.tex"
-              ) ]
+        findTemplateFile "RNGLR_step_template.tex"
 
-        match candidates |> List.tryFind File.Exists with
-        | Some p -> p
-        | None -> failwithf "Could not locate RNGLR_step_template.tex. Tried: %A" candidates
+    let findArroyueloStepTemplate () : string =
+        findTemplateFile "Arroyuelo_step_template.tex"
+
+    let findArroyueloStepTikzTemplate () : string =
+        findTemplateFile "Arroyuelo_step_tikz_template.tex"
 
     let findGllStepTikzTemplate () : string =
-        let candidates =
-            [ Path.Combine("data", "GLL_step_tikz_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "GLL_step_tikz_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "GLL_step_tikz_template.tex"
-              ) ]
-
-        match candidates |> List.tryFind File.Exists with
-        | Some p -> p
-        | None -> failwithf "Could not locate GLL_step_tikz_template.tex. Tried: %A" candidates
+        findTemplateFile "GLL_step_tikz_template.tex"
 
     let findRnglrStepTikzTemplate () : string =
-        let candidates =
-            [ Path.Combine("data", "RNGLR_step_tikz_template.tex")
-              Path.Combine(System.AppContext.BaseDirectory, "RNGLR_step_tikz_template.tex")
-              Path.Combine(
-                  System.AppContext.BaseDirectory,
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "..",
-                  "data",
-                  "RNGLR_step_tikz_template.tex"
-              ) ]
-
-        match candidates |> List.tryFind File.Exists with
-        | Some p -> p
-        | None -> failwithf "Could not locate RNGLR_step_tikz_template.tex. Tried: %A" candidates
+        findTemplateFile "RNGLR_step_tikz_template.tex"

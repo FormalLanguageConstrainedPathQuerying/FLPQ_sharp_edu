@@ -630,6 +630,14 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
 
         let gllStepTemplate = File.ReadAllText gllStepTemplatePath
 
+        let templates: SummaryTeX.StepTemplates =
+            { Gll = gllStepTemplate
+              GllTikz = ""
+              Rnglr = ""
+              RnglrTikz = ""
+              Arroyuelo = ""
+              ArroyueloTikz = "" }
+
         let content =
             SummaryTeX.buildContent
                 "GLL"
@@ -639,10 +647,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
                 None
                 None
                 rsmPdfs
-                gllStepTemplate
-                ""
-                ""
-                ""
+                templates
                 false
             |> String.concat "\n"
 
@@ -740,6 +745,14 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
 
         let rnglrStepTemplate = File.ReadAllText rnglrStepTemplatePath
 
+        let templates: SummaryTeX.StepTemplates =
+            { Gll = ""
+              GllTikz = ""
+              Rnglr = rnglrStepTemplate
+              RnglrTikz = ""
+              Arroyuelo = ""
+              ArroyueloTikz = "" }
+
         let content =
             SummaryTeX.buildContent
                 "RNGLR"
@@ -749,10 +762,7 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
                 (Some "dot_pdfs/lr_automaton.pdf")
                 None
                 rsmPdfs
-                ""
-                rnglrStepTemplate
-                ""
-                ""
+                templates
                 false
             |> String.concat "\n"
 
@@ -945,6 +955,14 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
 
         let rsmPdfs: (string * string) list = []
 
+        let templates: SummaryTeX.StepTemplates =
+            { Gll = ""
+              GllTikz = gllStepTikzTemplate
+              Rnglr = ""
+              RnglrTikz = ""
+              Arroyuelo = ""
+              ArroyueloTikz = "" }
+
         let content =
             SummaryTeX.buildContent
                 "GLL"
@@ -954,10 +972,7 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
                 None
                 None
                 rsmPdfs
-                ""
-                ""
-                gllStepTikzTemplate
-                ""
+                templates
                 true
             |> String.concat "\n"
 
@@ -1048,6 +1063,14 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
 
         let rsmPdfs = []
 
+        let templates: SummaryTeX.StepTemplates =
+            { Gll = ""
+              GllTikz = ""
+              Rnglr = ""
+              RnglrTikz = rnglrStepTikzTemplate
+              Arroyuelo = ""
+              ArroyueloTikz = "" }
+
         let content =
             SummaryTeX.buildContent
                 "RNGLR"
@@ -1057,10 +1080,7 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
                 None
                 (Some lrAutomatonTikz)
                 rsmPdfs
-                ""
-                ""
-                ""
-                rnglrStepTikzTemplate
+                templates
                 true
             |> String.concat "\n"
 

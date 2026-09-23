@@ -18,6 +18,7 @@ module Summary =
         | AlgorithmTypes.CLR1 -> SummaryTeX.SummaryKind.LR
         | AlgorithmTypes.GLL -> SummaryTeX.SummaryKind.GLL
         | AlgorithmTypes.RNGLR -> SummaryTeX.SummaryKind.RNGLR
+        | AlgorithmTypes.ArroyueloRPQ -> SummaryTeX.SummaryKind.ArroyueloRPQ
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
@@ -145,6 +146,22 @@ module Summary =
                 else
                     "", ""
 
+            let arroyueloStepTemplate, arroyueloStepTikzTemplate =
+                if algoKind = SummaryTeX.SummaryKind.ArroyueloRPQ then
+                    let templatePath = Helpers.findArroyueloStepTemplate ()
+                    let tikzTemplatePath = Helpers.findArroyueloStepTikzTemplate ()
+                    File.ReadAllText templatePath, File.ReadAllText tikzTemplatePath
+                else
+                    "", ""
+
+            let templates: SummaryTeX.StepTemplates =
+                { Gll = gllStepTemplate
+                  GllTikz = gllStepTikzTemplate
+                  Rnglr = rnglrStepTemplate
+                  RnglrTikz = rnglrStepTikzTemplate
+                  Arroyuelo = arroyueloStepTemplate
+                  ArroyueloTikz = arroyueloStepTikzTemplate }
+
             let content =
                 SummaryTeX.buildContent
                     (AlgorithmTypes.displayName algo)
@@ -154,10 +171,7 @@ module Summary =
                     visuals.LrAutomatonPdf
                     visuals.LrAutomatonTikz
                     visuals.RsmPdfs
-                    gllStepTemplate
-                    rnglrStepTemplate
-                    gllStepTikzTemplate
-                    rnglrStepTikzTemplate
+                    templates
                     useTikz
                 |> String.concat "\n"
 

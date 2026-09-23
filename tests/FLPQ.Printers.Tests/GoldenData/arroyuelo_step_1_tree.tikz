@@ -1,0 +1,15 @@
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, rectangle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+    v0 [as={$a$}];
+    v1 [as={$b$}, fill=lightblue!20];
+    v2 [as={$a$}];
+    v3 [as={$b \mid a$}];
+    v4 [as={$(b \mid a)^*$}];
+    v5 [as={$a / (b \mid a)^*$}];
+    v3 -> v1;
+    v3 -> v2;
+    v4 -> v3;
+    v5 -> v0;
+    v5 -> v4;
+  };
+\end{tikzpicture}

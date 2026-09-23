@@ -170,6 +170,22 @@ module Regexp =
 
         Dfa.fromTransitions [ 0 .. stateList.Length - 1 ] transitions startId finalStates
 
+    /// Build a DFA from a regular expression over terminals.
+    /// The alphabet is derived from the terminals occurring in the regexp;
+    /// terminal-free expressions (e.g. eps) yield a single-state DFA.
+    let toDfa (regexp: Regexp<'t, 'nt>) : DFA<'t, int> =
+        let alphabet =
+            symbols regexp
+            |> List.choose (function
+                | RsmSymbol.RTerm(Terminal t) -> Some t
+                | _ -> None)
+            |> List.distinct
+
+        let deriveFn (r: Regexp<'t, 'nt>) (sym: 't) =
+            derive r (RsmSymbol.RTerm(Terminal sym))
+
+        buildDfaFromRegex alphabet deriveFn regexp
+
 
 /// EBNF token type for tokenizer-based parsing.
 [<RequireQualifiedAccess>]
@@ -179,6 +195,7 @@ type private EbnfToken =
     | Star
     | Plus
     | Quest
+    | Slash
     | LParen
     | RParen
     | Arrow
@@ -216,6 +233,9 @@ module EbnfParser =
                         i <- i + 1
                     elif trimmed.[i] = '?' then
                         tokens.Add EbnfToken.Quest
+                        i <- i + 1
+                    elif trimmed.[i] = '/' then
+                        tokens.Add EbnfToken.Slash
                         i <- i + 1
                     elif trimmed.[i] = '(' then
                         tokens.Add EbnfToken.LParen
@@ -285,6 +305,9 @@ module EbnfParser =
             let first, rest = parsePostfix tokens
 
             match rest with
+            | EbnfToken.Slash :: r ->
+                let rest2, rem = parseSeq r
+                RSeq(first, rest2), rem
             | (EbnfToken.Ident _ | EbnfToken.LParen | EbnfToken.Eps) :: _ ->
                 let rest2, rem = parseSeq rest
                 RSeq(first, rest2), rem

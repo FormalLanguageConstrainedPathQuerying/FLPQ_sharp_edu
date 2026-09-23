@@ -10,6 +10,8 @@ open FLPQ.TestUtilities
 let private baseDir = System.AppContext.BaseDirectory
 
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
+let private exampleRegexp = Path.Combine(baseDir, "example_regexp.txt")
+let private exampleGraph = Path.Combine(baseDir, "example_graph.txt")
 
 let private runWithSummary (algorithm: string) (useDot: bool) : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -286,6 +288,75 @@ let ``RNGLR summary wraps each step GSS figure in adjustbox`` () =
 let ``ValiantModified summary produces merged TeX`` () =
     let outDir = runWithSummary "ValiantModified" false
     assertMergedTexExists outDir "ValiantModified"
+
+// Arroyuelo RPQ summary: the header carries the color legend, the query regexp (math mode),
+// the query DFA, and the input graph; each step is a two-column section (tree + matrices |
+// highlighted graph). There is no SPPF for RPQ — the trailing sppfSection is skipped when
+// the sppf files are absent.
+let private runArroyueloWithSummary (useDot: bool) : string =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+    Directory.CreateDirectory outDir |> ignore
+
+    let dotFlag = if useDot then [ "--use-dot" ] else []
+
+    let args =
+        Array.append
+            [| "-a"
+               "ArroyueloRPQ"
+               "-r"
+               exampleRegexp
+               "--graph"
+               exampleGraph
+               "-o"
+               outDir
+               "-s" |]
+            (Array.ofList dotFlag)
+
+    let code = Program.runCli args
+    Assert.Equal(0, code)
+    outDir
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary produces merged TeX`` () =
+    let outDir = runArroyueloWithSummary false
+    assertMergedTexExists outDir "ArroyueloRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary header orders legend before regexp before DFA before graph`` () =
+    let outDir = runArroyueloWithSummary false
+
+    let texPath =
+        Path.Combine(outDir, "results", "arroyuelorpq", "arroyuelorpq_merged.tex")
+
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+
+    let legendIdx = content.IndexOf("Color Legend")
+    let regexpIdx = content.IndexOf("Query Regular Expression")
+    let dfaIdx = content.IndexOf("Query DFA")
+    let graphIdx = content.IndexOf("Input Graph")
+
+    Assert.True(
+        legendIdx >= 0
+        && regexpIdx > legendIdx
+        && dfaIdx > regexpIdx
+        && graphIdx > dfaIdx
+    )
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary merged TeX compiles with lualatex`` () =
+    let outDir = runArroyueloWithSummary false
+    assertMergedTexCompiles outDir "ArroyueloRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary dot mode merged TeX compiles with lualatex`` () =
+    let outDir = runArroyueloWithSummary true
+    assertMergedTexCompiles outDir "ArroyueloRPQ"
 
 // SPPF must appear exactly once in the GLL/RNGLR merged summary — as the trailing
 // "SPPF (Shared Packed Parse Forest)" section. The header no longer carries a

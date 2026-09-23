@@ -65,6 +65,140 @@ module ArroyueloRPQ =
             let closure = transitiveClosure rMat
             MsBfs.boolAdd identity closure
 
+    /// The matrix operation performed at a regexp tree node.
+    type ArroyueloOperation =
+        | Base
+        | Alt
+        | Seq
+        | Star
+
+    /// One step of the path-semiring evaluation: one post-order visit of a regexp tree node.
+    /// NodeIndex is the post-order position (the last step is the root); Children holds the
+    /// post-order indices of the node's children (empty for leaves). Operands are the child
+    /// results ([] for Base, [left; right] for Alt/Seq, [child] for Star).
+    [<Struct>]
+    type ArroyueloTraceStep<'t, 'nt when 't: comparison and 'nt: comparison> =
+        { NodeIndex: int
+          Expr: Regexp<'t, 'nt>
+          Operation: ArroyueloOperation
+          Operands: Matrix<Set<int list>> list
+          Result: Matrix<Set<int list>>
+          Children: int list }
+
+    /// Convert a Boolean adjacency matrix to a path matrix: a true cell [i, j] becomes
+    /// the single-edge path [i; j].
+    let private boolToPathMatrix (m: Matrix<bool>) : Matrix<Set<int list>> =
+        let rows = Matrix.rows m
+        let cols = Matrix.cols m
+
+        Matrix.create rows cols (fun i j -> if m.[i, j] then Set.singleton [ i; j ] else Set.empty)
+
+    /// State of the post-order walk inside evaluateWithTrace: the index of the node just
+    /// completed, the steps collected so far (children before parents), and that node's
+    /// result matrix.
+    type private LoopState<'t, 'nt when 't: comparison and 'nt: comparison> =
+        { NodeIndex: int
+          Steps: ArroyueloTraceStep<'t, 'nt> list
+          Result: Matrix<Set<int list>> }
+
+    /// Evaluate a regexp on the given graph over the path semiring, recording one trace
+    /// step per AST node in post-order (children before parent; the last step is the root).
+    /// Returns the steps and the full |V| x |V| result matrix. Cells hold sets of simple
+    /// vertex paths, so on cyclic graphs the boolean projection may be a strict subset of
+    /// the Boolean evaluate's reachability (walks that revisit vertices are excluded);
+    /// on acyclic graphs the two coincide.
+    let evaluateWithTrace
+        (graph: NFA<'t, int>)
+        (regexp: Regexp<'t, 'nt>)
+        : ArroyueloTraceStep<'t, 'nt> list * Matrix<Set<int list>> =
+        let perLabel = BooleanDecomposition.decomposeNonEmptySet graph.Transitions
+        let vCount = Nfa.stateCount graph
+
+        let zeroMatrix = Matrix.init vCount vCount Set.empty
+
+        let baseMatrix (r: Regexp<'t, 'nt>) : Matrix<Set<int list>> =
+            match r with
+            | REps -> PathSemiring.identity vCount
+            | RTerm(Terminal t) ->
+                match Map.tryFind (ATerm t) perLabel with
+                | Some m -> boolToPathMatrix m
+                | None -> zeroMatrix
+            | _ -> zeroMatrix
+
+        let rec loop (r: Regexp<'t, 'nt>) (acc: ArroyueloTraceStep<'t, 'nt> list) : LoopState<'t, 'nt> =
+            match r with
+            | REps
+            | REmpty
+            | RTerm _
+            | RNonterm _ ->
+                let result = baseMatrix r
+
+                let step =
+                    { NodeIndex = List.length acc
+                      Expr = r
+                      Operation = Base
+                      Operands = []
+                      Result = result
+                      Children = [] }
+
+                { NodeIndex = step.NodeIndex
+                  Steps = step :: acc
+                  Result = result }
+            | RAlt(l, rr) ->
+                let left = loop l acc
+                let right = loop rr left.Steps
+                let result = PathSemiring.addMatrices left.Result right.Result
+
+                let step =
+                    { NodeIndex = List.length right.Steps
+                      Expr = r
+                      Operation = Alt
+                      Operands = [ left.Result; right.Result ]
+                      Result = result
+                      Children = [ left.NodeIndex; right.NodeIndex ] }
+
+                { NodeIndex = step.NodeIndex
+                  Steps = step :: right.Steps
+                  Result = result }
+            | RSeq(l, rr) ->
+                let left = loop l acc
+                let right = loop rr left.Steps
+                let result = PathSemiring.mxm left.Result right.Result
+
+                let step =
+                    { NodeIndex = List.length right.Steps
+                      Expr = r
+                      Operation = Seq
+                      Operands = [ left.Result; right.Result ]
+                      Result = result
+                      Children = [ left.NodeIndex; right.NodeIndex ] }
+
+                { NodeIndex = step.NodeIndex
+                  Steps = step :: right.Steps
+                  Result = result }
+            | RStar(rp) ->
+                let child = loop rp acc
+
+                let result =
+                    PathSemiring.addMatrices
+                        (PathSemiring.identity vCount)
+                        (PathSemiring.transitiveClosure child.Result)
+
+                let step =
+                    { NodeIndex = List.length child.Steps
+                      Expr = r
+                      Operation = Star
+                      Operands = [ child.Result ]
+                      Result = result
+                      Children = [ child.NodeIndex ] }
+
+                { NodeIndex = step.NodeIndex
+                  Steps = step :: child.Steps
+                  Result = result }
+
+        let root = loop regexp []
+        (List.rev root.Steps, root.Result)
+
     /// Evaluate a regexp on the given graph and return a |sources| × |V| boolean reachability matrix.
     /// Sources are taken from the NFA's start states.
     let evaluate (graph: NFA<'t, int>) (regexp: Regexp<'t, 'nt>) : Matrix<bool> =

@@ -104,18 +104,26 @@ Generates a LaTeX string using the `pNiceMatrix` environment from the nicematrix
 ### `toTeXStyled`
 
 ```fsharp
-type Highlight = { row: int; col: int; color: string }
+type HighlightLabel = | CurrentCell
+type SubmatrixBlockLabel = | CurrentStepSubmatrix | Submatrix of int
+type Highlight = { Row: int; Col: int; Label: HighlightLabel }
 type SubmatrixBlock =
-    { startRow: int; startCol: int; rowCount: int; colCount: int
-      borderColor: string option; fillColor: string option }
+    { StartRow: int; StartCol: int; RowCount: int; ColCount: int
+      Label: SubmatrixBlockLabel }
 
 val toTeXStyled:
     showRowNumbers: bool -> showColNumbers: bool ->
     cellPrinter: ('a -> string) -> m: Matrix<'a> ->
-    highlights: Highlight list -> blocks: SubmatrixBlock list -> string
+    highlights: Highlight list -> blocks: SubmatrixBlock list ->
+    rowLabelPrinter: (int -> string) option ->
+    colLabelPrinter: (int -> string) option ->
+    useRectangleColor: bool -> useAdjustbox: bool -> string
 ```
 
 Extended TeX printing with cell highlighting and submatrix block borders using nicematrix `\Block` commands.
+
+- `rowLabelPrinter` / `colLabelPrinter` — custom row/column header printers (e.g. vertex names). The printed label is emitted **as-is**: the printer owns the TeX, so it must produce content valid in the surrounding mode (math-mode matrices take math-mode labels such as `v_0`; callers that need text-mode labels wrap them in `\text{...}` themselves, as PathIndexTeX does).
+- `useAdjustbox` — wraps the matrix in `\begin{adjustbox}{max width=\textwidth} ... $ ... $ \end{adjustbox}` so wide matrices shrink to the text width; the `$...$` puts the matrix in math mode.
 
 ## Design Decisions
 

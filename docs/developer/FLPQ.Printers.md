@@ -38,6 +38,9 @@
 | [RsmDot / RsmTikz](rsm-viz.md) | Dot and Tikz rendering for Recursive State Machines; Tikz stacks blocks (connected components) top-to-bottom |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
+| [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of path semiring matrices (RPQ working matrices with vertex-path cells) |
+| [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
+| [ArroyueloStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's RPQ evaluation (regexp tree, matrix equations, graph highlights) |
 | [LLTableTeX](ll-table-tex.md) | TeX rendering for LL parsing tables |
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |

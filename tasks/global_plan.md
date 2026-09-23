@@ -11,10 +11,10 @@
 
 - Arroyuelo: Chapter 11, `03_Arroyuelo.tex` (sec:RPQ_Arroyuelo) — regexp → Boolean matrix
   translation M(ε)=I, M(a)=M_a, M(E1|E2)=M(E1)+M(E2), M(E1/E2)=M(E1)×M(E2),
-  M(E*)=I+M(E)^+; post-order evaluation of the regexp syntax tree.
+  M(E\*)=I+M(E)^+; post-order evaluation of the regexp syntax tree.
 - Belyanin: Chapter 11, `02_BFS.tex` (sec:RPQ_BFS, algo:RPQ_BFS_semiring) — BFS over
   (q,v) pairs with two |Q|×|V| matrices M (front) and P (accumulated); path semiring
-  carrier 2^{V*} with index operator I_simple (book example figure
+  carrier 2^{V\*} with index operator I_simple (book example figure
   `figures/02_BFS/algorithm_step.tex` shows paths in matrix cells).
 
 ## Dependencies and Execution Order
@@ -67,7 +67,7 @@ Because 281 starts only after 280 is merged to dev, there is no concurrent editi
 ### Path semiring (`src/FLPQ.RPQ/PathSemiring.fs`) — new module
 
 Custom semiring over sets of vertex sequences (the book's "path semiring",
-carrier 2^{V*}; Valiant's `Set<SppfParsingEntry>` cells are the inspiration for
+carrier 2^{V\*}; Valiant's `Set<SppfParsingEntry>` cells are the inspiration for
 tracking witnesses inside matrix cells):
 
 - A path is an `int list` (vertex sequence, endpoints included); a matrix cell is
@@ -148,7 +148,7 @@ Two-column minipage layout modeled on `data/RNGLR_step_template.tex` /
   — left: DFA with frontier states highlighted + M/P matrices; right: input graph
   with frontier paths highlighted + per-label propagation products.
 - TikZ figures inside templates are wrapped via the existing
-  `SummaryTeX.wrapTikzAdjustbox false` (adjustbox, shrink-only to \textwidth) —
+  `SummaryTeX.wrapTikzAdjustbox false` (adjustbox, shrink-only to \\textwidth) —
   the "use adjustbox for tikz" requirement.
 
 ### Summary plumbing (`SummaryTeX.fs`, `Summary.fs`, `Helpers.fs`)

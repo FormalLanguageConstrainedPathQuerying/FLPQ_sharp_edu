@@ -46,7 +46,13 @@ module GssTikz =
             Set.union activeVertices fromEdges
 
         for vidx in allVertices do
-            let label = vertexLabelPrinter vidx |> AutomatonTikz.escapeLatex
+            let rawLabel = vertexLabelPrinter vidx
+
+            let label =
+                if skipEscaping then
+                    rawLabel
+                else
+                    AutomatonTikz.escapeLatex rawLabel
 
             let isCurrent =
                 match currentVertex with
@@ -72,7 +78,13 @@ module GssTikz =
         // Also render current vertex if not already in allVertices
         match currentVertex with
         | Some cv when not (Set.contains cv allVertices) ->
-            let label = vertexLabelPrinter cv |> AutomatonTikz.escapeLatex
+            let rawLabel = vertexLabelPrinter cv
+
+            let label =
+                if skipEscaping then
+                    rawLabel
+                else
+                    AutomatonTikz.escapeLatex rawLabel
 
             sb.AppendLine(sprintf "    v%d [as={%s}, fill=lightblue!20];" cv label)
             |> ignore

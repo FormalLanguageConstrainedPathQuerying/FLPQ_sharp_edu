@@ -186,11 +186,11 @@ module MatrixTeX =
                               ""
                           elif isColHdr then
                               match colLabelPrinter with
-                              | Some printer -> sprintf @"\text{%s}" (printer (col - 1))
+                              | Some printer -> printer (col - 1)
                               | None -> ""
                           elif isRowHdr then
                               match rowLabelPrinter with
-                              | Some printer -> sprintf @"\text{%s}" (printer (row - 1))
+                              | Some printer -> printer (row - 1)
                               | None -> ""
                           else
                               let dataRow = row - dataRowOffset

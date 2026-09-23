@@ -10,16 +10,18 @@ algorithm, and produces a final visualization PDF. This replaces the former
 
 ## Types
 
-- `Algorithm` — DU: `CYK | Valiant | LL | LR0 | SLR1 | CLR1`
+- `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ`
 - `Arguments` — Argu argument type with `IArgParserTemplate`
 
 ## Command-line flags
 
 | Flag | Description | Default |
 | --- | --- | --- |
-| `-a` / `--algorithm` | Parsing algorithm | (required) |
-| `-g` / `--grammar` | Grammar file (.bnf) | (required) |
-| `-i` / `--input` | Input string file | (required) |
+| `-a` / `--algorithm` | Algorithm (parsing algorithms take `-g`/`-i`; RPQ algorithms take `-r`/`--graph`) | (required) |
+| `-g` / `--grammar` | Grammar file (.bnf) — parsing algorithms | (required for parsing algorithms) |
+| `-i` / `--input` | Input string file — parsing algorithms | (required for parsing algorithms) |
+| `-r` / `--regexp` | Regexp file (EBNF; the first rule's RHS is the query) — RPQ algorithms | (required for RPQ algorithms) |
+| `--graph` | Graph file (start vertices line + `from label to` edges) — RPQ algorithms | (required for RPQ algorithms) |
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
@@ -38,6 +40,7 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 | **Valiant** | `table.tex` (+ `bool_decomp_*.tex` on last step) | `pNiceMatrix` table with cell printer rendering sets (empty sets as `\cdot`) |
 | **LL** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Derivation tree with stack overlay: Tikz graphdrawing picture with a same-layer constraint on the stack frontier, or DOT graph; TeX input row with current position underlined |
 | **LR** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Same format as LL — the picture includes LR state frames in the stack chain |
+| **Arroyuelo RPQ** | `matrices.tex`, `tree.tikz.tex` (default) or `tree.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) | One directory per regexp tree node in post-order: the matrix equation for the node's operation, the regexp tree with the current node highlighted, and the graph with the vertices/edges of the step's result paths highlighted |
 
 Root-level artifacts per algorithm:
 
@@ -49,6 +52,7 @@ Root-level artifacts per algorithm:
 | **LR** | `grammar_original.tex`, `lr_table.tex`, `lr_automaton.tikz.tex` (default, Tikz standalone) or `lr_automaton.dot` (with `--use-dot`) |
 | **GLL** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `rsm_blocks.dot`, `ext_rsm.tikz.tex` (default) or `ext_rsm.dot` (`--use-dot`), `path_index.tex`, `sppf.dot` |
 | **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
+| **Arroyuelo RPQ** | `regexp.tex` (query formula), `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`) — the query's DFA with `q_i` state labels, `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) — the input graph without highlights, `result.tex` — final path semiring matrix plus one line per source listing its reachable vertices |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 
@@ -84,6 +88,10 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 # Same for the other algorithms: Valiant, LL, LR
 dotnet run --project src/FLPQ.Cli -c Release -- \
     -a LR -g data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
+
+# Arroyuelo RPQ: regexp query + graph instead of grammar/input
+dotnet run --project src/FLPQ.Cli -c Release -- \
+    -a ArroyueloRPQ -r data/example_regexp.txt --graph data/example_graph.txt -o ./viz_output
 ```
 
 ## Requirements

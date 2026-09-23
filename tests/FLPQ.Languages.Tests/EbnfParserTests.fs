@@ -51,6 +51,20 @@ module EbnfParseTests =
         Assert.Equal(1, Map.count grouped)
 
     [<Fact>]
+    let ``Parse explicit slash concatenation`` () =
+        let r1 = EbnfParser.parseEbnf "S -> a / b"
+        let r2 = EbnfParser.parseEbnf "S -> a b"
+        Assert.Equal<(Nonterminal<string> * Regexp<string, string>) list>(r2, r1)
+
+    [<Fact>]
+    let ``Parse book RPQ example walk/(O | R)+/walk`` () =
+        let rules = EbnfParser.parseEbnf "S -> walk / (O | R)+ / walk"
+        Assert.Equal(1, List.length rules)
+        let _, r = rules.Head
+        let alt = RAlt(RNonterm(Nonterminal "O"), RNonterm(Nonterminal "R"))
+        Assert.Equal(RSeq(RTerm(Terminal "walk"), RSeq(RSeq(alt, RStar alt), RTerm(Terminal "walk"))), r)
+
+    [<Fact>]
     let ``Parse multiple rules`` () =
         let rules =
             EbnfParser.parseEbnf

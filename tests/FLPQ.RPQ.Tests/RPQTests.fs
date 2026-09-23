@@ -379,22 +379,6 @@ module PropertyTests =
 
 // --- Cross-algorithm property tests with random regex patterns (task 115) ---
 
-let private regexToDfa (regexp: Regexp<string, string>) : DFA<string, int> =
-    let terminals =
-        Regexp.symbols regexp
-        |> List.choose (fun s ->
-            match s with
-            | RsmSymbol.RTerm(Terminal t) -> Some t
-            | _ -> None)
-        |> List.distinct
-
-    let alphabet = if List.isEmpty terminals then [ "a" ] else terminals
-
-    let deriveFn (r: Regexp<string, string>) (sym: string) =
-        Regexp.derive r (RsmSymbol.RTerm(Terminal sym))
-
-    Regexp.buildDfaFromRegex alphabet deriveFn regexp
-
 [<Properties(Arbitrary = [| typeof<RegexAndGraphGenerators> |])>]
 module RegexPropertyTests =
 
@@ -410,7 +394,7 @@ module RegexPropertyTests =
             else
                 let source = min d.Sources.[0] (v - 1)
                 let nfaBely = TestHelpers.nfaFromEdges v d.Edges [| source |]
-                let dfa = regexToDfa d.Regex
+                let dfa = Regexp.toDfa d.Regex
                 let belyResult = BelyaninRPQ.evaluate dfa nfaBely
 
                 let nfaArro = TestHelpers.nfaFromEdges v d.Edges [| source |]
@@ -436,7 +420,7 @@ module RegexPropertyTests =
             else
                 let source = min d.Sources.[0] (v - 1)
                 let nfa = TestHelpers.nfaFromEdges v d.Edges [| source |]
-                let dfa = regexToDfa d.Regex
+                let dfa = Regexp.toDfa d.Regex
                 let belyResult = BelyaninRPQ.evaluate dfa nfa
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
@@ -462,7 +446,7 @@ module RegexPropertyTests =
                     d.Sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
 
                 let nfa = TestHelpers.nfaFromEdges v d.Edges safeSources
-                let dfa = regexToDfa d.Regex
+                let dfa = Regexp.toDfa d.Regex
                 let arroResult = ArroyueloRPQ.evaluate nfa d.Regex
                 let kronResult = KroneckerRPQ.evaluate dfa nfa
 
@@ -551,3 +535,111 @@ module ExtendedAlphabetTests =
         let result = ArroyueloRPQ.evaluate nfa regexp
         Assert.True(result.[0, 2])
         Assert.True(result.[0, 4])
+
+// --- Arroyuelo path-semiring trace tests (task 280) ---
+
+[<Fact>]
+let ``trace: one step per AST node in post-order with correct children`` () =
+    let nfa =
+        nfaWithSources
+            [ { From = 0; Label = "a"; To = 1 }
+              { From = 1; Label = "b"; To = 2 }
+              { From = 1; Label = "c"; To = 3 } ]
+            [ 0 ]
+
+    let regexp =
+        RAlt(RTerm(Terminal "a"), RSeq(RStar(RTerm(Terminal "b")), RTerm(Terminal "c")))
+
+    let steps, _ = ArroyueloRPQ.evaluateWithTrace nfa regexp
+
+    // post-order: a=0, b=1, b*=2, c=3, b*/c=4, alt=5
+    Assert.Equal(6, List.length steps)
+    Assert.Equal(ArroyueloRPQ.ArroyueloOperation.Base, steps.[0].Operation)
+    Assert.Equal(RTerm(Terminal "a"), steps.[0].Expr)
+    Assert.Equal<int list>([], steps.[0].Children)
+    Assert.Equal(ArroyueloRPQ.ArroyueloOperation.Star, steps.[2].Operation)
+    Assert.Equal<int list>([ 1 ], steps.[2].Children)
+    Assert.Equal(ArroyueloRPQ.ArroyueloOperation.Seq, steps.[4].Operation)
+    Assert.Equal<int list>([ 2; 3 ], steps.[4].Children)
+
+    let root = steps.[5]
+    Assert.Equal(ArroyueloRPQ.ArroyueloOperation.Alt, root.Operation)
+    Assert.Equal(regexp, root.Expr)
+    Assert.Equal<int list>([ 0; 4 ], root.Children)
+
+    for step in steps do
+        for c in step.Children do
+            Assert.True(c < step.NodeIndex)
+
+[<Fact>]
+let ``trace: star step result is identity plus the transitive closure of the child`` () =
+    let nfa =
+        nfaWithSources [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 2 } ] [ 0 ]
+
+    let regexp = RStar(RTerm(Terminal "a"))
+    let steps, _ = ArroyueloRPQ.evaluateWithTrace nfa regexp
+
+    let starStep =
+        steps
+        |> List.find (fun (s: ArroyueloRPQ.ArroyueloTraceStep<string, string>) ->
+            s.Operation = ArroyueloRPQ.ArroyueloOperation.Star)
+
+    let operand = List.head starStep.Operands
+
+    let expected =
+        PathSemiring.addMatrices (PathSemiring.identity 3) (PathSemiring.transitiveClosure operand)
+
+    let equal =
+        [ for i in 0..2 do
+              for j in 0..2 do
+                  if starStep.Result.[i, j] <> expected.[i, j] then
+                      false ]
+        |> List.forall id
+
+    Assert.True(equal)
+
+[<Fact>]
+let ``trace: cyclic graph excludes the non-simple walk a a`` () =
+    let nfa =
+        nfaWithSources [ { From = 0; Label = "a"; To = 1 }; { From = 1; Label = "a"; To = 0 } ] [ 0 ]
+
+    let regexp = RSeq(RTerm(Terminal "a"), RTerm(Terminal "a"))
+
+    // The Boolean algorithm follows the walk v0 -> v1 -> v0 and reports v0 reachable.
+    let boolResult = ArroyueloRPQ.evaluate nfa regexp
+    Assert.True(boolResult.[0, 0])
+
+    // The path trace stores only simple paths: [0; 1; 0] revisits v0 and is dropped.
+    let _, finalMatrix = ArroyueloRPQ.evaluateWithTrace nfa regexp
+    Assert.True(PathSemiring.isZero finalMatrix.[0, 0])
+
+[<Properties(Arbitrary = [| typeof<AcyclicRpqGenerators> |])>]
+module ArroyueloTracePropertyTests =
+
+    /// On acyclic graphs every walk is simple, so the boolean projection of the path
+    /// trace equals the Boolean evaluate for every source row.
+    [<Property>]
+    let ``path trace projects to Boolean evaluate on acyclic graphs`` (d: RegexAndGraph) =
+        if d.Sources.Length = 0 then
+            true
+        else
+            let v = d.VertexCount
+
+            if v = 0 then
+                true
+            else
+                let safeSources =
+                    d.Sources |> Array.map (fun s -> min s (v - 1)) |> Set.ofArray |> Set.toArray
+
+                let nfa = TestHelpers.nfaFromEdges v d.Edges safeSources
+                let _, finalMatrix = ArroyueloRPQ.evaluateWithTrace nfa d.Regex
+                let proj = PathSemiring.booleanProjection finalMatrix
+                let boolResult = ArroyueloRPQ.evaluate nfa d.Regex
+
+                [ for i in 0 .. safeSources.Length - 1 do
+                      let s = safeSources.[i]
+
+                      for j in 0 .. v - 1 do
+                          if proj.[s, j] <> boolResult.[i, j] then
+                              false ]
+                |> List.forall id

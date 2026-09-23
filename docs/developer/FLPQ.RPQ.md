@@ -28,6 +28,8 @@
 | Module | Source | Documentation |
 | --- | --- | --- |
 | `GraphReader` | `GraphReader.fs` | [Graph Reader module design and logic](graph-reader.md) |
+| `RpqInput` | `RpqInput.fs` | [RPQ query regexp parsing](rpq-input.md) |
+| `PathSemiring` | `PathSemiring.fs` | [Path semiring over sets of vertex sequences](path-semiring.md) |
 | `BelyaninRPQ` | `BelyaninRPQ.fs` | [Belyanin RPQ module design and logic](belyanin-rpq.md) |
 | `ArroyueloRPQ` | `ArroyueloRPQ.fs` | [Arroyuelo RPQ module design and logic](arroyuelo-rpq.md) |
 | `KroneckerRPQ` | `KroneckerRPQ.fs` | [Kronecker RPQ module design and logic](kronecker-rpq.md) |
@@ -40,6 +42,7 @@ Implements Regular Path Querying — finding vertices reachable from source vert
 - **Arroyuelo's RPQ** — matrix-based regex evaluation: translates regular expression to Boolean matrix expression, evaluates post-order
 - **Kronecker-based RPQ** — Kronecker product of automaton and graph adjacency matrices with MS-BFS filtering
 - **GraphReader** — reads labeled graphs from text files, returns graph as NFA
+- **RpqInput** — parses RPQ query regular expressions from EBNF files (every identifier is an edge label)
 
 All three algorithms accept a DFA (query) and an NFA (labeled graph), returning a boolean reachability matrix. Property-based tests verify they produce identical results.
 

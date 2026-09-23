@@ -46,6 +46,14 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
 
             File.WriteAllText(Path.Combine(stepDir, "table.tex"), tex)
 
+        let templates: SummaryTeX.StepTemplates =
+            { Gll = ""
+              GllTikz = ""
+              Rnglr = ""
+              RnglrTikz = ""
+              Arroyuelo = ""
+              ArroyueloTikz = "" }
+
         let content =
             SummaryTeX.buildContent
                 "CYK"
@@ -55,10 +63,7 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
                 None
                 None
                 []
-                ""
-                ""
-                ""
-                ""
+                templates
                 false
             |> String.concat "\n"
 

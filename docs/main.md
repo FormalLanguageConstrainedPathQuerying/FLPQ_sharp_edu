@@ -67,6 +67,8 @@ What our standards and principles are, and why we chose them.
 - [Belyanin RPQ module](developer/belyanin-rpq.md)
 - [Arroyuelo RPQ module](developer/arroyuelo-rpq.md)
 - [Kronecker RPQ module](developer/kronecker-rpq.md)
+- [RpqInput module](developer/rpq-input.md)
+- [PathSemiring module](developer/path-semiring.md)
 - [DerivationTree module](developer/derivation-tree.md)
 - [LL parser module](developer/ll-parser.md)
 - [LR parser module](developer/lr-parser.md)
@@ -78,6 +80,9 @@ What our standards and principles are, and why we chose them.
 - [RSM visualization: Dot and Tikz](developer/rsm-viz.md)
 - [BasicSPPF visualization: Dot and Tikz](developer/basic-sppf-viz.md)
 - [SummaryTeX module](developer/summary-tex.md)
+- [PathSemiringTeX module](developer/path-semiring-tex.md)
+- [RPQ regexp visualization](developer/rpq-regexp-viz.md)
+- [Arroyuelo step visualization](developer/arroyuelo-step-viz.md)
 - [ExternalTools module](developer/external-tools.md)
 
 ## User Documentation

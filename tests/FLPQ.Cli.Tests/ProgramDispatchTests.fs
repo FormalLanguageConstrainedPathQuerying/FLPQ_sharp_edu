@@ -9,6 +9,8 @@ let private baseDir = System.AppContext.BaseDirectory
 
 let private exampleInput = Path.Combine(baseDir, "example_input.txt")
 let private exampleLRInput = Path.Combine(baseDir, "example_lr_input.txt")
+let private exampleRegexp = Path.Combine(baseDir, "example_regexp.txt")
+let private exampleGraph = Path.Combine(baseDir, "example_graph.txt")
 
 let private runAlgorithm (algorithm: string) (grammarFile: string) (inputFile: string) : int =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
@@ -98,6 +100,59 @@ let ``SLR1 runs successfully`` () =
 let ``CYK runs successfully`` () =
     let code = runAlgorithm "CYK" (TestGrammarFiles.exampleGrammar ()) exampleInput
     Assert.Equal(0, code)
+
+[<Fact>]
+let ``ArroyueloRPQ runs successfully with regexp and graph files`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "ArroyueloRPQ"
+           "-r"
+           exampleRegexp
+           "--graph"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``ArroyueloRPQ without regexp file exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args = [| "-a"; "ArroyueloRPQ"; "--graph"; exampleGraph; "-o"; outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
+
+[<Fact>]
+let ``ArroyueloRPQ without graph file exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args = [| "-a"; "ArroyueloRPQ"; "-r"; exampleRegexp; "-o"; outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
 
 [<Fact>]
 let ``main delegates to runCli`` () =

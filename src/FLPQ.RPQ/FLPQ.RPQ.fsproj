@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <Compile Include="GraphReader.fs" />
+    <Compile Include="RpqInput.fs" />
+    <Compile Include="PathSemiring.fs" />
     <Compile Include="BelyaninRPQ.fs" />
     <Compile Include="ArroyueloRPQ.fs" />
     <Compile Include="KroneckerRPQ.fs" />

@@ -34,7 +34,7 @@ module PathIndexTeX =
         let labelPrinter (idx: int) =
             let state = idx / pathIndex.VertexCount
             let vertex = idx % pathIndex.VertexCount
-            $"%d{state},%d{vertex}"
+            sprintf @"\text{%d,%d}" state vertex
 
         let matrix =
             MatrixTeX.toTeXStyled
@@ -64,7 +64,7 @@ module PathIndexTeX =
         let labelPrinter (idx: int) =
             let state = idx / pathIndex.VertexCount
             let vertex = idx % pathIndex.VertexCount
-            $"%d{state},%d{vertex}"
+            sprintf @"\text{%d,%d}" state vertex
 
         let highlights =
             changedCells

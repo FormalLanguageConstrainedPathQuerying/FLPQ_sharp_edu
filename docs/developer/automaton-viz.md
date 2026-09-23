@@ -32,8 +32,9 @@
 
 ### Functions
 
-- `nfaToDot: (int -> 's -> string) -> NFA<'t,'s> -> string` — renders NFA with green start states, double-circle final states, dotted epsilon transitions
-- `dfaToDot: (int -> 's -> string) -> DFA<'t,'s> -> string` — renders DFA to DOT
+- `nfaToDot: ('t -> string) -> (int -> 's -> string) -> NFA<'t,'s> -> string` — renders NFA with green start states, double-circle final states, dotted epsilon transitions
+- `dfaToDot: ('t -> string) -> (int -> 's -> string) -> DFA<'t,'s> -> string` — renders DFA to DOT
+- `dfaToDotWithHighlights: ('t -> string) -> (int -> 's -> string) -> DFA<'t,'s> -> Set<int> -> string` — renders DFA with the given states highlighted (`style=filled, fillcolor=lightblue`, overriding the start state's green fill); `dfaToDot` delegates with `Set.empty`
 
 ## AutomatonTikz Module
 
@@ -41,6 +42,7 @@
 
 - `nfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> NFA<'t,'s> -> string`
 - `dfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> string`
+- `dfaToTikzWithHighlights: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> Set<int> -> string` — renders DFA with the given states highlighted (`fill=lightblue!20`, overriding start/final fills; a highlighted final state keeps its double ring); `dfaToTikz` delegates with `Set.empty`
 
 ### Visual Style
 
@@ -48,6 +50,7 @@
 - Layout: `layered layout, <grow direction>, level sep=2cm, sibling sep=1.5cm`. The grow direction is parameterized by `AutomatonTikz.layeredGraphOptions shape growDirection`: the default is `defaultGrowDirection = "grow'=right"` (used by NFA/DFA/RSM/input-graph renderers); the GSS renderer selects `gssLayeredGrowDirection = "grow=left"` when it constrains input positions to layers, because pgf's same-layer cluster chaining reverses the orientation under the default grow direction.
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
+- Highlighted states (`dfaToTikzWithHighlights`): `fill=lightblue!20` appended last so it wins over start/final fills (last fill wins in TikZ); the Start label and final double ring are kept
 - Loop edges: `s%d ->["label",loop above] s%d`
 - Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
 - Arrow heads: `Latex[width=3mm,length=3mm]`
@@ -101,6 +104,7 @@ A : 0 \\
 | Decision | Rationale |
 | --- | --- |
 | State visualizer callback | Allows parameterized label generation per state index and label |
+| Highlight fill appended last (Tikz) / lightblue overrides green (DOT) | A highlighted state must be recognizable even when it is also the start or a final state; final states keep their double ring so both properties stay visible |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |
 | Enhanced arrow heads | `Latex[width=3mm,length=3mm]` for visibility |

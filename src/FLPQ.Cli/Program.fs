@@ -6,32 +6,48 @@ open Argu
 
 module Program =
 
+    let private runParsingAlgorithm
+        (results: ParseResults<AlgorithmTypes.Arguments>)
+        (algorithm: AlgorithmTypes.Algorithm)
+        (output: string)
+        (useDot: bool)
+        =
+        let grammar = results.GetResult AlgorithmTypes.Grammar
+        let input = results.GetResult AlgorithmTypes.Input
+        let k = results.GetResult(AlgorithmTypes.Lookahead, defaultValue = 1)
+        let noSppfTable = results.Contains AlgorithmTypes.NoSppfTable
+
+        match algorithm with
+        | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot noSppfTable
+        | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot noSppfTable
+        | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot noSppfTable
+        | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k useDot
+        | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
+        | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
+        | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
+        | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output useDot
+        | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output useDot
+        | _ -> failwithf "Unexpected algorithm in runParsingAlgorithm: %A" algorithm
+
     let runCli (argv: string[]) : int =
         let parser = ArgumentParser.Create<AlgorithmTypes.Arguments>(programName = "flpq")
 
         try
             let results = parser.ParseCommandLine argv
             let algorithm = results.GetResult AlgorithmTypes.Algorithm
-            let grammar = results.GetResult AlgorithmTypes.Grammar
-            let input = results.GetResult AlgorithmTypes.Input
             let output = results.GetResult(AlgorithmTypes.Output, defaultValue = "output")
-            let k = results.GetResult(AlgorithmTypes.Lookahead, defaultValue = 1)
             let summary = results.Contains AlgorithmTypes.Summary
             let useDot = results.Contains AlgorithmTypes.UseDot
-            let noSppfTable = results.Contains AlgorithmTypes.NoSppfTable
 
             Helpers.cleanOutputDir output
 
             match algorithm with
-            | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot noSppfTable
-            | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot noSppfTable
-            | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot noSppfTable
-            | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k useDot
-            | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
-            | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
-            | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
-            | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output useDot
-            | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output useDot
+            // RPQ algorithms take a regexp file and a graph file instead of grammar/input.
+            | AlgorithmTypes.ArroyueloRPQ ->
+                let regexpFile = results.GetResult AlgorithmTypes.Regexp
+                let graphFile = results.GetResult AlgorithmTypes.GraphFile
+                ArroyueloRunner.runArroyuelo regexpFile graphFile output useDot
+            | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then
                 let templatePath = Helpers.findSummaryTemplate ()

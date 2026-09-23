@@ -291,6 +291,77 @@ let ``LR(0) automaton Tikz has correct number of states`` () =
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
+// --- DFA state highlighting (task 280) ---
+
+let private highlightDfa: DFA<char, string> =
+    Dfa.fromTransitions
+        [ "q0"; "q1"; "q2" ]
+        [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'b'; To = 2 } ]
+        0
+        (set [ 2 ])
+
+let private dotStateLine (dot: string) (i: int) : string =
+    dot.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith(sprintf "  s%d [" i))
+    |> Array.head
+
+let private tikzStateLine (tikz: string) (i: int) : string =
+    tikz.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith(sprintf "    s%d [" i))
+    |> Array.head
+
+[<Fact>]
+let ``dfaToDotWithHighlights marks exactly the given states with lightblue`` () =
+    let dot =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 1 ])
+
+    Assert.Contains("fillcolor=lightblue", dotStateLine dot 1)
+    Assert.Contains("fillcolor=green", dotStateLine dot 0)
+    Assert.DoesNotContain("fillcolor", dotStateLine dot 2)
+    Assert.DoesNotContain("lightblue", dotStateLine dot 0)
+
+[<Fact>]
+let ``dfaToDotWithHighlights overrides the start state fill`` () =
+    let dot =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 0 ])
+
+    Assert.Contains("fillcolor=lightblue", dotStateLine dot 0)
+    Assert.DoesNotContain("green", dotStateLine dot 0)
+
+[<Fact>]
+let ``dfaToDot is byte-identical to dfaToDotWithHighlights with an empty set`` () =
+    let plain = AutomatonDot.dfaToDot string (fun _i s -> s) highlightDfa
+
+    let empty =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty
+
+    Assert.Equal(plain, empty)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``dfaToTikzWithHighlights marks exactly the given states with lightblue!20`` () =
+    let tikz =
+        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" highlightDfa (set [ 1; 2 ])
+
+    Assert.Contains("fill=lightblue!20", tikzStateLine tikz 1)
+    // Highlighted final state: lightblue wins the fill, the double ring is kept.
+    let finalLine = tikzStateLine tikz 2
+    Assert.Contains("fill=lightblue!20", finalLine)
+    Assert.Contains("double", finalLine)
+    Assert.Contains("fill=green!30", tikzStateLine tikz 0)
+    Assert.DoesNotContain("lightblue", tikzStateLine tikz 0)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``dfaToTikz is byte-identical to dfaToTikzWithHighlights with an empty set`` () =
+    let plain = AutomatonTikz.dfaToTikz string (fun _i s -> s) "rectangle" highlightDfa
+
+    let empty =
+        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" highlightDfa Set.empty
+
+    Assert.Equal(plain, empty)
+
 [<Fact>]
 let ``NFA dot with terminal and epsilon on the same edge renders both`` () =
     let aut =

@@ -13,6 +13,7 @@ module AutomatonDot =
         (states: 's list)
         (startStates: Set<int>)
         (finalStates: Set<int>)
+        (highlightedStates: Set<int>)
         (sb: System.Text.StringBuilder)
         : unit =
         for idx in 0 .. stateCount - 1 do
@@ -22,11 +23,13 @@ module AutomatonDot =
             let attrs =
                 let start = Set.contains idx startStates
                 let final = Set.contains idx finalStates
+                let highlighted = Set.contains idx highlightedStates
 
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
 
-                if start then
-                    parts <- "style=filled" :: "fillcolor=green" :: parts
+                if start || highlighted then
+                    let fillColor = if highlighted then "lightblue" else "green"
+                    parts <- "style=filled" :: sprintf "fillcolor=%s" fillColor :: parts
 
                 if final then
                     parts <- "peripheries=2" :: parts
@@ -79,22 +82,40 @@ module AutomatonDot =
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
-        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates sb
+        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates Set.empty sb
         transitionEdges labelPrinter nfa.Transitions sb
         epsEdges nfa.Transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
-    /// Render a DFA as a Graphviz dot graph.
-    let dfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
+    /// Render a DFA as a Graphviz dot graph with the given states highlighted (fillcolor=lightblue,
+    /// overriding the start state's green fill).
+    let dfaToDotWithHighlights
+        (labelPrinter: 't -> string)
+        (stateVisualizer: int -> 's -> string)
+        (dfa: DFA<'t, 's>)
+        (highlightedStates: Set<int>)
+        : string =
         let sb = System.Text.StringBuilder()
 
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
-        stateDeclarations dfa.States.Length stateVisualizer dfa.States (set [ dfa.StartState ]) dfa.FinalStates sb
+        stateDeclarations
+            dfa.States.Length
+            stateVisualizer
+            dfa.States
+            (set [ dfa.StartState ])
+            dfa.FinalStates
+            highlightedStates
+            sb
+
         transitionEdges labelPrinter dfa.Transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
+
+    /// Render a DFA as a Graphviz dot graph.
+    let dfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
+        dfaToDotWithHighlights labelPrinter stateVisualizer dfa Set.empty

@@ -250,6 +250,26 @@ type RegexAndGraph =
       Edges: Trans<string> list
       Sources: int[] }
 
+module private AbRegex =
+
+    /// Random regexp over the alphabet {a, b} (shared by the RPQ graph generators).
+    let genAbRegex: Gen<Regexp<string, string>> =
+        let alphabet = [ Terminal "a"; Terminal "b" ]
+
+        let rec genExpr depth =
+            if depth <= 0 then
+                MyGen.frequency [ (3, MyGen.map RTerm (MyGen.elements alphabet)); (1, MyGen.constant REps) ]
+            else
+                MyGen.choose (0, 3)
+                |> MyGen.bind (fun choice ->
+                    match choice with
+                    | 0 -> MyGen.map RTerm (MyGen.elements alphabet)
+                    | 1 -> MyGen.map2 (fun l r -> RSeq(l, r)) (genExpr (depth - 1)) (genExpr (depth - 1))
+                    | 2 -> MyGen.map2 (fun l r -> RAlt(l, r)) (genExpr (depth - 1)) (genExpr (depth - 1))
+                    | _ -> MyGen.map RStar (genExpr (depth - 1)))
+
+        MyGen.choose (0, 3) |> MyGen.bind genExpr
+
 type RegexAndGraphGenerators =
 
     static member RegexAndGraph() : Arbitrary<RegexAndGraph> =
@@ -267,34 +287,7 @@ type RegexAndGraphGenerators =
                             |> MyGen.bind (fun k ->
                                 MyGen.listOfLength k (MyGen.choose (0, n - 1))
                                 |> MyGen.bind (fun sources ->
-                                    let genRegex =
-                                        let alphabet = [ Terminal "a"; Terminal "b" ]
-
-                                        let rec genExpr depth =
-                                            if depth <= 0 then
-                                                MyGen.frequency
-                                                    [ (3, MyGen.map RTerm (MyGen.elements alphabet))
-                                                      (1, MyGen.constant REps) ]
-                                            else
-                                                MyGen.choose (0, 3)
-                                                |> MyGen.bind (fun choice ->
-                                                    match choice with
-                                                    | 0 -> MyGen.map RTerm (MyGen.elements alphabet)
-                                                    | 1 ->
-                                                        MyGen.map2
-                                                            (fun l r -> RSeq(l, r))
-                                                            (genExpr (depth - 1))
-                                                            (genExpr (depth - 1))
-                                                    | 2 ->
-                                                        MyGen.map2
-                                                            (fun l r -> RAlt(l, r))
-                                                            (genExpr (depth - 1))
-                                                            (genExpr (depth - 1))
-                                                    | _ -> MyGen.map RStar (genExpr (depth - 1)))
-
-                                        MyGen.choose (0, 3) |> MyGen.bind genExpr
-
-                                    genRegex
+                                    AbRegex.genAbRegex
                                     |> MyGen.map (fun regex ->
                                         let edges =
                                             List.zip3 fromList labelList toList
@@ -305,6 +298,41 @@ type RegexAndGraphGenerators =
                                           VertexCount = n
                                           Edges = edges
                                           Sources = Array.ofList sources }))))))))
+        |> MyArb.fromGen
+
+type AcyclicRpqGenerators =
+
+    /// Acyclic graph (edges only from lower to higher vertex index) with a random regexp over {a, b}.
+    static member AcyclicRegexAndGraph() : Arbitrary<RegexAndGraph> =
+        MyGen.choose (2, 6)
+        |> MyGen.bind (fun n ->
+            let forwardEdges =
+                [ for i in 0 .. n - 1 do
+                      for j in i + 1 .. n - 1 do
+                          yield (i, j) ]
+
+            MyGen.listOfLength
+                (List.length forwardEdges)
+                (MyGen.frequency [ (1, MyGen.constant true); (2, MyGen.constant false) ])
+            |> MyGen.bind (fun present ->
+                let kept = List.zip forwardEdges present |> List.filter snd |> List.map fst
+
+                MyGen.listOfLength (List.length kept) (MyGen.elements [ "a"; "b" ])
+                |> MyGen.bind (fun labels ->
+                    MyGen.choose (1, n)
+                    |> MyGen.bind (fun k ->
+                        MyGen.listOfLength k (MyGen.choose (0, n - 1))
+                        |> MyGen.bind (fun sources ->
+                            let edges =
+                                List.zip kept labels
+                                |> List.map (fun ((f, t), l) -> { From = f; Label = l; To = t })
+
+                            AbRegex.genAbRegex
+                            |> MyGen.map (fun regex ->
+                                { Regex = regex
+                                  VertexCount = n
+                                  Edges = edges
+                                  Sources = Array.ofList sources }))))))
         |> MyArb.fromGen
 
 type StressStringGenerators =
@@ -376,6 +404,114 @@ type StressRpqGenerators =
                                     { VertexCount = n
                                       Edges = edges
                                       Sources = Array.ofList sources })))))))
+        |> MyArb.fromGen
+
+type PathSemiringGenerators =
+
+    /// Well-formed path matrix: cell [i, j] holds random simple paths from i to j
+    /// (diagonal cells optionally hold the trivial path [i]).
+    static member PathMatrix() : Arbitrary<Matrix<Set<int list>>> =
+        MyGen.choose (2, 5)
+        |> MyGen.bind (fun n ->
+            let offDiagCells = n * (n - 1)
+            let total = n + offDiagCells * (1 + 3 * (n - 2))
+
+            MyGen.listOfLength total (MyGen.choose (0, 99))
+            |> MyGen.map (fun bits ->
+                let mutable idx = 0
+
+                let next () =
+                    let v = bits.[idx]
+                    idx <- idx + 1
+                    v
+
+                let genPath (i: int) (j: int) : int list =
+                    let others =
+                        [ for v in 0 .. n - 1 do
+                              if v <> i && v <> j then
+                                  yield v ]
+
+                    let flags =
+                        [ for _ in others do
+                              next () % 2 = 0 ]
+
+                    let inter = List.zip others flags |> List.filter snd |> List.map fst
+                    [ i ] @ inter @ [ j ]
+
+                Matrix.create n n (fun i j ->
+                    if i = j then
+                        if next () % 2 = 0 then Set.singleton [ i ] else Set.empty
+                    else
+                        let k = next () % 4
+
+                        [ for _ in 1..k do
+                              yield genPath i j ]
+                        |> List.toSeq
+                        |> Set.ofSeq)))
+        |> MyArb.fromGen
+
+    /// Pair of well-formed path matrices with the same dimensions.
+    static member PathMatrixPair() : Arbitrary<Matrix<Set<int list>> * Matrix<Set<int list>>> =
+        MyGen.choose (2, 5)
+        |> MyGen.bind (fun n ->
+            let offDiagCells = n * (n - 1)
+            let perMatrix = n + offDiagCells * (1 + 3 * (n - 2))
+
+            MyGen.listOfLength (2 * perMatrix) (MyGen.choose (0, 99))
+            |> MyGen.map (fun bits ->
+                let build (offset: int) : Matrix<Set<int list>> =
+                    let mutable idx = offset
+
+                    let next () =
+                        let v = bits.[idx]
+                        idx <- idx + 1
+                        v
+
+                    let genPath (i: int) (j: int) : int list =
+                        let others =
+                            [ for v in 0 .. n - 1 do
+                                  if v <> i && v <> j then
+                                      yield v ]
+
+                        let flags =
+                            [ for _ in others do
+                                  next () % 2 = 0 ]
+
+                        let inter = List.zip others flags |> List.filter snd |> List.map fst
+                        [ i ] @ inter @ [ j ]
+
+                    Matrix.create n n (fun i j ->
+                        if i = j then
+                            if next () % 2 = 0 then Set.singleton [ i ] else Set.empty
+                        else
+                            let k = next () % 4
+
+                            [ for _ in 1..k do
+                                  yield genPath i j ]
+                            |> List.toSeq
+                            |> Set.ofSeq)
+
+                (build 0, build perMatrix)))
+        |> MyArb.fromGen
+
+type PathEdgeMatrixGenerators =
+
+    /// Edge matrix: cell [i, j] (i <> j) holds the single-edge path [i; j] or is empty;
+    /// diagonal cells are empty.
+    static member PathEdgeMatrix() : Arbitrary<Matrix<Set<int list>>> =
+        MyGen.choose (2, 5)
+        |> MyGen.bind (fun n ->
+            MyGen.listOfLength (n * (n - 1)) (MyGen.choose (0, 99))
+            |> MyGen.map (fun bits ->
+                let mutable idx = 0
+
+                Matrix.create n n (fun i j ->
+                    if i = j then
+                        Set.empty
+                    else
+                        let present = bits.[idx] % 2 = 0
+                        idx <- idx + 1
+                        if present then Set.singleton [ i; j ] else Set.empty)))
         |> MyArb.fromGen
 
 type StressMatrixGenerators =

@@ -1,0 +1,12 @@
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+    v0 [as={$v_0$}];
+    v1 [as={$v_1$}, fill=yellow!20];
+    v2 [as={$v_2$}, fill=yellow!20];
+    v3 [as={$v_3$}];
+    v0 ->["a"] v1;
+    v1 ->["b", red] v2;
+    v1 ->["a"] v3;
+    v2 ->["a"] v3;
+  };
+\end{tikzpicture}

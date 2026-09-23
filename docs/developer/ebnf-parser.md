@@ -2,13 +2,13 @@
 
 **Tags:** algorithm, ebnf, rsm, automaton, derivative, parsing, grammar, regular
 **Kind:** algorithm
-**Module:** EbnfParser
+**Module:** EbnfParser, Regexp, RsmBuilder
 **Source:** `src/FLPQ.Languages/EbnfParser.fs`
 **Depends on:** Grammar, RSM, Automaton
-**Used by:** GLL, RNGLR
+**Used by:** GLL, RNGLR, RpqInput
 **Book reference:** Chapter 6
 
-> **Abstract:** Parses EBNF grammar files (`.ebnf`) and constructs RSM (Recursive State Machine) via Brzozowski derivatives. Uses FParsec for parsing EBNF syntax. Converts each regular expression in the EBNF to a deterministic finite automaton using derivatives — generates DFA directly, no NFA-to-DFA determinization needed. Provides `parseEbnfGrammar` and `ebnfToRsm` functions.
+> **Abstract:** Parses EBNF grammar text into regular-expression ASTs and constructs RSMs (Recursive State Machines) via Brzozowski derivatives. Each rule's right-hand side becomes a `Regexp`; each nonterminal gets a deterministic block built directly from derivatives — no NFA-to-DFA determinization. Also provides `Regexp.toDfa` for building a DFA from a terminal-only regular expression, used by RPQ query processing.
 
 ## Contents
 
@@ -21,60 +21,95 @@
 
 ## Algorithm
 
-### EBNF Parsing (FParsec-based)
+### EBNF Parsing (hand-written tokenizer + recursive descent)
 
-1. Parse EBNF syntax: alternation `|`, Kleene star `*`, plus `+`, optional `?`, grouping `(...)`.
-2. Two-stage parsing: parse to AST, then group rules by nonterminal and build combined regex per nonterminal.
+1. Tokenize line by line: identifiers, alternation `|`, Kleene star `*`, plus `+`, optional `?`, explicit concatenation `/`, grouping `(...)`, rule arrow `->`, and the keyword `eps`.
+2. Recursive-descent parse per line with precedence: alternation < sequence < postfix (`*`, `+`, `?`). Sequence is implicit (juxtaposition) or explicit via `/`.
+3. Identifiers starting with an uppercase letter are nonterminals, all others are terminals; `eps` is epsilon.
+4. Two-stage usage: parse to a list of `(Nonterminal, Regexp)` rules, then group rules by nonterminal and build a combined regex per nonterminal.
 
-### RSM Construction (Brzozowski Derivatives)
+### DFA Construction (Brzozowski Derivatives)
 
-For each nonterminal:
+For a regular expression and an alphabet:
 
-1. Build a DFA from the regular expression using Brzozowski derivatives.
-2. Each DFA state is a derivative of the regex; start state is the original regex; final states are nullable derivatives.
-3. Transitions on nonterminals are relabeled to transitions on the corresponding block's start state.
+1. Each DFA state is a derivative of the regex; start state is the original regex; final states are nullable derivatives.
+2. State discovery is a worklist over the alphabet; transitions are added for every (state, symbol) pair.
+3. `mkAlt` flattens nested alternations and removes duplicates — required for termination: without flattening, repeated derivation of expressions like `(a*)(aa)*` nests `RAlt` one level deeper per step and the derivative closure is infinite.
 
 ## Type Definitions
 
-### EBNF Grammar AST
-
-Regular expression nodes: `Epsilon`, `Terminal<'t>`, `Nonterminal<'nt>`, `Concatenate`, `Alternative`, `Star`, `Plus`, `Optional`.
-
-### EBNF Grammar
+### Regexp AST
 
 ```fsharp
-type EbnfGrammar<'t, 'nt> = { rules: Map<'nt, Regexp<'t, 'nt>>; start: 'nt }
+type Regexp<'t, 'nt> =
+    | REps
+    | REmpty
+    | RTerm of Terminal<'t>
+    | RNonterm of Nonterminal<'nt>
+    | RSeq of Regexp<'t, 'nt> * Regexp<'t, 'nt>
+    | RAlt of Regexp<'t, 'nt> * Regexp<'t, 'nt>
+    | RStar of Regexp<'t, 'nt>
 ```
+
+`REmpty` is the empty language (derivative dead state); it is not producible by the EBNF parser but arises during derivation.
 
 ## Function Signatures
 
+### EbnfParser
+
 ```fsharp
-val parseEbnfGrammar: string -> EbnfGrammar<string, string>
-val ebnfToRsm: EbnfGrammar<'t, 'nt> -> RSM<'t, 'nt>
+val parseEbnf: string -> (Nonterminal<string> * Regexp<string, string>) list
+val parseEbnfFile: string -> (Nonterminal<string> * Regexp<string, string>) list
+val groupRules: (Nonterminal<string> * Regexp<string, string>) list -> Map<Nonterminal<string>, Regexp<string, string>>
 ```
 
-### parseEbnfGrammar
+- `parseEbnf` — parses EBNF text into one `(nonterminal, regexp)` pair per rule line. Throws on malformed input.
+- `parseEbnfFile` — reads a file and calls `parseEbnf`.
+- `groupRules` — joins multiple rules for the same nonterminal with `RAlt`.
 
-Parses an EBNF grammar from file content. Uses FParsec for parsing. Handles grouping: multiple rules for the same nonterminal are joined with `|`.
+### Regexp
 
-### ebnfToRsm
+```fsharp
+val nullable: Regexp<'t, 'nt> -> bool
+val derive: Regexp<'t, 'nt> -> RsmSymbol<'t, 'nt> -> Regexp<'t, 'nt>
+val symbols: Regexp<'t, 'nt> -> RsmSymbol<'t, 'nt> list
+val toString: (Terminal<'t> -> string) -> (Nonterminal<'nt> -> string) -> Regexp<'t, 'nt> -> string
+val buildDfaFromRegex: 'sym list -> (Regexp<'t, 'nt> -> 'sym -> Regexp<'t, 'nt>) -> Regexp<'t, 'nt> -> DFA<'sym, int>
+val toDfa: Regexp<'t, 'nt> -> DFA<'t, int>
+```
 
-Converts an EBNF grammar to an RSM. Builds deterministic blocks via Brzozowski derivatives — start state is the original regex, final states are nullable derivatives.
+- `derive` — Brzozowski derivative of a regexp with respect to a grammar symbol (terminal or nonterminal).
+- `buildDfaFromRegex` — worklist DFA construction over a given alphabet and derivation function.
+- `toDfa` — builds a DFA from a regular expression over terminals: the alphabet is the set of terminals occurring in the regexp (derived via `symbols`), derivation is over `RsmSymbol.RTerm`. Terminal-free expressions (e.g. `eps`) yield a single-state DFA. Used by RPQ query processing to compile the query regexp into the DFA consumed by the RPQ algorithms.
+
+### RsmBuilder
+
+```fsharp
+val buildRSMWithStart: Map<Nonterminal<string>, Regexp<string, string>> -> Nonterminal<string> -> RSM<string, string>
+val buildRSM: Map<Nonterminal<string>, Regexp<string, string>> -> RSM<string, string>
+val buildRSMFromText: string -> RSM<string, string>
+val buildRSMFromFile: string -> RSM<string, string>
+```
+
+Build one deterministic DFA block per nonterminal (derivation over all symbols of the regexp) and wire blocks into a single RSM.
 
 ## Design Decisions
 
 | Decision | Rationale |
 | --- | --- |
-| FParsec for parsing | Handles EBNF syntax robustly: alternation \` |
+| Hand-written tokenizer + recursive descent | EBNF is small and fixed; no parser-combinator dependency needed |
 | Brzozowski derivatives for DFA construction | Generates deterministic automata directly, no need for NFA → DFA determinization |
-| Two-stage parsing | Parse to AST, then group rules by nonterminal and build combined regex per nonterminal |
+| `mkAlt` flattens and deduplicates alternations | Termination of `buildDfaFromRegex`: keeps the syntactic derivative closure finite (see `tasks/fixes_for_book.md`) |
+| Explicit `/` concatenation operator | Matches the book's regexp notation (e.g. `walk/(O \| R)+/walk`, Chapter 11); juxtaposition remains supported, so existing inputs are unaffected |
+| `toDfa` alphabet = terminals of the regexp | Terminal-free regexps need no invented symbols; derivation over absent symbols is empty, so the result is identical to any fallback alphabet |
 
 ## Book Reference
 
-Chapter 6: EBNF grammar, Brzozowski derivatives, RSM construction.
+Chapter 6: EBNF grammar, Brzozowski derivatives, RSM construction. Chapter 11 uses `Regexp.toDfa` for RPQ query compilation.
 
 ## See Also
 
 - [RSM module](rsm.md) — Recursive State Machine types
 - [Automaton module](automaton.md) — DFA type used in blocks
 - [RsmToGrammar module](rsm-to-grammar.md) — RSM to BNF conversion
+- [RpqInput module](rpq-input.md) — RPQ query regexp parsing built on `parseEbnf`

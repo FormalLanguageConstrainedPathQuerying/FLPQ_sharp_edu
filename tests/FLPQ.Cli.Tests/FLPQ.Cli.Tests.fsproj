@@ -19,6 +19,7 @@
     <Compile Include="CliSummaryTests.fs" />
     <Compile Include="GllRunnerTests.fs" />
     <Compile Include="RnglrRunnerTests.fs" />
+    <Compile Include="ArroyueloRunnerTests.fs" />
     <Compile Include="ProgramDispatchTests.fs" />
   </ItemGroup>
 
@@ -34,6 +35,7 @@
     <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.RPQ\FLPQ.RPQ.fsproj" />
     <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
   </ItemGroup>
 
@@ -44,6 +46,14 @@
     </Content>
     <Content Include="..\..\data\example_lr_input.txt">
       <Link>example_lr_input.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_regexp.txt">
+      <Link>example_regexp.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_graph.txt">
+      <Link>example_graph.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
