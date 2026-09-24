@@ -725,5 +725,5 @@
 
 ---
 
-282. Improve RPQ visualization. 1. Unify CLI argumanes. No separated key for graph. it is just an input. Also unify grammar and regexp keys: In all cases it is a query (like in RPQ or CFPQ). 2. Imprve hraph visualization in steps. First, it friquently does not fit page. Does ajustbox used appropriately? Does template configured correctly? Second, It contains edges that draw fully overlapped (eg two edges between v2 and v3 in example input). Can such cases be automatically handled to draw curve edges without overlapping?
-     **[USER GUIDANCE]**: Do not touch GLL and RNGLR for now.
+[done] 282. Improve RPQ visualization. 1. Unify CLI argumanes. No separated key for graph. it is just an input. Also unify grammar and regexp keys: In all cases it is a query (like in RPQ or CFPQ). 2. Imprve hraph visualization in steps. First, it friquently does not fit page. Does ajustbox used appropriately? Does template configured correctly? Second, It contains edges that draw fully overlapped (eg two edges between v2 and v3 in example input). Can such cases be automatically handled to draw curve edges without overlapping?
+**[USER GUIDANCE]**: Do not touch GLL and RNGLR for now.
