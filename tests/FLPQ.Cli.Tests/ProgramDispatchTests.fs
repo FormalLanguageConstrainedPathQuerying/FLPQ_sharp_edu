@@ -155,6 +155,59 @@ let ``ArroyueloRPQ without graph file exits non-zero`` () =
     Assert.NotEqual(0, code)
 
 [<Fact>]
+let ``BelyaninRPQ runs successfully with regexp and graph files`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "BelyaninRPQ"
+           "-r"
+           exampleRegexp
+           "--graph"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``BelyaninRPQ without regexp file exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args = [| "-a"; "BelyaninRPQ"; "--graph"; exampleGraph; "-o"; outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
+
+[<Fact>]
+let ``BelyaninRPQ without graph file exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args = [| "-a"; "BelyaninRPQ"; "-r"; exampleRegexp; "-o"; outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
+
+[<Fact>]
 let ``main delegates to runCli`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 

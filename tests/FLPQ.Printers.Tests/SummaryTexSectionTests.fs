@@ -11,7 +11,9 @@ let private emptyTemplates: SummaryTeX.StepTemplates =
       Rnglr = ""
       RnglrTikz = ""
       Arroyuelo = ""
-      ArroyueloTikz = "" }
+      ArroyueloTikz = ""
+      Belyanin = ""
+      BelyaninTikz = "" }
 
 [<Fact>]
 let ``SummaryKind ToString renders each kind`` () =
@@ -21,6 +23,7 @@ let ``SummaryKind ToString renders each kind`` () =
     Assert.Equal("gll", SummaryTeX.SummaryKind.GLL.ToString())
     Assert.Equal("rnglr", SummaryTeX.SummaryKind.RNGLR.ToString())
     Assert.Equal("arroyuelorpq", SummaryTeX.SummaryKind.ArroyueloRPQ.ToString())
+    Assert.Equal("belyaninrpq", SummaryTeX.SummaryKind.BelyaninRPQ.ToString())
 
 [<Fact>]
 let ``collectSteps on a non-existent directory returns an empty array`` () =
@@ -360,6 +363,90 @@ let ``arroyueloStepSection in tikz mode fills empty placeholders for missing fil
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
         // Missing tikz files are replaced by empty strings; the adjustbox wrap is still applied.
         Assert.Contains("T=\\begin{center}", lines.[1])
+        Assert.Contains("|G=\\begin{center}", lines.[1]))
+
+[<Fact>]
+let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA before graph`` () =
+    TestHelpers.withTempDir (fun dir ->
+        File.WriteAllText(Path.Combine(dir, "regexp.tex"), "REGEXPTX")
+        File.WriteAllText(Path.Combine(dir, "dfa.tikz.tex"), "DFATIKZ")
+        File.WriteAllText(Path.Combine(dir, "graph.tikz.tex"), "GRAPHTIKZ")
+
+        let lines =
+            SummaryTeX.headerSection dir SummaryTeX.SummaryKind.BelyaninRPQ None None [] true
+
+        let text = String.concat "\n" lines
+
+        let legendIdx = text.IndexOf("Color Legend")
+        let regexpIdx = text.IndexOf("Query Regular Expression")
+        let dfaIdx = text.IndexOf("Query DFA")
+        let graphIdx = text.IndexOf("Input Graph")
+
+        Assert.True(
+            legendIdx >= 0
+            && regexpIdx > legendIdx
+            && dfaIdx > regexpIdx
+            && graphIdx > dfaIdx
+        )
+
+        // The Belyanin legend describes the frontier automaton states, not a tree node.
+        Assert.Contains("Frontier automaton states", text)
+        Assert.DoesNotContain("Current regexp tree node", text)
+
+        Assert.Contains("REGEXPTX", text)
+        Assert.Contains("DFATIKZ", text)
+        Assert.Contains("GRAPHTIKZ", text)
+        // The DFA and graph figures use the width-only adjustbox; the regexp is math mode.
+        Assert.Equal(
+            2,
+            text.Split([| @"\begin{adjustbox}{max width=\textwidth}" |], System.StringSplitOptions.None).Length
+            - 1
+        )
+
+        Assert.Contains("\[\nREGEXPTX\n\]", text))
+
+[<Fact>]
+let ``BelyaninRPQ header in dot mode includes the DFA and graph PDFs`` () =
+    TestHelpers.withTempDir (fun dir ->
+        File.WriteAllText(Path.Combine(dir, "dfa.dot"), "digraph DFA { a }")
+        File.WriteAllText(Path.Combine(dir, "graph.dot"), "digraph G { a }")
+
+        let lines =
+            SummaryTeX.headerSection dir SummaryTeX.SummaryKind.BelyaninRPQ None None [] false
+
+        let text = String.concat "\n" lines
+
+        Assert.Contains(@"\includegraphics[width=0.9\textwidth,keepaspectratio]{{dot_pdfs/dfa.pdf}}", text)
+        Assert.Contains(@"\includegraphics[width=0.9\textwidth,keepaspectratio]{{dot_pdfs/graph.pdf}}", text)
+        Assert.DoesNotContain("adjustbox", text))
+
+[<Fact>]
+let ``belyaninStepSection in dot mode fills empty placeholders for missing files`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let stepDir = Path.Combine(dir, "step_0")
+        Directory.CreateDirectory stepDir |> ignore
+
+        let template = "M=__MATRICES__|A=__STEP_AUTOMATON_PDF__|G=__STEP_GRAPH_PDF__"
+
+        let lines = SummaryTeX.belyaninStepSection stepDir 0 template "" false
+
+        Assert.Equal(3, List.length lines)
+        Assert.Equal(SummaryTeX.section "Step 0", lines.[0])
+        Assert.Equal("M=|A=dot_pdfs/step_0_automaton.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1]))
+
+[<Fact>]
+let ``belyaninStepSection in tikz mode fills empty placeholders for missing files`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let stepDir = Path.Combine(dir, "step_1")
+        Directory.CreateDirectory stepDir |> ignore
+
+        let template = "A=__STEP_AUTOMATON_TIKZ__|G=__STEP_GRAPH_TIKZ__"
+
+        let lines = SummaryTeX.belyaninStepSection stepDir 1 template template true
+
+        Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
+        // Missing tikz files are replaced by empty strings; the adjustbox wrap is still applied.
+        Assert.Contains("A=\\begin{center}", lines.[1])
         Assert.Contains("|G=\\begin{center}", lines.[1]))
 
 [<Fact>]

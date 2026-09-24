@@ -9,6 +9,7 @@
     <Compile Include="GoldenHelpers.fs" />
     <Compile Include="ExternalToolsTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
+    <Compile Include="RpqGraphVizTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
     <Compile Include="RnglrAutomatonTikzTests.fs" />
     <Compile Include="DerivationTreeVisualizationTests.fs" />
@@ -39,6 +40,7 @@
     <Compile Include="PathSemiringTexTests.fs" />
     <Compile Include="RegexpTexTests.fs" />
     <Compile Include="ArroyueloStepVisualizationTests.fs" />
+    <Compile Include="BelyaninStepVisualizationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -84,6 +86,14 @@
     </Content>
     <Content Include="..\..\data\Arroyuelo_step_tikz_template.tex">
       <Link>Arroyuelo_step_tikz_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Belyanin_step_template.tex">
+      <Link>Belyanin_step_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Belyanin_step_tikz_template.tex">
+      <Link>Belyanin_step_tikz_template.tex</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\data\tex_math_wrap_template.tex">

@@ -40,7 +40,9 @@
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
 | [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of path semiring matrices (RPQ working matrices with vertex-path cells) |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
+| [RpqGraphViz](rpq-graph-viz.md) | Shared rendering of the RPQ input graph with path highlights (DOT + TikZ) |
 | [ArroyueloStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's RPQ evaluation (regexp tree, matrix equations, graph highlights) |
+| [BelyaninStepVisualizer](belyanin-step-viz.md) | Step-by-step visualization of Belyanin's RPQ evaluation (DFA frontier, propagation matrices, graph highlights) |
 | [LLTableTeX](ll-table-tex.md) | TeX rendering for LL parsing tables |
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |

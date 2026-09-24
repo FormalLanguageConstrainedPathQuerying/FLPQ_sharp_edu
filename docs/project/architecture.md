@@ -69,8 +69,9 @@ FLPQ.slnx
  │       ├── LRRunner.fs             # LR(0)/SLR(1)/CLR(1) CLI runner
  │       ├── GllRunner.fs            # GLL CLI runner
  │       ├── RnglrRunner.fs          # RNGLR CLI runner
- │       ├── ArroyueloRunner.fs      # Arroyuelo RPQ CLI runner (regexp + graph input)
- │       └── Summary.fs              # Merged TeX summary generation (--summary)
+  │       ├── ArroyueloRunner.fs      # Arroyuelo RPQ CLI runner (regexp + graph input)
+  │       ├── BelyaninRunner.fs       # Belyanin RPQ CLI runner (regexp + graph input)
+  │       └── Summary.fs              # Merged TeX summary generation (--summary)
  └── tests/
     ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
     │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
@@ -116,7 +117,7 @@ FLPQ.slnx
 - **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
 - **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `lualatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra`, `FLPQ.Languages`, and `FLPQ.RPQ`.
-- **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms and RPQ algorithms (Arroyuelo) with optional summary PDF generation (`--summary`). Depends on `FLPQ.Languages`, `FLPQ.Printers`, and `FLPQ.RPQ`.
+- **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms and RPQ algorithms (Arroyuelo, Belyanin) with optional summary PDF generation (`--summary`). Depends on `FLPQ.Languages`, `FLPQ.Printers`, and `FLPQ.RPQ`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.
 - **FLPQ.GraphAnalysis.Tests** — xUnit test project for graph analysis. Uses FsCheck for property-based testing.
 - **FLPQ.Languages.Tests** — xUnit test project for languages. Uses FsCheck for property-based testing. Depends on `FLPQ.Languages` (and transitively on `FLPQ.LinearAlgebra`).

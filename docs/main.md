@@ -82,7 +82,9 @@ What our standards and principles are, and why we chose them.
 - [SummaryTeX module](developer/summary-tex.md)
 - [PathSemiringTeX module](developer/path-semiring-tex.md)
 - [RPQ regexp visualization](developer/rpq-regexp-viz.md)
+- [RPQ graph visualization](developer/rpq-graph-viz.md)
 - [Arroyuelo step visualization](developer/arroyuelo-step-viz.md)
+- [Belyanin step visualization](developer/belyanin-step-viz.md)
 - [ExternalTools module](developer/external-tools.md)
 
 ## User Documentation

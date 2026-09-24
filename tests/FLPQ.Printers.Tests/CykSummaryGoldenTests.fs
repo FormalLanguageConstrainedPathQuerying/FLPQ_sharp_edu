@@ -52,7 +52,9 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
               Rnglr = ""
               RnglrTikz = ""
               Arroyuelo = ""
-              ArroyueloTikz = "" }
+              ArroyueloTikz = ""
+              Belyanin = ""
+              BelyaninTikz = "" }
 
         let content =
             SummaryTeX.buildContent

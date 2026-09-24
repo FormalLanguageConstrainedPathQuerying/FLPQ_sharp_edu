@@ -55,6 +55,10 @@ let ``algorithmToKind for ArroyueloRPQ is ArroyueloRPQ`` () =
     Assert.Equal(SummaryTeX.SummaryKind.ArroyueloRPQ, algorithmToKind ArroyueloRPQ)
 
 [<Fact>]
+let ``algorithmToKind for BelyaninRPQ is BelyaninRPQ`` () =
+    Assert.Equal(SummaryTeX.SummaryKind.BelyaninRPQ, algorithmToKind BelyaninRPQ)
+
+[<Fact>]
 let ``algorithmLower for Valiant`` () =
     Assert.Equal("valiant", algorithmLower Valiant)
 
@@ -82,6 +86,10 @@ let ``algorithmLower for RNGLR`` () =
 [<Fact>]
 let ``algorithmLower for ArroyueloRPQ`` () =
     Assert.Equal("arroyuelorpq", algorithmLower ArroyueloRPQ)
+
+[<Fact>]
+let ``algorithmLower for BelyaninRPQ`` () =
+    Assert.Equal("belyaninrpq", algorithmLower BelyaninRPQ)
 
 /// Runs `f` inside two fresh temp directories (vizDir, resultDir), removed afterwards.
 let private withTempDirs (f: string * string -> unit) : unit =
@@ -205,3 +213,19 @@ let ``buildSummary for RNGLR in tikz mode embeds the LR automaton TikZ`` () =
         // The automaton head uses the SPPF-style adjustbox limited to \textheight.
         Assert.Contains(@"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}", text)
         Assert.DoesNotContain("lr_automaton.pdf", text))
+
+[<Fact>]
+let ``buildSummary for BelyaninRPQ in tikz mode embeds the step automaton TikZ`` () =
+    withTempDirs (fun (vizDir, resultDir) ->
+        let stepDir = Path.Combine(vizDir, "step_0")
+        Directory.CreateDirectory stepDir |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "automaton.tikz.tex"), "AUTOMATONTIKZMARKER")
+
+        let ok =
+            Summary.buildSummary (Helpers.findSummaryTemplate ()) BelyaninRPQ vizDir resultDir false
+
+        Assert.True(ok)
+
+        let merged = Path.Combine(resultDir, "belyaninrpq", "belyaninrpq_merged.tex")
+        let text = File.ReadAllText merged
+        Assert.Contains("AUTOMATONTIKZMARKER", text))

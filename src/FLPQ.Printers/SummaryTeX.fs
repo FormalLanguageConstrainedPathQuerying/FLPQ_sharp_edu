@@ -14,6 +14,7 @@ module SummaryTeX =
         | GLL
         | RNGLR
         | ArroyueloRPQ
+        | BelyaninRPQ
 
         override this.ToString() =
             match this with
@@ -23,16 +24,19 @@ module SummaryTeX =
             | GLL -> "gll"
             | RNGLR -> "rnglr"
             | ArroyueloRPQ -> "arroyuelorpq"
+            | BelyaninRPQ -> "belyaninrpq"
 
     /// Per-algorithm step templates (DOT and TikZ variants). Fields are empty strings for
-    /// algorithms that do not use a step template; task 281 adds the Belyanin fields.
+    /// algorithms that do not use a step template.
     type StepTemplates =
         { Gll: string
           GllTikz: string
           Rnglr: string
           RnglrTikz: string
           Arroyuelo: string
-          ArroyueloTikz: string }
+          ArroyueloTikz: string
+          Belyanin: string
+          BelyaninTikz: string }
 
     /// Wraps TeX content in a centered display math environment.
     let wrapMath (tex: string) : string =
@@ -98,14 +102,25 @@ module SummaryTeX =
         else
             None
 
+    /// A filled color swatch for a legend row.
+    let private colorBox (color: string) : string =
+        sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
+
+    /// A colored edge sample for a legend row.
+    let private coloredEdge (color: string) : string =
+        sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
+
+    /// Renders legend rows as a centered two-column tabular.
+    let private legendTable (rows: (string * string) list) : string =
+        let rowLines =
+            rows
+            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
+            |> String.concat "\n"
+
+        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+
     /// Generates the color legend for GLL summary visualization.
     let private gllColorLegend () : string =
-        let colorBox (color: string) =
-            sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
-
-        let coloredEdge (color: string) =
-            sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
-
         let rows =
             [ colorBox "yellow!20", "Current descriptor in descriptors table"
               colorBox "yellow", "Modified path index cells"
@@ -117,20 +132,9 @@ module SummaryTeX =
               colorBox "green!20", "Genuinely new descriptors"
               colorBox "red!20", "Already-handled descriptors attempted again" ]
 
-        let rowLines =
-            rows
-            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
-            |> String.concat "\n"
-
-        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+        legendTable rows
 
     let private rnglrColorLegend () : string =
-        let colorBox (color: string) =
-            sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
-
-        let coloredEdge (color: string) =
-            sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
-
         let rows =
             [ colorBox "yellow", "Modified path index cells"
               colorBox "green!30", "Current input position"
@@ -138,32 +142,60 @@ module SummaryTeX =
               coloredEdge "red", "Newly added GSS edges"
               colorBox "orange!30", "Passing reductions handling triggered at GSS vertex" ]
 
-        let rowLines =
-            rows
-            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
-            |> String.concat "\n"
-
-        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+        legendTable rows
 
     let private arroyueloColorLegend () : string =
-        let colorBox (color: string) =
-            sprintf @"\colorbox{%s}{\rule{0pt}{2ex}\rule{1.2em}{0pt}}" color
-
-        let coloredEdge (color: string) =
-            sprintf @"\textcolor{%s}{\rule{2em}{0.4pt}}" color
-
         let rows =
             [ colorBox "lightblue!20", "Current regexp tree node"
               colorBox "yellow!20", "Vertices of the step's result paths"
               coloredEdge "red", "Edges of the step's result paths"
               @"$\cdot$", "Empty matrix cell" ]
 
-        let rowLines =
-            rows
-            |> List.map (fun (colorSample, desc) -> sprintf @"%s & %s \\" colorSample desc)
-            |> String.concat "\n"
+        legendTable rows
 
-        sprintf @"\begin{center}\begin{tabular}{cl} %s \end{tabular}\end{center}" rowLines
+    let private belyaninColorLegend () : string =
+        let rows =
+            [ colorBox "lightblue!20", "Frontier automaton states (non-empty M[q,\\*])"
+              colorBox "yellow!20", "Vertices of the current frontier paths"
+              coloredEdge "red", "Edges of the current frontier paths"
+              @"$\cdot$", "Empty matrix cell" ]
+
+        legendTable rows
+
+    /// Shared RPQ header section (Arroyuelo and Belyanin): color legend, query regexp,
+    /// query DFA, and input graph. Mode-aware: TikZ embeds the .tikz.tex source wrapped in a
+    /// width-only adjustbox; DOT includes the dot-compiled PDF (present when the dot source
+    /// exists).
+    let private rpqHeaderSection (vizDir: string) (legend: string) (useTikz: bool) : string list =
+        let maybe (file: string) (label: string) (wrap: string -> string) =
+            match readIfExists (Path.Combine(vizDir, file)) with
+            | Some tex -> [ section label; wrap tex; "" ]
+            | None -> []
+
+        // DOT-mode figure head: present when the dot source exists, referencing the PDF
+        // compiled by the CLI.
+        let dotFigure (file: string) (label: string) (pdfName: string) : string list =
+            match readIfExists (Path.Combine(vizDir, file)) with
+            | Some _ -> [ section label; includePdf pdfName; "" ]
+            | None -> []
+
+        let colorLegend = [ section "Color Legend"; legend; "" ]
+
+        let regexpLines = maybe "regexp.tex" "Query Regular Expression" wrapMath
+
+        let dfaLines =
+            if useTikz then
+                maybe "dfa.tikz.tex" "Query DFA" (fun t -> wrapTikzAdjustbox false t)
+            else
+                dotFigure "dfa.dot" "Query DFA" "dot_pdfs/dfa.pdf"
+
+        let graphLines =
+            if useTikz then
+                maybe "graph.tikz.tex" "Input Graph" (fun t -> wrapTikzAdjustbox false t)
+            else
+                dotFigure "graph.dot" "Input Graph" "dot_pdfs/graph.pdf"
+
+        colorLegend @ regexpLines @ dfaLines @ graphLines
 
     /// Enumerates step directories in the given visualization directory,
     /// sorted by step number. Returns an empty array if the directory does not exist.
@@ -240,33 +272,8 @@ module SummaryTeX =
 
                 colorLegend @ inputSection @ extRsmTikzSection @ rsmFigureLines @ pathIndexLines
 
-            | SummaryKind.ArroyueloRPQ ->
-                let colorLegend = [ section "Color Legend"; arroyueloColorLegend (); "" ]
-
-                let regexpLines = maybe "regexp.tex" "Query Regular Expression" wrapMath
-
-                // DOT-mode figure head: present when the dot source exists, referencing the
-                // PDF compiled by the CLI.
-                let dotFigure (file: string) (label: string) (pdfName: string) : string list =
-                    match readIfExists (Path.Combine(vizDir, file)) with
-                    | Some _ -> [ section label; includePdf pdfName; "" ]
-                    | None -> []
-
-                // Mode-aware query DFA and input graph heads: TikZ embeds the .tikz.tex source
-                // wrapped in a width-only adjustbox, DOT includes the dot-compiled PDF.
-                let dfaLines =
-                    if useTikz then
-                        maybe "dfa.tikz.tex" "Query DFA" (fun t -> wrapTikzAdjustbox false t)
-                    else
-                        dotFigure "dfa.dot" "Query DFA" "dot_pdfs/dfa.pdf"
-
-                let graphLines =
-                    if useTikz then
-                        maybe "graph.tikz.tex" "Input Graph" (fun t -> wrapTikzAdjustbox false t)
-                    else
-                        dotFigure "graph.dot" "Input Graph" "dot_pdfs/graph.pdf"
-
-                colorLegend @ regexpLines @ dfaLines @ graphLines
+            | SummaryKind.ArroyueloRPQ -> rpqHeaderSection vizDir (arroyueloColorLegend ()) useTikz
+            | SummaryKind.BelyaninRPQ -> rpqHeaderSection vizDir (belyaninColorLegend ()) useTikz
 
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
@@ -506,6 +513,54 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
+    /// Builds the content lines for a single Belyanin RPQ step using the two-column template
+    /// layout (left: query DFA figure with frontier states highlighted + matrix stack; right:
+    /// graph with the current frontier path vertices/edges highlighted). In TikZ mode the
+    /// step's automaton and graph figures are wrapped in adjustbox (shrink-only, at most
+    /// \textwidth) via `wrapTikzAdjustbox`; DOT mode includes the dot-compiled PDFs.
+    let belyaninStepSection
+        (stepDir: string)
+        (stepNum: int)
+        (template: string)
+        (tikzTemplate: string)
+        (useTikz: bool)
+        : string list =
+        let header = section (sprintf "Step %d" stepNum)
+
+        let stepName = Path.GetFileName(stepDir)
+
+        let matrices =
+            match readIfExists (Path.Combine(stepDir, "matrices.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let automatonPdf = sprintf "dot_pdfs/%s_automaton.pdf" stepName
+        let graphPdf = sprintf "dot_pdfs/%s_graph.pdf" stepName
+
+        let filledTemplate =
+            if useTikz then
+                let automatonTikz =
+                    match readIfExists (Path.Combine(stepDir, "automaton.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                let graphTikz =
+                    match readIfExists (Path.Combine(stepDir, "graph.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                tikzTemplate
+                    .Replace("__STEP_AUTOMATON_TIKZ__", wrapTikzAdjustbox false automatonTikz)
+                    .Replace("__MATRICES__", matrices)
+                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustbox false graphTikz)
+            else
+                template
+                    .Replace("__STEP_AUTOMATON_PDF__", automatonPdf)
+                    .Replace("__MATRICES__", matrices)
+                    .Replace("__STEP_GRAPH_PDF__", graphPdf)
+
+        [ header; filledTemplate; "" ]
+
     /// Builds the SPPF section using TikZ if available, falling back to DOT PDF.
     /// In TikZ mode the figure is wrapped in an adjustbox limited to at most \textwidth
     /// and \textheight (shrink-only); DOT mode includes the dot-compiled PDF.
@@ -556,6 +611,7 @@ module SummaryTeX =
         let isGll = algoKind = SummaryKind.GLL
         let isRnglr = algoKind = SummaryKind.RNGLR
         let isArroyuelo = algoKind = SummaryKind.ArroyueloRPQ
+        let isBelyanin = algoKind = SummaryKind.BelyaninRPQ
 
         let stepLines =
             collectSteps vizDir
@@ -581,6 +637,9 @@ module SummaryTeX =
                     |> List.toArray
                 elif isArroyuelo then
                     arroyueloStepSection stepDir stepNum templates.Arroyuelo templates.ArroyueloTikz useTikz
+                    |> List.toArray
+                elif isBelyanin then
+                    belyaninStepSection stepDir stepNum templates.Belyanin templates.BelyaninTikz useTikz
                     |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName useTikz |> List.toArray)

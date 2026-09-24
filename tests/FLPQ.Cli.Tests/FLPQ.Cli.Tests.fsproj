@@ -20,6 +20,7 @@
     <Compile Include="GllRunnerTests.fs" />
     <Compile Include="RnglrRunnerTests.fs" />
     <Compile Include="ArroyueloRunnerTests.fs" />
+    <Compile Include="BelyaninRunnerTests.fs" />
     <Compile Include="ProgramDispatchTests.fs" />
   </ItemGroup>
 

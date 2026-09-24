@@ -1,5 +1,34 @@
 # Code Review Report
 
+## Task 281 Review (2026-09-24)
+
+Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: path-semiring trace `evaluateWithTrace`, `reachableFromPaths`, `BelyaninLabelStep`/`BelyaninTraceStep`), `src/FLPQ.Printers/RpqGraphViz.fs` (S2: new shared module extracted from ArroyueloStepVisualizer), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` + `data/Belyanin_step_(tikz_)template.tex` (S3), `src/FLPQ.Cli/BelyaninRunner.fs` + `AlgorithmTypes.fs` + `Program.fs` + `Summary.fs` + `src/FLPQ.Printers/SummaryTeX.fs` (S4: runner, dispatch, `SummaryKind.BelyaninRPQ`, shared `rpqHeaderSection`, `belyaninStepSection`), tests (`BelyaninTraceTests`, `RpqGraphVizTests`, `BelyaninStepVisualizationTests` + 18 goldens, `BelyaninRunnerTests`, dispatch/summary/section test additions), and docs (`belyanin-rpq.md`, `rpq-graph-viz.md`, `belyanin-step-viz.md`, `path-semiring-tex.md`, `summary-tex.md`, `FLPQ.Cli.md`, `cli.md`, `architecture.md`).
+
+**Findings resolved this review:**
+
+- §2/§13 (style idiom / no duplication) — FSharpLint FL0087 on three `sprintf` calls without interpolation holes in `BelyaninStepVisualizer.renderMatrices` (the `$\text{M}$`/`$\text{P}$`/`$\text{New } M =$` captions); replaced with plain verbatim strings. Rendered output is byte-identical, so the 18 Belyanin goldens pass unchanged.
+- §23 (idiom) — FSharpLint FL0055 in `BelyaninStepVisualizationTests.fs`: `let _ = Assert.Single lines` → `ignore (Assert.Single lines)`.
+
+Both fixes committed together (commit 5707596). A full-solution FSharpLint run (`FLPQ.slnx`) found no other warnings in any file.
+
+**Verified:** build 0 errors; suites green — FLPQ.Cli.Tests 228, FLPQ.Printers.Tests 333 (incl. all Belyanin goldens and both lualatex end-to-end summary compiles), FLPQ.RPQ.Tests 79; full-solution FSharpLint 0 warnings after the fix commit; Fantomas clean; mdformat clean; manual CLI runs on the example data in TikZ and DOT modes with `-s` produce the root artifacts, six step dirs, and all dot-compiled PDFs.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no tuple expression larger than 2 items introduced; `BelyaninVisualizationStep` is a struct, trace steps are records.
+- §6 (doc comments) — all new public API carries XML docs (`evaluateWithTrace`, `reachableFromPaths`, both trace records, `RpqGraphViz.pathHighlights`/`renderGraph`, `BelyaninStepVisualizer.renderSteps` + the step struct, `belyaninStepSection`, `matrixWithVertexLabels`); private helpers follow each file's existing convention. `runBelyanin` has no doc comment, matching `runArroyuelo` (module-level doc covers both).
+- §7 (genericity) — the trace API is generic in the terminal type (`BelyaninTraceStep<'t when 't: comparison>`); the visualizer hardcodes `string` terminals, consistent with every other step visualizer (presentation layer over the book's string-labeled example).
+- §9 (separation) — `BelyaninRPQ` produces plain data (trace records + final P); all TeX/DOT strings live in `FLPQ.Printers`; the runner does file I/O only.
+- §13 (no duplication) — `RpqGraphViz` is shared by both step visualizers and both runners; `matrixWithVertexLabels` is shared by both matrix renderers; `rpqHeaderSection` + hoisted `colorBox`/`coloredEdge`/`legendTable` serve all four legends and both RPQ headers; the test helper `runRpqWithSummary` serves both RPQ summary test families. The two runners share only the one-line `vertexName` helper (below the >3-line threshold).
+- §15/§16 (test fidelity / Fact vs Property) — every new fact asserts a concrete property: hand-computed 6-step trace cells, the I_simple drop at step 4, per-source reachable sets, status-line strings, equivalence with the Boolean `evaluate`, template placeholder filling in both modes, header section ordering, and lualatex compilation. The acyclic equivalence test is a `[<Property>]` reusing `AcyclicRpqGenerators` from the shared registry.
+- §19 (test coverage) — every new/changed module has tests: `BelyaninRPQ` trace → `BelyaninTraceTests`; `RpqGraphViz` → `RpqGraphVizTests`; `BelyaninStepVisualizer` → `BelyaninStepVisualizationTests`; `BelyaninRunner`/dispatch/summary → `BelyaninRunnerTests`, `ProgramDispatchTests`, `SummaryTests`, `SummaryTexSectionTests`, `CliSummaryTests`.
+- §20 (documentation) — new module docs (`belyanin-rpq.md`, `rpq-graph-viz.md`, `belyanin-step-viz.md`) plus updates to `path-semiring-tex.md`, `summary-tex.md` (shared RPQ head, new kind/section), `FLPQ.Cli.md`, `cli.md` (algorithm list, artifact tables, usage), and `architecture.md`; hub/navigation links updated in S2/S3.
+- §21 (book traceability) — `BelyaninRPQ.fs` references Chapter 11 `02_BFS.tex` / `algo:RPQ_BFS_semiring`; the visualizer and step docs reference the same; the I_simple drop is documented against the book's path semiring.
+
+**No blocking findings.** No open items carried over from prior reports.
+
+---
+
 ## Task 279 Review (2026-09-22)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/RnglrAutomatonTikz.fs` (new: RNGLR LR automaton TikZ renderer), `src/FLPQ.Cli/RnglrRunner.fs` (mode-aware `ext_rsm.*` + `lr_automaton.*` artifacts, `rsm_blocks.dot` removed), `src/FLPQ.Cli/Summary.fs` (RNGLR header visuals: extended RSM PDF + LR automaton detection), `src/FLPQ.Printers/SummaryTeX.fs` (RNGLR head order Color Legend → Extended RSM → LR Automaton → Table → Path Index; SPPF-style adjustbox for the automaton), tests (`RnglrAutomatonTikzTests`, `RnglrRunnerTests`, `SummaryTests`, `SummaryTexSectionTests`, `CliSummaryTests`, both RNGLR end-to-end tests in `TexCompilationTests`), and docs (`automaton-viz.md`, `FLPQ.Printers.md`, `summary-tex.md`, `FLPQ.Cli.md`, `rnglr.md`, `cli.md`).

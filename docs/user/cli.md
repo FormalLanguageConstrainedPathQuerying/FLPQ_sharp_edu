@@ -10,7 +10,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 
 ## Types
 
-- `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ`
+- `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ | BelyaninRPQ`
 - `Arguments` — Argu argument type with `IArgParserTemplate`
 
 ## Command-line flags
@@ -41,6 +41,7 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 | **LL** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Derivation tree with stack overlay: Tikz graphdrawing picture with a same-layer constraint on the stack frontier, or DOT graph; TeX input row with current position underlined |
 | **LR** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Same format as LL — the picture includes LR state frames in the stack chain |
 | **Arroyuelo RPQ** | `matrices.tex`, `tree.tikz.tex` (default) or `tree.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) | One directory per regexp tree node in post-order: the matrix equation for the node's operation, the regexp tree with the current node highlighted, and the graph with the vertices/edges of the step's result paths highlighted |
+| **Belyanin RPQ** | `matrices.tex`, `automaton.tikz.tex` (default) or `automaton.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) | One directory per BFS iteration (plus `step_0` for the initialization): the frontier/accumulated matrices with the per-label propagation products, the query DFA with the current frontier states highlighted, and the graph with the vertices/edges of the current frontier paths highlighted |
 
 Root-level artifacts per algorithm:
 
@@ -53,6 +54,7 @@ Root-level artifacts per algorithm:
 | **GLL** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `rsm_blocks.dot`, `ext_rsm.tikz.tex` (default) or `ext_rsm.dot` (`--use-dot`), `path_index.tex`, `sppf.dot` |
 | **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
 | **Arroyuelo RPQ** | `regexp.tex` (query formula), `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`) — the query's DFA with `q_i` state labels, `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) — the input graph without highlights, `result.tex` — final path semiring matrix plus one line per source listing its reachable vertices |
+| **Belyanin RPQ** | Same as Arroyuelo RPQ: `regexp.tex`, `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`), `result.tex` — final path semiring matrix plus one line per source listing its reachable vertices |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 
@@ -89,9 +91,12 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 dotnet run --project src/FLPQ.Cli -c Release -- \
     -a LR -g data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
 
-# Arroyuelo RPQ: regexp query + graph instead of grammar/input
+# RPQ algorithms (Arroyuelo, Belyanin): regexp query + graph instead of grammar/input
 dotnet run --project src/FLPQ.Cli -c Release -- \
     -a ArroyueloRPQ -r data/example_regexp.txt --graph data/example_graph.txt -o ./viz_output
+
+dotnet run --project src/FLPQ.Cli -c Release -- \
+    -a BelyaninRPQ -r data/example_regexp.txt --graph data/example_graph.txt -o ./viz_output -s
 ```
 
 ## Requirements

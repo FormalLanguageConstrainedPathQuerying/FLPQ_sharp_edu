@@ -23,11 +23,13 @@
 val pathToTeX: int list -> string
 val pathSetCellToTeX: Set<int list> -> string
 val matrixToTeX: (int -> string) -> (int -> string) -> Matrix<Set<int list>> -> string
+val matrixWithVertexLabels: Matrix<Set<int list>> -> string
 ```
 
 - `pathToTeX p` — a vertex sequence as a TeX tuple: `[0; 2; 3]` → `(v_0, v_2, v_3)`. Vertex names are math-mode subscripts (`v_0`), matching the book's graph figures.
 - `pathSetCellToTeX cell` — a set of paths as a TeX set: `\{(v_0, v_1), (v_0, v_2)\}`; the empty set renders as `\cdot`. Reuses `ParsingTableTeX.setToTeX` with `pathToTeX` as the item printer, so set formatting (braces, ordering) is shared with parsing tables.
 - `matrixToTeX rowLabel colLabel m` — a path semiring matrix with vertex row/column headers (e.g. `fun i -> sprintf "v_%d" i`), wrapped in adjustbox. Delegates to `MatrixTeX.toTeXStyled` with `useAdjustbox = true`, `useRectangleColor = false`.
+- `matrixWithVertexLabels m` — `matrixToTeX` with `v_i` vertex labels; the shared block used by both RPQ step visualizers.
 
 ## Design Decisions
 

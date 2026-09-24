@@ -289,11 +289,11 @@ let ``ValiantModified summary produces merged TeX`` () =
     let outDir = runWithSummary "ValiantModified" false
     assertMergedTexExists outDir "ValiantModified"
 
-// Arroyuelo RPQ summary: the header carries the color legend, the query regexp (math mode),
-// the query DFA, and the input graph; each step is a two-column section (tree + matrices |
-// highlighted graph). There is no SPPF for RPQ — the trailing sppfSection is skipped when
-// the sppf files are absent.
-let private runArroyueloWithSummary (useDot: bool) : string =
+// RPQ summaries (Arroyuelo and Belyanin): the header carries the color legend, the query
+// regexp (math mode), the query DFA, and the input graph; each step is a two-column section
+// (figure + matrices | highlighted graph). There is no SPPF for RPQ — the trailing
+// sppfSection is skipped when the sppf files are absent.
+let private runRpqWithSummary (algorithm: string) (useDot: bool) : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     Directory.CreateDirectory outDir |> ignore
 
@@ -302,7 +302,7 @@ let private runArroyueloWithSummary (useDot: bool) : string =
     let args =
         Array.append
             [| "-a"
-               "ArroyueloRPQ"
+               algorithm
                "-r"
                exampleRegexp
                "--graph"
@@ -319,13 +319,13 @@ let private runArroyueloWithSummary (useDot: bool) : string =
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``ArroyueloRPQ summary produces merged TeX`` () =
-    let outDir = runArroyueloWithSummary false
+    let outDir = runRpqWithSummary "ArroyueloRPQ" false
     assertMergedTexExists outDir "ArroyueloRPQ"
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``ArroyueloRPQ summary header orders legend before regexp before DFA before graph`` () =
-    let outDir = runArroyueloWithSummary false
+    let outDir = runRpqWithSummary "ArroyueloRPQ" false
 
     let texPath =
         Path.Combine(outDir, "results", "arroyuelorpq", "arroyuelorpq_merged.tex")
@@ -349,14 +349,56 @@ let ``ArroyueloRPQ summary header orders legend before regexp before DFA before 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``ArroyueloRPQ summary merged TeX compiles with lualatex`` () =
-    let outDir = runArroyueloWithSummary false
+    let outDir = runRpqWithSummary "ArroyueloRPQ" false
     assertMergedTexCompiles outDir "ArroyueloRPQ"
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``ArroyueloRPQ summary dot mode merged TeX compiles with lualatex`` () =
-    let outDir = runArroyueloWithSummary true
+    let outDir = runRpqWithSummary "ArroyueloRPQ" true
     assertMergedTexCompiles outDir "ArroyueloRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary produces merged TeX`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" false
+    assertMergedTexExists outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary header orders legend before regexp before DFA before graph`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" false
+
+    let texPath =
+        Path.Combine(outDir, "results", "belyaninrpq", "belyaninrpq_merged.tex")
+
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    let content = File.ReadAllText texPath
+
+    let legendIdx = content.IndexOf("Color Legend")
+    let regexpIdx = content.IndexOf("Query Regular Expression")
+    let dfaIdx = content.IndexOf("Query DFA")
+    let graphIdx = content.IndexOf("Input Graph")
+
+    Assert.True(
+        legendIdx >= 0
+        && regexpIdx > legendIdx
+        && dfaIdx > regexpIdx
+        && graphIdx > dfaIdx
+    )
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary merged TeX compiles with lualatex`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" false
+    assertMergedTexCompiles outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary dot mode merged TeX compiles with lualatex`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" true
+    assertMergedTexCompiles outDir "BelyaninRPQ"
 
 // SPPF must appear exactly once in the GLL/RNGLR merged summary — as the trailing
 // "SPPF (Shared Packed Parse Forest)" section. The header no longer carries a

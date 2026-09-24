@@ -15,6 +15,7 @@
     <Compile Include="GllRunner.fs" />
     <Compile Include="RnglrRunner.fs" />
     <Compile Include="ArroyueloRunner.fs" />
+    <Compile Include="BelyaninRunner.fs" />
     <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

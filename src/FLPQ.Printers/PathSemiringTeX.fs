@@ -20,3 +20,7 @@ module PathSemiringTeX =
     /// Render a path semiring matrix with vertex row/column labels, wrapped in adjustbox.
     let matrixToTeX (rowLabel: int -> string) (colLabel: int -> string) (m: Matrix<Set<int list>>) : string =
         MatrixTeX.toTeXStyled false false pathSetCellToTeX m [] [] (Some rowLabel) (Some colLabel) false true
+
+    /// Render a path semiring matrix with v_i vertex row/column labels.
+    let matrixWithVertexLabels (m: Matrix<Set<int list>>) : string =
+        matrixToTeX (fun i -> sprintf "v_%d" i) (fun j -> sprintf "v_%d" j) m

@@ -15,6 +15,7 @@ module AlgorithmTypes =
         | GLL
         | RNGLR
         | ArroyueloRPQ
+        | BelyaninRPQ
 
     let displayName (algo: Algorithm) : string =
         match algo with
@@ -28,6 +29,7 @@ module AlgorithmTypes =
         | GLL -> "GLL"
         | RNGLR -> "RNGLR"
         | ArroyueloRPQ -> "Arroyuelo RPQ"
+        | BelyaninRPQ -> "Belyanin RPQ"
 
     type Arguments =
         | [<AltCommandLine("-a")>] Algorithm of Algorithm
@@ -45,7 +47,7 @@ module AlgorithmTypes =
             member this.Usage =
                 match this with
                 | Algorithm _ ->
-                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, or ArroyueloRPQ"
+                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, or BelyaninRPQ"
                 | Grammar _ -> "Path to grammar file (.bnf format)"
                 | Input _ -> "Path to input string file"
                 | Regexp _ ->

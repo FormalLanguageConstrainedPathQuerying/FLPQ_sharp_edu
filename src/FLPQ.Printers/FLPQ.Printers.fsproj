@@ -33,7 +33,9 @@
     <Compile Include="GllStepVisualizer.fs" />
     <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="RnglrStepVisualizer.fs" />
+    <Compile Include="RpqGraphViz.fs" />
     <Compile Include="ArroyueloStepVisualizer.fs" />
+    <Compile Include="BelyaninStepVisualizer.fs" />
     <Compile Include="CykTeX.fs" />
     <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />

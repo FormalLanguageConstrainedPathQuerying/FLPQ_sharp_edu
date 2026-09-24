@@ -56,8 +56,7 @@ module ArroyueloRunner =
                 (Path.Combine(outputDir, "dfa.dot"))
                 (AutomatonDot.dfaToDot string (fun idx _ -> sprintf "q_%d" idx) dfa)
 
-            let graphDot, _ =
-                ArroyueloStepVisualizer.renderGraph string graph Set.empty Set.empty
+            let graphDot, _ = RpqGraphViz.renderGraph string graph Set.empty Set.empty
 
             Helpers.writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
         else
@@ -65,8 +64,7 @@ module ArroyueloRunner =
                 (Path.Combine(outputDir, "dfa.tikz.tex"))
                 (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
 
-            let _, graphTikz =
-                ArroyueloStepVisualizer.renderGraph string graph Set.empty Set.empty
+            let _, graphTikz = RpqGraphViz.renderGraph string graph Set.empty Set.empty
 
             Helpers.writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
 

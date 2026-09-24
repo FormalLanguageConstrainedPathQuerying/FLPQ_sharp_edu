@@ -47,6 +47,10 @@ module Program =
                 let regexpFile = results.GetResult AlgorithmTypes.Regexp
                 let graphFile = results.GetResult AlgorithmTypes.GraphFile
                 ArroyueloRunner.runArroyuelo regexpFile graphFile output useDot
+            | AlgorithmTypes.BelyaninRPQ ->
+                let regexpFile = results.GetResult AlgorithmTypes.Regexp
+                let graphFile = results.GetResult AlgorithmTypes.GraphFile
+                BelyaninRunner.runBelyanin regexpFile graphFile output useDot
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then

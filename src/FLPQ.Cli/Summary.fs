@@ -19,6 +19,7 @@ module Summary =
         | AlgorithmTypes.GLL -> SummaryTeX.SummaryKind.GLL
         | AlgorithmTypes.RNGLR -> SummaryTeX.SummaryKind.RNGLR
         | AlgorithmTypes.ArroyueloRPQ -> SummaryTeX.SummaryKind.ArroyueloRPQ
+        | AlgorithmTypes.BelyaninRPQ -> SummaryTeX.SummaryKind.BelyaninRPQ
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
@@ -154,13 +155,23 @@ module Summary =
                 else
                     "", ""
 
+            let belyaninStepTemplate, belyaninStepTikzTemplate =
+                if algoKind = SummaryTeX.SummaryKind.BelyaninRPQ then
+                    let templatePath = Helpers.findBelyaninStepTemplate ()
+                    let tikzTemplatePath = Helpers.findBelyaninStepTikzTemplate ()
+                    File.ReadAllText templatePath, File.ReadAllText tikzTemplatePath
+                else
+                    "", ""
+
             let templates: SummaryTeX.StepTemplates =
                 { Gll = gllStepTemplate
                   GllTikz = gllStepTikzTemplate
                   Rnglr = rnglrStepTemplate
                   RnglrTikz = rnglrStepTikzTemplate
                   Arroyuelo = arroyueloStepTemplate
-                  ArroyueloTikz = arroyueloStepTikzTemplate }
+                  ArroyueloTikz = arroyueloStepTikzTemplate
+                  Belyanin = belyaninStepTemplate
+                  BelyaninTikz = belyaninStepTikzTemplate }
 
             let content =
                 SummaryTeX.buildContent

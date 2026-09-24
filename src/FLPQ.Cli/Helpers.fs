@@ -98,6 +98,23 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "tree.tikz.tex")) steps.[idx].TreeTikz
                 writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
 
+    let writeBelyaninStepsVisualization
+        (outputDir: string)
+        (useDot: bool)
+        (steps: BelyaninStepVisualizer.BelyaninVisualizationStep list)
+        =
+        for idx in 0 .. steps.Length - 1 do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
+
+            writeOutputFile (Path.Combine(stepDir, "matrices.tex")) steps.[idx].Matrices
+
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "automaton.dot")) steps.[idx].AutomatonDot
+                writeOutputFile (Path.Combine(stepDir, "graph.dot")) steps.[idx].GraphDot
+            else
+                writeOutputFile (Path.Combine(stepDir, "automaton.tikz.tex")) steps.[idx].AutomatonTikz
+                writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
+
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
@@ -133,6 +150,12 @@ module Helpers =
 
     let findArroyueloStepTikzTemplate () : string =
         findTemplateFile "Arroyuelo_step_tikz_template.tex"
+
+    let findBelyaninStepTemplate () : string =
+        findTemplateFile "Belyanin_step_template.tex"
+
+    let findBelyaninStepTikzTemplate () : string =
+        findTemplateFile "Belyanin_step_tikz_template.tex"
 
     let findGllStepTikzTemplate () : string =
         findTemplateFile "GLL_step_tikz_template.tex"

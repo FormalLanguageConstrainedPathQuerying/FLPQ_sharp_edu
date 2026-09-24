@@ -636,7 +636,9 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
               Rnglr = ""
               RnglrTikz = ""
               Arroyuelo = ""
-              ArroyueloTikz = "" }
+              ArroyueloTikz = ""
+              Belyanin = ""
+              BelyaninTikz = "" }
 
         let content =
             SummaryTeX.buildContent
@@ -751,7 +753,9 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
               Rnglr = rnglrStepTemplate
               RnglrTikz = ""
               Arroyuelo = ""
-              ArroyueloTikz = "" }
+              ArroyueloTikz = ""
+              Belyanin = ""
+              BelyaninTikz = "" }
 
         let content =
             SummaryTeX.buildContent
@@ -961,7 +965,9 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
               Rnglr = ""
               RnglrTikz = ""
               Arroyuelo = ""
-              ArroyueloTikz = "" }
+              ArroyueloTikz = ""
+              Belyanin = ""
+              BelyaninTikz = "" }
 
         let content =
             SummaryTeX.buildContent
@@ -1069,7 +1075,9 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
               Rnglr = ""
               RnglrTikz = rnglrStepTikzTemplate
               Arroyuelo = ""
-              ArroyueloTikz = "" }
+              ArroyueloTikz = ""
+              Belyanin = ""
+              BelyaninTikz = "" }
 
         let content =
             SummaryTeX.buildContent
