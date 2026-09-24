@@ -190,6 +190,7 @@ module GllStepVisualizer =
                 "rectangle, rounded corners"
                 true
                 None
+                false
 
         let rsmDot =
             let currentState = step.CurrentDescriptor |> Option.map (fun d -> d.RsmState)
@@ -272,6 +273,7 @@ module GllStepVisualizer =
                 "rectangle, rounded corners"
                 true
                 None
+                false
 
         let rsmDot = RsmDot.extendedRsmToDot terminalPrinter nonterminalPrinter ersm None
 

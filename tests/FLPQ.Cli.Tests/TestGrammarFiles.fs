@@ -30,3 +30,13 @@ module TestGrammarFiles =
 
     let exampleLRGrammar () =
         writeTempFile LanguageRegistry.ArithExpr.Grammars.[1].Text
+
+    /// The ANBN classic registry grammar text (rules "S -> a S b" and "S -> eps").
+    let anbnEbnf = LanguageRegistry.ANBN.Grammars.[0].Text
+
+    /// The 4-token ANBN accept string "a a b b", from the registry.
+    let anbnInput =
+        LanguageRegistry.ANBN.AcceptStrings
+        |> List.find (fun tokens -> List.length tokens = 4)
+        |> List.map (fun (FLPQ.Languages.Terminal t) -> t)
+        |> String.concat " "

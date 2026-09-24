@@ -452,7 +452,7 @@ module AutomatonGoldenTests =
                 (set [ 1 ])
 
         let dot = AutomatonDot.nfaToDot string (fun _i s -> s) aut
-        verifyGolden "nfa_aplus.Dot" dot
+        verifyGolden "nfa_aplus.dot" dot
 
     [<Fact>]
     let ``DFA a+ dot golden`` () =
@@ -464,7 +464,7 @@ module AutomatonGoldenTests =
                 (set [ 1 ])
 
         let dot = AutomatonDot.dfaToDot string (fun _i s -> s) aut
-        verifyGolden "dfa_aplus.Dot" dot
+        verifyGolden "dfa_aplus.dot" dot
 
     [<Fact>]
     let ``NFA a+ tikz golden`` () =

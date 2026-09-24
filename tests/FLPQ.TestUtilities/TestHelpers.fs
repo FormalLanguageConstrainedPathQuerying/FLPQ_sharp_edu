@@ -23,6 +23,10 @@ module TestHelpers =
             with ex ->
                 eprintfn "Warning: failed to clean up temp dir %s: %s" dir ex.Message
 
+    /// Counts the occurrences of `needle` in `haystack`.
+    let countOccurrences (haystack: string) (needle: string) : int =
+        haystack.Split([| needle |], System.StringSplitOptions.None).Length - 1
+
     /// Asserts that code throws an exception whose message contains the given substring.
     let assertThrows (messagePart: string) (code: unit -> 'a) : unit =
         let exn =

@@ -11,6 +11,9 @@ open FLPQ.RPQ.ArroyueloRPQ
 /// for the step's operation, and the graph with the vertices/edges of the step's result paths.
 module ArroyueloStepVisualizer =
 
+    /// One rendered trace step: the regexp tree figure, the matrix equation for the step's
+    /// operation, and the input graph with the step's result paths highlighted — each in DOT
+    /// and TikZ form (the runner picks one).
     [<Struct>]
     type ArroyueloVisualizationStep =
         { TreeDot: string
@@ -96,6 +99,7 @@ module ArroyueloStepVisualizer =
                     "rectangle"
                     true
                     None
+                    false
 
             let pathVerts, pathEdgeHl = RpqGraphViz.pathHighlights step.Result
 

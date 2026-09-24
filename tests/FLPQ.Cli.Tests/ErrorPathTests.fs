@@ -5,11 +5,11 @@ open Xunit
 open FLPQ.Cli
 
 [<Fact>]
-let ``missing grammar file returns non-zero`` () =
+let ``missing query file returns non-zero`` () =
     let args =
         [| "-a"
            "CYK"
-           "-g"
+           "-q"
            "nonexistent_grammar.bnf"
            "-i"
            "nonexistent_input.txt"
@@ -22,7 +22,7 @@ let ``missing grammar file returns non-zero`` () =
 [<Fact>]
 let ``invalid algorithm name returns non-zero`` () =
     let args =
-        [| "-a"; "InvalidAlgo"; "-g"; "nonexistent.bnf"; "-i"; "nonexistent.txt" |]
+        [| "-a"; "InvalidAlgo"; "-q"; "nonexistent.bnf"; "-i"; "nonexistent.txt" |]
 
     let code = Program.runCli args
     Assert.NotEqual(0, code)
@@ -35,14 +35,15 @@ let ``empty output directory is handled`` () =
     let args =
         [| "-a"
            "CYK"
-           "-g"
+           "-q"
            "nonexistent.bnf"
            "-i"
            "nonexistent.txt"
            "-o"
            outDir |]
 
-    Program.runCli args |> ignore
+    let code = Program.runCli args
+    Assert.NotEqual(0, code)
     Directory.Delete(outDir, true)
 
 [<Fact>]
@@ -50,7 +51,7 @@ let ``unsupported algorithm with summary`` () =
     let args =
         [| "-a"
            "CYK"
-           "-g"
+           "-q"
            "nonexistent.bnf"
            "-i"
            "nonexistent.txt"
@@ -66,7 +67,7 @@ let ``bad lookahead value`` () =
     let args =
         [| "-a"
            "LL"
-           "-g"
+           "-q"
            "nonexistent.bnf"
            "-i"
            "nonexistent.txt"

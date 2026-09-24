@@ -79,6 +79,28 @@ module SummaryTeX =
           @"\end{center}" ]
         |> String.concat "\n"
 
+    /// Wraps a TikZ figure in a centered adjustbox that shrinks it to at most \linewidth
+    /// (the current column width) without upscaling smaller figures. Used for RPQ step
+    /// figures, which sit inside minipage columns where \textwidth is still the full page
+    /// width and would let an over-wide figure overflow its column.
+    let wrapTikzAdjustboxColumn (tikz: string) : string =
+        [ @"\begin{center}"
+          @"\begin{adjustbox}{max width=\linewidth}"
+          tikz
+          @"\end{adjustbox}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
+    /// Wraps a filled RPQ step template in an adjustbox limited to at most \textwidth and
+    /// 0.9\textheight (shrink-only). The 10% height headroom accommodates the step's
+    /// \subsection* heading, which must stay outside the box: sectioning commands cannot
+    /// run inside an adjustbox. Short steps are never scaled.
+    let wrapStepAdjustbox (tex: string) : string =
+        [ @"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}"
+          tex
+          @"\end{adjustbox}" ]
+        |> String.concat "\n"
+
     /// Wraps a raw TeX tabular in a centered, resizable box (no math mode, no inner center).
     let wrapTabularResized (tabular: string) : string =
         [ @"\begin{center}"
@@ -468,8 +490,10 @@ module SummaryTeX =
     /// Builds the content lines for a single Arroyuelo RPQ step using the two-column template
     /// layout (left: regexp tree figure + matrix equation; right: graph with the step's result
     /// path vertices/edges highlighted). In TikZ mode the step's tree and graph figures are
-    /// wrapped in adjustbox (shrink-only, at most \textwidth) via `wrapTikzAdjustbox`; DOT
-    /// mode includes the dot-compiled PDFs.
+    /// wrapped in adjustbox (shrink-only, at most \linewidth) via `wrapTikzAdjustboxColumn`;
+    /// DOT mode includes the dot-compiled PDFs. The filled template is wrapped whole in
+    /// `wrapStepAdjustbox` (at most \textwidth and 0.9\textheight) so the step fits one page;
+    /// the step heading stays outside the box.
     let arroyueloStepSection
         (stepDir: string)
         (stepNum: int)
@@ -502,22 +526,24 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__STEP_TREE_TIKZ__", wrapTikzAdjustbox false treeTikz)
+                    .Replace("__STEP_TREE_TIKZ__", wrapTikzAdjustboxColumn treeTikz)
                     .Replace("__MATRICES__", matrices)
-                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustbox false graphTikz)
+                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustboxColumn graphTikz)
             else
                 template
                     .Replace("__STEP_TREE_PDF__", treePdf)
                     .Replace("__MATRICES__", matrices)
                     .Replace("__STEP_GRAPH_PDF__", graphPdf)
 
-        [ header; filledTemplate; "" ]
+        [ header; wrapStepAdjustbox filledTemplate; "" ]
 
     /// Builds the content lines for a single Belyanin RPQ step using the two-column template
     /// layout (left: query DFA figure with frontier states highlighted + matrix stack; right:
     /// graph with the current frontier path vertices/edges highlighted). In TikZ mode the
     /// step's automaton and graph figures are wrapped in adjustbox (shrink-only, at most
-    /// \textwidth) via `wrapTikzAdjustbox`; DOT mode includes the dot-compiled PDFs.
+    /// \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled PDFs.
+    /// The filled template is wrapped whole in `wrapStepAdjustbox` (at most \textwidth and
+    /// 0.9\textheight) so the step fits one page; the step heading stays outside the box.
     let belyaninStepSection
         (stepDir: string)
         (stepNum: int)
@@ -550,16 +576,16 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__STEP_AUTOMATON_TIKZ__", wrapTikzAdjustbox false automatonTikz)
+                    .Replace("__STEP_AUTOMATON_TIKZ__", wrapTikzAdjustboxColumn automatonTikz)
                     .Replace("__MATRICES__", matrices)
-                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustbox false graphTikz)
+                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustboxColumn graphTikz)
             else
                 template
                     .Replace("__STEP_AUTOMATON_PDF__", automatonPdf)
                     .Replace("__MATRICES__", matrices)
                     .Replace("__STEP_GRAPH_PDF__", graphPdf)
 
-        [ header; filledTemplate; "" ]
+        [ header; wrapStepAdjustbox filledTemplate; "" ]
 
     /// Builds the SPPF section using TikZ if available, falling back to DOT PDF.
     /// In TikZ mode the figure is wrapped in an adjustbox limited to at most \textwidth

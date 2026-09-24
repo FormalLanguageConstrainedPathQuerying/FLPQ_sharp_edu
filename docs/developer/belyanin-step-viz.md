@@ -50,7 +50,12 @@ val renderSteps: (string -> string) -> DFA<string, int> -> NFA<string, int> -> B
 both with a `__MATRICES__` slot. Two-column minipage layout modeled on
 `data/RNGLR_step_template.tex`: left = automaton figure + matrices, right = graph. The
 matrices sit in a group where `\textwidth` is shortened to the minipage's `\linewidth`, so
-the adjustbox-wrapped matrices shrink to the column instead of the page width.
+the adjustbox-wrapped matrices shrink to the column instead of the page width. The DOT
+template's figures use `\includegraphics[width=\linewidth]` so they fit their minipage
+column (a minipage does not change `\textwidth`). At summary time the section builder
+wraps the TikZ figures in `SummaryTeX.wrapTikzAdjustboxColumn` and the whole filled
+template in `SummaryTeX.wrapStepAdjustbox` (at most `\textwidth` and `0.9\textheight`) so
+every step fits one page — see [SummaryTeX module](summary-tex.md).
 
 ## Design Decisions
 

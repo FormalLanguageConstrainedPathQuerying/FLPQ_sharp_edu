@@ -4,6 +4,7 @@ open System.IO
 open Xunit
 open FLPQ.Printers
 open FLPQ.TestUtilities
+open GoldenHelpers
 
 let private emptyTemplates: SummaryTeX.StepTemplates =
     { Gll = ""
@@ -300,11 +301,7 @@ let ``ArroyueloRPQ header in tikz mode orders legend before regexp before DFA be
         Assert.Contains("DFATIKZ", text)
         Assert.Contains("GRAPHTIKZ", text)
         // The DFA and graph figures use the width-only adjustbox; the regexp is math mode.
-        Assert.Equal(
-            2,
-            text.Split([| @"\begin{adjustbox}{max width=\textwidth}" |], System.StringSplitOptions.None).Length
-            - 1
-        )
+        Assert.Equal(2, countOccurrences text @"\begin{adjustbox}{max width=\textwidth}")
 
         Assert.Contains("\[\nREGEXPTX\n\]", text))
 
@@ -348,7 +345,11 @@ let ``arroyueloStepSection in dot mode fills empty placeholders for missing file
 
         Assert.Equal(3, List.length lines)
         Assert.Equal(SummaryTeX.section "Step 0", lines.[0])
-        Assert.Equal("M=|T=dot_pdfs/step_0_tree.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1]))
+        // The filled template is wrapped whole in the step adjustbox (shrink-only).
+        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
+        Assert.EndsWith(@"\end{adjustbox}", lines.[1])
+        Assert.Contains("M=|T=dot_pdfs/step_0_tree.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1])
+        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
 
 [<Fact>]
 let ``arroyueloStepSection in tikz mode fills empty placeholders for missing files`` () =
@@ -361,9 +362,13 @@ let ``arroyueloStepSection in tikz mode fills empty placeholders for missing fil
         let lines = SummaryTeX.arroyueloStepSection stepDir 1 template template true
 
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
-        // Missing tikz files are replaced by empty strings; the adjustbox wrap is still applied.
+        // Missing tikz files are replaced by empty strings; the column-width figure wrap and
+        // the whole-step adjustbox are still applied.
         Assert.Contains("T=\\begin{center}", lines.[1])
-        Assert.Contains("|G=\\begin{center}", lines.[1]))
+        Assert.Contains("|G=\\begin{center}", lines.[1])
+        Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}")
+        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
+        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
 
 [<Fact>]
 let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA before graph`` () =
@@ -397,11 +402,7 @@ let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA bef
         Assert.Contains("DFATIKZ", text)
         Assert.Contains("GRAPHTIKZ", text)
         // The DFA and graph figures use the width-only adjustbox; the regexp is math mode.
-        Assert.Equal(
-            2,
-            text.Split([| @"\begin{adjustbox}{max width=\textwidth}" |], System.StringSplitOptions.None).Length
-            - 1
-        )
+        Assert.Equal(2, countOccurrences text @"\begin{adjustbox}{max width=\textwidth}")
 
         Assert.Contains("\[\nREGEXPTX\n\]", text))
 
@@ -432,7 +433,11 @@ let ``belyaninStepSection in dot mode fills empty placeholders for missing files
 
         Assert.Equal(3, List.length lines)
         Assert.Equal(SummaryTeX.section "Step 0", lines.[0])
-        Assert.Equal("M=|A=dot_pdfs/step_0_automaton.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1]))
+        // The filled template is wrapped whole in the step adjustbox (shrink-only).
+        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
+        Assert.EndsWith(@"\end{adjustbox}", lines.[1])
+        Assert.Contains("M=|A=dot_pdfs/step_0_automaton.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1])
+        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
 
 [<Fact>]
 let ``belyaninStepSection in tikz mode fills empty placeholders for missing files`` () =
@@ -445,9 +450,13 @@ let ``belyaninStepSection in tikz mode fills empty placeholders for missing file
         let lines = SummaryTeX.belyaninStepSection stepDir 1 template template true
 
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
-        // Missing tikz files are replaced by empty strings; the adjustbox wrap is still applied.
+        // Missing tikz files are replaced by empty strings; the column-width figure wrap and
+        // the whole-step adjustbox are still applied.
         Assert.Contains("A=\\begin{center}", lines.[1])
-        Assert.Contains("|G=\\begin{center}", lines.[1]))
+        Assert.Contains("|G=\\begin{center}", lines.[1])
+        Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}")
+        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
+        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
 
 [<Fact>]
 let ``buildContent for the LL kind renders stack step sections`` () =

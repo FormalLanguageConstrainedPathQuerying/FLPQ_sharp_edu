@@ -12,10 +12,10 @@ let private exampleLRInput = Path.Combine(baseDir, "example_lr_input.txt")
 let private exampleRegexp = Path.Combine(baseDir, "example_regexp.txt")
 let private exampleGraph = Path.Combine(baseDir, "example_graph.txt")
 
-let private runAlgorithm (algorithm: string) (grammarFile: string) (inputFile: string) : int =
+let private runAlgorithm (algorithm: string) (queryFile: string) (inputFile: string) : int =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args = [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; algorithm; "-q"; queryFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
     let mutable cleanup = true
@@ -46,10 +46,10 @@ let ``GLL runs successfully with EBNF grammar`` () =
     let inputFile = Path.Combine(tmpDir, "input.txt")
     let outDir = Path.Combine(tmpDir, "output")
     Directory.CreateDirectory(tmpDir) |> ignore
-    File.WriteAllText(grammarFile, "S -> a S b | eps")
-    File.WriteAllText(inputFile, "a a b b")
+    File.WriteAllText(grammarFile, TestGrammarFiles.anbnEbnf)
+    File.WriteAllText(inputFile, TestGrammarFiles.anbnInput)
 
-    let args = [| "-a"; "GLL"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; "GLL"; "-q"; grammarFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -67,10 +67,10 @@ let ``RNGLR runs successfully with EBNF grammar`` () =
     let inputFile = Path.Combine(tmpDir, "input.txt")
     let outDir = Path.Combine(tmpDir, "output")
     Directory.CreateDirectory(tmpDir) |> ignore
-    File.WriteAllText(grammarFile, "S -> a S b | eps")
-    File.WriteAllText(inputFile, "a a b b")
+    File.WriteAllText(grammarFile, TestGrammarFiles.anbnEbnf)
+    File.WriteAllText(inputFile, TestGrammarFiles.anbnInput)
 
-    let args = [| "-a"; "RNGLR"; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir |]
+    let args = [| "-a"; "RNGLR"; "-q"; grammarFile; "-i"; inputFile; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -102,15 +102,15 @@ let ``CYK runs successfully`` () =
     Assert.Equal(0, code)
 
 [<Fact>]
-let ``ArroyueloRPQ runs successfully with regexp and graph files`` () =
+let ``ArroyueloRPQ runs successfully with query and input files`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
     let args =
         [| "-a"
            "ArroyueloRPQ"
-           "-r"
+           "-q"
            exampleRegexp
-           "--graph"
+           "-i"
            exampleGraph
            "-o"
            outDir |]
@@ -125,10 +125,10 @@ let ``ArroyueloRPQ runs successfully with regexp and graph files`` () =
     Assert.Equal(0, code)
 
 [<Fact>]
-let ``ArroyueloRPQ without regexp file exits non-zero`` () =
+let ``ArroyueloRPQ without query file exits non-zero`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args = [| "-a"; "ArroyueloRPQ"; "--graph"; exampleGraph; "-o"; outDir |]
+    let args = [| "-a"; "ArroyueloRPQ"; "-i"; exampleGraph; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -140,10 +140,10 @@ let ``ArroyueloRPQ without regexp file exits non-zero`` () =
     Assert.NotEqual(0, code)
 
 [<Fact>]
-let ``ArroyueloRPQ without graph file exits non-zero`` () =
+let ``ArroyueloRPQ without input file exits non-zero`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args = [| "-a"; "ArroyueloRPQ"; "-r"; exampleRegexp; "-o"; outDir |]
+    let args = [| "-a"; "ArroyueloRPQ"; "-q"; exampleRegexp; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -155,18 +155,11 @@ let ``ArroyueloRPQ without graph file exits non-zero`` () =
     Assert.NotEqual(0, code)
 
 [<Fact>]
-let ``BelyaninRPQ runs successfully with regexp and graph files`` () =
+let ``BelyaninRPQ runs successfully with query and input files`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
     let args =
-        [| "-a"
-           "BelyaninRPQ"
-           "-r"
-           exampleRegexp
-           "--graph"
-           exampleGraph
-           "-o"
-           outDir |]
+        [| "-a"; "BelyaninRPQ"; "-q"; exampleRegexp; "-i"; exampleGraph; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -178,10 +171,10 @@ let ``BelyaninRPQ runs successfully with regexp and graph files`` () =
     Assert.Equal(0, code)
 
 [<Fact>]
-let ``BelyaninRPQ without regexp file exits non-zero`` () =
+let ``BelyaninRPQ without query file exits non-zero`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args = [| "-a"; "BelyaninRPQ"; "--graph"; exampleGraph; "-o"; outDir |]
+    let args = [| "-a"; "BelyaninRPQ"; "-i"; exampleGraph; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -193,10 +186,10 @@ let ``BelyaninRPQ without regexp file exits non-zero`` () =
     Assert.NotEqual(0, code)
 
 [<Fact>]
-let ``BelyaninRPQ without graph file exits non-zero`` () =
+let ``BelyaninRPQ without input file exits non-zero`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 
-    let args = [| "-a"; "BelyaninRPQ"; "-r"; exampleRegexp; "-o"; outDir |]
+    let args = [| "-a"; "BelyaninRPQ"; "-q"; exampleRegexp; "-o"; outDir |]
 
     let code = Program.runCli args
 
@@ -214,7 +207,7 @@ let ``main delegates to runCli`` () =
     let args =
         [| "-a"
            "ValiantModified"
-           "-g"
+           "-q"
            TestGrammarFiles.exampleGrammar ()
            "-i"
            exampleInput

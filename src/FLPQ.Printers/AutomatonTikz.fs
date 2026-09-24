@@ -8,6 +8,7 @@ open FLPQ.Languages
 /// Tikz visualization for finite automata using graphdrawing with layered layout.
 module AutomatonTikz =
 
+    /// Escapes the LaTeX special characters of a plain-text label for use in node content.
     let escapeLatex (s: string) : string =
         s
             .Replace(@"\", @"\textbackslash ")
@@ -21,6 +22,9 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
+    /// The TikZ node options for one automaton state: the `as={...}` content, the Start
+    /// label/fill, the final-state double border/fill, and the highlight fill (which wins
+    /// over the others).
     let nodeOptions
         (idx: int)
         (stateContent: string)
@@ -134,6 +138,7 @@ module AutomatonTikz =
     let tikzHeader (shape: string) (sb: StringBuilder) : unit =
         tikzHeaderWithOptions (layeredGraphOptions shape defaultGrowDirection) sb
 
+    /// Closes the graph environment and the tikzpicture opened by `tikzHeader`.
     let tikzFooter (sb: StringBuilder) : unit =
         sb.AppendLine("  };") |> ignore
         sb.AppendLine(@"\end{tikzpicture}") |> ignore

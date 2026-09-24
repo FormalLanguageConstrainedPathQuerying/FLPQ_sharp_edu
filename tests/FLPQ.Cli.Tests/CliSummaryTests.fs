@@ -23,7 +23,7 @@ let private runWithSummary (algorithm: string) (useDot: bool) : string =
         Array.append
             [| "-a"
                algorithm
-               "-g"
+               "-q"
                TestGrammarFiles.exampleGrammar ()
                "-i"
                exampleInput
@@ -171,7 +171,7 @@ let private runWithSummaryEBNFUseDot
 
     let args =
         Array.append
-            [| "-a"; algorithm; "-g"; grammarFile; "-i"; inputFile; "-o"; outDir; "-s" |]
+            [| "-a"; algorithm; "-q"; grammarFile; "-i"; inputFile; "-o"; outDir; "-s" |]
             (Array.ofList dotFlag)
 
     let code = Program.runCli args
@@ -184,13 +184,17 @@ let private runWithSummaryEBNF (algorithm: string) (grammarText: string) (inputT
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary produces merged TeX`` () =
-    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "GLL" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertMergedTexExists outDir "GLL"
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary color legend includes stored-pops orange row`` () =
-    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "GLL" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "gll", "gll_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -201,13 +205,17 @@ let ``GLL summary color legend includes stored-pops orange row`` () =
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary produces merged TeX`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertMergedTexExists outDir "RNGLR"
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary color legend includes passing-reductions orange row`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -215,11 +223,8 @@ let ``RNGLR summary color legend includes passing-reductions orange row`` () =
     Assert.Contains("Passing reductions handling triggered at GSS vertex", content)
     Assert.Contains(@"\colorbox{orange!30}", content)
 
-// Per-step GSS/RSM figures in TikZ mode are wrapped with the existing
-// wrapTikzAdjustbox helper (shrink-only, at most \textwidth — which inside a step
-// minipage equals the column width). DOT mode includes dot-compiled PDFs instead.
-let private countOccurrences (haystack: string) (needle: string) : int =
-    haystack.Split([| needle |], System.StringSplitOptions.None).Length - 1
+// Per-step GSS/RSM figures in TikZ mode are wrapped with the existing wrapTikzAdjustbox
+// helper (shrink-only, at most \textwidth). DOT mode includes dot-compiled PDFs instead.
 
 let private stepSections (content: string) : string list =
     // Note: the leading backslash must be doubled — in .NET regex a single \s is the whitespace class.
@@ -231,20 +236,12 @@ let private stepSections (content: string) : string list =
     |> Seq.map (fun m -> m.Groups.[2].Value)
     |> Seq.toList
 
-// The ANBN classic registry grammar (rules "S -> a S b" and "S -> eps") with its
-// 4-token accept string "a a b b".
-let private anbnEbnf = LanguageRegistry.ANBN.Grammars.[0].Text
-
-let private anbnInput =
-    LanguageRegistry.ANBN.AcceptStrings
-    |> List.find (fun tokens -> List.length tokens = 4)
-    |> List.map (fun (FLPQ.Languages.Terminal t) -> t)
-    |> String.concat " "
-
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary wraps each step GSS and RSM figure in adjustbox`` () =
-    let outDir = runWithSummaryEBNF "GLL" anbnEbnf anbnInput
+    let outDir =
+        runWithSummaryEBNF "GLL" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "gll", "gll_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -256,15 +253,17 @@ let ``GLL summary wraps each step GSS and RSM figure in adjustbox`` () =
 
     for sec in sections do
         // Each GLL step carries exactly two wrapped figures: GSS and RSM.
-        Assert.Equal(2, countOccurrences sec adjustboxBegin)
+        Assert.Equal(2, TestHelpers.countOccurrences sec adjustboxBegin)
 
     // The head Extended RSM figure contributes exactly one more adjustbox.
-    Assert.Equal(1 + 2 * sections.Length, countOccurrences content adjustboxBegin)
+    Assert.Equal(1 + 2 * sections.Length, TestHelpers.countOccurrences content adjustboxBegin)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary wraps each step GSS figure in adjustbox`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -276,12 +275,12 @@ let ``RNGLR summary wraps each step GSS figure in adjustbox`` () =
 
     for sec in sections do
         // Each RNGLR step carries exactly one wrapped figure: GSS (no per-step RSM).
-        Assert.Equal(1, countOccurrences sec adjustboxBegin)
+        Assert.Equal(1, TestHelpers.countOccurrences sec adjustboxBegin)
 
     // The head Extended RSM figure contributes exactly one more width-only adjustbox.
     // The LR automaton head uses the max-totalheight variant (asserted in
     // assertMaxTotalHeightAdjustboxCount), which this needle does not match.
-    Assert.Equal(1 + sections.Length, countOccurrences content adjustboxBegin)
+    Assert.Equal(1 + sections.Length, TestHelpers.countOccurrences content adjustboxBegin)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
@@ -303,9 +302,9 @@ let private runRpqWithSummary (algorithm: string) (useDot: bool) : string =
         Array.append
             [| "-a"
                algorithm
-               "-r"
+               "-q"
                exampleRegexp
-               "--graph"
+               "-i"
                exampleGraph
                "-o"
                outDir
@@ -400,6 +399,56 @@ let ``BelyaninRPQ summary dot mode merged TeX compiles with lualatex`` () =
     let outDir = runRpqWithSummary "BelyaninRPQ" true
     assertMergedTexCompiles outDir "BelyaninRPQ"
 
+/// Compiles the merged RPQ summary and asserts that the lualatex log left in the output
+/// directory by compileTexFile contains no Overfull boxes: the column-width figure wraps
+/// and the whole-step adjustbox must keep every step on one page.
+let private assertRpqMergedTexCompilesWithoutOverfull (outDir: string) (algorithm: string) =
+    let texPath = mergedTexPath outDir algorithm
+    Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    try
+        Assert.True(
+            ExternalTools.compileTexFile texPath (Path.GetDirectoryName texPath),
+            sprintf "Merged TeX failed to compile with lualatex: %s" texPath
+        )
+
+        let logPath =
+            Path.Combine(Path.GetDirectoryName texPath, sprintf "%s.log" (Path.GetFileNameWithoutExtension texPath))
+
+        Assert.True(File.Exists logPath, sprintf "lualatex log not found: %s" logPath)
+
+        let log = File.ReadAllText logPath
+        Assert.DoesNotContain("Overfull", log)
+    finally
+        try
+            Directory.Delete(outDir, true)
+        with _ ->
+            ()
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary merged TeX compiles without Overfull boxes`` () =
+    let outDir = runRpqWithSummary "ArroyueloRPQ" false
+    assertRpqMergedTexCompilesWithoutOverfull outDir "ArroyueloRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``ArroyueloRPQ summary dot mode merged TeX compiles without Overfull boxes`` () =
+    let outDir = runRpqWithSummary "ArroyueloRPQ" true
+    assertRpqMergedTexCompilesWithoutOverfull outDir "ArroyueloRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary merged TeX compiles without Overfull boxes`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" false
+    assertRpqMergedTexCompilesWithoutOverfull outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ summary dot mode merged TeX compiles without Overfull boxes`` () =
+    let outDir = runRpqWithSummary "BelyaninRPQ" true
+    assertRpqMergedTexCompilesWithoutOverfull outDir "BelyaninRPQ"
+
 // SPPF must appear exactly once in the GLL/RNGLR merged summary — as the trailing
 // "SPPF (Shared Packed Parse Forest)" section. The header no longer carries a
 // separate "\subsection*{SPPF}" with the DOT-compiled PDF (task 269).
@@ -422,13 +471,17 @@ let private assertSingleTrailingSppfSection (outDir: string) (algorithm: string)
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary contains exactly one SPPF section (trailing)`` () =
-    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "GLL" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertSingleTrailingSppfSection outDir "GLL"
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary contains exactly one SPPF section (trailing)`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertSingleTrailingSppfSection outDir "RNGLR"
 
 // Figures wrapped with the max-totalheight adjustbox variant: the trailing SPPF
@@ -443,7 +496,7 @@ let private assertMaxTotalHeightAdjustboxCount (outDir: string) (algorithm: stri
     let variant =
         @"\begin{adjustbox}{max width=\textwidth, max totalheight=\textheight}"
 
-    Assert.Equal(expectedCount, countOccurrences content variant)
+    Assert.Equal(expectedCount, TestHelpers.countOccurrences content variant)
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
@@ -460,19 +513,25 @@ let ``Valiant summary SPPF uses adjustbox with max totalheight`` () =
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``GLL summary SPPF uses adjustbox with max totalheight`` () =
-    let outDir = runWithSummaryEBNF "GLL" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "GLL" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertMaxTotalHeightAdjustboxCount outDir "GLL" 1
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary SPPF and LR automaton use adjustbox with max totalheight`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" "S -> a S b | eps" "a a b b"
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     assertMaxTotalHeightAdjustboxCount outDir "RNGLR" 2
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary orders extended RSM before LR automaton before parsing table`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -486,7 +545,9 @@ let ``RNGLR summary orders extended RSM before LR automaton before parsing table
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary tikz mode contains no DOT RSM figure`` () =
-    let outDir = runWithSummaryEBNF "RNGLR" anbnEbnf anbnInput
+    let outDir =
+        runWithSummaryEBNF "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 
@@ -497,7 +558,9 @@ let ``RNGLR summary tikz mode contains no DOT RSM figure`` () =
 [<Fact>]
 [<Trait("Category", "Summary")>]
 let ``RNGLR summary dot mode includes extended RSM and LR automaton PDFs`` () =
-    let outDir = runWithSummaryEBNFUseDot "RNGLR" anbnEbnf anbnInput true
+    let outDir =
+        runWithSummaryEBNFUseDot "RNGLR" TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput true
+
     let texPath = Path.Combine(outDir, "results", "rnglr", "rnglr_merged.tex")
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
 

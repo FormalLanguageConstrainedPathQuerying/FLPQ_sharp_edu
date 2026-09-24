@@ -90,6 +90,7 @@ module RnglrStepVisualizer =
                 "circle"
                 true
                 (Some(fun idx -> snd (vertexInfo idx)))
+                false
 
         let lrTable =
             match step.Action with

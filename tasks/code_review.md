@@ -1,5 +1,40 @@
 # Code Review Report
 
+## Task 282 Review (2026-09-24)
+
+Scope: full branch diff vs dev — `src/FLPQ.Cli/AlgorithmTypes.fs` + `Program.fs` + `ArroyueloRunner.fs` + `BelyaninRunner.fs` (S1: unified `-q`/`-i` CLI), `src/FLPQ.Printers/GssTikz.fs` (S2: trailing `bendReciprocalEdges` parameter) + `RpqGraphViz.fs` (passes `true`) + `GllStepVisualizer.fs` / `RnglrStepVisualizer.fs` / `ArroyueloStepVisualizer.fs` (pass `false`), `src/FLPQ.Printers/SummaryTeX.fs` (S3: `wrapTikzAdjustboxColumn`, `wrapStepAdjustbox`, RPQ step sections) + `data/{Arroyuelo,Belyanin}_step_template.tex` (`\linewidth` includegraphics), tests (`GssDotTests`, `RpqGraphVizTests`, `SummaryTexSectionTests`, both step-visualization test files, `CliSummaryTests`, `ErrorPathTests`, `ProgramDispatchTests`, `TestGrammarFiles`, `GoldenHelpers`, `TestHelpers`, `AutomatonVisualizationTests` golden names, `xunit.runner.json`), regenerated Belyanin graph goldens, and docs (`cli.md`, `FLPQ.Cli.md`, `rpq-graph-viz.md`, `arroyuelo-step-viz.md`, `belyanin-step-viz.md`, `rnglr.md`, `summary-tex.md`).
+
+**Findings resolved this review (commit 0522b05):**
+
+- §13 (no duplication) — the Arroyuelo/Belyanin runners copy-pasted the ~14-line root-artifact block (regexp.tex + dfa/graph in DOT or TikZ form). Extracted to `Helpers.writeRpqRootArtifacts`; both runners call it. Output files byte-identical (runner tests pass unchanged).
+- §15 (no stubbed tests) — `ErrorPathTests.empty output directory is handled` had no assertion and could never fail (`runCli` swallows all exceptions); now asserts a non-zero exit code like its siblings.
+- §13/§17 (no duplication / shared helpers) — `countOccurrences` existed twice (private in `GoldenHelpers` and in `CliSummaryTests`). Canonical definition moved to shared `TestHelpers` (FLPQ.TestUtilities); `GoldenHelpers` delegates, `CliSummaryTests` uses it directly.
+- §14 (language registry) — the ANBN classic grammar text + 4-token accept string were hardcoded literals in `CliSummaryTests` (8 sites) and `ProgramDispatchTests` (2 sites) while the same file already derived them from `LanguageRegistry.ANBN`. Bindings moved to `TestGrammarFiles`; all literal sites use them.
+- §6 (doc comments) — added summaries to `ArroyueloVisualizationStep` / `BelyaninVisualizationStep`, `AutomatonTikz.escapeLatex` / `nodeOptions` / `tikzFooter`, and `InputGraphDot.toDot`.
+- Consistency — the two RPQ-header facts in `SummaryTexSectionTests` used an inline Split-based count in a file that now opens `GoldenHelpers`; they use `countOccurrences` like every other fact.
+
+**Verified:** build 0 errors; suites green — FLPQ.Printers.Tests 340, FLPQ.Cli.Tests 232 (incl. all Belyanin/Arroyuelo goldens, both per-step no-Overfull lualatex compiles, and the four end-to-end merged-summary no-Overfull compiles); Fantomas clean; mdformat clean; commit gate PASS.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no tuple expression larger than 2 items introduced by this branch; `writeRpqRootArtifacts` takes 5 scalar parameters (not a tuple).
+- §6 (doc comments) — all new public API carries XML docs (`bendReciprocalEdges` documented at the function, both new SummaryTeX wrappers, `writeRpqRootArtifacts`, the two step records); the review added the missing ones listed above.
+- §7 (genericity) — no new hardcoding introduced; the branch's new code follows the existing RPQ-layer convention (string terminals in the visualization layer, see open items).
+- §9 (separation) — `GssTikz`/`SummaryTeX` produce strings only; runners do file I/O via `Helpers`; the bend decision is a rendering parameter, not algorithm state.
+- §13 (no duplication) — see resolved findings; the two RPQ runners still share only the one-line `vertexName` helper (below the >3-line threshold, accepted in the task 281 review).
+- §15/§16 (test fidelity / Fact vs Property) — every new fact asserts a concrete property: bent/straight edge lines in TikZ, DOT unchanged, exact adjustbox variant counts per filled step, lualatex compilation with no Overfull boxes (per-step and end-to-end), non-zero CLI exit codes. All deterministic `[<Fact>]`.
+- §19 (test coverage) — every changed behavior has a fact: bend logic (`GssDotTests`, `RpqGraphVizTests`), column-width/step wraps (`SummaryTexSectionTests`), page fit (both step-visualization test files + `CliSummaryTests`), CLI unification (`ProgramDispatchTests`, `ErrorPathTests`).
+- §20 (documentation) — `rpq-graph-viz.md`, `arroyuelo-step-viz.md`, `belyanin-step-viz.md`, `rnglr.md`, `summary-tex.md` (new wrappers, RPQ step-fit decisions, corrected the false `\textwidth`-in-minipage claim), `cli.md`, `FLPQ.Cli.md` all match the implemented behavior.
+- §21 (book traceability) — S2/S3 changes are rendering-layer refinements of the book's worked example (Chapter 11); book references retained on both RPQ step visualizers and the shared graph renderer.
+
+**Open items (pre-existing, not fixed in this task):**
+
+- GLL/RNGLR (user guidance: "Do not touch GLL and RNGLR for now"): dead `symbolVisualizer` parameter in `GllStepVisualizer.renderStep/renderInit/renderSteps` (declared, passed through, never used); missing module doc comment on `RnglrStepVisualizer`; hardcoded ANBN literals in `GllRunnerTests` / `RnglrRunnerTests` (~28 sites).
+- Tuple sizes > 2 in pre-existing code: `RnglrTypes.fs` stored-state 5-tuple (consciously accepted with documentation in the task 278 review), `Valiant.fs` 3-tuple list, `Sppf.fs` 4-tuple option, `ExternalTools.fs` 3-tuple accumulation, `GllTypes.fs` 4-tuple hash. Refactoring these is a cross-cutting change beyond this task's scope (and Rnglr/GLL are user-protected).
+- RPQ visualization layer hardcodes `string` terminals (`RpqGraphViz`, both step visualizers, `RegexpTeX`) while the algorithms are generic — a design choice consciously accepted in the task 281 review ("consistent with every other step visualizer"); generalizing is a cross-cutting refactor beyond this task's scope.
+
+---
+
 ## Task 281 Review (2026-09-24)
 
 Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: path-semiring trace `evaluateWithTrace`, `reachableFromPaths`, `BelyaninLabelStep`/`BelyaninTraceStep`), `src/FLPQ.Printers/RpqGraphViz.fs` (S2: new shared module extracted from ArroyueloStepVisualizer), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` + `data/Belyanin_step_(tikz_)template.tex` (S3), `src/FLPQ.Cli/BelyaninRunner.fs` + `AlgorithmTypes.fs` + `Program.fs` + `Summary.fs` + `src/FLPQ.Printers/SummaryTeX.fs` (S4: runner, dispatch, `SummaryKind.BelyaninRPQ`, shared `rpqHeaderSection`, `belyaninStepSection`), tests (`BelyaninTraceTests`, `RpqGraphVizTests`, `BelyaninStepVisualizationTests` + 18 goldens, `BelyaninRunnerTests`, dispatch/summary/section test additions), and docs (`belyanin-rpq.md`, `rpq-graph-viz.md`, `belyanin-step-viz.md`, `path-semiring-tex.md`, `summary-tex.md`, `FLPQ.Cli.md`, `cli.md`, `architecture.md`).

@@ -9,6 +9,8 @@ open FLPQ.GraphAnalysis
 /// with optional highlighting of the current input position.
 module InputGraphDot =
 
+    /// Renders the input graph as a DOT digraph; the current position (if any) is filled
+    /// lightblue.
     let toDot
         (terminalPrinter: 't -> string)
         (inputGraph: Graph<int, Option<'t>>)

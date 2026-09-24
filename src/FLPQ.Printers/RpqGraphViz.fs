@@ -84,6 +84,8 @@ module RpqGraphViz =
                 None
                 None
 
+        // bendReciprocalEdges = true: the input graph may carry both directions of a pair
+        // (e.g. v2->v3 and v3->v2), which TikZ would otherwise draw fully overlapped.
         let tikz =
             GssTikz.toTikzFromSets
                 (fun v -> sprintf "$v_%d$" v)
@@ -97,5 +99,6 @@ module RpqGraphViz =
                 "circle"
                 true
                 None
+                true
 
         (dot, tikz)

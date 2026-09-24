@@ -7,7 +7,7 @@
 **Depends on:** GrammarTeX, MatrixTeX, ExternalTools
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Generates TeX content for merged summary documents produced by the CLI. Provides LaTeX helper functions (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `wrapTikzAdjustbox`, `includePdf`, `section`) and structured section builders (`headerSection`, `tableStepSection`, `stackStepSection`, `gllStepSection`, `rnglrStepSection`, `arroyueloStepSection`, `belyaninStepSection`, `buildContent`) that assemble per-step artifacts (tables, stacks, dot-generated PDFs, Tikz diagrams) into a single compilable TeX document. Operates purely on string content — file I/O is handled by the CLI.
+> **Abstract:** Generates TeX content for merged summary documents produced by the CLI. Provides LaTeX helper functions (`wrapMath`, `wrapCenter`, `wrapTikzCenter`, `wrapTikzAdjustbox`, `wrapTikzAdjustboxColumn`, `wrapStepAdjustbox`, `includePdf`, `section`) and structured section builders (`headerSection`, `tableStepSection`, `stackStepSection`, `gllStepSection`, `rnglrStepSection`, `arroyueloStepSection`, `belyaninStepSection`, `buildContent`) that assemble per-step artifacts (tables, stacks, dot-generated PDFs, Tikz diagrams) into a single compilable TeX document. Operates purely on string content — file I/O is handled by the CLI.
 
 ## Contents
 
@@ -38,6 +38,8 @@ val wrapMath: string -> string
 val wrapCenter: string -> string
 val wrapTikzCenter: string -> string
 val wrapTikzAdjustbox: bool -> string -> string
+val wrapTikzAdjustboxColumn: string -> string
+val wrapStepAdjustbox: string -> string
 val includePdf: string -> string
 val section: string -> string
 ```
@@ -62,6 +64,8 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 - `StepTemplates` bundles the per-algorithm step templates (DOT and TikZ variants); fields are empty strings for algorithms that do not use a step template.
 - `buildContent` assembles the complete merged TeX for one algorithm
 - `wrapTikzAdjustbox limitHeight tikz`: wraps `tikz` in a centered adjustbox limited to at most `\textwidth`; when `limitHeight` is true it is additionally limited to at most `\textheight`. Shrink-only — small figures are never upscaled and node font metrics are preserved.
+- `wrapTikzAdjustboxColumn tikz`: wraps `tikz` in a centered adjustbox limited to at most `\linewidth` (the current column width). For RPQ step figures, which sit inside minipage columns where `\textwidth` is still the full page width (task 282, S3).
+- `wrapStepAdjustbox tex`: wraps a filled RPQ step template in an adjustbox limited to at most `\textwidth` and `0.9\textheight`. The 10% height headroom accommodates the step's `\subsection*` heading, which must stay outside the box — sectioning commands cannot run inside an adjustbox (task 282, S3).
 
 ## Design Decisions
 
@@ -72,7 +76,7 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 | File I/O via `readIfExists` | Headers/steps read existing artifact files; module produces only string content |
 | `\includegraphics` for dot PDFs | References PDFs compiled by CLI via ExternalTools; module assumes they exist |
 | `wrapTikzCenter` with resizebox | Ensures Tikz diagrams fit page width in merged summary (LR automaton, GLL input string) |
-| `wrapTikzAdjustbox` for step figures and SPPF | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used by `stackStepSection` (LL/LR stack-trees), by `gllStepSection`/`rnglrStepSection` for the per-step GSS and RSM figures (RSM for GLL only), and by `sppfSection` for the SPPF — the latter passes `limitHeight = true`, adding `max totalheight=\textheight` so tall SPPF forests also fit the page height. Inside a step minipage `\textwidth` equals the column width, so the wrap shrinks a figure to fit its column. Remaining resizebox inclusions: LR automaton, GLL input string (GLL-wide migration is task 244) |
+| `wrapTikzAdjustbox` for step figures and SPPF | `\begin{adjustbox}{max width=\textwidth}` shrinks over-wide figures but never upscales small ones, preserving natural size and font metrics; resizebox would scale node text along with the picture. Used by `stackStepSection` (LL/LR stack-trees), by `gllStepSection`/`rnglrStepSection` for the per-step GSS and RSM figures (RSM for GLL only), and by `sppfSection` for the SPPF — the latter passes `limitHeight = true`, adding `max totalheight=\textheight` so tall SPPF forests also fit the page height. Note: a minipage does **not** change `\textwidth` (it stays the full page width), so this wrap does not confine a figure to its step column — the RPQ steps therefore use `wrapTikzAdjustboxColumn` instead (task 282, S3); the GLL/RNGLR wraps are kept as-is per user guidance. Remaining resizebox inclusions: LR automaton, GLL input string (GLL-wide migration is task 244) |
 | Mode-aware extended RSM head for RNGLR | The RNGLR head shows the extended RSM in both modes — `ext_rsm.tikz.tex` embedded in Tikz mode, dot-compiled `ext_rsm.pdf` in DOT mode. The plain RSM figure (`rsm_blocks`) is no longer produced by the runner or shown in the summary (task 279) |
 | SPPF-style adjustbox for the RNGLR LR automaton | The RNGLR LR automaton head reuses the SPPF wrap (`wrapTikzAdjustbox true`): shrink-only to `\textwidth` plus `max totalheight=\textheight`, so wide item-list states and tall state stacks both fit the page (task 279) |
 | `stackStepSection` per-mode picture | Default mode embeds the step's `tree_and_stack.tikz.tex` inline (same-layer stack frontier), wrapped in adjustbox; `--use-dot` includes the dot-compiled PDF. Mirrors the GLL/RNGLR `useTikz` switch |
@@ -81,6 +85,8 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 | Shared mode-aware RPQ head | One `rpqHeaderSection` serves both RPQ algorithms (Arroyuelo, Belyanin): the query regexp (`regexp.tex`, math mode), the query DFA, and the input graph — inline TikZ wrapped in a width-only adjustbox in Tikz mode, dot-compiled `dot_pdfs/dfa.pdf` / `dot_pdfs/graph.pdf` in DOT mode. Each figure is skipped gracefully when its source file is absent; only the color legend differs between the two kinds (task 280, task 281) |
 | `arroyueloStepSection` two-column layout | Each Arroyuelo RPQ step fills `data/Arroyuelo_step_(tikz_)template.tex`: left minipage = regexp tree figure + matrix equation, right minipage = graph with the step's result-path highlights. Tree and graph figures are adjustbox-wrapped in TikZ mode; DOT mode includes the dot-compiled PDFs (task 280) |
 | `belyaninStepSection` two-column layout | Each Belyanin RPQ step fills `data/Belyanin_step_(tikz_)template.tex`: left minipage = query DFA figure with frontier states highlighted + matrix stack, right minipage = graph with the current frontier-path highlights. Automaton and graph figures are adjustbox-wrapped in TikZ mode; DOT mode includes the dot-compiled PDFs (task 281) |
+| RPQ step figures wrap to the column width (`wrapTikzAdjustboxColumn`) | The step figures sit inside minipage columns of `0.52\textwidth` / `0.46\textwidth`, but a minipage does not change `\textwidth` — the old `wrapTikzAdjustbox` (max width=`\textwidth`) let an over-wide figure reach the full page width and overflow its column. `\linewidth` is the column width inside the minipage, so the column-width wrap confines the figure to its column. The DOT-mode templates' `\includegraphics` use `width=\linewidth` for the same reason (task 282, S3) |
+| Whole RPQ step wrapped in `wrapStepAdjustbox` | The left-column matrix stack (up to 8 `pNiceMatrix` blocks) exceeded `\textheight`, producing `Overfull \vbox` on the step pages. Wrapping the entire filled step template in an adjustbox limited to `max width=\textwidth, max totalheight=0.9\textheight` shrinks over-tall steps to fit one page (shrink-only — short steps are never scaled). The 10% headroom accommodates the step's `\subsection*` heading, which must stay outside the box: sectioning commands cannot run inside an adjustbox (verified — LaTeX error "Something's wrong--perhaps a missing \\item"). Verified end-to-end: both RPQ summaries (TikZ and DOT) compile with no Overfull boxes in the lualatex log (task 282, S3) |
 
 ## See Also
 

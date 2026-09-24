@@ -34,6 +34,7 @@ are the comma-joined terminal labels of the pair (epsilon-only edges label as "�
 | --- | --- |
 | Extracted from ArroyueloStepVisualizer | Both RPQ step visualizers and both runners render the same graph figure — one shared module instead of duplicated logic (task 281, S2) |
 | Reuses `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` | The input graph is an NFA with states = vertices; all vertices/edges active, step paths as highlights, no stored-pop/current-vertex state |
+| TikZ rendering passes `bendReciprocalEdges = true` | An input graph may carry both directions of a pair (e.g. `v2 -> v3` and `v3 -> v2`); TikZ would draw the two straight edges fully on top of each other, while `bend left=15` on both turns the pair into two symmetric arcs. DOT needs no equivalent — Graphviz separates reciprocal pairs automatically (task 282, S2) |
 
 ## See Also
 

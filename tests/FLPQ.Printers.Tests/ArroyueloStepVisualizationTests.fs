@@ -124,11 +124,13 @@ let ``graph DOT highlights exactly the vertices of the step's result paths`` () 
 let private summaryTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_summary_template.tex")
 
+/// Mirrors the real pipeline (SummaryTeX.arroyueloStepSection): figures are wrapped in the
+/// column-width adjustbox before being inserted into the template.
 let private fillStepTemplate (template: string) (step: ArroyueloStepVisualizer.ArroyueloVisualizationStep) : string =
     template
-        .Replace("__STEP_TREE_TIKZ__", step.TreeTikz)
+        .Replace("__STEP_TREE_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumn step.TreeTikz)
         .Replace("__MATRICES__", step.Matrices)
-        .Replace("__STEP_GRAPH_TIKZ__", step.GraphTikz)
+        .Replace("__STEP_GRAPH_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumn step.GraphTikz)
 
 [<Fact>]
 let ``filled tikz step template has no leftover placeholders and wraps matrices in adjustbox`` () =
@@ -165,5 +167,35 @@ let ``filled tikz step template compiles with lualatex`` () =
 
         try
             Assert.True(ExternalTools.compileTexFile texFile tempDir)
+        finally
+            Directory.Delete(tempDir, true)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``every filled step wrapped in the step adjustbox compiles without Overfull boxes`` () =
+    let templatePath =
+        Path.Combine(System.AppContext.BaseDirectory, "Arroyuelo_step_tikz_template.tex")
+
+    let template = File.ReadAllText templatePath
+    let summaryTemplate = File.ReadAllText summaryTemplatePath
+
+    for i in 0 .. rendered.Length - 1 do
+        // The whole-step adjustbox (at most \textwidth and 0.9\textheight) is what the
+        // summary section builder applies around the filled template.
+        let filled = SummaryTeX.wrapStepAdjustbox (fillStepTemplate template rendered.[i])
+
+        let document =
+            summaryTemplate.Replace("__ALGORITHM__", "Arroyuelo RPQ").Replace("__CONTENT__", filled)
+
+        let tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+        Directory.CreateDirectory tempDir |> ignore
+        let texFile = Path.Combine(tempDir, sprintf "arroyuelo_step_%d.tex" i)
+        File.WriteAllText(texFile, document)
+
+        try
+            Assert.True(ExternalTools.compileTexFile texFile tempDir, sprintf "step %d: lualatex failed" i)
+
+            let log = File.ReadAllText(texFile.Replace(".tex", ".log"))
+            Assert.False(log.Contains "Overfull", sprintf "step %d: Overfull box in the log" i)
         finally
             Directory.Delete(tempDir, true)

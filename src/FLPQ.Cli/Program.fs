@@ -12,21 +12,21 @@ module Program =
         (output: string)
         (useDot: bool)
         =
-        let grammar = results.GetResult AlgorithmTypes.Grammar
+        let query = results.GetResult AlgorithmTypes.Query
         let input = results.GetResult AlgorithmTypes.Input
         let k = results.GetResult(AlgorithmTypes.Lookahead, defaultValue = 1)
         let noSppfTable = results.Contains AlgorithmTypes.NoSppfTable
 
         match algorithm with
-        | AlgorithmTypes.CYK -> CykRunner.runCyk grammar input output useDot noSppfTable
-        | AlgorithmTypes.Valiant -> ValiantRunner.runValiant grammar input output useDot noSppfTable
-        | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified grammar input output useDot noSppfTable
-        | AlgorithmTypes.LL -> LLRunner.runLL grammar input output k useDot
-        | AlgorithmTypes.LR0 -> LRRunner.runLR grammar input output algorithm useDot
-        | AlgorithmTypes.SLR1 -> LRRunner.runLR grammar input output algorithm useDot
-        | AlgorithmTypes.CLR1 -> LRRunner.runLR grammar input output algorithm useDot
-        | AlgorithmTypes.GLL -> GllRunner.runGll grammar input output useDot
-        | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr grammar input output useDot
+        | AlgorithmTypes.CYK -> CykRunner.runCyk query input output useDot noSppfTable
+        | AlgorithmTypes.Valiant -> ValiantRunner.runValiant query input output useDot noSppfTable
+        | AlgorithmTypes.ValiantModified -> ValiantRunner.runValiantModified query input output useDot noSppfTable
+        | AlgorithmTypes.LL -> LLRunner.runLL query input output k useDot
+        | AlgorithmTypes.LR0 -> LRRunner.runLR query input output algorithm useDot
+        | AlgorithmTypes.SLR1 -> LRRunner.runLR query input output algorithm useDot
+        | AlgorithmTypes.CLR1 -> LRRunner.runLR query input output algorithm useDot
+        | AlgorithmTypes.GLL -> GllRunner.runGll query input output useDot
+        | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr query input output useDot
         | _ -> failwithf "Unexpected algorithm in runParsingAlgorithm: %A" algorithm
 
     let runCli (argv: string[]) : int =
@@ -42,15 +42,16 @@ module Program =
             Helpers.cleanOutputDir output
 
             match algorithm with
-            // RPQ algorithms take a regexp file and a graph file instead of grammar/input.
+            // RPQ algorithms take the same unified query/input pair: the query is a
+            // regexp file and the input is a graph file.
             | AlgorithmTypes.ArroyueloRPQ ->
-                let regexpFile = results.GetResult AlgorithmTypes.Regexp
-                let graphFile = results.GetResult AlgorithmTypes.GraphFile
-                ArroyueloRunner.runArroyuelo regexpFile graphFile output useDot
+                let queryFile = results.GetResult AlgorithmTypes.Query
+                let inputFile = results.GetResult AlgorithmTypes.Input
+                ArroyueloRunner.runArroyuelo queryFile inputFile output useDot
             | AlgorithmTypes.BelyaninRPQ ->
-                let regexpFile = results.GetResult AlgorithmTypes.Regexp
-                let graphFile = results.GetResult AlgorithmTypes.GraphFile
-                BelyaninRunner.runBelyanin regexpFile graphFile output useDot
+                let queryFile = results.GetResult AlgorithmTypes.Query
+                let inputFile = results.GetResult AlgorithmTypes.Input
+                BelyaninRunner.runBelyanin queryFile inputFile output useDot
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then

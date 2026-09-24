@@ -12,6 +12,10 @@ open FLPQ.RPQ.BelyaninRPQ
 /// graph with the current frontier paths highlighted.
 module BelyaninStepVisualizer =
 
+    /// One rendered trace step: the query DFA with the frontier states highlighted, the
+    /// frontier/accumulated matrices with the per-label propagation products, and the input
+    /// graph with the current frontier paths highlighted — each in DOT and TikZ form (the
+    /// runner picks one).
     [<Struct>]
     type BelyaninVisualizationStep =
         { AutomatonDot: string

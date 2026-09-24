@@ -42,31 +42,15 @@ module ArroyueloRunner =
 
         matrixTex + "\n\n" + String.concat "\n" sourceLines
 
-    let runArroyuelo (regexpFile: string) (graphFile: string) (outputDir: string) (useDot: bool) : unit =
-        let regexp = RpqInput.parseRegexpFile regexpFile
+    /// The query is the regexp file and the input is the graph file (unified CLI `-q`/`-i`).
+    let runArroyuelo (queryFile: string) (inputFile: string) (outputDir: string) (useDot: bool) : unit =
+        let regexp = RpqInput.parseRegexpFile queryFile
         let dfa = Regexp.toDfa regexp
-        let graph = GraphReader.parseGraphFile graphFile
+        let graph = GraphReader.parseGraphFile inputFile
 
         let steps, finalMatrix = ArroyueloRPQ.evaluateWithTrace graph regexp
 
-        Helpers.writeOutputFile (Path.Combine(outputDir, "regexp.tex")) (RegexpTeX.toTeX regexp)
-
-        if useDot then
-            Helpers.writeOutputFile
-                (Path.Combine(outputDir, "dfa.dot"))
-                (AutomatonDot.dfaToDot string (fun idx _ -> sprintf "q_%d" idx) dfa)
-
-            let graphDot, _ = RpqGraphViz.renderGraph string graph Set.empty Set.empty
-
-            Helpers.writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
-        else
-            Helpers.writeOutputFile
-                (Path.Combine(outputDir, "dfa.tikz.tex"))
-                (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
-
-            let _, graphTikz = RpqGraphViz.renderGraph string graph Set.empty Set.empty
-
-            Helpers.writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+        Helpers.writeRpqRootArtifacts outputDir useDot regexp dfa graph
 
         let boolResult = ArroyueloRPQ.evaluate graph regexp
         let sources = graph.StartStates |> Set.toArray |> Array.sort

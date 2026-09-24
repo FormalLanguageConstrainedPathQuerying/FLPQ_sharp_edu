@@ -76,3 +76,23 @@ let ``renderGraph: highlighted vertices and edges appear in both formats`` () =
     Assert.NotEqual<string>(plainDot, dot)
     let _, plainTikz = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
     Assert.NotEqual<string>(plainTikz, tikz)
+
+[<Fact>]
+let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
+    let dot, tikz = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
+
+    // The example graph carries both 2->3 ("c") and 3->2 ("b").
+    Assert.Contains("v2 ->[\"c\", bend left=15] v3;", tikz)
+    Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)
+    // One-way edges stay straight.
+    Assert.Contains("v0 ->[\"a\"] v1;", tikz)
+    // Graphviz separates reciprocal pairs on its own; no bend attribute in DOT.
+    Assert.DoesNotContain("bend", dot)
+
+[<Fact>]
+let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
+    let _, tikz =
+        RpqGraphViz.renderGraph string exampleGraph Set.empty (Set.ofList [ (2, 3) ])
+
+    Assert.Contains("v2 ->[\"c\", red, bend left=15] v3;", tikz)
+    Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)

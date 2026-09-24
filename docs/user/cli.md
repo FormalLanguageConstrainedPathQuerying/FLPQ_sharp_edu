@@ -17,11 +17,9 @@ algorithm, and produces a final visualization PDF. This replaces the former
 
 | Flag | Description | Default |
 | --- | --- | --- |
-| `-a` / `--algorithm` | Algorithm (parsing algorithms take `-g`/`-i`; RPQ algorithms take `-r`/`--graph`) | (required) |
-| `-g` / `--grammar` | Grammar file (.bnf) — parsing algorithms | (required for parsing algorithms) |
-| `-i` / `--input` | Input string file — parsing algorithms | (required for parsing algorithms) |
-| `-r` / `--regexp` | Regexp file (EBNF; the first rule's RHS is the query) — RPQ algorithms | (required for RPQ algorithms) |
-| `--graph` | Graph file (start vertices line + `from label to` edges) — RPQ algorithms | (required for RPQ algorithms) |
+| `-a` / `--algorithm` | Algorithm (all algorithms take the unified `-q`/`-i` query/input pair) | (required) |
+| `-q` / `--query` | Query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms | (required) |
+| `-i` / `--input` | Input file: input string for parsing algorithms, graph (start vertices line + `from label to` edges) for RPQ algorithms | (required) |
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
@@ -85,18 +83,18 @@ Grammars and inputs are located in the `data/` folder:
 ```bash
 # Run CYK and build the summary PDF
 dotnet run --project src/FLPQ.Cli -c Release -- \
-    -a CYK -g data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
+    -a CYK -q data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
 
 # Same for the other algorithms: Valiant, LL, LR
 dotnet run --project src/FLPQ.Cli -c Release -- \
-    -a LR -g data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
+    -a LR -q data/example_grammar.bnf -i data/example_input.txt -o ./viz_output -s
 
-# RPQ algorithms (Arroyuelo, Belyanin): regexp query + graph instead of grammar/input
+# RPQ algorithms (Arroyuelo, Belyanin): the query is a regexp and the input is a graph
 dotnet run --project src/FLPQ.Cli -c Release -- \
-    -a ArroyueloRPQ -r data/example_regexp.txt --graph data/example_graph.txt -o ./viz_output
+    -a ArroyueloRPQ -q data/example_regexp.txt -i data/example_graph.txt -o ./viz_output
 
 dotnet run --project src/FLPQ.Cli -c Release -- \
-    -a BelyaninRPQ -r data/example_regexp.txt --graph data/example_graph.txt -o ./viz_output -s
+    -a BelyaninRPQ -q data/example_regexp.txt -i data/example_graph.txt -o ./viz_output -s
 ```
 
 ## Requirements

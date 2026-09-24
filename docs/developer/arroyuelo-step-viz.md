@@ -45,7 +45,7 @@ val renderSteps: (string -> string) -> NFA<string, int> -> ArroyueloTraceStep<st
 
 ## Step Templates
 
-`data/Arroyuelo_step_template.tex` (DOT: `__STEP_TREE_PDF__`, `__STEP_GRAPH_PDF__`) and `data/Arroyuelo_step_tikz_template.tex` (TikZ: `__STEP_TREE_TIKZ__`, `__STEP_GRAPH_TIKZ__`), both with a `__MATRICES__` slot. Two-column minipage layout modeled on `data/RNGLR_step_template.tex`: left = tree figure + matrices, right = graph. The matrices sit in a group where `\textwidth` is shortened to the minipage's `\linewidth`, so the adjustbox-wrapped matrices shrink to the column instead of the page width.
+`data/Arroyuelo_step_template.tex` (DOT: `__STEP_TREE_PDF__`, `__STEP_GRAPH_PDF__`) and `data/Arroyuelo_step_tikz_template.tex` (TikZ: `__STEP_TREE_TIKZ__`, `__STEP_GRAPH_TIKZ__`), both with a `__MATRICES__` slot. Two-column minipage layout modeled on `data/RNGLR_step_template.tex`: left = tree figure + matrices, right = graph. The matrices sit in a group where `\textwidth` is shortened to the minipage's `\linewidth`, so the adjustbox-wrapped matrices shrink to the column instead of the page width. The DOT template's figures use `\includegraphics[width=\linewidth]` so they fit their minipage column (a minipage does not change `\textwidth`). At summary time the section builder wraps the TikZ figures in `SummaryTeX.wrapTikzAdjustboxColumn` and the whole filled template in `SummaryTeX.wrapStepAdjustbox` (at most `\textwidth` and `0.9\textheight`) so every step fits one page — see [SummaryTeX module](summary-tex.md).
 
 ## Design Decisions
 
@@ -55,6 +55,7 @@ val renderSteps: (string -> string) -> NFA<string, int> -> ArroyueloTraceStep<st
 | `GssTikz.toTikzFromSets` now skips escaping vertex labels when `skipEscaping = true` | Tree node labels are already-TeX math-mode formulas (`RegexpTeX.toTeX`) that must not be escaped; the existing callers pass plain-text vertex labels with no LaTeX specials, so their output is byte-identical (golden tests unchanged) |
 | TikZ tree node labels wrap the formula in `$...$` | `as={...}` node content is text mode; math-mode formulas need an explicit math wrapper (same convention as `LRAutomatonTikz.stateContentToTikzAs`) |
 | Graph highlights derived from the step's Result only | Each step figure must show what that step computed; union over `PathSemiring.allPaths` gives exactly the vertices/edges of the stored simple paths |
+| Tree passes `bendReciprocalEdges = false`, graph inherits bending from [RpqGraphViz](rpq-graph-viz.md) | Tree edges are parent→child (one direction only, no reciprocal pairs); the input graph may carry both directions of a pair and needs the TikZ bend (task 282, S2) |
 | Both DOT and TikZ produced per step, runner picks one | Matches the existing runner convention (TikZ default, DOT via `--use-dot`) without rendering twice |
 
 ## Book Reference

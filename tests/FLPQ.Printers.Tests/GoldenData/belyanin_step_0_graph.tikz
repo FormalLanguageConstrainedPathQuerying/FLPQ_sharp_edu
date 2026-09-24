@@ -8,9 +8,9 @@
     v5 [as={$v_5$}];
     v0 ->["a"] v1;
     v1 ->["b"] v2;
-    v2 ->["c"] v3;
+    v2 ->["c", bend left=15] v3;
     v2 ->["a"] v5;
-    v3 ->["b"] v2;
+    v3 ->["b", bend left=15] v2;
     v3 ->["a"] v4;
   };
 \end{tikzpicture}

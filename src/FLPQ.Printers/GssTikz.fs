@@ -16,6 +16,10 @@ module GssTikz =
     /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
     /// so that input position 0 stays rightmost: pgf's same-layer cluster chaining reverses the
     /// orientation under the default grow direction.
+    /// When bendReciprocalEdges is true, every edge whose reverse is also drawn gets
+    /// `bend left=15`: a reciprocal pair (u->v and v->u) would otherwise be two straight
+    /// lines on top of each other, while the bend turns it into two symmetric arcs
+    /// (Graphviz DOT separates such pairs automatically, so this is a TikZ-only concern).
     let toTikzFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -28,6 +32,7 @@ module GssTikz =
         (shape: string)
         (skipEscaping: bool)
         (positionOf: (int -> int) option)
+        (bendReciprocalEdges: bool)
         : string =
         let sb = StringBuilder()
 
@@ -103,16 +108,31 @@ module GssTikz =
 
             let loopAttr = if fromIdx = toIdx then ",loop above" else ""
 
+            // A reciprocal pair (u->v and v->u) draws as two overlapping straight lines;
+            // bending both edges of the pair separates them into symmetric arcs. Self-loops
+            // are never bent.
+            let bendAttr =
+                if
+                    bendReciprocalEdges
+                    && fromIdx <> toIdx
+                    && Set.contains (toIdx, fromIdx) activeEdges
+                then
+                    ", bend left=15"
+                else
+                    ""
+
             if isHighlighted then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red%s] v%d;" fromIdx label loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
                 |> ignore
             elif label = "" then
                 if fromIdx = toIdx then
                     sb.AppendLine(sprintf "    v%d ->[loop above] v%d;" fromIdx fromIdx) |> ignore
+                elif bendAttr <> "" then
+                    sb.AppendLine(sprintf "    v%d ->[bend left=15] v%d;" fromIdx toIdx) |> ignore
                 else
                     sb.AppendLine(sprintf "    v%d -> v%d;" fromIdx toIdx) |> ignore
             else
-                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" fromIdx label loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
                 |> ignore
 
         // Constrain all vertices at the same input position to the same layer. The grouping covers

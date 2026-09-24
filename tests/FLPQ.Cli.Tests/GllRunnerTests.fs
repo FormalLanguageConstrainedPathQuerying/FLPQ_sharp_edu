@@ -1,6 +1,7 @@
-// The runner prints its status line to the process-global Console.Out; both
-// capturing test modules share this collection so their Console.SetOut calls
-// never interleave.
+// The runner prints its status line to the process-global Console.Out; all capturing
+// test modules share this collection, and the assembly disables xUnit parallelization
+// (xunit.runner.json) so a Console.SetOut capture never interleaves with console writes
+// from tests in other collections.
 [<Xunit.Collection("ConsoleCapture")>]
 module GllRunnerTests
 

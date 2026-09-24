@@ -5,6 +5,7 @@ open System.IO
 open System.Text.RegularExpressions
 open FLPQ.Languages
 open FLPQ.Printers
+open FLPQ.TestUtilities
 open Xunit
 
 let stripQuotes (s: string) =
@@ -13,8 +14,8 @@ let stripQuotes (s: string) =
     else
         s.Replace("\\\"", "\"")
 
-let countOccurrences (haystack: string) (needle: string) : int =
-    haystack.Split(needle, System.StringSplitOptions.None).Length - 1
+/// Shared with the other test projects via FLPQ.TestUtilities.
+let countOccurrences = TestHelpers.countOccurrences
 
 let vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
 

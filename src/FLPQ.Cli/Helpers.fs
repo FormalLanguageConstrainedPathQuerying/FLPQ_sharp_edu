@@ -115,6 +115,34 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "automaton.tikz.tex")) steps.[idx].AutomatonTikz
                 writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
 
+    /// Shared RPQ root artifacts (Arroyuelo and Belyanin): the query regexp in TeX, the
+    /// query DFA, and the input graph — DOT sources or inline TikZ depending on useDot.
+    let writeRpqRootArtifacts
+        (outputDir: string)
+        (useDot: bool)
+        (regexp: Regexp<string, string>)
+        (dfa: DFA<string, int>)
+        (graph: NFA<string, int>)
+        : unit =
+        writeOutputFile (Path.Combine(outputDir, "regexp.tex")) (RegexpTeX.toTeX regexp)
+
+        if useDot then
+            writeOutputFile
+                (Path.Combine(outputDir, "dfa.dot"))
+                (AutomatonDot.dfaToDot string (fun idx _ -> sprintf "q_%d" idx) dfa)
+
+            let graphDot, _ = RpqGraphViz.renderGraph string graph Set.empty Set.empty
+
+            writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
+        else
+            writeOutputFile
+                (Path.Combine(outputDir, "dfa.tikz.tex"))
+                (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
+
+            let _, graphTikz = RpqGraphViz.renderGraph string graph Set.empty Set.empty
+
+            writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
