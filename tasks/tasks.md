@@ -731,3 +731,5 @@
 ---
 
 [done] 283. Fix all remaining code review findings
+
+284. Improve Belyanin RPQ rendering. 1. Use F for frontier (instead M), use V for visited (instead P). 2. EXplicitly write all matrices: '(N^a)^T \\otimes F = \<explicit_representation_of_N^a^T> \\otimes \<explicit_representation_of_F> = \<explicit_representation_of_result>' 3. Fix indices in matrices. Currently v_i used for both coluns and rows, but come of them are automata states, so must be q_i. 4. Improve graphs: currently in graph traverced edges highlighted with shift on 1 step: edges from current step highlighted at next step. Moreover, highlight edge on this step with color different from path. Eg save red for current edge, and light red for path. Add bold for current edge. Highlight only vertices touched on current step (from and to), not all vertices in path.
