@@ -98,6 +98,7 @@ module ArroyueloStepVisualizer =
                     Set.empty
                     Set.empty
                     Set.empty
+                    Set.empty
                     (Some step.NodeIndex)
                     None
 
@@ -110,6 +111,7 @@ module ArroyueloStepVisualizer =
                     Set.empty
                     Set.empty
                     Set.empty
+                    Set.empty
                     (Some step.NodeIndex)
                     "rectangle"
                     true
@@ -119,7 +121,7 @@ module ArroyueloStepVisualizer =
             let pathVerts, pathEdgeHl = RpqGraphViz.pathHighlights step.Result
 
             let graphDot, graphTikz =
-                RpqGraphViz.renderGraph terminalPrinter graph pathVerts pathEdgeHl
+                RpqGraphViz.renderGraph terminalPrinter graph pathVerts Set.empty pathEdgeHl
 
             { TreeDot = treeDot
               TreeTikz = treeTikz

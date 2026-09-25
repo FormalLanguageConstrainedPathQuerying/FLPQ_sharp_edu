@@ -93,6 +93,8 @@ module GssDot =
 
     /// Renders GSS from vertex and edge sets directly (without full GSS struct).
     /// Used for step visualization where only active elements are known.
+    /// highlightedEdges are red with penwidth=2.0, pathEdges are light red (#FF9999); an
+    /// edge in both sets renders as highlighted.
     /// storedPopVertices get filled with orange (stored pops handling triggered at these vertices).
     /// When positionOf is Some, every vertex is constrained to the rank of its input position
     /// (one {rank=same; ...} subgraph per position), so all nodes at the same input position share
@@ -104,6 +106,7 @@ module GssDot =
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (pathEdges: Set<int * int>)
         (storedPopVertices: Set<int>)
         (currentVertex: int option)
         (positionOf: (int -> int) option)
@@ -178,10 +181,14 @@ module GssDot =
             let label = edgeLabelPrinter (fromIdx, toIdx) |> DerivationTreeDot.escapeLabel
 
             let isHighlighted = Set.contains (fromIdx, toIdx) highlightedEdges
+            let isPath = not isHighlighted && Set.contains (fromIdx, toIdx) pathEdges
 
             let attrs =
                 if isHighlighted then
                     sprintf "label=\"%s\", color=red, penwidth=2.0" label
+                elif isPath then
+                    // Quoted: an unquoted # would start a DOT comment and break the line.
+                    sprintf "label=\"%s\", color=\"#FF9999\"" label
                 else
                     sprintf "label=\"%s\"" label
 

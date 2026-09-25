@@ -131,7 +131,7 @@ module Helpers =
                 (Path.Combine(outputDir, "dfa.dot"))
                 (AutomatonDot.dfaToDot string (fun idx _ -> sprintf "q_%d" idx) dfa)
 
-            let graphDot, _ = RpqGraphViz.renderGraph id graph Set.empty Set.empty
+            let graphDot, _ = RpqGraphViz.renderGraph id graph Set.empty Set.empty Set.empty
 
             writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
         else
@@ -139,7 +139,7 @@ module Helpers =
                 (Path.Combine(outputDir, "dfa.tikz.tex"))
                 (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
 
-            let _, graphTikz = RpqGraphViz.renderGraph id graph Set.empty Set.empty
+            let _, graphTikz = RpqGraphViz.renderGraph id graph Set.empty Set.empty Set.empty
 
             writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
 

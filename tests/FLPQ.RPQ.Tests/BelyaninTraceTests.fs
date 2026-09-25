@@ -84,6 +84,42 @@ let ``trace: step 2 shows all three labels, only b extends`` () =
     Assert.Equal<Set<int list>>(Set.singleton [ 0; 1; 2 ], step.NewM.[1, 2])
 
 [<Fact>]
+let ``trace: label steps store the per-label N and G matrices`` () =
+    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+
+    // DFA a(b|c)*a: q0 -a-> q1, q1 -b,c-> q1, q1 -a-> q2. Graph a-edges: 0->1, 2->5, 3->4.
+    let nA = Matrix.init 3 3 false
+    nA.[0, 1] <- true
+    nA.[1, 2] <- true
+    let gA = Matrix.init 6 6 false
+    gA.[0, 1] <- true
+    gA.[2, 5] <- true
+    gA.[3, 4] <- true
+
+    // Step 1: only label a propagates.
+    let step1 = steps.[1]
+    Assert.Equal(1, List.length step1.Labels)
+    let a1 = List.head step1.Labels
+    Assert.Equal(nA, a1.N)
+    Assert.Equal(gA, a1.G)
+
+    // Step 2: all three labels; N/G are the DFA/graph per-label matrices.
+    let step2 = steps.[2]
+    let nBC = Matrix.init 3 3 false
+    nBC.[1, 1] <- true
+    let gB = Matrix.init 6 6 false
+    gB.[1, 2] <- true
+    gB.[3, 2] <- true
+    let gC = Matrix.init 6 6 false
+    gC.[2, 3] <- true
+    Assert.Equal(nA, (labelStep step2 "a").N)
+    Assert.Equal(gA, (labelStep step2 "a").G)
+    Assert.Equal(nBC, (labelStep step2 "b").N)
+    Assert.Equal(gB, (labelStep step2 "b").G)
+    Assert.Equal(nBC, (labelStep step2 "c").N)
+    Assert.Equal(gC, (labelStep step2 "c").G)
+
+[<Fact>]
 let ``trace: step 3 forks to v_5 via a and v_3 via c`` () =
     let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
     let step = steps.[3]

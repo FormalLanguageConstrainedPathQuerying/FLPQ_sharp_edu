@@ -38,29 +38,55 @@ module RpqGraphViz =
                 terms |> List.map terminalPrinter |> String.concat ", "
         | None -> ""
 
-    /// Vertices and edges used by the paths stored in a path semiring matrix.
-    let pathHighlights (result: Matrix<Set<int list>>) : Set<int> * Set<int * int> =
+    /// Vertices used by the paths stored in a path semiring matrix.
+    let pathVertices (result: Matrix<Set<int list>>) : Set<int> =
+        PathSemiring.allPaths result
+        |> Set.fold (fun acc p -> p |> List.fold (fun a v -> Set.add v a) acc) Set.empty
+
+    /// Edges used by the paths stored in a path semiring matrix.
+    let pathEdges (result: Matrix<Set<int list>>) : Set<int * int> =
         PathSemiring.allPaths result
         |> Set.fold
-            (fun (vAcc, eAcc) p ->
-                let vAcc' = p |> List.fold (fun acc v -> Set.add v acc) vAcc
+            (fun acc p ->
+                p
+                |> List.windowed 2
+                |> List.map (fun w -> (w.[0], w.[1]))
+                |> List.fold (fun a e -> Set.add e a) acc)
+            Set.empty
 
-                let eAcc' =
-                    p
-                    |> List.windowed 2
-                    |> List.map (fun w -> (w.[0], w.[1]))
-                    |> List.fold (fun acc e -> Set.add e acc) eAcc
+    /// The last edge of every stored path with at least two vertices: the edge traversed
+    /// when the path was extended to its final vertex. Trivial paths contribute nothing.
+    let pathLastEdges (result: Matrix<Set<int list>>) : Set<int * int> =
+        PathSemiring.allPaths result
+        |> Set.fold
+            (fun acc p ->
+                match p with
+                | []
+                | [ _ ] -> acc
+                | _ ->
+                    let from = p.[List.length p - 2]
+                    let to_ = p.[List.length p - 1]
+                    Set.add (from, to_) acc)
+            Set.empty
 
-                (vAcc', eAcc'))
-            (Set.empty, Set.empty)
+    /// Endpoints of a set of edges.
+    let edgeEndpoints (edges: Set<int * int>) : Set<int> =
+        edges
+        |> Set.fold (fun acc (from, to_) -> Set.add from (Set.add to_ acc)) Set.empty
 
-    /// Render the graph with the given highlighted vertices/edges (pass empty sets for the
-    /// plain input graph). Returns (dot, tikz).
+    /// Vertices and edges used by the paths stored in a path semiring matrix.
+    let pathHighlights (result: Matrix<Set<int list>>) : Set<int> * Set<int * int> =
+        (pathVertices result, pathEdges result)
+
+    /// Render the graph with the given highlights (pass empty sets for the plain input
+    /// graph): highlightedVertices get the vertex fill, pathEdges render light red,
+    /// currentEdges render red and bold. Returns (dot, tikz).
     let renderGraph
         (terminalPrinter: 't -> string)
         (graph: NFA<'t, int>)
         (highlightedVertices: Set<int>)
-        (highlightedEdges: Set<int * int>)
+        (pathEdges: Set<int * int>)
+        (currentEdges: Set<int * int>)
         : string * string =
         let n = Nfa.stateCount graph
 
@@ -79,7 +105,8 @@ module RpqGraphViz =
                 allVertices
                 gEdges
                 highlightedVertices
-                highlightedEdges
+                currentEdges
+                pathEdges
                 Set.empty
                 None
                 None
@@ -93,7 +120,8 @@ module RpqGraphViz =
                 allVertices
                 gEdges
                 highlightedVertices
-                highlightedEdges
+                currentEdges
+                pathEdges
                 Set.empty
                 None
                 "circle"

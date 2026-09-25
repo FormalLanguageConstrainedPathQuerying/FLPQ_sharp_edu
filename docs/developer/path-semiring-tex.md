@@ -8,7 +8,7 @@
 **Used by:** Arroyuelo RPQ summary/steps (task 280), Belyanin RPQ summary/steps (task 281)
 **Book reference:** Chapter 11, Section sec:RPQ_BFS (matrix cells holding vertex sequences)
 
-> **Abstract:** TeX rendering of path semiring matrices — the book's RPQ working matrices whose cells hold sets of vertex paths instead of booleans. A cell renders as a TeX set of vertex tuples (`\{(v_0, v_1), (v_0, v_2)\}`); an empty cell renders as `\cdot` (Valiant's convention). The full matrix wraps `MatrixTeX.toTeXStyled` with adjustbox so wide matrices shrink to the text width.
+> **Abstract:** TeX rendering of the RPQ working matrices — path semiring matrices whose cells hold sets of vertex paths, plus the boolean N^a/G^a matrices used alongside them in Belyanin's step visualization. A path cell renders as a TeX set of vertex tuples (`\{(v_0, v_1), (v_0, v_2)\}`); an empty cell renders as `\cdot` (Valiant's convention). The full matrix wraps `MatrixTeX.toTeXStyled` with adjustbox so wide matrices shrink to the text width.
 
 ## Contents
 
@@ -24,12 +24,16 @@ val pathToTeX: int list -> string
 val pathSetCellToTeX: Set<int list> -> string
 val matrixToTeX: (int -> string) -> (int -> string) -> Matrix<Set<int list>> -> string
 val matrixWithVertexLabels: Matrix<Set<int list>> -> string
+val matrixWithStateVertexLabels: Matrix<Set<int list>> -> string
+val boolMatrixToTeX: (int -> string) -> (int -> string) -> Matrix<bool> -> string
 ```
 
 - `pathToTeX p` — a vertex sequence as a TeX tuple: `[0; 2; 3]` → `(v_0, v_2, v_3)`. Vertex names are math-mode subscripts (`v_0`), matching the book's graph figures.
 - `pathSetCellToTeX cell` — a set of paths as a TeX set: `\{(v_0, v_1), (v_0, v_2)\}`; the empty set renders as `\cdot`. Reuses `ParsingTableTeX.setToTeX` with `pathToTeX` as the item printer, so set formatting (braces, ordering) is shared with parsing tables.
 - `matrixToTeX rowLabel colLabel m` — a path semiring matrix with vertex row/column headers (e.g. `fun i -> sprintf "v_%d" i`), wrapped in adjustbox. Delegates to `MatrixTeX.toTeXStyled` with `useAdjustbox = true`, `useRectangleColor = false`.
 - `matrixWithVertexLabels m` — `matrixToTeX` with `v_i` vertex labels; the shared block used by both RPQ step visualizers.
+- `matrixWithStateVertexLabels m` — `matrixToTeX` with `q_i` state row labels and `v_i` vertex column labels; Belyanin's |Q|×|V| working matrices (F, V, Select, Extend, New F), whose rows are automaton states.
+- `boolMatrixToTeX rowLabel colLabel m` — a boolean matrix with row/column headers: true cells render as `\bullet`, false cells as `\cdot` (the book's figure convention for N^a and G^a); adjustbox-wrapped like the path matrices.
 
 ## Design Decisions
 

@@ -24,3 +24,23 @@ module PathSemiringTeX =
     /// Render a path semiring matrix with v_i vertex row/column labels.
     let matrixWithVertexLabels (m: Matrix<Set<int list>>) : string =
         matrixToTeX (fun i -> sprintf "v_%d" i) (fun j -> sprintf "v_%d" j) m
+
+    /// Render a |Q|x|V| path semiring matrix with q_i state row labels and v_i vertex
+    /// column labels (the book's RPQ working matrices: rows are automaton states).
+    let matrixWithStateVertexLabels (m: Matrix<Set<int list>>) : string =
+        matrixToTeX (fun i -> sprintf "q_%d" i) (fun j -> sprintf "v_%d" j) m
+
+    /// Render a boolean matrix with row/column labels, wrapped in adjustbox: true cells as
+    /// \bullet, false cells as \cdot (the book's figure convention for N^a and G^a).
+    let boolMatrixToTeX (rowLabel: int -> string) (colLabel: int -> string) (m: Matrix<bool>) : string =
+        MatrixTeX.toTeXStyled
+            false
+            false
+            (fun b -> if b then @"\bullet" else @"\cdot")
+            m
+            []
+            []
+            (Some rowLabel)
+            (Some colLabel)
+            false
+            true

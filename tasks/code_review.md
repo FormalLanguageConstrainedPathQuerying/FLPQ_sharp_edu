@@ -1,5 +1,32 @@
 # Code Review Report
 
+## Task 284 Review (2026-09-25)
+
+Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: `BelyaninLabelStep` gains the per-label `N`/`G` matrices), `src/FLPQ.Printers/PathSemiringTeX.fs` (S2: `matrixWithStateVertexLabels`, `boolMatrixToTeX`), `src/FLPQ.Printers/{GssDot,GssTikz}.fs` (S3: `pathEdges` parameter, two-tier edge rendering, bold strong edges) + every `toDotFromSets`/`toTikzFromSets` call site (`RpqGraphViz`, `ArroyueloStepVisualizer`, `GllStepVisualizer`, `RnglrStepVisualizer`), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S4: F/V titles, explicit per-label product chains, q/v labels; S5: current/path edge wiring), `src/FLPQ.Printers/RpqGraphViz.fs` (S5: `pathVertices`/`pathEdges`/`pathLastEdges`/`edgeEndpoints`, 5-arg `renderGraph`), `src/FLPQ.Cli/{BelyaninRunner,Helpers}.fs` (q/v result matrix, plain-graph call sites), tests (`BelyaninTraceTests`, `PathSemiringTexTests`, `GssDotTests`, `RpqGraphVizTests`, `BelyaninStepVisualizationTests` + 12 regenerated goldens), and docs (`belyanin-rpq.md`, `path-semiring-tex.md`, `gss-dot.md` new, `gss-tikz.md` new, `rpq-graph-viz.md`, `belyanin-step-viz.md`, `FLPQ.Printers.md`, `tasks/fixes_for_book.md`).
+
+**Findings resolved this review (commit 1b77624):**
+
+- §21/§23 (book traceability / naming semantics) — `BelyaninRunner.renderResult`'s doc comment named the final matrix "V" while the code identifier is `p` (book-faithful) and the result file renders the matrix without a title; the F/V notation applies to the step figures only. Reworded neutrally, parallel to `ArroyueloRunner.renderResult`.
+
+**Verified:** build 0 errors; full-solution FSharpLint — all `src/` files 0 warnings (the run was interrupted on an unrelated NuGet test-SDK file after every project source file had passed; per-project lint of the six changed projects re-runs in the hard gate); suites green — FLPQ.Printers.Tests 353, FLPQ.Cli.Tests 232 (incl. all Belyanin/Arroyuelo goldens and both dot-mode lualatex summary compiles), FLPQ.RPQ.Tests 80; Fantomas clean; mdformat clean; commit gate PASS.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no tuple expression larger than two items introduced; `pathHighlights` returns a 2-item tuple, `renderGraph` takes five scalar parameters.
+- §6 (doc comments) — all new public API carries XML docs: `BelyaninLabelStep` (updated), `matrixWithStateVertexLabels`, `boolMatrixToTeX`, `pathVertices`, `pathEdges`, `pathLastEdges`, `edgeEndpoints`, `renderGraph` (updated); the private `stateLabel`/`vertexLabel` helpers are documented; `toDotFromSets`/`toTikzFromSets` doc comments updated for the new tier.
+- §7 (genericity) — no new hardcoding: `RpqGraphViz` stays generic over `'t` with an explicit terminal printer; the new path-projection functions operate on the module's existing `Matrix<Set<int list>>` convention; `boolMatrixToTeX` takes label printers as parameters.
+- §9 (separation) — `BelyaninRPQ` stores plain data (`N`/`G` matrices in the trace); all TeX/DOT strings live in `FLPQ.Printers`; the runner does file I/O only.
+- §13 (no duplication) — `pathHighlights` reuses `pathVertices`/`pathEdges` instead of duplicating the fold; the step-visualization graph facts reuse `RpqGraphViz.pathEdges`/`pathLastEdges`/`edgeEndpoints` (the old inline `allPaths` folds were removed); the three path-projection functions share only the one-line `allPaths |> Set.fold` skeleton with distinct bodies (below the >3-line threshold).
+- §14 (language registry) — no new grammar/RSM literals; the RPQ test examples reuse each file's existing local bindings.
+- §15/§16 (test fidelity / Fact vs Property) — every new fact asserts a concrete property: stored N/G matrices against hand-computed DFA/graph matrices, q/v headers and `\bullet`/`\cdot` cells, per-step exact red-bold/light-red/yellow sets computed from the trace, two-tier rendering in both formats, lualatex compilation of a boolean matrix. All deterministic `[<Fact>]`.
+- §19 (test coverage) — every changed module has tests: `BelyaninRPQ` trace → `BelyaninTraceTests`; `PathSemiringTeX` → `PathSemiringTexTests`; `GssDot`/`GssTikz` tiers → `GssDotTests`; `RpqGraphViz` → `RpqGraphVizTests`; `BelyaninStepVisualizer` → `BelyaninStepVisualizationTests`; dot-mode end-to-end → `CliSummaryTests`.
+- §20 (documentation) — `rpq-graph-viz.md` (new signatures, two-tier decision), `belyanin-step-viz.md` (three graph tiers, init step has no highlights), `gss-dot.md`/`gss-tikz.md` (new module docs incl. the quoted-hex-color decision), `path-semiring-tex.md`, `belyanin-rpq.md`, `FLPQ.Printers.md` hub, and `tasks/fixes_for_book.md` (M/P vs F/V notation note) all match the implemented behavior.
+- §21 (book traceability) — book references retained on `BelyaninRPQ` (Chapter 11 `02_BFS.tex`, `algo:RPQ_BFS_semiring`) and the visualizer; the F/V rendering deviation from the book's M/P notation is recorded in `tasks/fixes_for_book.md`; code identifiers keep the book's M/P.
+
+**No blocking findings.** No open items carried over from prior reports (the Task 283 review closed every Task 282 item).
+
+---
+
 ## Task 283 Review (2026-09-25)
 
 Scope: full branch diff vs dev — resolves every open item from the Task 282 review. `src/FLPQ.Printers/GllStepVisualizer.fs` (S1: removed the dead `symbolVisualizer` parameter from `renderStep`/`renderInit`/`renderSteps`), `src/FLPQ.Printers/RnglrStepVisualizer.fs` (S1: added the missing module doc comment), `tests/FLPQ.Cli.Tests/{GllRunnerTests,RnglrRunnerTests}.fs` (S2: ANBN literals → `TestGrammarFiles` bindings), `src/FLPQ.Languages/RnglrTypes.fs` + `Rnglr.fs` (S3: stored-state 5-tuple → `RnglrStoredState<'nt>` record), `src/FLPQ.Languages/{Valiant,Sppf}.fs` (S4: binary-rule 3-tuple → `ValiantBinaryRule<'nt>`, coords 4-tuple → `SppfNodeCoords`), `src/FLPQ.Printers/ExternalTools.fs` + `src/FLPQ.Languages/GllTypes.fs` (S5: node-position 3-tuple → `NodePosition`, `Descriptor.GetHashCode` 4-tuple → `System.HashCode.Combine`), and the RPQ visualization layer generalized over `'t`/`'nt` (S6: `RegexpTeX`, `RpqGraphViz`, `ArroyueloStepVisualizer`, `BelyaninStepVisualizer` + call sites in `Helpers.fs`, both runners, and four test files). Docs: `gll-step-visualizer.md` (new), `valiant.md`, `external-tools.md`, `language-registry.md`, `rnglr.md`, and the four RPQ viz docs.

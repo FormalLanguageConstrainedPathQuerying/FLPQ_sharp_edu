@@ -61,6 +61,7 @@ module RnglrStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
+                Set.empty
                 step.PassingReductionVertices
                 None
                 (Some(fun idx -> snd (vertexInfo idx)))
@@ -88,6 +89,7 @@ module RnglrStepVisualizer =
                 step.ActiveGssEdges
                 step.NewGssVertices
                 step.NewGssEdges
+                Set.empty
                 step.PassingReductionVertices
                 None
                 "circle"

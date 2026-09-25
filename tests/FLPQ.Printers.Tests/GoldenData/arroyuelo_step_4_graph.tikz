@@ -4,9 +4,9 @@
     v1 [as={$v_1$}, fill=yellow!20];
     v2 [as={$v_2$}, fill=yellow!20];
     v3 [as={$v_3$}, fill=yellow!20];
-    v0 ->["a", red] v1;
-    v1 ->["b", red] v2;
-    v1 ->["a", red] v3;
-    v2 ->["a", red] v3;
+    v0 ->["a", red, thick] v1;
+    v1 ->["b", red, thick] v2;
+    v1 ->["a", red, thick] v3;
+    v2 ->["a", red, thick] v3;
   };
 \end{tikzpicture}

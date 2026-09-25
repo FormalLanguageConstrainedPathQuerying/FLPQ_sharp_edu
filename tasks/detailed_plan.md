@@ -1,250 +1,253 @@
-# Detailed Plan: Task 283 — Fix all remaining code review findings
+# Detailed Plan: Task 284 — Improve Belyanin RPQ rendering
 
 ## Task description (verbatim)
 
 ```
-283. Fix all remaining code review findings
+284. Improve Belyanin RPQ rendering. 1. Use F for frontier (instead M), use V for visited (instead P). 2. EXplicitly write all matrices: '(N^a)^T \otimes F = <explicit_representation_of_N^a^T> \otimes <explicit_representation_of_F> = <explicit_representation_of_result>' 3. Fix indices in matrices. Currently v_i used for both coluns and rows, but come of them are automata states, so must be q_i. 4. Improve graphs: currently in graph traverced edges highlighted with shift on 1 step: edges from current step highlighted at next step. Moreover, highlight edge on this step with color different from path. Eg save red for current edge, and light red for path. Add bold for current edge. Highlight only vertices touched on current step (from and to), not all vertices in path.
 ```
 
 ## Scope and constraints
 
-This task resolves every item in the **Task 282 Review "Open items"** section of
-`tasks/code_review.md` (the deferred, pre-existing findings). The user's explicit request
-("Fix all remaining code review findings") supersedes the task-282 guidance
-"do not touch GLL and RNGLR for now" — those GLL/RNGLR items are in scope.
+The task changes only the **rendering** of Belyanin's RPQ evaluation
+(`BelyaninStepVisualizer` + the shared pieces it uses). The algorithm
+(`BelyaninRPQ.evaluateWithTrace`) keeps its book-faithful names (the book's
+listing `algo:RPQ_BFS_semiring` uses M/P); only rendered labels change to the
+user-requested F/V notation.
 
-The three finding groups:
+Four requirements, mapped to subtasks:
 
-1. **GLL/RNGLR small fixes** — dead `symbolVisualizer` parameter in
-   `GllStepVisualizer.renderStep/renderInit/renderSteps`; missing module doc comment on
-   `RnglrStepVisualizer`; hardcoded ANBN literals in `GllRunnerTests` / `RnglrRunnerTests`.
-2. **Tuple sizes > 2** (design guide §4: tuples ≤ 2 items, else a named type) —
-   `RnglrTypes.fs` stored-state 5-tuple, `Valiant.fs` binary-rules 3-tuple,
-   `Sppf.fs` getCoords 4-tuple, `ExternalTools.fs` node-position 3-tuple,
-   `GllTypes.fs` 4-tuple hash.
-3. **RPQ visualization genericity** — `RpqGraphViz`, `ArroyueloStepVisualizer`,
-   `BelyaninStepVisualizer`, `RegexpTeX` hardcode `string` terminals while the algorithms
-   and every other step visualizer (Gll/Rnglr/LL/LR) are generic over `'t`/`'nt`.
+1. **F/V notation** (S4): rendered matrix titles become `$\text{F}$` (frontier,
+   was M), `$\text{V}$` (visited/accumulated, was P), `$\text{New } F =$` (was
+   New M), and the per-label product line becomes `$(N^{a})^T \otimes F =$`.
+
+2. **Explicit matrices** (S1 + S2 + S4): every matrix in a per-label block is
+   written out, not just the results:
+
+   ```
+   $(N^{a})^T \otimes F =$
+   [N^a^T]          boolean |Q|x|Q| matrix, q_i rows and columns
+   $\otimes$
+   [F]              path matrix (the step's frontier, re-rendered)
+   $=$
+   [Select]         path matrix
+   $\times G^{a} =$
+   [G^a]            boolean |V|x|V| matrix, v_i rows and columns
+   $=$
+   [Extend]         path matrix
+   ```
+
+   N^a and G^a are stored in the trace (`BelyaninLabelStep` gains `N` and `G`
+   fields) so the trace stays the single source of truth for rendering.
+
+3. **Indices** (S2 + S4): |Q|x|V| path matrices get q_i row labels and v_i
+   column labels (`PathSemiringTeX.matrixWithStateVertexLabels`); boolean
+   matrices get matching square labels (N^a^T: q_i x q_i, G^a: v_i x v_i) via a
+   new `PathSemiringTeX.boolMatrixToTeX` (cells `\bullet`/`\cdot`, the book's
+   figure convention). The runner's result matrix (final P) also switches to
+   q/v labels. Arroyuelo's |V|x|V| matrices keep v/v labels (unchanged).
+
+4. **Graph highlights** (S3 + S5): two edge tiers + restricted vertex
+   highlight:
+
+   - **current edges** (red, bold) = the last edge of every path in the step's
+     `NewM` — exactly the edges traversed during this iteration. This fixes the
+     one-step shift: today the figure highlights all edges of the step's M
+     paths, whose newest edge was traversed at the *previous* step.
+   - **path edges** (light red) = all edges of the step's M paths (the frontier
+     being processed).
+   - **highlighted vertices** (lightyellow, color unchanged) = endpoints of the
+     current edges only — not all vertices of the frontier paths.
+   - Initialization step: no highlights at all (trivial paths have no edges).
+
+   The generic set-based renderers (`GssDot.toDotFromSets`,
+   `GssTikz.toTikzFromSets`) gain one parameter, `pathEdges` (light-red tier);
+   the strong tier becomes bold in TikZ (`red, thick` — matching the book's
+   figure, where the current walk is drawn `MyRed, thick`). DOT strong edges
+   are already bold (`penwidth=2.0`). Colors: strong = `red` / `color=red`;
+   path = `red!40` (TikZ) / `#FF9999` (DOT, same RGB).
 
 Constraints:
 
-- Every refactor is **behavior-preserving**: rendered output, parse results, and test
-  goldens must stay byte-identical unless a finding explicitly changes an API.
-- No new tuple > 2 items anywhere; no tuples-of-tuples workarounds (design guide §4).
-- Public API changes keep XML doc comments current (design guide §6).
-- The RPQ viz layer must match the existing step-visualizer convention: `renderSteps`
-  takes explicit printer functions (`'t -> string`, `'nt -> string`) plus generic data;
-  the visualization-step record holds rendered `string` fields only.
+- GLL and RNGLR rendered output must stay byte-identical (they pass no
+  highlighted edges in TikZ; their DOT strong-edge style is unchanged).
+- Arroyuelo's graph figures share `RpqGraphViz`; its red edges gain the TikZ
+  boldness (same shared renderer, book-consistent) — its goldens are
+  regenerated in S3. No other Arroyuelo output changes.
+- Belyanin automaton figures are unchanged (frontier-state highlighting stays).
+- Every subtask compiles and passes its tests; goldens are regenerated within
+  the subtask that changes the corresponding output.
+
+## Reuse analysis (reusing skill)
+
+- `MatrixTeX.toTeXStyled` — reused for boolean matrices (no new matrix engine);
+  custom row/col label printers already supported.
+- `PathSemiringTeX.matrixToTeX` — reused for the new q/v-labeled path matrices.
+- `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` — extended with the
+  `pathEdges` tier instead of duplicating graph rendering in RpqGraphViz.
+- `RpqGraphViz` — stays the single RPQ graph entry point; new edge-set helpers
+  live here next to `pathHighlights`.
+- `BelyaninRPQ.dfaLabelMatrix` + `BooleanDecomposition.decomposeNonEmptySet` —
+  already compute N^a/G^a inside `evaluateWithTrace`; the trace now stores them.
+- No new modules, no new files.
 
 ## Subtasks
 
-### S1: GLL/RNGLR visualizer cleanups (dead param + module doc)
+### S1: Store N^a and G^a in the Belyanin trace [done, bb8e327]
 
-**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — remove the unused first parameter
-`(symbolVisualizer: Symbol<'t, 'nt> -> string)` from `renderStep` (~:142), `renderInit`
-(~:225), and `renderSteps` (~:300), and drop the two internal pass-throughs of that value
-(`renderSteps` → `renderStep`/`renderInit`, ~:314/:324). Update every external call site to
-stop passing it: `src/FLPQ.Cli/GllRunner.fs:63`;
-`tests/FLPQ.Printers.Tests/TexCompilationTests.fs:521,563,805,912`;
-`tests/FLPQ.Printers.Tests/RsmTikzTests.fs:239`;
-`tests/FLPQ.Printers.Tests/GssDotVisualizationTests.fs:17`.
-`src/FLPQ.Printers/RnglrStepVisualizer.fs` — add a module-level `///` doc comment (matching
-the style of `GllStepVisualizer` / `ArroyueloStepVisualizer`) describing the RNGLR per-action
-substep visualizer and its book reference (sec:CFPQ_RNGLR).
+**Code:** `src/FLPQ.RPQ/BelyaninRPQ.fs` — extend
+`BelyaninLabelStep<'t>` to `{ Label; N: Matrix<bool>; G: Matrix<bool>; Select; Extend }` (N = `dfaLabelMatrix dfa label`, G = the per-label graph matrix from
+the existing decomposition). Fill both fields in `evaluateWithTrace` where the
+label loop already has `label` and `gMat`. Update the record's doc comment.
 
-**Tests:** No new tests — this is dead-code removal + a doc comment. Existing GLL/RNGLR
-visualizer suites (`GllStepVisualizationTests`, `RnglrStepVisualizationTests`,
-`TexCompilationTests`, `RsmTikzTests`, `GssDotVisualizationTests`) must pass unchanged,
-proving the removed parameter was unused and output is byte-identical.
+**Tests:** `tests/FLPQ.RPQ.Tests/BelyaninTraceTests.fs` — new facts asserting
+the stored matrices on the example: step 1 label a has N with exactly
+N[0,1] = true (q0 -a-> q1) and G with exactly edges (0,1), (2,5), (3,4);
+step 2 labels a/b/c have G equal to the per-label graph edge sets and N equal
+to the DFA per-label transition sets.
 
-**Docs:** Check `docs/developer/rnglr.md` and any GLL step-viz doc for a signature listing
-that includes `symbolVisualizer`; update if present. The new `RnglrStepVisualizer` module doc
-needs no separate doc file (module docs are not individually documented).
+**Docs:** `docs/developer/belyanin-rpq.md` — `BelyaninLabelStep` signature and
+description gain N/G.
 
 **Spec:**
 
-- Confirm `symbolVisualizer` is genuinely unused in the `GllStepVisualizer` body (only
-  declared + passed through) before removing — grep shows decls at :142/:225/:300 and
-  pass-throughs at :314/:324, no other use.
-- After removal, the three functions keep their remaining parameters and order unchanged;
-  only the leading `symbolVisualizer` is dropped.
-- The `RnglrStepVisualizer` module doc states what it renders (GSS figure DOT+TikZ, path
-  index, input graph, LR table with the substep's action cell highlighted) and cites
-  sec:CFPQ_RNGLR, consistent with sibling visualizers.
+- N is stored untransposed (the book's N^a); the visualizer transposes at
+  render time for the `(N^a)^T` factor.
+- Epsilon labels are skipped as today; no label step is created for them.
+- Boolean `evaluate` is untouched.
 
-### S2: Migrate hardcoded ANBN literals to registry bindings
+### S2: PathSemiringTeX — q/v-labeled path matrices and boolean matrices [done, 3e0156a]
 
-**Code:** `tests/FLPQ.Cli.Tests/GllRunnerTests.fs` and
-`tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs` — replace the hardcoded ANBN classic grammar text
-`"S -> a S b | eps"` with `TestGrammarFiles.anbnEbnf` and the 4-token accept input
-`"a a b b"` with `TestGrammarFiles.anbnInput` at every site. Do NOT touch the distinct
-grammar `"S -> a S b | S S | eps"` / input `"a b"` (not the ANBN classic) or non-accept
-inputs such as `"a a a"` (keep those literals; only the grammar half of such calls moves to
-`anbnEbnf`).
+**Code:** `src/FLPQ.Printers/PathSemiringTeX.fs` — add
+`matrixWithStateVertexLabels (m: Matrix<Set<int list>>) : string`
+(`matrixToTeX` with q_i row / v_i column labels) and
+`boolMatrixToTeX (rowLabel: int -> string) (colLabel: int -> string) (m: Matrix<bool>) : string` (`MatrixTeX.toTeXStyled` with a `\bullet`/`\cdot`
+cell printer, adjustbox-wrapped). Keep `matrixWithVertexLabels` (Arroyuelo's
+|V|x|V| matrices).
 
-**Tests:** The affected facts already assert `File.Exists` + `Length > 0` on artifacts and do
-not compare against the raw grammar source text, so the pipe-form → registry newline-form
-change is safe (same parsed grammar). All GLL/RNGLR runner suites must pass unchanged. Add no
-new facts — this is a data-source migration, matching the precedent set in task 282 for
-`CliSummaryTests` / `ProgramDispatchTests`.
+**Tests:** `tests/FLPQ.Printers.Tests/PathSemiringTexTests.fs` — new facts:
+`matrixWithStateVertexLabels` emits q_i row headers and v_i column headers;
+`boolMatrixToTeX` renders true cells as `\bullet`, false as `\cdot`, with the
+given labels, wrapped in adjustbox.
 
-**Docs:** None (test-only change; registry-eligibility rationale already documented in the
-task 282 review).
+**Docs:** `docs/developer/path-semiring-tex.md` — new function signatures +
+descriptions; `docs/developer/FLPQ.Printers.md` hub one-liner for
+PathSemiringTeX mentions boolean matrices.
 
 **Spec:**
 
-- `TestGrammarFiles.anbnEbnf` = `LanguageRegistry.ANBN.Grammars.[0].Text`;
-  `TestGrammarFiles.anbnInput` = the 4-token accept string `"a a b b"`. Both are in
-  namespace `FLPQ.Cli.Tests`, same as the two test modules — reference directly.
-- Replace only where the grammar is exactly the ANBN classic; leave the `S S` variant and
-  reject-string inputs' grammar half on `anbnEbnf` but keep their non-accept input literal.
+- Boolean cell printer: `true -> @"\bullet"`, `false -> @"\cdot"` (the book's
+  figure `figures/02_BFS/algorithm_step.tex` uses bullets for true entries).
+- Both functions are pure TeX strings, no document-level commands (module
+  convention).
 
-### S3: Convert RnglrTypes stored-state 5-tuple to a named record
+### S3: GSS renderers — light-red path-edge tier + bold strong edges [done, a735252]
 
-**Code:** `src/FLPQ.Languages/RnglrTypes.fs` — introduce
-`[<Struct>] type RnglrStoredState<'nt when 'nt: comparison> = { Nt: Nonterminal<'nt>; InvState: int; RangeEndState: int; RangeEndVertex: int; TriggerLrState: int }`. Change the
-`RnglrGSS.StoredStates` field and the four `RnglrGSS` functions (`create`, `addEdge` return,
-`getStoredStates`, `setStoredStates`) from `Set<Nonterminal<'nt> * int * int * int * int>` to
-`Set<RnglrStoredState<'nt>>`. Update the type-site doc comment (:33-40) to name the record.
-`src/FLPQ.Languages/Rnglr.fs` — update the construction at :266
-(`(invData.Nonterminal, nextInv, endState, endVertex, p.TriggerLrState)` → record literal) and
-the destructuring at :381 (`for (storedNt, storedInv, storedEndState, storedEndVertex, storedTriggerLr) in consumedStates` → `for st in consumedStates` using `st.Nt`, `st.InvState`,
-etc.).
+**Code:** `src/FLPQ.Printers/GssTikz.fs`, `src/FLPQ.Printers/GssDot.fs` — add a
+`pathEdges: Set<int * int>` parameter to `toTikzFromSets` / `toDotFromSets`
+(inserted after `highlightedEdges`). Edge rendering tiers, in priority order:
+strong (`highlightedEdges`) → TikZ `red, thick`, DOT `color=red, penwidth=2.0`
+(DOT unchanged); path (`pathEdges`) → TikZ `red!40`, DOT `color="#FF9999"`;
+else plain. An edge in both sets renders as strong. Update every call site to
+pass `Set.empty` for the new parameter: `RpqGraphViz.renderGraph` (2),
+`ArroyueloStepVisualizer.renderSteps` (2), `GllStepVisualizer` (4),
+`RnglrStepVisualizer` (2).
 
-**Tests:** No new tests — behavior-preserving type refactor. The full RNGLR suite
-(`RnglrTests`, `RnglrStepVisualizationTests`, cross-parser equivalence, and the byte-identical
-reference-visualization check) must pass unchanged, proving the record carries identical data
-and Set semantics (structural equality/hash) are preserved.
+**Tests:** `tests/FLPQ.Printers.Tests/GssDotTests.fs` — update the TikZ
+red-edge assertion to the new `red, thick` string; new facts: a path-edge
+renders light-red in both formats (`red!40` / `color="#FF9999"`), a strong edge
+takes priority over a path edge, plain edges are unchanged. All other suites
+(GssDotVisualizationTests, Gll/Rnglr step tests) must pass with byte-identical
+goldens. Regenerate the Arroyuelo graph TikZ goldens (red edges gain `thick`)
+via the golden workflow; Arroyuelo DOT output is byte-identical.
 
-**Docs:** Update `docs/developer/rnglr.md` :123 (the `StoredStates` field type in the type
-listing) and :126 (the prose describing the stored states as a 5-tuple) to reference
-`RnglrStoredState<'nt>` and its named fields.
-
-**Spec:**
-
-- Field names map positionally: Nt←nonterminal, InvState←invState, RangeEndState←rangeEndState,
-  RangeEndVertex←rangeEndVertex, TriggerLrState←triggerLrState.
-- A `[<Struct>]` record gets F# structural equality + hashing, so `Set<RnglrStoredState<'nt>>`
-  behaves identically to the old tuple set (membership, dedup, iteration order by hash).
-- No other module references the stored-state tuple shape directly (it is internal to the GSS);
-  verify with a grep for the 5-tuple type and `getStoredStates`/`setStoredStates` across src+tests.
-
-### S4: Convert Valiant binary-rules 3-tuple and Sppf getCoords 4-tuple to records
-
-**Code:** `src/FLPQ.Languages/Valiant.fs` — introduce a private
-`type ValiantBinaryRule<'nt when 'nt: comparison> = { Lhs: Nonterminal<'nt>; Pair: BinaryPair<'nt>; ProdIdx: int }`. Replace `(Nonterminal<'nt> * BinaryPair<'nt> * int) list` in `InitData.BinaryRules`
-(:52), `binaryRulesFromGrammar` (:131, :135), and `mxmSet` (:168, :179) with the record; update
-the `Some(r.Lhs, { Left = left; Right = right }, number)` construction and the
-`(lhs, pair, prodIdx)` destructuring. `src/FLPQ.Languages/Sppf.fs` — introduce a private
-`type SppfNodeCoords = { FromState: int; FromPos: int; ToState: int; ToPos: int }`; change
-`getCoords` (:558) to return `SppfNodeCoords option` and update its two constructions (:560-561)
-and the two destructurings (`Some(lfs, lfp, lts, ltp)` :576, `Some(rfs, rfp, rts, rtp)` :630).
-
-**Tests:** No new tests — behavior-preserving. Valiant and SPPF suites (including
-`SppfValidatorTests`, which exercises `validateIntermediateConnectedness` where `getCoords`
-lives) must pass unchanged.
-
-**Docs:** None — both are private/internal types not surfaced in module docs (confirm against
-`docs/developer/guides/documentation-conventions.md`; no public API changes).
+**Docs:** none new (no GssDot/GssTikz module docs exist); check
+`docs/developer/FLPQ.Printers.md` hub for stale one-liners.
 
 **Spec:**
 
-- `ValiantBinaryRule` reuses the existing `BinaryPair<'nt>` record for the `Pair` field
-  (legitimate composition, not a tuple workaround); keep it `private` like `InitData`.
-- `SppfNodeCoords` is a private module type in `Sppf.fs`; field names follow the existing
-  `(fs, fp, ts, tp)` = from-state/from-pos/to-state/to-pos convention used in the error messages.
+- TikZ strong-edge string: `v%d ->["%s", red, thick%s%s] v%d` (bend/loop attrs
+  appended after, as today).
+- TikZ path-edge string: `v%d ->["%s", red!40%s%s] v%d`.
+- DOT path-edge attrs: `label="%s", color="#FF9999"` (quoted — an unquoted #
+  starts a DOT comment and breaks graphviz compilation).
+- Empty-label edges keep the current behavior per tier (strong/path tiers emit
+  the quoted label; plain tier omits it).
 
-### S5: Convert ExternalTools node-position 3-tuple and fix GllTypes 4-tuple hash
+### S4: Belyanin matrices — F/V notation, explicit products, q/v indices [done, 1c35145]
 
-**Code:** `src/FLPQ.Printers/ExternalTools.fs` — introduce a private
-`type NodePosition = { Name: string; X: float; Y: float }`; change the intermediate
-`ResizeArray<(string * float * float)>` (:146) to `ResizeArray<NodePosition>`, update the
-`positions.Add((name, x, y))` (:166) and the final map (:168). The public return type
-`Map<string, float * float>` stays (a 2-tuple value is allowed). `src/FLPQ.Languages/GllTypes.fs`
-— replace the 4-item `hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)` (:28)
-with nested 2-tuple hashing (e.g. `hash (hash (a, b), hash (c, d))`) or `System.HashCode.Combine`,
-matching whatever `GetHashCode` idiom the codebase already uses.
+**Code:** `src/FLPQ.Printers/BelyaninStepVisualizer.fs` — `renderMatrices`:
+titles `$\text{F}$`, `$\text{V}$`, `$\text{New } F =$`; all path matrices via
+`PathSemiringTeX.matrixWithStateVertexLabels`. `labelBlock`: the explicit chain
+from Scope item 2 — `$(N^{a})^T \otimes F =$`, `boolMatrixToTeX` of
+`Matrix.transpose ls.N` with q/q labels, `$\otimes$`, the step's F matrix,
+`$=$`, Select, `$\times G^{a} =$`, `boolMatrixToTeX` of `ls.G` with v/v labels,
+`$=$`, Extend. `src/FLPQ.Cli/BelyaninRunner.fs` — `renderResult` uses
+`matrixWithStateVertexLabels` for the final matrix (rows are automaton states).
 
-**Tests:** No new tests — behavior-preserving. `ExternalToolsTests` (node-position extraction)
-and the GLL suite (Descriptor equality/hash via `GllTypes`) must pass unchanged.
+**Tests:** `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` —
+update the pNiceMatrix block-count fact (init: 2; iteration: 2 + 5 x labels +
+1); new facts: every non-init step contains the explicit chain markers
+(`\otimes F =`, `\times G^{a} =`) per label, path matrices carry q_i row
+headers and v_i column headers while boolean N^a^T/G^a blocks carry q/q and
+v/v headers respectively, and no matrix block uses a v_i row header for a
+|Q|x|V| matrix. Regenerate the six `belyanin_step_*_matrices.tex` goldens via
+the golden workflow. The lualatex compile + no-Overfull facts must pass on all
+steps (taller matrix stacks shrink via the step adjustbox).
 
-**Docs:** None (private type + internal hash; no public API change).
-
-**Spec:**
-
-- For the GllTypes hash, prefer the idiom already used by other `GetHashCode` overrides in the
-  codebase (check a couple) for consistency; the exact hash values need not be stable across
-  versions (they are not persisted), only equal-for-equal and well-distributed.
-
-### S6: Generalize the RPQ visualization layer over `'t`/`'nt`
-
-**Code:** Make the four RPQ printer modules generic, matching the Gll/Rnglr/LL/LR convention
-(printer params + generic data; step records hold rendered strings only):
-
-- `src/FLPQ.Printers/RegexpTeX.fs` — `toTeX (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (r: Regexp<'t, 'nt>) : string`; the single-char check in
-  `termToTeX` (:10-14) applies to the *printed* terminal (`terminalPrinter t`), not the raw value.
-- `src/FLPQ.Printers/RpqGraphViz.fs` — `renderGraph (terminalPrinter: 't -> string) (graph: NFA<'t, int>) ...` and private `graphEdgeSet`/`graphEdgeLabel` generic over `'t`.
-- `src/FLPQ.Printers/ArroyueloStepVisualizer.fs` — `renderSteps (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (graph: NFA<'t, int>) (steps: ArroyueloTraceStep<'t, 'nt> list)`;
-  private helpers generic; pass printers through to `RegexpTeX.toTeX` and `RpqGraphViz.renderGraph`.
-- `src/FLPQ.Printers/BelyaninStepVisualizer.fs` — `renderSteps (terminalPrinter: 't -> string) (dfa: DFA<'t, int>) (graph: NFA<'t, int>) (steps: BelyaninTraceStep<'t> list)`; drop the explicit
-  `string` type arguments at :88/:91 (`AutomatonDot.dfaToDotWithHighlights`,
-  `AutomatonTikz.dfaToTikzWithHighlights`) so they infer `'t`.
-- Update call sites: `src/FLPQ.Cli/ArroyueloRunner.fs:60`, `src/FLPQ.Cli/BelyaninRunner.fs:46`,
-  `src/FLPQ.Cli/Helpers.fs:127,134,142` (pass `id`/identity printers for the string terminals),
-  and the test files (`ArroyueloStepVisualizationTests`, `BelyaninStepVisualizationTests`,
-  `RpqGraphVizTests`, `RegexpTexTests`) — pass `id` (or the existing printer) so inference keeps
-  them at `string`.
-
-**Tests:** No new tests required for correctness (behavior-preserving; all call sites stay at
-`string`). The existing RPQ viz suites + both lualatex end-to-end compiles must pass unchanged,
-proving rendered output is byte-identical. Optionally add one fact instantiating a visualizer at a
-non-`string` terminal type to lock in the genericity (only if it can be done with an existing
-registry/generator without new fixtures).
-
-**Docs:** Update `docs/developer/rpq-graph-viz.md`, `arroyuelo-step-viz.md`,
-`belyanin-step-viz.md`, and `rpq-regexp-viz.md` where they show the now-generic signatures or
-imply string-only terminals; state that the layer is generic over `'t`/`'nt` like the other step
-visualizers.
+**Docs:** `docs/developer/belyanin-step-viz.md` — Matrices artifact description
+(F/V titles, explicit per-label chain, q/v labels); `tasks/fixes_for_book.md` —
+note that the book's M/P notation should become F (frontier) / V (visited) to
+match the rendering.
 
 **Spec:**
 
-- All underlying data types are already generic (`NFA<'t,'s>`, `DFA<'t,'s>`, `Regexp<'t,'nt>`,
-  `ArroyueloTraceStep<'t,'nt>`, `BelyaninTraceStep<'t>`); only these four printer files pin them
-  to `string`. `PathSemiringTeX` needs no change (cells are `Set<int list>`, terminal-agnostic).
-- The single genuine string-specific logic is `RegexpTeX.termToTeX`'s `String.length t = 1`;
-  move that decision onto the printed name so a generic `'t` works.
-- Keep the visualization-step records (`ArroyueloVisualizationStep`, `BelyaninVisualizationStep`)
-  as-is (rendered `string` fields only) — they are already convention-compliant.
+- The F matrix is re-rendered inside every label block (explicit operands per
+  the task), even though it equals the top-level F block.
+- Init step renders only the F and V blocks (no label blocks, no New F).
+- Step 5 (zero labels) renders F, V, New F only.
 
-## Execution order
+### S5: Belyanin graph — current-step edges, path edges, endpoint vertices [done, a1f0783]
 
-S1 → S2 → S3 → S4 → S5 → S6. All subtasks are independent (no shared edits); the order runs the
-small, safe cleanups first and defers the largest cross-cutting refactor (S6) to last so progress
-is bounded if it blocks. After all subtasks: full code review, hard gate (`STATUS: PASS`),
-squash-merge to `dev`, mark task `[done]`.
+**Code:** `src/FLPQ.Printers/RpqGraphViz.fs` — add `pathVertices`,
+`pathEdges`, `pathLastEdges` (last edge of every stored path with >= 2
+vertices), `edgeEndpoints`; refactor `pathHighlights` to reuse them; change
+`renderGraph` to `(terminalPrinter, graph, highlightedVertices, pathEdges, currentEdges)`. `src/FLPQ.Printers/BelyaninStepVisualizer.fs` — wire the graph
+figure: currentEdges = `pathLastEdges step.NewM`, pathEdges = `pathEdges step.M`, highlightedVertices = `edgeEndpoints currentEdges`.
+`src/FLPQ.Printers/ArroyueloStepVisualizer.fs` — pass
+`(pathVerts, Set.empty, pathEdgeHl)` (output unchanged after S3).
 
-## Completion status
+**Tests:** `tests/FLPQ.Printers.Tests/RpqGraphVizTests.fs` — new facts for
+`pathEdges`, `pathLastEdges` (single-vertex paths contribute nothing),
+`edgeEndpoints`; update `renderGraph` call sites to the 5-arg signature; new
+fact: a path edge renders light-red and a current edge renders strong in both
+formats. `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` —
+replace the frontier-paths graph facts with: red (strong) DOT edges = exactly
+the last edges of NewM paths, light-red DOT edges = exactly the edges of M
+paths, yellow vertices = exactly their endpoints; per-step expected sets are
+computed from the trace. Regenerate the six `belyanin_step_*_graph.tikz`
+goldens. The lualatex compile + no-Overfull facts must pass.
 
-All six subtasks are complete and committed on `feature/283-fix-review-findings`:
+**Docs:** `docs/developer/rpq-graph-viz.md` — new function signatures,
+renderGraph signature, two-tier highlight design decision;
+`docs/developer/belyanin-step-viz.md` — Graph artifact description (current vs
+path edges, endpoint-only vertices, init step has no highlights).
 
-| Subtask | Commit | Status |
-| --- | --- | --- |
-| S1 GLL/RNGLR visualizer cleanups | 65380c5 | done |
-| S2 ANBN literals → registry bindings | a79ffd4 | done |
-| S3 RnglrTypes stored-state 5-tuple → record | d82f48b | done |
-| S4 Valiant 3-tuple + Sppf 4-tuple → records | 4110641 | done |
-| S5 ExternalTools 3-tuple → record + GllTypes hash | 286ff1c | done |
-| S6 RPQ viz layer generic over `'t`/`'nt` | 991a918 | done |
+**Spec:**
 
-Verification: build 0 errors; full-solution FSharpLint 0 warnings (111 files); suites green —
-FLPQ.Languages.Tests 634, FLPQ.Printers.Tests 340, FLPQ.Cli.Tests 232 (RPQ goldens byte-identical,
-lualatex compiles pass); Fantomas + mdformat clean; commit gate PASS. Code review (see
-`tasks/code_review.md`, Task 283 report) found zero issues — every Task 282 open item resolved.
+- `pathLastEdges`: for a path `[v0; ...; vk]` with k >= 1 contribute
+  `(v_{k-1}, vk)`; trivial paths contribute nothing.
+- Current edges are computed from `NewM`, not M — this is the one-step-shift
+  fix: the edges traversed during iteration k are the final edges of the
+  paths produced by that iteration.
+- Initialization step: NewM = M holds only trivial paths, so all three
+  highlight sets are empty.
 
-Note on S5: the plan suggested "nested 2-tuple hashing or `System.HashCode.Combine`, matching the
-existing idiom". No other multi-field `GetHashCode` override exists in the codebase to match, so
-`System.HashCode.Combine` was chosen (eliminates the tuple entirely; idiomatic for .NET 10).
+## Verification
 
-Note on S6: call sites pass `id` explicitly rather than relying on the F# `string`-as-identity
-value quirk that the previous code used implicitly for Belyanin's DFA labels. Behavior is
-identical (both are identity on `string`); goldens are byte-identical.
+- Per subtask: format + build + affected test suites (subtask-loop skill).
+- Pre-merge: full hard gate (`tools/hard_gate.py`) — format, lint, build,
+  tests with coverage (line >= 90% per project / 95% total, branch likewise),
+  markdown checks. New code paths are covered by the new facts above.
+- Golden diff review: only `belyanin_step_*_matrices.tex`,
+  `belyanin_step_*_graph.tikz`, and `arroyuelo_step_*_graph.tikz` may change;
+  every other golden must be byte-identical.

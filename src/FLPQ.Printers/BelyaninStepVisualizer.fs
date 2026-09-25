@@ -44,34 +44,60 @@ module BelyaninStepVisualizer =
         | ATerm t -> AutomatonTikz.escapeLatex (terminalPrinter t)
         | AEpsilon -> @"\varepsilon"
 
-    /// One label's propagation as a TeX block: (N^a)^T (x) M = <Select>, then x G^a = <Extend>.
-    let private labelBlock (terminalPrinter: 't -> string) (ls: BelyaninLabelStep<'t>) : string =
+    /// Row/column label printers: q_i for automaton states, v_i for graph vertices.
+    let private stateLabel (i: int) : string = sprintf "q_%d" i
+
+    let private vertexLabel (j: int) : string = sprintf "v_%d" j
+
+    /// One label's propagation as a TeX block with every matrix written explicitly:
+    /// (N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <Select>, then × G^a = <G^a> = <Extend>.
+    let private labelBlock
+        (terminalPrinter: 't -> string)
+        (f: Matrix<Set<int list>>)
+        (ls: BelyaninLabelStep<'t>)
+        : string =
         let l = labelToTeX terminalPrinter ls.Label
 
-        sprintf @"$(N^{%s})^T \otimes M =$" l
+        sprintf @"$(N^{%s})^T \otimes F =$" l
         + "\n"
-        + PathSemiringTeX.matrixWithVertexLabels ls.Select
+        + PathSemiringTeX.boolMatrixToTeX stateLabel stateLabel (Matrix.transpose ls.N)
+        + "\n"
+        + @"$\otimes$"
+        + "\n"
+        + PathSemiringTeX.matrixWithStateVertexLabels f
+        + "\n"
+        + @"$=$"
+        + "\n"
+        + PathSemiringTeX.matrixWithStateVertexLabels ls.Select
         + "\n"
         + sprintf @"$\times G^{%s} =$" l
         + "\n"
-        + PathSemiringTeX.matrixWithVertexLabels ls.Extend
+        + PathSemiringTeX.boolMatrixToTeX vertexLabel vertexLabel ls.G
+        + "\n"
+        + @"$=$"
+        + "\n"
+        + PathSemiringTeX.matrixWithStateVertexLabels ls.Extend
 
-    /// The step's matrices as a vertical stack: M and P, then per label the two
-    /// propagation products, then New M.
+    /// The step's matrices as a vertical stack: F (frontier) and V (visited), then per
+    /// label the explicit propagation products, then New F.
     let private renderMatrices (terminalPrinter: 't -> string) (step: BelyaninTraceStep<'t>) : string =
-        let mBlock = @"$\text{M}$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.M
+        let fBlock =
+            @"$\text{F}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.M
 
-        let pBlock = @"$\text{P}$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.P
+        let vBlock =
+            @"$\text{V}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.P
 
         if step.IsInit then
-            mBlock + "\n" + pBlock
+            fBlock + "\n" + vBlock
         else
-            let newMBlock =
-                @"$\text{New } M =$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.NewM
+            let newFBlock =
+                @"$\text{New } F =$"
+                + "\n"
+                + PathSemiringTeX.matrixWithStateVertexLabels step.NewM
 
-            [ mBlock; pBlock ]
-            @ (step.Labels |> List.map (labelBlock terminalPrinter))
-            @ [ newMBlock ]
+            [ fBlock; vBlock ]
+            @ (step.Labels |> List.map (labelBlock terminalPrinter step.M))
+            @ [ newFBlock ]
             |> String.concat "\n"
 
     /// Render every trace step to its visualization artifacts (both DOT and TikZ; the runner
@@ -97,10 +123,20 @@ module BelyaninStepVisualizer =
                     dfa
                     frontier
 
-            let pathVerts, pathEdgeHl = RpqGraphViz.pathHighlights step.M
+            // The edges traversed on this step are the final edges of the paths produced
+            // by it (NewM) — highlighting them here, not at the next step. The frontier
+            // paths being processed (M) render as the light-red path tier; only the
+            // endpoints of the traversed edges get the vertex highlight.
+            let currentEdges = RpqGraphViz.pathLastEdges step.NewM
+            let frontierPathEdges = RpqGraphViz.pathEdges step.M
 
             let graphDot, graphTikz =
-                RpqGraphViz.renderGraph terminalPrinter graph pathVerts pathEdgeHl
+                RpqGraphViz.renderGraph
+                    terminalPrinter
+                    graph
+                    (RpqGraphViz.edgeEndpoints currentEdges)
+                    frontierPathEdges
+                    currentEdges
 
             { AutomatonDot = automatonDot
               AutomatonTikz = automatonTikz

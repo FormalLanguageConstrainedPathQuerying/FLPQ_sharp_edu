@@ -9,8 +9,9 @@ open FLPQ.LinearAlgebra
 module GssTikz =
 
     /// Renders a GSS as a TikZ tikzpicture from vertex and edge sets.
-    /// highlightedVertices get filled with yellow!20, highlightedEdges are red.
-    /// The currentVertex (if specified) gets fill=lightblue!20.
+    /// highlightedVertices get filled with yellow!20, highlightedEdges are red and bold
+    /// (thick), pathEdges are light red (red!40); an edge in both sets renders as
+    /// highlighted. The currentVertex (if specified) gets fill=lightblue!20.
     /// storedPopVertices get filled with orange!30 (stored pops handling triggered).
     /// When positionOf is Some, every vertex is constrained to the layer of its input position
     /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
@@ -27,6 +28,7 @@ module GssTikz =
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
+        (pathEdges: Set<int * int>)
         (storedPopVertices: Set<int>)
         (currentVertex: int option)
         (shape: string)
@@ -105,6 +107,7 @@ module GssTikz =
                     AutomatonTikz.escapeLatex rawLabel
 
             let isHighlighted = Set.contains (fromIdx, toIdx) highlightedEdges
+            let isPath = not isHighlighted && Set.contains (fromIdx, toIdx) pathEdges
 
             let loopAttr = if fromIdx = toIdx then ",loop above" else ""
 
@@ -122,7 +125,10 @@ module GssTikz =
                     ""
 
             if isHighlighted then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                |> ignore
+            elif isPath then
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
                 |> ignore
             elif label = "" then
                 if fromIdx = toIdx then

@@ -87,10 +87,14 @@ module BelyaninRPQ =
 
         result
 
-    /// One label's propagation in a Belyanin iteration: Select = (N^a)^T (x) M (automaton
-    /// backward step) and Extend = Select (x) G^a (graph forward step).
+    /// One label's propagation in a Belyanin iteration: N is the DFA transition matrix
+    /// N^a, G is the graph edge matrix G^a, Select = (N^a)^T (x) M (automaton backward
+    /// step) and Extend = Select (x) G^a (graph forward step). N and G are stored so the
+    /// trace is self-contained for rendering the explicit per-label products.
     type BelyaninLabelStep<'t when 't: comparison> =
         { Label: AutomatonLabel<'t>
+          N: Matrix<bool>
+          G: Matrix<bool>
           Select: Matrix<Set<int list>>
           Extend: Matrix<Set<int list>> }
 
@@ -154,7 +158,8 @@ module BelyaninRPQ =
                 match label with
                 | AEpsilon -> ()
                 | ATerm _ ->
-                    let select = PathSemiring.boolSelectRows (dfaLabelMatrix dfa label) masked
+                    let n = dfaLabelMatrix dfa label
+                    let select = PathSemiring.boolSelectRows n masked
 
                     if not (PathSemiring.isEmpty select) then
                         let extend = PathSemiring.boolExtendCols select gMat
@@ -162,6 +167,8 @@ module BelyaninRPQ =
 
                         labelSteps <-
                             { Label = label
+                              N = n
+                              G = gMat
                               Select = select
                               Extend = extend }
                             :: labelSteps

@@ -13,11 +13,11 @@ module BelyaninRunner =
 
     let private vertexName (i: int) : string = sprintf "v_%d" i
 
-    /// The result file: the final accumulated path semiring matrix P plus one line per
-    /// source listing its reachable vertices (derived from P via path heads at final
-    /// states — the trace is the single source of truth).
+    /// The result file: the final accumulated path semiring matrix (q_i/v_i labels, no
+    /// title) plus one line per source listing its reachable vertices (derived from the
+    /// matrix via path heads at final states — the trace is the single source of truth).
     let private renderResult (dfa: DFA<string, int>) (p: Matrix<Set<int list>>) (sources: int array) : string =
-        let matrixTex = PathSemiringTeX.matrixWithVertexLabels p
+        let matrixTex = PathSemiringTeX.matrixWithStateVertexLabels p
         let reachable = BelyaninRPQ.reachableFromPaths dfa p sources
 
         let sourceLines =

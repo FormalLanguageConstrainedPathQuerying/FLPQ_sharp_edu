@@ -114,6 +114,7 @@ let ``toDotFromSets stored-pop vertex gets orange fill`` () =
             (set [ (0, 2); (5, 7) ])
             (set [ 5 ])
             Set.empty
+            Set.empty
             (set [ 2 ])
             (Some 0)
             None
@@ -140,6 +141,7 @@ let ``toDotFromSets current vertex takes priority over stored-pop`` () =
             Set.empty
             Set.empty
             Set.empty
+            Set.empty
             (set [ 0 ])
             (Some 0)
             None
@@ -156,6 +158,7 @@ let ``toDotFromSets with positionOf emits one rank=same subgraph per position`` 
             (fun _ -> "e")
             (set [ 0; 1; 2; 3 ])
             (set [ (1, 0); (3, 2) ])
+            Set.empty
             Set.empty
             Set.empty
             Set.empty
@@ -176,6 +179,7 @@ let ``toDotFromSets without positionOf emits no rank=same subgraph`` () =
             Set.empty
             Set.empty
             Set.empty
+            Set.empty
             None
             None
 
@@ -192,11 +196,33 @@ let ``toDotFromSets renders the current vertex even when absent from all active 
             Set.empty
             Set.empty
             Set.empty
+            Set.empty
             (Some 5)
             None
 
     Assert.Contains("v5 [", dot)
     Assert.Contains("fillcolor=lightblue", dot)
+
+[<Fact>]
+let ``toDotFromSets renders path edges light red and highlighted edges red bold`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 1; 2 ])
+            (set [ (0, 1); (1, 2); (0, 2) ])
+            Set.empty
+            (set [ (1, 2); (0, 2) ])
+            (set [ (0, 1); (0, 2) ])
+            Set.empty
+            None
+            None
+
+    // The hex color is quoted: an unquoted # would start a DOT comment.
+    Assert.Contains("v0 -> v1 [label=\"e\", color=\"#FF9999\"];", dot)
+    Assert.Contains("v1 -> v2 [label=\"e\", color=red, penwidth=2.0];", dot)
+    // An edge in both sets renders as highlighted.
+    Assert.Contains("v0 -> v2 [label=\"e\", color=red, penwidth=2.0];", dot)
 
 
 module GssTikzTests =
@@ -207,6 +233,7 @@ module GssTikzTests =
             GssTikz.toTikzFromSets
                 (fun idx -> sprintf "%d" idx)
                 (fun _ -> "e")
+                Set.empty
                 Set.empty
                 Set.empty
                 Set.empty
@@ -231,6 +258,7 @@ module GssTikzTests =
                 Set.empty
                 Set.empty
                 Set.empty
+                Set.empty
                 None
                 "circle"
                 false
@@ -251,6 +279,7 @@ module GssTikzTests =
                 Set.empty
                 Set.empty
                 Set.empty
+                Set.empty
                 None
                 "circle"
                 false
@@ -268,6 +297,7 @@ module GssTikzTests =
                 (fun _ -> "")
                 (set [ 0; 1 ])
                 (set [ (0, 1); (1, 0) ])
+                Set.empty
                 Set.empty
                 Set.empty
                 Set.empty
@@ -292,6 +322,7 @@ module GssTikzTests =
                 Set.empty
                 (set [ (1, 0) ])
                 Set.empty
+                Set.empty
                 None
                 "circle"
                 false
@@ -299,5 +330,28 @@ module GssTikzTests =
                 true
 
         Assert.Contains("v0 ->[\"e\", bend left=15] v1;", tikz)
-        Assert.Contains("v1 ->[\"e\", red, bend left=15] v0;", tikz)
+        Assert.Contains("v1 ->[\"e\", red, thick, bend left=15] v0;", tikz)
         Assert.Contains("v0 ->[\"e\"] v2;", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets renders path edges light red and highlighted edges red bold`` () =
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0; 1; 2 ])
+                (set [ (0, 1); (1, 2); (0, 2) ])
+                Set.empty
+                (set [ (1, 2); (0, 2) ])
+                (set [ (0, 1); (0, 2) ])
+                Set.empty
+                None
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("v0 ->[\"e\", red!40] v1;", tikz)
+        Assert.Contains("v1 ->[\"e\", red, thick] v2;", tikz)
+        // An edge in both sets renders as highlighted.
+        Assert.Contains("v0 ->[\"e\", red, thick] v2;", tikz)

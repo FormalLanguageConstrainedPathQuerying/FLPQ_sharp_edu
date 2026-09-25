@@ -51,10 +51,11 @@ accumulated matrix P.
 - `BelyaninTraceStep { Index; IsInit; M; P; Labels; NewM }` — M is the frontier after the
   mask, P the accumulated result, Labels the per-label products for labels with a
   non-empty Select, NewM the next frontier.
-- `BelyaninLabelStep { Label; Select; Extend }` — Select = (N^a)^T ⊗ M (automaton
-  backward step via `PathSemiring.boolSelectRows`), Extend = Select × G^a (graph forward
-  step via `PathSemiring.boolExtendCols`, which drops non-simple extensions — the book's
-  I_simple).
+- `BelyaninLabelStep { Label; N; G; Select; Extend }` — N is the DFA transition matrix
+  N^a and G is the graph edge matrix G^a (stored so the trace is self-contained for
+  rendering the explicit per-label products); Select = (N^a)^T ⊗ M (automaton backward
+  step via `PathSemiring.boolSelectRows`), Extend = Select × G^a (graph forward step via
+  `PathSemiring.boolExtendCols`, which drops non-simple extensions — the book's I_simple).
 
 ### `reachableFromPaths: DFA<'t, int> -> Matrix<Set<int list>> -> int array -> (int * int list) list`
 

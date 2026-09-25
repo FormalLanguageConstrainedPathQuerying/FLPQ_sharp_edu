@@ -1,35 +1,59 @@
-$\text{M}$
+$\text{F}$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
 
-$\text{P}$
+$\text{V}$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \{(v_0)\} & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \{(v_0, v_1)\} & \{(v_0, v_1, v_2)\} & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
+q_0 & \{(v_0)\} & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \{(v_0, v_1)\} & \{(v_0, v_1, v_2)\} & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
 
-$(N^{a})^T \otimes M =$
+$(N^{a})^T \otimes F =$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & q_0 & q_1 & q_2 \\
+q_0 & \cdot & \cdot & \cdot \\
+q_1 & \bullet & \cdot & \cdot \\
+q_2 & \cdot & \bullet & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$\otimes$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$=$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
@@ -39,21 +63,60 @@ $\times G^{a} =$
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_0 & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\
 v_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3, v_4)\} & \cdot \\
+v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet \\
+v_3 & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot \\
+v_4 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_5 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
 
-$(N^{b})^T \otimes M =$
+$=$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3, v_4)\} & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$(N^{b})^T \otimes F =$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & q_0 & q_1 & q_2 \\
+q_0 & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \bullet & \cdot \\
+q_2 & \cdot & \cdot & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$\otimes$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$=$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
@@ -64,20 +127,59 @@ $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
 v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_1 & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot \\
 v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_3 & \cdot & \cdot & \bullet & \cdot & \cdot & \cdot \\
+v_4 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_5 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
 
-$(N^{c})^T \otimes M =$
+$=$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$(N^{c})^T \otimes F =$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & q_0 & q_1 & q_2 \\
+q_0 & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \bullet & \cdot \\
+q_2 & \cdot & \cdot & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$\otimes$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_5)\} \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$=$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3)\} & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
@@ -89,19 +191,34 @@ $
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
 v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 v_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_2 & \cdot & \cdot & \cdot & \bullet & \cdot & \cdot \\
+v_3 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_4 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+v_5 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}
 
-$\text{New } M =$
+$=$
 \begin{adjustbox}{max width=\textwidth}
 $
 \begin{pNiceMatrix}[first-row,first-col]
  & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
-v_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
-v_2 & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3, v_4)\} & \cdot \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+\end{pNiceMatrix}
+$
+\end{adjustbox}
+
+$\text{New } F =$
+\begin{adjustbox}{max width=\textwidth}
+$
+\begin{pNiceMatrix}[first-row,first-col]
+ & v_0 & v_1 & v_2 & v_3 & v_4 & v_5 \\
+q_0 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_1 & \cdot & \cdot & \cdot & \cdot & \cdot & \cdot \\
+q_2 & \cdot & \cdot & \cdot & \cdot & \{(v_0, v_1, v_2, v_3, v_4)\} & \cdot \\
 \end{pNiceMatrix}
 $
 \end{adjustbox}

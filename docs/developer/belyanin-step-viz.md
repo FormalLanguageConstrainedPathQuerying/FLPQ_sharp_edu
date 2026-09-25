@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli (Belyanin runner, task 281 S4)
 **Book reference:** Chapter 11, Section 02_BFS.tex, Algorithm algo:RPQ_BFS_semiring
 
-> **Abstract:** Renders each step of Belyanin's path-semiring evaluation (one main-loop iteration of the BFS-like traversal, plus an initialization step) into three artifacts: the query DFA with the current frontier states highlighted, the frontier/accumulated matrices with the per-label propagation products, and the input graph with the current frontier paths highlighted. Both DOT and TikZ are produced per step; the runner writes only one format (TikZ by default, DOT with `--use-dot`).
+> **Abstract:** Renders each step of Belyanin's path-semiring evaluation (one main-loop iteration of the BFS-like traversal, plus an initialization step) into three artifacts: the query DFA with the current frontier states highlighted, the frontier/accumulated matrices with the per-label propagation products, and the input graph with the step's frontier paths in light red, the edges traversed on the step in red bold, and their endpoints highlighted. Both DOT and TikZ are produced per step; the runner writes only one format (TikZ by default, DOT with `--use-dot`).
 
 ## Contents
 
@@ -41,8 +41,8 @@ labels the graph's edges, the query DFA transitions, and the per-label propagati
 ## Step Artifacts
 
 - **Automaton** — the query DFA with the current frontier states highlighted (lightblue): q with a non-empty M[q, \*] cell in the step. Rendered with `AutomatonDot.dfaToDotWithHighlights` / `AutomatonTikz.dfaToTikzWithHighlights` (state labels `q_i`, TikZ `$q_i$`, circle shape).
-- **Matrices** — a vertical stack of path semiring matrices (`PathSemiringTeX.matrixWithVertexLabels`): the initialization step shows M and P; an iteration shows M (frontier after the mask), P (accumulated), then per label the two propagation products `(N^a)^T ⊗ M = <Select>` and `× G^a = <Extend>` (only labels with a non-empty Select — see [Belyanin RPQ](belyanin-rpq.md) design decisions), and finally `New M`.
-- **Graph** — all graph vertices/edges active, edge labels = terminal names; highlighted vertices/edges (yellow/red) = the union over all paths in the step's frontier M, derived via `RpqGraphViz.pathHighlights`. Step k's highlight set depends only on step k's M — no cross-step leakage.
+- **Matrices** — a vertical stack of matrices: the initialization step shows F (frontier) and V (visited); an iteration shows F (frontier after the mask), V (accumulated), then per label the explicit propagation chain `(N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <Select>` and `× G^a = <G^a> = <Extend>` — every matrix written out, with N^a^T and G^a as boolean matrices (`\bullet`/`\cdot` cells) — (only labels with a non-empty Select — see [Belyanin RPQ](belyanin-rpq.md) design decisions), and finally `New F`. Path matrices use q_i state row labels and v_i vertex column labels (`PathSemiringTeX.matrixWithStateVertexLabels`); the boolean blocks use q/q headers (N^a^T) and v/v headers (G^a).
+- **Graph** — all graph vertices/edges active, edge labels = terminal names; three highlight tiers: path edges (light red) = all edges of the paths in the step's frontier M (`RpqGraphViz.pathEdges`), current edges (red, bold) = the last edge of every path in the step's NewM (`RpqGraphViz.pathLastEdges`) — the edges traversed on this step, and highlighted vertices (yellow) = the endpoints of the current edges (`RpqGraphViz.edgeEndpoints`). The initialization step has no highlights. Step k's highlight sets depend only on step k's M and NewM — no cross-step leakage.
 
 ## Step Templates
 
@@ -63,7 +63,7 @@ every step fits one page — see [SummaryTeX module](summary-tex.md).
 | Decision | Rationale |
 | --- | --- |
 | Automaton highlights = frontier states (non-empty M[q, \*]) | The step's partial result in the automaton is exactly which states the current frontier paths sit in; reuses the S5 highlight variants of the DFA renderers |
-| Graph highlights derived from the step's M only | Each step figure must show what that step processes; union over `RpqGraphViz.pathHighlights` gives exactly the vertices/edges of the stored simple frontier paths |
+| Current edges = `pathLastEdges NewM`, path edges = `pathEdges M` | The edge traversed on a step is the last edge of the extended (NewM) paths; highlighting all of M's edges instead lags by one step (task 284, S5). Vertex highlights are restricted to the current edges' endpoints so the figure shows where the step acts, not the whole accumulated path |
 | Per-label blocks only for non-empty Select | All-empty products add noise; the book's I_simple drop is visible as a non-empty Select with an empty Extend (example: iteration 4, label b) |
 | Both DOT and TikZ produced per step, runner picks one | Matches the existing runner convention (TikZ default, DOT via `--use-dot`) without rendering twice |
 

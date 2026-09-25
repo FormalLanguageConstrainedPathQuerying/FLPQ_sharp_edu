@@ -36,9 +36,10 @@
 | [BasicSppfDot / BasicSppfTikz](basic-sppf-viz.md) | Dot and Tikz rendering for basic (Rekers-style) SPPF |
 | [InputGraphDot](input-graph-dot.md) | Dot rendering for the GLL input graph with input position highlighting |
 | [RsmDot / RsmTikz](rsm-viz.md) | Dot and Tikz rendering for Recursive State Machines; Tikz stacks blocks (connected components) top-to-bottom |
+| [GssDot](gss-dot.md) / [GssTikz](gss-tikz.md) | Dot and Tikz rendering for the graph-structured stack from vertex/edge sets, with two-tier edge highlighting |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
-| [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of path semiring matrices (RPQ working matrices with vertex-path cells) |
+| [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of RPQ working matrices: path semiring matrices (vertex-path cells) and boolean N^a/G^a matrices |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
 | [RpqGraphViz](rpq-graph-viz.md) | Shared rendering of the RPQ input graph with path highlights (DOT + TikZ) |
 | [ArroyueloStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's RPQ evaluation (regexp tree, matrix equations, graph highlights) |

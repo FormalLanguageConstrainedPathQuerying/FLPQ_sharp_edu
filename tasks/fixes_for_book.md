@@ -25,3 +25,9 @@
 ## buildLR0/buildLR1 Already Deduplicated (Task 119)
 
 **Note**: Task 119 mentions deduplicating `buildLR0`/`buildLR1` (~60 duplicated lines) by extracting a common BFS framework. The implementation already has the `buildLR` helper function (parameterized by closure and item construction) which is a thin shared layer over the generic `buildAutomaton` function. `buildLR0` and `buildLR1` are already thin wrappers (~20 lines each) over `buildLR`. No further deduplication is needed here.
+
+## Belyanin BFS Notation: M/P vs F/V (Task 284)
+
+**Problem**: Task 284 changes the step rendering to label the frontier matrix F and the accumulated (visited) matrix V. The book's listing `algo:RPQ_BFS_semiring` (Chapter 11, 02_BFS.tex) uses M for the frontier and P for the accumulated result — and already uses F for the final-state row vector in the last lines of the algorithm.
+
+**Book reference**: Chapter 11, 02_BFS.tex — if the book adopts the rendering's notation (F = frontier, V = visited), the final-state row vector currently named F needs a different name to avoid the clash.
