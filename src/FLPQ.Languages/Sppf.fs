@@ -62,6 +62,14 @@ module Sppf =
           Label: Option<SppfEdgeLabel>
           To: int }
 
+    /// The (fromState, fromPos, toState, toPos) coordinates of an SPPF range/nonterminal node.
+    [<Struct>]
+    type private SppfNodeCoords =
+        { FromState: int
+          FromPos: int
+          ToState: int
+          ToPos: int }
+
     /// Builds the SPPF from a path index starting from the given root ranges.
     /// Top-down traversal with memoization: range nodes are created once and reused for packed alternatives.
     /// Each range is processed exactly once to avoid infinite recursion.
@@ -555,10 +563,20 @@ module Sppf =
 
             result
 
-        let getCoords (nodeIdx: int) : (int * int * int * int) option =
+        let getCoords (nodeIdx: int) : SppfNodeCoords option =
             match Graph.getVertex nodeIdx sppf.Graph with
-            | SppfNodeInfo.SppfRange(fs, fp, ts, tp) -> Some(fs, fp, ts, tp)
-            | SppfNodeInfo.SppfNonterminal(_, fp, tp, fs, ts) -> Some(fs, fp, ts, tp)
+            | SppfNodeInfo.SppfRange(fs, fp, ts, tp) ->
+                Some
+                    { FromState = fs
+                      FromPos = fp
+                      ToState = ts
+                      ToPos = tp }
+            | SppfNodeInfo.SppfNonterminal(_, fp, tp, fs, ts) ->
+                Some
+                    { FromState = fs
+                      FromPos = fp
+                      ToState = ts
+                      ToPos = tp }
             | _ -> None
 
         for i in 0 .. vc - 1 do
@@ -573,8 +591,8 @@ module Sppf =
                     | SppfNodeInfo.SppfEpsilon _ -> ()
                     | vLeft ->
                         match getCoords lc with
-                        | Some(lfs, lfp, lts, ltp) ->
-                            if lfs <> fromState || lfp <> fromPos then
+                        | Some c ->
+                            if c.FromState <> fromState || c.FromPos <> fromPos then
                                 errors <-
                                     sprintf
                                         "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): left child %d starts at [s%d,v%d], expected [s%d,v%d]"
@@ -586,13 +604,13 @@ module Sppf =
                                         state
                                         pos
                                         lc
-                                        lfs
-                                        lfp
+                                        c.FromState
+                                        c.FromPos
                                         fromState
                                         fromPos
                                     :: errors
 
-                            if lts <> state || ltp <> pos then
+                            if c.ToState <> state || c.ToPos <> pos then
                                 errors <-
                                     sprintf
                                         "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): left child %d ends at [s%d,v%d], expected [s%d,v%d]"
@@ -604,8 +622,8 @@ module Sppf =
                                         state
                                         pos
                                         lc
-                                        lts
-                                        ltp
+                                        c.ToState
+                                        c.ToPos
                                         state
                                         pos
                                     :: errors
@@ -627,8 +645,8 @@ module Sppf =
                     | SppfNodeInfo.SppfEpsilon _ -> ()
                     | vRight ->
                         match getCoords rc with
-                        | Some(rfs, rfp, rts, rtp) ->
-                            if rfs <> state || rfp <> pos then
+                        | Some c ->
+                            if c.FromState <> state || c.FromPos <> pos then
                                 errors <-
                                     sprintf
                                         "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): right child %d starts at [s%d,v%d], expected [s%d,v%d]"
@@ -640,13 +658,13 @@ module Sppf =
                                         state
                                         pos
                                         rc
-                                        rfs
-                                        rfp
+                                        c.FromState
+                                        c.FromPos
                                         state
                                         pos
                                     :: errors
 
-                            if rts <> toState || rtp <> toPos then
+                            if c.ToState <> toState || c.ToPos <> toPos then
                                 errors <-
                                     sprintf
                                         "Intermediate node %d [s%d,v%d]->[s%d,v%d] (I(%d,%d)): right child %d ends at [s%d,v%d], expected [s%d,v%d]"
@@ -658,8 +676,8 @@ module Sppf =
                                         state
                                         pos
                                         rc
-                                        rts
-                                        rtp
+                                        c.ToState
+                                        c.ToPos
                                         toState
                                         toPos
                                     :: errors

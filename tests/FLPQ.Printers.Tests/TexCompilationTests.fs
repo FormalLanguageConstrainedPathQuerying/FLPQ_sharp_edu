@@ -518,15 +518,7 @@ let ``renderInit renders GSS edges from the step snapshot`` () =
           VertexCount = vertexCount }
 
     let viz =
-        GllStepVisualizer.renderInit
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            step
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderInit string string ersm step pathIndex vertexCount graph
 
     // Edge (0,1) decomposes to (state 0, vertex 0) -> (state 0, vertex 1) for vertexCount = 2.
     Assert.Contains("0,0 → 0,1", viz.GssDot)
@@ -560,15 +552,7 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
 
     let vizSteps =
-        GllStepVisualizer.renderSteps
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            steps
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount graph
 
     TestHelpers.withTempDir (fun tempDir ->
         let dotPdfDir = Path.Combine(tempDir, "dot_pdfs")
@@ -802,15 +786,7 @@ let ``GSS tikz compiles with lualatex`` () =
     let vertexCount = FLPQ.GraphAnalysis.Graph.vertexCount graph
 
     let vizSteps =
-        GllStepVisualizer.renderSteps
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            steps
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount graph
 
     Assert.NotEmpty(vizSteps)
     let step0 = vizSteps.[0]
@@ -909,15 +885,7 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
 
     let vizSteps =
-        GllStepVisualizer.renderSteps
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            steps
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount graph
 
     TestHelpers.withTempDir (fun tempDir ->
         for idx in 0 .. vizSteps.Length - 1 do

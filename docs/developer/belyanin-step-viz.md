@@ -32,10 +32,11 @@ One record per trace step (`BelyaninRPQ.BelyaninTraceStep`).
 ## Module Functions
 
 ```fsharp
-val renderSteps: (string -> string) -> DFA<string, int> -> NFA<string, int> -> BelyaninTraceStep<string> list -> BelyaninVisualizationStep list
+val renderSteps: ('t -> string) -> DFA<'t, int> -> NFA<'t, int> -> BelyaninTraceStep<'t> list -> BelyaninVisualizationStep list
 ```
 
-`renderSteps terminalPrinter dfa graph steps` renders every trace step. The terminal printer labels the graph's edges.
+`renderSteps terminalPrinter dfa graph steps` renders every trace step. The terminal printer
+labels the graph's edges, the query DFA transitions, and the per-label propagation blocks.
 
 ## Step Artifacts
 

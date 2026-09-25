@@ -30,8 +30,7 @@ let private testDfa: DFA<string, int> = Regexp.toDfa testRegexp
 
 let private steps, _ = BelyaninRPQ.evaluateWithTrace testDfa testGraph
 
-let private rendered =
-    BelyaninStepVisualizer.renderSteps string testDfa testGraph steps
+let private rendered = BelyaninStepVisualizer.renderSteps id testDfa testGraph steps
 
 /// The automaton states of the step's frontier: q with a non-empty M[q, *] cell.
 let private frontierStates (m: Matrix<Set<int list>>) : Set<int> =

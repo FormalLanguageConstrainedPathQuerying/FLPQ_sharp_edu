@@ -1,236 +1,250 @@
-# Detailed Plan: Task 282 — Improve RPQ visualization
+# Detailed Plan: Task 283 — Fix all remaining code review findings
 
 ## Task description (verbatim)
 
 ```
-282. Improve RPQ visualization. 1. Unify CLI argumanes. No separated key for graph. it is just an input. Also unify grammar and regexp keys: In all cases it is a query (like in RPQ or CFPQ). 2. Imprve hraph visualization in steps. First, it friquently does not fit page. Does ajustbox used appropriately? Does template configured correctly? Second, It contains edges that draw fully overlapped (eg two edges between v2 and v3 in example input). Can such cases be automatically handled to draw curve edges without overlapping?
-      **[USER GUIDANCE]**: Do not touch GLL and RNGLR for now.
+283. Fix all remaining code review findings
 ```
 
 ## Scope and constraints
 
-- RPQ algorithms only: ArroyueloRPQ and BelyaninRPQ (runners, step visualizers,
-  `RpqGraphViz`, step templates, summary sections). **GLL and RNGLR visualization
-  output must stay byte-identical** (user guidance). Mechanical signature updates at
-  GLL/RNGLR call sites are allowed only when the passed value preserves behavior
-  exactly (S2 passes `false` for the new bending flag).
-- The CLI unification (item 1) necessarily touches the shared CLI layer
-  (`AlgorithmTypes`, `Program`) and all CLI tests — that is what "unify" means;
-  parsing-algorithm behavior is unchanged, only the flag names change.
+This task resolves every item in the **Task 282 Review "Open items"** section of
+`tasks/code_review.md` (the deferred, pre-existing findings). The user's explicit request
+("Fix all remaining code review findings") supersedes the task-282 guidance
+"do not touch GLL and RNGLR for now" — those GLL/RNGLR items are in scope.
 
-## Empirical findings (verified before planning)
+The three finding groups:
 
-1. **Vertical overflow (confirmed):** compiling the current Belyanin merged summary
-   (`data/example_regexp.txt` + `data/example_graph.txt`) yields
-   `Overfull \vbox (61.7pt)` and `(69.9pt)` on the step pages — the left-column
-   matrix stack (up to 8 `pNiceMatrix` blocks) exceeds `\textheight`.
-2. **Horizontal fit bug (confirmed by inspection):** `SummaryTeX.wrapTikzAdjustbox`
-   limits figures to `max width=\textwidth`, but RPQ step figures sit inside
-   minipage columns of `0.46\textwidth` — a wide graph figure is allowed to be up to
-   the full page width and overflows its column. The templates'
-   `\includegraphics[width=\textwidth]` (DOT mode) has the same bug. The existing
-   doc claim "inside a step minipage `\textwidth` equals the column width"
-   (`docs/developer/summary-tex.md`) is wrong — a minipage does not change
-   `\textwidth` (which is why the templates carry the
-   `\setlength{\textwidth}{\linewidth}` hack for matrices).
-3. **Reciprocal edges in DOT are fine:** `dot` automatically draws a reciprocal pair
-   (`v2 -> v3`, `v3 -> v2`) as two non-overlapping curves (verified via `-Tsvg` edge
-   paths). No DOT change needed.
-4. **Reciprocal edges in TikZ overlap:** `GssTikz.toTikzFromSets` emits both
-   directions as straight lines on top of each other. Giving both edges of a pair
-   `bend left=15` produces two symmetric arcs (standard TikZ idiom).
-5. **`\subsection*` cannot run inside an adjustbox** (verified: LaTeX error
-   "Something's wrong--perhaps a missing \\item"), so the step heading must stay
-   outside the shrinking box. Measured in the fixed summary geometry (12pt article,
-   landscape A4, 1cm margins; `\textheight` ≈ 540pt): the subsection heading consumes
-   ≈ 46pt (8.6%). Limiting step content to `0.9\textheight` leaves ≈ 54pt of headroom
-   and removes the overflow (verified: no Overfull in a test document).
-6. **Pre-existing gate blocker found while running S2 tests:**
-   `AutomatonVisualizationTests` referenced goldens `dfa_aplus.Dot` / `nfa_aplus.Dot`
-   (uppercase extension) but the committed files are lowercase `.dot` — on case-sensitive
-   Linux `File.Exists` fails, so two golden tests always failed. Fixed by lowercasing
-   the two test strings (separate `fix(tests)` commit, not part of S2's scope).
-7. **Pre-existing flake found while running S3 tests:** `GllRunnerTests` failed once in
-   the full CLI suite with `ArgumentOutOfRangeException` inside `StringBuilder.ToString()`
-   (the captured `StringWriter`). Root cause: `withCapturedOutput` redirects the
-   process-global `Console.Out`, but xUnit ran other collections (e.g. `CliSummaryTests`)
-   in parallel, and their console writes raced the capture. The four capturing modules
-   already share one xUnit collection; that only serializes them against each other.
-   Fixed by disabling xUnit parallelization for the whole CLI test assembly
-   (`xunit.runner.json` with `parallelizeTestCollections: false`) — process-global
-   console state is fundamentally incompatible with cross-collection parallelism
-   (separate `fix(282-S3)` commit, not part of S3's scope).
+1. **GLL/RNGLR small fixes** — dead `symbolVisualizer` parameter in
+   `GllStepVisualizer.renderStep/renderInit/renderSteps`; missing module doc comment on
+   `RnglrStepVisualizer`; hardcoded ANBN literals in `GllRunnerTests` / `RnglrRunnerTests`.
+2. **Tuple sizes > 2** (design guide §4: tuples ≤ 2 items, else a named type) —
+   `RnglrTypes.fs` stored-state 5-tuple, `Valiant.fs` binary-rules 3-tuple,
+   `Sppf.fs` getCoords 4-tuple, `ExternalTools.fs` node-position 3-tuple,
+   `GllTypes.fs` 4-tuple hash.
+3. **RPQ visualization genericity** — `RpqGraphViz`, `ArroyueloStepVisualizer`,
+   `BelyaninStepVisualizer`, `RegexpTeX` hardcode `string` terminals while the algorithms
+   and every other step visualizer (Gll/Rnglr/LL/LR) are generic over `'t`/`'nt`.
 
-## Reuse analysis (reusing skill)
+Constraints:
 
-- Reused as-is: `SummaryTeX.wrapCenter`, `section`, `readIfExists`;
-  `GssDot.toDotFromSets` (unchanged); `ExternalTools.compileTexStringWithTemplateLog`
-  (returns lualatex stdout — used for Overfull assertions);
-  `ExternalTools.compileTexFile` (leaves `<name>.log` in the output dir — used by the
-  end-to-end no-Overfull test); `GoldenHelpers.verifyGolden` + `CREATE_GOLDEN_FILES=1`
-  workflow; Argu `Arguments` pattern.
-- Generalized: none (generalizing `wrapTikzAdjustbox` to `\linewidth` would change
-  GLL/RNGLR step output — forbidden by user guidance).
-- New: `SummaryTeX.wrapTikzAdjustboxColumn`, `SummaryTeX.wrapStepAdjustbox`,
-  `GssTikz.toTikzFromSets` trailing `bendReciprocalEdges: bool` parameter,
-  `AlgorithmTypes.Query` case.
-- Note (pre-existing, out of scope): `docs/developer/gss-dot.md` / `gss-tikz.md` links
-  in `rpq-graph-viz.md` point to non-existent files.
+- Every refactor is **behavior-preserving**: rendered output, parse results, and test
+  goldens must stay byte-identical unless a finding explicitly changes an API.
+- No new tuple > 2 items anywhere; no tuples-of-tuples workarounds (design guide §4).
+- Public API changes keep XML doc comments current (design guide §6).
+- The RPQ viz layer must match the existing step-visualizer convention: `renderSteps`
+  takes explicit printer functions (`'t -> string`, `'nt -> string`) plus generic data;
+  the visualization-step record holds rendered `string` fields only.
 
 ## Subtasks
 
-### S1: Unify CLI arguments — one `-q` query and `-i` input for all algorithms [done — cf23db5]
+### S1: GLL/RNGLR visualizer cleanups (dead param + module doc)
 
-**Code:**
+**Code:** `src/FLPQ.Printers/GllStepVisualizer.fs` — remove the unused first parameter
+`(symbolVisualizer: Symbol<'t, 'nt> -> string)` from `renderStep` (~:142), `renderInit`
+(~:225), and `renderSteps` (~:300), and drop the two internal pass-throughs of that value
+(`renderSteps` → `renderStep`/`renderInit`, ~:314/:324). Update every external call site to
+stop passing it: `src/FLPQ.Cli/GllRunner.fs:63`;
+`tests/FLPQ.Printers.Tests/TexCompilationTests.fs:521,563,805,912`;
+`tests/FLPQ.Printers.Tests/RsmTikzTests.fs:239`;
+`tests/FLPQ.Printers.Tests/GssDotVisualizationTests.fs:17`.
+`src/FLPQ.Printers/RnglrStepVisualizer.fs` — add a module-level `///` doc comment (matching
+the style of `GllStepVisualizer` / `ArroyueloStepVisualizer`) describing the RNGLR per-action
+substep visualizer and its book reference (sec:CFPQ_RNGLR).
 
-- `src/FLPQ.Cli/AlgorithmTypes.fs`: replace the `Grammar` (`-g`) and `Regexp` (`-r`)
-  cases with a single `Query` case (`<AltCommandLine("-q")>`); delete the `GraphFile`
-  (`--graph`) case. Usage strings: `Query` = "Path to the query file: grammar (.bnf)
-  for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ
-  algorithms"; `Input` = "Path to the input file: input string for parsing
-  algorithms, graph (start vertices line + 'from label to' edges) for RPQ
-  algorithms".
-- `src/FLPQ.Cli/Program.fs`: `runParsingAlgorithm` reads `AlgorithmTypes.Query`
-  instead of `Grammar`; the Arroyuelo/Belyanin dispatch reads `Query` + `Input` and
-  passes them to the runners.
-- `src/FLPQ.Cli/ArroyueloRunner.fs`, `src/FLPQ.Cli/BelyaninRunner.fs`: rename
-  parameters `regexpFile`/`graphFile` → `queryFile`/`inputFile` (semantics unchanged:
-  the query is parsed as a regexp, the input as a graph).
+**Tests:** No new tests — this is dead-code removal + a doc comment. Existing GLL/RNGLR
+visualizer suites (`GllStepVisualizationTests`, `RnglrStepVisualizationTests`,
+`TexCompilationTests`, `RsmTikzTests`, `GssDotVisualizationTests`) must pass unchanged,
+proving the removed parameter was unused and output is byte-identical.
 
-**Tests:**
-
-- `tests/FLPQ.Cli.Tests/ProgramDispatchTests.fs`: `-g` → `-q` everywhere; RPQ tests
-  switch `-r <regexp> --graph <graph>` → `-q <regexp> -i <graph>`; rename the
-  "without regexp file" / "without graph file" facts to "without query file" /
-  "without input file" (same non-zero-exit assertions).
-- `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`: `runWithSummary` and
-  `runWithSummaryEBNFUseDot` use `-q`; `runRpqWithSummary` uses `-q`/`-i`.
-- `tests/FLPQ.Cli.Tests/ErrorPathTests.fs`: `-g` → `-q`.
-
-**Docs:**
-
-- `docs/user/cli.md`: flag table — drop the `-g`, `-r`, `--graph` rows, add the `-q`
-  row, update the `-a` and `-i` descriptions; update the example-usage commands.
-- `docs/developer/FLPQ.Cli.md`: update the Arguments description (single query/input
-  pair for all algorithms).
+**Docs:** Check `docs/developer/rnglr.md` and any GLL step-viz doc for a signature listing
+that includes `symbolVisualizer`; update if present. The new `RnglrStepVisualizer` module doc
+needs no separate doc file (module docs are not individually documented).
 
 **Spec:**
 
-- Old flags (`-g`, `-r`, `--graph`) are removed, not aliased — Argu rejects unknown
-  arguments, so stale invocations fail with a usage message.
-- Parsing algorithms keep identical behavior; only the flag spelling changes.
-- RPQ runners keep parsing the query via `RpqInput.parseRegexpFile` and the input
-  via `GraphReader.parseGraphFile`.
+- Confirm `symbolVisualizer` is genuinely unused in the `GllStepVisualizer` body (only
+  declared + passed through) before removing — grep shows decls at :142/:225/:300 and
+  pass-throughs at :314/:324, no other use.
+- After removal, the three functions keep their remaining parameters and order unchanged;
+  only the leading `symbolVisualizer` is dropped.
+- The `RnglrStepVisualizer` module doc states what it renders (GSS figure DOT+TikZ, path
+  index, input graph, LR table with the substep's action cell highlighted) and cites
+  sec:CFPQ_RNGLR, consistent with sibling visualizers.
 
-### S2: Bend reciprocal edges in the RPQ graph TikZ rendering [done — 2e81c3c]
+### S2: Migrate hardcoded ANBN literals to registry bindings
 
-**Code:**
+**Code:** `tests/FLPQ.Cli.Tests/GllRunnerTests.fs` and
+`tests/FLPQ.Cli.Tests/RnglrRunnerTests.fs` — replace the hardcoded ANBN classic grammar text
+`"S -> a S b | eps"` with `TestGrammarFiles.anbnEbnf` and the 4-token accept input
+`"a a b b"` with `TestGrammarFiles.anbnInput` at every site. Do NOT touch the distinct
+grammar `"S -> a S b | S S | eps"` / input `"a b"` (not the ANBN classic) or non-accept
+inputs such as `"a a a"` (keep those literals; only the grammar half of such calls moves to
+`anbnEbnf`).
 
-- `src/FLPQ.Printers/GssTikz.fs`: add a trailing `bendReciprocalEdges: bool`
-  parameter to `toTikzFromSets`. When true, an edge `(u, v)` with `u <> v` and
-  `(v, u) ∈ activeEdges` gets `, bend left=15` in its TikZ edge attributes — in all
-  three rendering branches (highlighted red: `["l", red, bend left=15]`; plain
-  labeled: `["l", bend left=15]`; unlabeled: `[bend left=15]`). Self-loops are never
-  bent. When false, output is byte-identical to today.
-- `src/FLPQ.Printers/RpqGraphViz.fs`: pass `true` (the input graph is the consumer).
-- `src/FLPQ.Printers/GllStepVisualizer.fs` (2 call sites),
-  `src/FLPQ.Printers/RnglrStepVisualizer.fs`,
-  `src/FLPQ.Printers/ArroyueloStepVisualizer.fs` (tree figure): pass `false` —
-  mechanical signature update, GLL/RNGLR/tree output unchanged.
+**Tests:** The affected facts already assert `File.Exists` + `Length > 0` on artifacts and do
+not compare against the raw grammar source text, so the pipe-form → registry newline-form
+change is safe (same parsed grammar). All GLL/RNGLR runner suites must pass unchanged. Add no
+new facts — this is a data-source migration, matching the precedent set in task 282 for
+`CliSummaryTests` / `ProgramDispatchTests`.
 
-**Tests:**
-
-- `tests/FLPQ.Printers.Tests/GssDotTests.fs` (`GssTikzTests` module): add `false` to
-  the two existing call sites; new facts — (a) reciprocal pair with empty labels and
-  `true` → both edges render `[bend left=15]`; (b) same graph with `false` → no
-  "bend" anywhere; (c) one-way edge with `true` → no bend.
-- `tests/FLPQ.Printers.Tests/RpqGraphVizTests.fs`: new facts on the example graph
-  (has the 2↔3 reciprocal pair) — (a) plain render: tikz contains
-  `v2 ->["c", bend left=15] v3` and `v3 ->["b", bend left=15] v2`, while the
-  one-way edge `v0 ->["a"] v1` has no bend; (b) highlight `(2,3)`: the red edge keeps
-  its label and gains the bend (`["c", red, bend left=15]`).
-- Golden regeneration: delete `tests/FLPQ.Printers.Tests/GoldenData/belyanin_step_{0..5}_graph.tikz`,
-  run the Belyanin golden tests with `CREATE_GOLDEN_FILES=1`, copy the regenerated
-  files back, re-run green. (Arroyuelo test graph has no reciprocal pair — its
-  goldens stay unchanged; verify.)
-
-**Docs:**
-
-- `docs/developer/rpq-graph-viz.md`: design-decision row — reciprocal edge pairs are
-  bent in TikZ (`bend left=15` on both directions) because straight lines would fully
-  overlap; DOT needs no change (Graphviz separates reciprocal edges automatically).
-- `docs/developer/rnglr.md` GSS design table: one-line note that the new trailing
-  `bendReciprocalEdges` parameter defaults to off for GLL/RNGLR (behavior unchanged).
+**Docs:** None (test-only change; registry-eligibility rationale already documented in the
+task 282 review).
 
 **Spec:**
 
-- Bend angle is a fixed constant `15` (degrees), matching Graphviz's gentle
-  reciprocal-edge curvature.
-- The decision is per edge: `(u, v)` bends iff its reverse is also drawn.
-- DOT output of `RpqGraphViz.renderGraph` is unchanged.
+- `TestGrammarFiles.anbnEbnf` = `LanguageRegistry.ANBN.Grammars.[0].Text`;
+  `TestGrammarFiles.anbnInput` = the 4-token accept string `"a a b b"`. Both are in
+  namespace `FLPQ.Cli.Tests`, same as the two test modules — reference directly.
+- Replace only where the grammar is exactly the ANBN classic; leave the `S S` variant and
+  reject-string inputs' grammar half on `anbnEbnf` but keep their non-accept input literal.
 
-### S3: Fit RPQ steps on one page — column-width figure wraps + whole-step adjustbox [done — 4f63b9f]
+### S3: Convert RnglrTypes stored-state 5-tuple to a named record
 
-**Code:**
+**Code:** `src/FLPQ.Languages/RnglrTypes.fs` — introduce
+`[<Struct>] type RnglrStoredState<'nt when 'nt: comparison> = { Nt: Nonterminal<'nt>; InvState: int; RangeEndState: int; RangeEndVertex: int; TriggerLrState: int }`. Change the
+`RnglrGSS.StoredStates` field and the four `RnglrGSS` functions (`create`, `addEdge` return,
+`getStoredStates`, `setStoredStates`) from `Set<Nonterminal<'nt> * int * int * int * int>` to
+`Set<RnglrStoredState<'nt>>`. Update the type-site doc comment (:33-40) to name the record.
+`src/FLPQ.Languages/Rnglr.fs` — update the construction at :266
+(`(invData.Nonterminal, nextInv, endState, endVertex, p.TriggerLrState)` → record literal) and
+the destructuring at :381 (`for (storedNt, storedInv, storedEndState, storedEndVertex, storedTriggerLr) in consumedStates` → `for st in consumedStates` using `st.Nt`, `st.InvState`,
+etc.).
 
-- `src/FLPQ.Printers/SummaryTeX.fs`:
-  - New `wrapTikzAdjustboxColumn (tikz: string) : string` — centered adjustbox with
-    `max width=\linewidth` (shrink-only). Inside the RPQ step templates' minipage
-    columns `\linewidth` is the column width, so over-wide figures shrink to fit
-    their column.
-  - New `wrapStepAdjustbox (tex: string) : string` — adjustbox with
-    `max width=\textwidth, max totalheight=0.9\textheight` wrapping the entire filled
-    step template; the 10% headroom accommodates the step's `\subsection*` heading,
-    which must stay outside the box (sectioning commands cannot run inside an
-    adjustbox — verified). Shrink-only: short steps are never scaled.
-  - `arroyueloStepSection`: TikZ mode wraps the tree and graph figures with
-    `wrapTikzAdjustboxColumn` (replacing `wrapTikzAdjustbox false`); both modes wrap
-    the filled template with `wrapStepAdjustbox`.
-  - `belyaninStepSection`: same for the automaton and graph figures.
-- `data/Arroyuelo_step_template.tex`, `data/Belyanin_step_template.tex`:
-  `\includegraphics[width=\textwidth,keepaspectratio]` →
-  `width=\linewidth` (DOT-mode figures must fit their minipage column).
+**Tests:** No new tests — behavior-preserving type refactor. The full RNGLR suite
+(`RnglrTests`, `RnglrStepVisualizationTests`, cross-parser equivalence, and the byte-identical
+reference-visualization check) must pass unchanged, proving the record carries identical data
+and Set semantics (structural equality/hash) are preserved.
 
-**Tests:**
-
-- `tests/FLPQ.Printers.Tests/SummaryTexSectionTests.fs`: update the four RPQ step
-  section facts — dot-mode exact-line assertions now expect the outer adjustbox
-  wrapper; TikZ-mode facts assert the figure wrap is
-  `\begin{adjustbox}{max width=\linewidth}`. New fact: each filled RPQ step contains
-  exactly one `max totalheight=0.9\textheight` adjustbox (both modes).
-- `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` and
-  `ArroyueloStepVisualizationTests.fs`: update the private `fillStepTemplate` to
-  mirror the real pipeline — figures via `SummaryTeX.wrapTikzAdjustboxColumn`, whole
-  template via `SummaryTeX.wrapStepAdjustbox`. Keep the existing compile facts; new
-  fact per algorithm: every filled step compiles with lualatex and the output
-  contains no "Overfull" (via
-  `ExternalTools.compileTexStringWithTemplateLog` with `tex_summary_template.tex`).
-- `tests/FLPQ.Cli.Tests/CliSummaryTests.fs`: new end-to-end facts — for both RPQ
-  algorithms in TikZ and DOT mode, the merged summary compiles and its lualatex log
-  (left by `ExternalTools.compileTexFile` in the output dir) contains no "Overfull".
-
-**Docs:**
-
-- `docs/developer/summary-tex.md`: document `wrapTikzAdjustboxColumn` and
-  `wrapStepAdjustbox`; add design-decision rows for the RPQ step fit (column-width
-  figure wrap; whole-step shrink with 0.9 headroom and why the heading stays
-  outside); correct the false claim that "`\textwidth` equals the column width inside
-  a step minipage".
-- `docs/developer/arroyuelo-step-viz.md`, `docs/developer/belyanin-step-viz.md`:
-  note the DOT-template `\linewidth` includegraphics and the whole-step adjustbox
-  wrap applied by the summary section builder.
+**Docs:** Update `docs/developer/rnglr.md` :123 (the `StoredStates` field type in the type
+listing) and :126 (the prose describing the stored states as a 5-tuple) to reference
+`RnglrStoredState<'nt>` and its named fields.
 
 **Spec:**
 
-- The per-step artifact files (written by the runners) are unchanged — wrapping is
-  applied only at summary time, so step-directory output stays byte-identical except
-  for S2's graph TikZ bending.
-- `wrapTikzAdjustbox` (the `\textwidth` variant) stays as-is for GLL/RNGLR/SPPF/LL/LR
-  and the RPQ header — untouched per user guidance.
-- Verification: run both RPQ algorithms with `-s` (TikZ and DOT), compile the merged
-  TeX twice, grep the log for "Overfull" — must be absent.
+- Field names map positionally: Nt←nonterminal, InvState←invState, RangeEndState←rangeEndState,
+  RangeEndVertex←rangeEndVertex, TriggerLrState←triggerLrState.
+- A `[<Struct>]` record gets F# structural equality + hashing, so `Set<RnglrStoredState<'nt>>`
+  behaves identically to the old tuple set (membership, dedup, iteration order by hash).
+- No other module references the stored-state tuple shape directly (it is internal to the GSS);
+  verify with a grep for the 5-tuple type and `getStoredStates`/`setStoredStates` across src+tests.
+
+### S4: Convert Valiant binary-rules 3-tuple and Sppf getCoords 4-tuple to records
+
+**Code:** `src/FLPQ.Languages/Valiant.fs` — introduce a private
+`type ValiantBinaryRule<'nt when 'nt: comparison> = { Lhs: Nonterminal<'nt>; Pair: BinaryPair<'nt>; ProdIdx: int }`. Replace `(Nonterminal<'nt> * BinaryPair<'nt> * int) list` in `InitData.BinaryRules`
+(:52), `binaryRulesFromGrammar` (:131, :135), and `mxmSet` (:168, :179) with the record; update
+the `Some(r.Lhs, { Left = left; Right = right }, number)` construction and the
+`(lhs, pair, prodIdx)` destructuring. `src/FLPQ.Languages/Sppf.fs` — introduce a private
+`type SppfNodeCoords = { FromState: int; FromPos: int; ToState: int; ToPos: int }`; change
+`getCoords` (:558) to return `SppfNodeCoords option` and update its two constructions (:560-561)
+and the two destructurings (`Some(lfs, lfp, lts, ltp)` :576, `Some(rfs, rfp, rts, rtp)` :630).
+
+**Tests:** No new tests — behavior-preserving. Valiant and SPPF suites (including
+`SppfValidatorTests`, which exercises `validateIntermediateConnectedness` where `getCoords`
+lives) must pass unchanged.
+
+**Docs:** None — both are private/internal types not surfaced in module docs (confirm against
+`docs/developer/guides/documentation-conventions.md`; no public API changes).
+
+**Spec:**
+
+- `ValiantBinaryRule` reuses the existing `BinaryPair<'nt>` record for the `Pair` field
+  (legitimate composition, not a tuple workaround); keep it `private` like `InitData`.
+- `SppfNodeCoords` is a private module type in `Sppf.fs`; field names follow the existing
+  `(fs, fp, ts, tp)` = from-state/from-pos/to-state/to-pos convention used in the error messages.
+
+### S5: Convert ExternalTools node-position 3-tuple and fix GllTypes 4-tuple hash
+
+**Code:** `src/FLPQ.Printers/ExternalTools.fs` — introduce a private
+`type NodePosition = { Name: string; X: float; Y: float }`; change the intermediate
+`ResizeArray<(string * float * float)>` (:146) to `ResizeArray<NodePosition>`, update the
+`positions.Add((name, x, y))` (:166) and the final map (:168). The public return type
+`Map<string, float * float>` stays (a 2-tuple value is allowed). `src/FLPQ.Languages/GllTypes.fs`
+— replace the 4-item `hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)` (:28)
+with nested 2-tuple hashing (e.g. `hash (hash (a, b), hash (c, d))`) or `System.HashCode.Combine`,
+matching whatever `GetHashCode` idiom the codebase already uses.
+
+**Tests:** No new tests — behavior-preserving. `ExternalToolsTests` (node-position extraction)
+and the GLL suite (Descriptor equality/hash via `GllTypes`) must pass unchanged.
+
+**Docs:** None (private type + internal hash; no public API change).
+
+**Spec:**
+
+- For the GllTypes hash, prefer the idiom already used by other `GetHashCode` overrides in the
+  codebase (check a couple) for consistency; the exact hash values need not be stable across
+  versions (they are not persisted), only equal-for-equal and well-distributed.
+
+### S6: Generalize the RPQ visualization layer over `'t`/`'nt`
+
+**Code:** Make the four RPQ printer modules generic, matching the Gll/Rnglr/LL/LR convention
+(printer params + generic data; step records hold rendered strings only):
+
+- `src/FLPQ.Printers/RegexpTeX.fs` — `toTeX (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (r: Regexp<'t, 'nt>) : string`; the single-char check in
+  `termToTeX` (:10-14) applies to the *printed* terminal (`terminalPrinter t`), not the raw value.
+- `src/FLPQ.Printers/RpqGraphViz.fs` — `renderGraph (terminalPrinter: 't -> string) (graph: NFA<'t, int>) ...` and private `graphEdgeSet`/`graphEdgeLabel` generic over `'t`.
+- `src/FLPQ.Printers/ArroyueloStepVisualizer.fs` — `renderSteps (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (graph: NFA<'t, int>) (steps: ArroyueloTraceStep<'t, 'nt> list)`;
+  private helpers generic; pass printers through to `RegexpTeX.toTeX` and `RpqGraphViz.renderGraph`.
+- `src/FLPQ.Printers/BelyaninStepVisualizer.fs` — `renderSteps (terminalPrinter: 't -> string) (dfa: DFA<'t, int>) (graph: NFA<'t, int>) (steps: BelyaninTraceStep<'t> list)`; drop the explicit
+  `string` type arguments at :88/:91 (`AutomatonDot.dfaToDotWithHighlights`,
+  `AutomatonTikz.dfaToTikzWithHighlights`) so they infer `'t`.
+- Update call sites: `src/FLPQ.Cli/ArroyueloRunner.fs:60`, `src/FLPQ.Cli/BelyaninRunner.fs:46`,
+  `src/FLPQ.Cli/Helpers.fs:127,134,142` (pass `id`/identity printers for the string terminals),
+  and the test files (`ArroyueloStepVisualizationTests`, `BelyaninStepVisualizationTests`,
+  `RpqGraphVizTests`, `RegexpTexTests`) — pass `id` (or the existing printer) so inference keeps
+  them at `string`.
+
+**Tests:** No new tests required for correctness (behavior-preserving; all call sites stay at
+`string`). The existing RPQ viz suites + both lualatex end-to-end compiles must pass unchanged,
+proving rendered output is byte-identical. Optionally add one fact instantiating a visualizer at a
+non-`string` terminal type to lock in the genericity (only if it can be done with an existing
+registry/generator without new fixtures).
+
+**Docs:** Update `docs/developer/rpq-graph-viz.md`, `arroyuelo-step-viz.md`,
+`belyanin-step-viz.md`, and `rpq-regexp-viz.md` where they show the now-generic signatures or
+imply string-only terminals; state that the layer is generic over `'t`/`'nt` like the other step
+visualizers.
+
+**Spec:**
+
+- All underlying data types are already generic (`NFA<'t,'s>`, `DFA<'t,'s>`, `Regexp<'t,'nt>`,
+  `ArroyueloTraceStep<'t,'nt>`, `BelyaninTraceStep<'t>`); only these four printer files pin them
+  to `string`. `PathSemiringTeX` needs no change (cells are `Set<int list>`, terminal-agnostic).
+- The single genuine string-specific logic is `RegexpTeX.termToTeX`'s `String.length t = 1`;
+  move that decision onto the printed name so a generic `'t` works.
+- Keep the visualization-step records (`ArroyueloVisualizationStep`, `BelyaninVisualizationStep`)
+  as-is (rendered `string` fields only) — they are already convention-compliant.
 
 ## Execution order
 
-S1 → S2 → S3. Each subtask is an independent, compilable, testable increment with its
-own commit (`feat(282-SN)` / `docs` as appropriate).
+S1 → S2 → S3 → S4 → S5 → S6. All subtasks are independent (no shared edits); the order runs the
+small, safe cleanups first and defers the largest cross-cutting refactor (S6) to last so progress
+is bounded if it blocks. After all subtasks: full code review, hard gate (`STATUS: PASS`),
+squash-merge to `dev`, mark task `[done]`.
+
+## Completion status
+
+All six subtasks are complete and committed on `feature/283-fix-review-findings`:
+
+| Subtask | Commit | Status |
+| --- | --- | --- |
+| S1 GLL/RNGLR visualizer cleanups | 65380c5 | done |
+| S2 ANBN literals → registry bindings | a79ffd4 | done |
+| S3 RnglrTypes stored-state 5-tuple → record | d82f48b | done |
+| S4 Valiant 3-tuple + Sppf 4-tuple → records | 4110641 | done |
+| S5 ExternalTools 3-tuple → record + GllTypes hash | 286ff1c | done |
+| S6 RPQ viz layer generic over `'t`/`'nt` | 991a918 | done |
+
+Verification: build 0 errors; full-solution FSharpLint 0 warnings (111 files); suites green —
+FLPQ.Languages.Tests 634, FLPQ.Printers.Tests 340, FLPQ.Cli.Tests 232 (RPQ goldens byte-identical,
+lualatex compiles pass); Fantomas + mdformat clean; commit gate PASS. Code review (see
+`tasks/code_review.md`, Task 283 report) found zero issues — every Task 282 open item resolved.
+
+Note on S5: the plan suggested "nested 2-tuple hashing or `System.HashCode.Combine`, matching the
+existing idiom". No other multi-field `GetHashCode` override exists in the codebase to match, so
+`System.HashCode.Combine` was chosen (eliminates the tuple entirely; idiomatic for .NET 10).
+
+Note on S6: call sites pass `id` explicitly rather than relying on the F# `string`-as-identity
+value quirk that the previous code used implicitly for Belyanin's DFA labels. Behavior is
+identical (both are identity on `string`); goldens are byte-identical.

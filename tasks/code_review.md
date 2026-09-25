@@ -1,5 +1,32 @@
 # Code Review Report
 
+## Task 283 Review (2026-09-25)
+
+Scope: full branch diff vs dev — resolves every open item from the Task 282 review. `src/FLPQ.Printers/GllStepVisualizer.fs` (S1: removed the dead `symbolVisualizer` parameter from `renderStep`/`renderInit`/`renderSteps`), `src/FLPQ.Printers/RnglrStepVisualizer.fs` (S1: added the missing module doc comment), `tests/FLPQ.Cli.Tests/{GllRunnerTests,RnglrRunnerTests}.fs` (S2: ANBN literals → `TestGrammarFiles` bindings), `src/FLPQ.Languages/RnglrTypes.fs` + `Rnglr.fs` (S3: stored-state 5-tuple → `RnglrStoredState<'nt>` record), `src/FLPQ.Languages/{Valiant,Sppf}.fs` (S4: binary-rule 3-tuple → `ValiantBinaryRule<'nt>`, coords 4-tuple → `SppfNodeCoords`), `src/FLPQ.Printers/ExternalTools.fs` + `src/FLPQ.Languages/GllTypes.fs` (S5: node-position 3-tuple → `NodePosition`, `Descriptor.GetHashCode` 4-tuple → `System.HashCode.Combine`), and the RPQ visualization layer generalized over `'t`/`'nt` (S6: `RegexpTeX`, `RpqGraphViz`, `ArroyueloStepVisualizer`, `BelyaninStepVisualizer` + call sites in `Helpers.fs`, both runners, and four test files). Docs: `gll-step-visualizer.md` (new), `valiant.md`, `external-tools.md`, `language-registry.md`, `rnglr.md`, and the four RPQ viz docs.
+
+**Findings resolved this review (commits 65380c5, a79ffd4, d82f48b, 4110641, 286ff1c, 991a918):**
+
+- Task 282 open item — GLL/RNGLR (S1/S2): removed the dead `symbolVisualizer` parameter from `GllStepVisualizer.renderStep/renderInit/renderSteps` and every call site; added the missing module doc comment on `RnglrStepVisualizer`; moved the ~28 hardcoded ANBN-classic literals in `GllRunnerTests`/`RnglrRunnerTests` to the shared `TestGrammarFiles.anbnEbnf`/`anbnInput` bindings (distinct grammars and reject inputs left as literals by design).
+- Task 282 open item — tuples > 2 (S3/S4/S5): converted every pre-existing tuple larger than two items to a named type — `RnglrTypes` stored-state 5-tuple → `RnglrStoredState<'nt>` struct, `Valiant.fs` binary-rule 3-tuple → `ValiantBinaryRule<'nt>` struct, `Sppf.fs` coords 4-tuple → `SppfNodeCoords` struct, `ExternalTools.fs` node-position 3-tuple → `NodePosition` struct, and `GllTypes.Descriptor.GetHashCode`'s 4-tuple → `System.HashCode.Combine`.
+- Task 282 open item — RPQ viz string hardcoding (S6): generalized `RegexpTeX`, `RpqGraphViz`, `ArroyueloStepVisualizer`, and `BelyaninStepVisualizer` over `'t`/`'nt` with explicit terminal/nonterminal printers; the rendered step records keep their string fields only. Belyanin's DFA rendering now uses the explicit `terminalPrinter` instead of the implicit `string`-as-identity quirk, consistent with the graph and matrix labels. Call sites pass `id` explicitly.
+
+**Verified:** build 0 errors; full-solution FSharpLint 0 warnings (all 111 files); suites green — FLPQ.Languages.Tests 634, FLPQ.Printers.Tests 340, FLPQ.Cli.Tests 232 (incl. all RPQ goldens byte-identical and the lualatex compiles); Fantomas clean; mdformat clean; commit gate PASS.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no tuple expression larger than two items remains anywhere in `src/` or `tests/`; FSharpLint `maxNumberOfItemsInTuple` confirms 0 warnings. The five pre-existing >2-tuples are now named records/structs.
+- §6 (doc comments) — all public API retains XML docs: the four generalized RPQ renderers (`renderGraph`, both `renderSteps`) and their step records; the new `RnglrStepVisualizer` module doc; the new `gll-step-visualizer.md`. The only new public type is `RnglrStoredState<'nt>`, documented in `rnglr.md`; the other four new record types are private.
+- §7 (genericity) — the RPQ visualization layer is now generic over `'t`/`'nt`; no hardcoded `string` remains in any algorithm or renderer data type. The single-character check in `RegexpTeX.toTeX` applies to the printed name, so it is type-correct for any terminal type with a printer.
+- §9 (separation) — the step records hold rendered strings only (presentation); the algorithms produce generic F# data; printers render it.
+- §13 (no duplication) — no new duplication introduced; the S6 printer parameters are threaded through, not copied.
+- §14 (language registry) — S2 moved the ANBN literals to the shared `TestGrammarFiles` bindings; distinct grammars and reject inputs remain literals by design (documented in `language-registry.md`).
+- §20 (documentation) — `gll-step-visualizer.md` (new, fixes a broken link), `valiant.md`, `external-tools.md`, `language-registry.md`, `rnglr.md`, and the four RPQ viz docs all match the implemented behavior.
+- §21 (book traceability) — book references retained on all touched visualizers and algorithms; the S6 generalization is a presentation-layer refinement with no book-semantics change.
+
+**No blocking findings.** All Task 282 open items are resolved; no new open items introduced.
+
+---
+
 ## Task 282 Review (2026-09-24)
 
 Scope: full branch diff vs dev — `src/FLPQ.Cli/AlgorithmTypes.fs` + `Program.fs` + `ArroyueloRunner.fs` + `BelyaninRunner.fs` (S1: unified `-q`/`-i` CLI), `src/FLPQ.Printers/GssTikz.fs` (S2: trailing `bendReciprocalEdges` parameter) + `RpqGraphViz.fs` (passes `true`) + `GllStepVisualizer.fs` / `RnglrStepVisualizer.fs` / `ArroyueloStepVisualizer.fs` (pass `false`), `src/FLPQ.Printers/SummaryTeX.fs` (S3: `wrapTikzAdjustboxColumn`, `wrapStepAdjustbox`, RPQ step sections) + `data/{Arroyuelo,Belyanin}_step_template.tex` (`\linewidth` includegraphics), tests (`GssDotTests`, `RpqGraphVizTests`, `SummaryTexSectionTests`, both step-visualization test files, `CliSummaryTests`, `ErrorPathTests`, `ProgramDispatchTests`, `TestGrammarFiles`, `GoldenHelpers`, `TestHelpers`, `AutomatonVisualizationTests` golden names, `xunit.runner.json`), regenerated Belyanin graph goldens, and docs (`cli.md`, `FLPQ.Cli.md`, `rpq-graph-viz.md`, `arroyuelo-step-viz.md`, `belyanin-step-viz.md`, `rnglr.md`, `summary-tex.md`).

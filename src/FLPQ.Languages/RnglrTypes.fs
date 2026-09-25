@@ -27,23 +27,33 @@ type RnglrTable<'t, 'nt when 't: comparison and 'nt: comparison> =
 [<Struct>]
 type RnglrGssEdge<'t, 'nt> = { EdgeSymbol: Symbol<'t, 'nt> }
 
+/// A cached intermediate automaton intersection state stored on a GSS vertex for the product
+/// construction. Nt is the nonterminal being reduced; InvState is the inverted-RSM state;
+/// RangeEndState / RangeEndVertex identify the block's final state and its vertex position
+/// (propagated through the BFS for PIntermediate placement); TriggerLrState is the LR state that
+/// originally triggered the reduction, carried through passing-reduction cascades.
+/// Book reference: sec:CFPQ_RNGLR.
+[<Struct>]
+type RnglrStoredState<'nt when 'nt: comparison> =
+    { Nt: Nonterminal<'nt>
+      InvState: int
+      RangeEndState: int
+      RangeEndVertex: int
+      TriggerLrState: int }
+
 /// RNGLR Graph-Structured Stack — a labeled directed graph encoding all parsing paths.
 /// Vertices are created lazily on-demand with sequential IDs (0, 1, 2, ...).
 /// Edges carry the recognized grammar symbol.
 /// storedStates[gssIdx] holds cached intermediate automaton intersection states:
-/// Set of (nonterminal, invState, rangeEndState, rangeEndVertex, triggerLrState) tuples for the
-/// product construction. rangeEndState and rangeEndVertex identify the block's final state and its
-/// vertex position, propagated through the BFS to enable correct PIntermediate entry placement at
-/// each step. triggerLrState is the LR state that originally triggered the reduction (the row of
-/// the r_A action cell), carried through passing-reduction cascades so each substep can report it.
-/// When a shift creates a new edge from a GSS vertex, its storedStates are consumed and
-/// each tuple is continued via product BFS through the inverted RSM block of nt.
+/// Set of RnglrStoredState records for the product construction. When a shift creates a new edge
+/// from a GSS vertex, its storedStates are consumed and each state is continued via product BFS
+/// through the inverted RSM block of Nt.
 /// Book reference: sec:CFPQ_RNGLR.
 type RnglrGSS<'t, 'nt when 't: comparison and 'nt: comparison> =
     { VertexLookup: Dictionary<int * int, int>
       VertexInfo: ResizeArray<int * int>
       Edges: Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int * int>> }
+      StoredStates: Dictionary<int, Set<RnglrStoredState<'nt>>> }
 
 module RnglrGSS =
 
@@ -52,7 +62,7 @@ module RnglrGSS =
         { VertexLookup = Dictionary<int * int, int>()
           VertexInfo = ResizeArray<int * int>()
           Edges = Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>()
-          StoredStates = Dictionary<int, Set<Nonterminal<'nt> * int * int * int * int>>() }
+          StoredStates = Dictionary<int, Set<RnglrStoredState<'nt>>>() }
 
     /// Returns the GSS vertex ID for (lrState, inputVertex), creating it if it does not exist.
     let getOrCreateVertex (gss: RnglrGSS<'t, 'nt>) (lrState: int) (inputVertex: int) : int =
@@ -84,7 +94,7 @@ module RnglrGSS =
         (fromIdx: int)
         (toIdx: int)
         (label: Symbol<'t, 'nt>)
-        : Set<Nonterminal<'nt> * int * int * int * int> =
+        : Set<RnglrStoredState<'nt>> =
         let edge = { EdgeSymbol = label }
 
         let targets =
@@ -112,17 +122,13 @@ module RnglrGSS =
         states
 
     /// Returns the stored intermediate intersection states for a GSS vertex without clearing them.
-    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<Nonterminal<'nt> * int * int * int * int> =
+    let getStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) : Set<RnglrStoredState<'nt>> =
         match gss.StoredStates.TryGetValue(gssIdx) with
         | true, s -> s
         | false, _ -> Set.empty
 
     /// Sets the stored intermediate intersection states for a GSS vertex.
-    let setStoredStates
-        (gss: RnglrGSS<'t, 'nt>)
-        (gssIdx: int)
-        (states: Set<Nonterminal<'nt> * int * int * int * int>)
-        : unit =
+    let setStoredStates (gss: RnglrGSS<'t, 'nt>) (gssIdx: int) (states: Set<RnglrStoredState<'nt>>) : unit =
         gss.StoredStates.[gssIdx] <- states
 
     /// Returns all outgoing edges from a GSS vertex as (targetIdx, symbol) pairs.

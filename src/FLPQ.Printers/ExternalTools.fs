@@ -16,6 +16,10 @@ module ExternalTools =
           Stdout: string
           Stderr: string }
 
+    /// A positioned node from Graphviz `-Tjson` output (name + x/y coordinates).
+    [<Struct>]
+    type private NodePosition = { Name: string; X: float; Y: float }
+
     /// Parsed information from a Graphviz `-Tplain` output.
     type DotInfo =
         { NodeCount: int
@@ -143,7 +147,7 @@ module ExternalTools =
                 failwithf "dot -Tjson node-position extraction failed (exit %d): %s" r.ExitCode r.Stderr
 
             let doc = JsonDocument.Parse(r.Stdout)
-            let positions = ResizeArray<(string * float * float)>()
+            let positions = ResizeArray<NodePosition>()
 
             let rootProps =
                 doc.RootElement.EnumerateObject()
@@ -163,9 +167,9 @@ module ExternalTools =
                         if coords.Length >= 2 then
                             let x: float = Double.Parse(coords.[0], CultureInfo.InvariantCulture)
                             let y: float = Double.Parse(coords.[1], CultureInfo.InvariantCulture)
-                            positions.Add((name, x, y))
+                            positions.Add({ Name = name; X = x; Y = y })
 
-            positions |> Seq.map (fun (n, x, y) -> (n, (x, y))) |> Map.ofSeq
+            positions |> Seq.map (fun p -> (p.Name, (p.X, p.Y))) |> Map.ofSeq
         finally
             File.Delete(tempFile)
 

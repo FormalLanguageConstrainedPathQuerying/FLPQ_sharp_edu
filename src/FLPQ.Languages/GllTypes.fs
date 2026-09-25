@@ -25,7 +25,7 @@ type Descriptor =
         | _ -> false
 
     override this.GetHashCode() =
-        hash (this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
+        System.HashCode.Combine(this.RsmState, this.Vertex, this.GssIdx, this.MatchedRange)
 
     interface System.IComparable with
         member this.CompareTo(obj: obj) =

@@ -214,6 +214,8 @@
 
 **Generator**: `abStringGen`
 
+**Shared test bindings**: CLI runner tests reference the classic grammar and its 4-token accept string via `TestGrammarFiles.anbnEbnf` / `TestGrammarFiles.anbnInput` (in `FLPQ.Cli.Tests`) rather than hardcoding the grammar text.
+
 ---
 
 ### ASTAR_BSTAR (a^m b^n)

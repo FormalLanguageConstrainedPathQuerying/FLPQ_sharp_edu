@@ -47,6 +47,7 @@
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |
 | [LRStepVisualizer](lr-step-visualizer.md) | LR parser step-by-step visualization |
+| [GllStepVisualizer](gll-step-visualizer.md) | GLL parser step-by-step visualization (descriptors, GSS, path index, input, extended RSM) |
 | [ExternalTools](external-tools.md) | Graphviz and lualatex wrappers (shared by CLI and tests) |
 | [SummaryTeX](summary-tex.md) | TeX content generation for merged summary documents |
 

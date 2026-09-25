@@ -55,7 +55,7 @@ let ``pathHighlights: empty matrix yields empty sets`` () =
 
 [<Fact>]
 let ``renderGraph: plain graph has no highlights in either format`` () =
-    let dot, tikz = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
+    let dot, tikz = RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty
 
     Assert.Contains("digraph", dot)
     Assert.Contains("v_0", dot)
@@ -67,19 +67,19 @@ let ``renderGraph: plain graph has no highlights in either format`` () =
 [<Fact>]
 let ``renderGraph: highlighted vertices and edges appear in both formats`` () =
     let dot, tikz =
-        RpqGraphViz.renderGraph string exampleGraph (Set.ofList [ 1; 2 ]) (Set.ofList [ (1, 2) ])
+        RpqGraphViz.renderGraph id exampleGraph (Set.ofList [ 1; 2 ]) (Set.ofList [ (1, 2) ])
 
     Assert.Contains("v_1", dot)
     Assert.Contains("v_2", dot)
     // The highlighted vertex style differs from the plain one in both formats.
-    let plainDot, _ = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
+    let plainDot, _ = RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty
     Assert.NotEqual<string>(plainDot, dot)
-    let _, plainTikz = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
+    let _, plainTikz = RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty
     Assert.NotEqual<string>(plainTikz, tikz)
 
 [<Fact>]
 let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
-    let dot, tikz = RpqGraphViz.renderGraph string exampleGraph Set.empty Set.empty
+    let dot, tikz = RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty
 
     // The example graph carries both 2->3 ("c") and 3->2 ("b").
     Assert.Contains("v2 ->[\"c\", bend left=15] v3;", tikz)
@@ -92,7 +92,7 @@ let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
 [<Fact>]
 let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
     let _, tikz =
-        RpqGraphViz.renderGraph string exampleGraph Set.empty (Set.ofList [ (2, 3) ])
+        RpqGraphViz.renderGraph id exampleGraph Set.empty (Set.ofList [ (2, 3) ])
 
     Assert.Contains("v2 ->[\"c\", red, bend left=15] v3;", tikz)
     Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)

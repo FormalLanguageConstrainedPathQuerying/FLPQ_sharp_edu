@@ -22,7 +22,7 @@
 Vertices and edges used by the paths stored in a path semiring matrix. A path
 `[v0; v1; ...]` contributes all its vertices and all consecutive vertex pairs as edges.
 
-### `renderGraph: (string -> string) -> NFA<string, int> -> Set<int> -> Set<int * int> -> string * string`
+### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int * int> -> string * string`
 
 Render the graph with the given highlighted vertices/edges (pass empty sets for the plain
 input graph). Returns `(dot, tikz)`. Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels

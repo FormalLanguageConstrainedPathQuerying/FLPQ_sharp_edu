@@ -236,15 +236,7 @@ let private renderGllStepRsmTikz
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
 
     let vizSteps =
-        GllStepVisualizer.renderSteps
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            steps
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount graph
 
     (ersm, vizSteps |> List.map (fun s -> s.RsmTikz))
 

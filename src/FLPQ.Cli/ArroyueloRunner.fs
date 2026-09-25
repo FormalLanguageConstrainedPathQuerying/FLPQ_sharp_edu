@@ -57,7 +57,7 @@ module ArroyueloRunner =
 
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (renderResult boolResult sources finalMatrix)
 
-        let vizSteps = ArroyueloStepVisualizer.renderSteps string graph steps
+        let vizSteps = ArroyueloStepVisualizer.renderSteps id id graph steps
         Helpers.writeArroyueloStepsVisualization outputDir useDot vizSteps
 
         let vCount = Nfa.stateCount graph

@@ -14,15 +14,7 @@ let private renderGssDots (rsm: RSM<string, string>) (input: string list) : stri
     let pathIndex, steps = GLL.buildPathIndexWithSteps freshStart ersm graph
 
     let vizSteps =
-        GllStepVisualizer.renderSteps
-            (SymbolTeX.toLaTeX string string)
-            string
-            string
-            ersm
-            steps
-            pathIndex
-            vertexCount
-            graph
+        GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount graph
 
     vizSteps |> List.map (fun s -> s.GssDot)
 

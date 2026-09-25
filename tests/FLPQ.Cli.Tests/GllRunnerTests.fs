@@ -36,7 +36,7 @@ let private cleanup (outDir: string) =
 
 [<Fact>]
 let ``runGll produces grammar_original.tex`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "grammar_original.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -44,7 +44,7 @@ let ``runGll produces grammar_original.tex`` () =
 
 [<Fact>]
 let ``runGll produces grammar_ebnf.tex`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "grammar_ebnf.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -52,7 +52,7 @@ let ``runGll produces grammar_ebnf.tex`` () =
 
 [<Fact>]
 let ``runGll produces input.dot`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "input.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -60,7 +60,7 @@ let ``runGll produces input.dot`` () =
 
 [<Fact>]
 let ``runGll produces rsm_blocks.dot`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "rsm_blocks.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -68,7 +68,7 @@ let ``runGll produces rsm_blocks.dot`` () =
 
 [<Fact>]
 let ``runGll produces path_index.tex`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "path_index.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -76,7 +76,7 @@ let ``runGll produces path_index.tex`` () =
 
 [<Fact>]
 let ``runGll produces sppf.dot`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let f = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -92,7 +92,7 @@ let ``runGll handles ambiguous grammar with S -> S S production`` () =
 
 [<Fact>]
 let ``runGll produces step visualization with descriptors table`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
     let step0Dir = Path.Combine(outDir, "step_0")
 
     Assert.True(File.Exists(Path.Combine(step0Dir, "queue.tex")))
@@ -245,7 +245,7 @@ let ``runGll stored-pops step 0 has no orange highlight (dot mode)`` () =
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
 let ``runGll input DOT compiles with graphviz`` () =
-    let (outDir, _) = runGllRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) = runGllRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
 
     let checkInputDot path =
         let content = File.ReadAllText path
@@ -298,7 +298,9 @@ let ``runGll stored-pops step highlights GSS vertex orange (tikz mode)`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces input.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -306,7 +308,9 @@ let ``runGll tikz mode produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces ext_rsm.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -314,7 +318,9 @@ let ``runGll tikz mode produces ext_rsm.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode produces sppf.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "sppf.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -322,7 +328,9 @@ let ``runGll tikz mode produces sppf.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces gss.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "step_0", "gss.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -330,7 +338,9 @@ let ``runGll tikz mode step 0 produces gss.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces input.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "step_0", "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -338,7 +348,9 @@ let ``runGll tikz mode step 0 produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runGll tikz mode step 0 produces rsm.tikz.tex`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "step_0", "rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -426,7 +438,8 @@ let ``runGll tikz mode gss uses rounded rectangle shape`` () =
 
 [<Fact>]
 let ``runGll tikz mode gss edges use R-based range notation`` () =
-    let (outDir, _) = runGllRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runGllRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
 
     let mutable foundEdges = false
 
@@ -449,7 +462,7 @@ let ``runGll tikz mode gss edges use R-based range notation`` () =
 
 [<Fact>]
 let ``runGll reports Rejected status for unbalanced input`` () =
-    let (outDir, output) = runGllRunner "S -> a S b | eps" "a a a"
+    let (outDir, output) = runGllRunner TestGrammarFiles.anbnEbnf "a a a"
 
     Assert.Contains("GLL: Rejected", output)
 

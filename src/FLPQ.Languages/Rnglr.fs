@@ -263,7 +263,11 @@ module Rnglr =
                                             gss
                                             nextGss
                                             (Set.add
-                                                (invData.Nonterminal, nextInv, endState, endVertex, p.TriggerLrState)
+                                                { Nt = invData.Nonterminal
+                                                  InvState = nextInv
+                                                  RangeEndState = endState
+                                                  RangeEndVertex = endVertex
+                                                  TriggerLrState = p.TriggerLrState }
                                                 cur)
 
                                     queue.Enqueue(
@@ -378,27 +382,27 @@ module Rnglr =
 
                         emit (Some(RnglrAction.Shift(Terminal tVal, lrState))) v
 
-                        for (storedNt, storedInv, storedEndState, storedEndVertex, storedTriggerLr) in consumedStates do
-                            match Map.tryFind storedNt invBlockData with
+                        for st in consumedStates do
+                            match Map.tryFind st.Nt invBlockData with
                             | Some invData ->
                                 let extPredecessors =
                                     productBfs
                                         invData
                                         [ { GssIdx = targetGssIdx
-                                            LrState = storedInv
-                                            Vertex = storedEndState
-                                            Aux = storedEndVertex
-                                            TriggerLrState = storedTriggerLr } ]
+                                            LrState = st.InvState
+                                            Vertex = st.RangeEndState
+                                            Aux = st.RangeEndVertex
+                                            TriggerLrState = st.TriggerLrState } ]
 
                                 for pred in extPredecessors do
                                     processReduction
-                                        storedNt
-                                        storedInv
+                                        st.Nt
+                                        st.InvState
                                         pred.LrState
                                         pred.GssIdx
                                         pred.Vertex
                                         vNext
-                                        storedTriggerLr
+                                        st.TriggerLrState
                                     |> ignore
                             | None -> ()
                     | _ -> ()

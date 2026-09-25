@@ -46,6 +46,8 @@ val compileDotFileToPdf : dotPath:string -> pdfPath:string -> bool
 `compileDotStringToNodePositions` parses Graphviz `-Tjson` output into a map of node name to its
 `(x, y)` coordinates. Used by layout tests to verify layered arrangements (e.g. that nodes
 constrained to the same rank share an x-coordinate and that a column ordering is preserved).
+Internally, positioned nodes are accumulated as `NodePosition` records `{ Name; X; Y }` before
+being projected to the returned map.
 
 ### TeX Compilation
 

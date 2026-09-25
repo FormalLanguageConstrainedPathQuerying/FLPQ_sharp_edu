@@ -10,7 +10,7 @@ open FLPQ.RPQ
 module RpqGraphViz =
 
     /// All graph edges with their terminal labels (epsilon-only edges label as "ε").
-    let private graphEdgeSet (graph: NFA<string, int>) : Set<int * int> =
+    let private graphEdgeSet (graph: NFA<'t, int>) : Set<int * int> =
         let t = graph.Transitions
 
         Set.ofList
@@ -19,7 +19,7 @@ module RpqGraphViz =
                       if t.[i, j].IsSome then
                           (i, j) ]
 
-    let private graphEdgeLabel (graph: NFA<string, int>) (terminalPrinter: string -> string) (e: int * int) : string =
+    let private graphEdgeLabel (graph: NFA<'t, int>) (terminalPrinter: 't -> string) (e: int * int) : string =
         let i, j = e
 
         match graph.Transitions.[i, j] with
@@ -57,8 +57,8 @@ module RpqGraphViz =
     /// Render the graph with the given highlighted vertices/edges (pass empty sets for the
     /// plain input graph). Returns (dot, tikz).
     let renderGraph
-        (terminalPrinter: string -> string)
-        (graph: NFA<string, int>)
+        (terminalPrinter: 't -> string)
+        (graph: NFA<'t, int>)
         (highlightedVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
         : string * string =

@@ -39,14 +39,14 @@ module BelyaninStepVisualizer =
                       q ]
 
     /// A label as a TeX math symbol: terminals escaped, epsilon as \varepsilon.
-    let private labelToTeX (label: AutomatonLabel<string>) : string =
+    let private labelToTeX (terminalPrinter: 't -> string) (label: AutomatonLabel<'t>) : string =
         match label with
-        | ATerm t -> AutomatonTikz.escapeLatex t
+        | ATerm t -> AutomatonTikz.escapeLatex (terminalPrinter t)
         | AEpsilon -> @"\varepsilon"
 
     /// One label's propagation as a TeX block: (N^a)^T (x) M = <Select>, then x G^a = <Extend>.
-    let private labelBlock (ls: BelyaninLabelStep<string>) : string =
-        let l = labelToTeX ls.Label
+    let private labelBlock (terminalPrinter: 't -> string) (ls: BelyaninLabelStep<'t>) : string =
+        let l = labelToTeX terminalPrinter ls.Label
 
         sprintf @"$(N^{%s})^T \otimes M =$" l
         + "\n"
@@ -58,7 +58,7 @@ module BelyaninStepVisualizer =
 
     /// The step's matrices as a vertical stack: M and P, then per label the two
     /// propagation products, then New M.
-    let private renderMatrices (step: BelyaninTraceStep<string>) : string =
+    let private renderMatrices (terminalPrinter: 't -> string) (step: BelyaninTraceStep<'t>) : string =
         let mBlock = @"$\text{M}$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.M
 
         let pBlock = @"$\text{P}$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.P
@@ -69,26 +69,33 @@ module BelyaninStepVisualizer =
             let newMBlock =
                 @"$\text{New } M =$" + "\n" + PathSemiringTeX.matrixWithVertexLabels step.NewM
 
-            [ mBlock; pBlock ] @ (step.Labels |> List.map labelBlock) @ [ newMBlock ]
+            [ mBlock; pBlock ]
+            @ (step.Labels |> List.map (labelBlock terminalPrinter))
+            @ [ newMBlock ]
             |> String.concat "\n"
 
     /// Render every trace step to its visualization artifacts (both DOT and TikZ; the runner
     /// writes only one format per step).
     let renderSteps
-        (terminalPrinter: string -> string)
-        (dfa: DFA<string, int>)
-        (graph: NFA<string, int>)
-        (steps: BelyaninTraceStep<string> list)
+        (terminalPrinter: 't -> string)
+        (dfa: DFA<'t, int>)
+        (graph: NFA<'t, int>)
+        (steps: BelyaninTraceStep<'t> list)
         : BelyaninVisualizationStep list =
         steps
         |> List.map (fun step ->
             let frontier = frontierStates step.M
 
             let automatonDot =
-                AutomatonDot.dfaToDotWithHighlights string (fun idx _ -> sprintf "q_%d" idx) dfa frontier
+                AutomatonDot.dfaToDotWithHighlights terminalPrinter (fun idx _ -> sprintf "q_%d" idx) dfa frontier
 
             let automatonTikz =
-                AutomatonTikz.dfaToTikzWithHighlights string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa frontier
+                AutomatonTikz.dfaToTikzWithHighlights
+                    terminalPrinter
+                    (fun idx _ -> sprintf "$q_%d$" idx)
+                    "circle"
+                    dfa
+                    frontier
 
             let pathVerts, pathEdgeHl = RpqGraphViz.pathHighlights step.M
 
@@ -97,6 +104,6 @@ module BelyaninStepVisualizer =
 
             { AutomatonDot = automatonDot
               AutomatonTikz = automatonTikz
-              Matrices = renderMatrices step
+              Matrices = renderMatrices terminalPrinter step
               GraphDot = graphDot
               GraphTikz = graphTikz })

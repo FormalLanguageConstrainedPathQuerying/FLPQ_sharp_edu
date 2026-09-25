@@ -44,12 +44,18 @@ module Valiant =
           Left: Submatrix
           Right: Submatrix }
 
+    /// A binary CNF production: Lhs -> Pair.Left Pair.Right, with its rule number.
+    type private ValiantBinaryRule<'nt when 'nt: comparison> =
+        { Lhs: Nonterminal<'nt>
+          Pair: BinaryPair<'nt>
+          ProdIdx: int }
+
     type private InitData<'t, 'nt when 't: comparison and 'nt: comparison> =
         { Table: SppfParsingTable<'nt>
           TokensArr: 't[]
           TableSize: int
           N: int
-          BinaryRules: (Nonterminal<'nt> * BinaryPair<'nt> * int) list
+          BinaryRules: ValiantBinaryRule<'nt> list
           TerminalRules: Map<'t, (Nonterminal<'nt> * int) list> }
 
     let private bottomSubmatrix (m: Submatrix) : Submatrix =
@@ -128,11 +134,15 @@ module Valiant =
         |> List.map (fun (t, pairs) -> t, pairs |> List.map snd)
         |> Map.ofList
 
-    let private binaryRulesFromGrammar (cnf: Grammar<'t, 'nt>) : (Nonterminal<'nt> * BinaryPair<'nt> * int) list =
+    let private binaryRulesFromGrammar (cnf: Grammar<'t, 'nt>) : ValiantBinaryRule<'nt> list =
         Grammar.numberedRules cnf
         |> List.choose (fun (number, r) ->
             match Rhs.toNonEpsilonList r.Rhs with
-            | [ Symbol.N left; Symbol.N right ] -> Some(r.Lhs, { Left = left; Right = right }, number)
+            | [ Symbol.N left; Symbol.N right ] ->
+                Some
+                    { Lhs = r.Lhs
+                      Pair = { Left = left; Right = right }
+                      ProdIdx = number }
             | _ -> None)
 
     let private initValiant (cnf: Grammar<'t, 'nt>) (tokensArr: 't[]) : InitData<'t, 'nt> =
@@ -165,7 +175,7 @@ module Valiant =
           TerminalRules = terminalRules }
 
     let private mxmSet
-        (binaryRules: (Nonterminal<'nt> * BinaryPair<'nt> * int) list)
+        (binaryRules: ValiantBinaryRule<'nt> list)
         (a: Matrix<Set<SppfParsingEntry<'nt>>>)
         (b: Matrix<Set<SppfParsingEntry<'nt>>>)
         : Matrix<Set<SppfParsingEntry<'nt>>> =
@@ -176,16 +186,16 @@ module Valiant =
                     Set.empty
                 else
                     binaryRules
-                    |> List.choose (fun (lhs, pair, prodIdx) ->
-                        let hasLeft = leftSet |> Set.exists (fun entry -> entry.Nt = pair.Left)
+                    |> List.choose (fun rule ->
+                        let hasLeft = leftSet |> Set.exists (fun entry -> entry.Nt = rule.Pair.Left)
 
-                        let hasRight = rightSet |> Set.exists (fun entry -> entry.Nt = pair.Right)
+                        let hasRight = rightSet |> Set.exists (fun entry -> entry.Nt = rule.Pair.Right)
 
                         if hasLeft && hasRight then
                             Some
-                                { Nt = lhs
+                                { Nt = rule.Lhs
                                   SplitPoint = k
-                                  ProdIdx = prodIdx }
+                                  ProdIdx = rule.ProdIdx }
                         else
                             None)
                     |> Set.ofList)

@@ -113,6 +113,14 @@ type RnglrGssEdge<'t, 'nt> = { EdgeSymbol: Symbol<'t, 'nt> }
 
 GSS edge labeled with the grammar symbol recognized at this step. Multiple edges between same pair possible → `NonEmptySet`.
 
+### RnglrStoredState
+
+```fsharp
+type RnglrStoredState<'nt> = { Nt: Nonterminal<'nt>; InvState: int; RangeEndState: int; RangeEndVertex: int; TriggerLrState: int }
+```
+
+A cached intermediate automaton intersection state stored on a GSS vertex for the product construction. `Nt` is the nonterminal being reduced, `InvState` the inverted-RSM state, `RangeEndState`/`RangeEndVertex` the block's final state and its vertex position (for `PIntermediate` placement), and `TriggerLrState` the LR state that originally triggered the reduction.
+
 ### RnglrGSS
 
 ```fsharp
@@ -120,10 +128,10 @@ type RnglrGSS<'t, 'nt> =
     { VertexLookup: Dictionary<int * int, int>
       VertexInfo: ResizeArray<int * int>
       Edges: Dictionary<int, Dictionary<int, NonEmptySet<RnglrGssEdge<'t, 'nt>>>>
-      StoredStates: Dictionary<int, Set<Nonterminal<'nt> * int * int * int * int>> }
+      StoredStates: Dictionary<int, Set<RnglrStoredState<'nt>>> }
 ```
 
-The RNGLR Graph-Structured Stack. Vertices are created lazily on-demand with sequential IDs (0, 1, 2, ...). `VertexLookup` maps (lrState, inputVertex) to GSS index; `VertexInfo` provides reverse lookup. Edges use sparse Dictionary-based adjacency. `StoredStates` caches intermediate automaton intersection states as `(nonterminal, invState, rangeEndState, rangeEndVertex, triggerLrState)` tuples: the first four drive the product construction and `PIntermediate` placement, while `triggerLrState` is the LR state that originally triggered the reduction (the row of the `r_A` action cell), carried through passing-reduction cascades so each substep can report it.
+The RNGLR Graph-Structured Stack. Vertices are created lazily on-demand with sequential IDs (0, 1, 2, ...). `VertexLookup` maps (lrState, inputVertex) to GSS index; `VertexInfo` provides reverse lookup. Edges use sparse Dictionary-based adjacency. `StoredStates` caches intermediate automaton intersection states as `RnglrStoredState` records: `Nt`/`InvState`/`RangeEndState`/`RangeEndVertex` drive the product construction and `PIntermediate` placement, while `TriggerLrState` is the LR state that originally triggered the reduction (the row of the `r_A` action cell), carried through passing-reduction cascades so each substep can report it.
 
 ## GSS Module Functions
 
@@ -177,7 +185,7 @@ Acceptance is checked with `PathIndex.isAccepted pathIndex extRsm vertexCount`, 
 | Full-rescan reduce fixpoint (not incremental queue) | The GSS grows during a level, so every pass re-scans all vertices at v until no new GSS edge is added. Guarantees each reduction's product BFS runs over the current GSS — completeness without tracking which vertices changed |
 | No recursion in the driver | `processReduction` returns whether a new GSS edge was added and the reduce fixpoint decides whether another rescan pass is needed; the old recursive processNode ↔ processReduction cascade (and its 1000 depth guard) is gone |
 | Visualization snapshots are per action substep, not per level | One snapshot after exactly one action — one reduce or one shift, i.e. one new GSS edge — plus the initial state (`Action = None`). Flat output: each substep is its own `step_N` directory and summary section via the unchanged step template; levels with no actions produce nothing. The only template change is the LR table highlight: a shift highlights its Action cell in green, a reduce highlights its Goto cell and the trigger's Action cell in red (`RnglrTableTeX.tableToTeXWithActionHighlight`) |
-| `triggerLrState` carried in stored states and `PredecessorInfo` | A reduce substep must highlight the Action row of the LR state holding the complete item. In the fixpoint loop that is the scanned state; in passing-reduction cascades it is the state where the reduction was originally triggered, which is not recoverable from the current GSS vertex — so the stored-state tuple and `PredecessorInfo` carry it unchanged through the product BFS |
+| `triggerLrState` carried in stored states and `PredecessorInfo` | A reduce substep must highlight the Action row of the LR state holding the complete item. In the fixpoint loop that is the scanned state; in passing-reduction cascades it is the state where the reduction was originally triggered, which is not recoverable from the current GSS vertex — so the stored-state record and `PredecessorInfo` carry it unchanged through the product BFS |
 | Epsilon-only changes do not emit a substep | A deduplicated reduction that only adds a fresh PEpsilonNonterminal path-index entry (possible for blocks with start ∈ finals and ≥ 2 finals) adds no GSS edge, so it emits nothing; the new cells surface in the next substep's `ChangedCells` (or only in the final `path_index.tex` if no later substep exists). Keeps "substep ⇒ one new GSS edge" exact |
 | Orange highlight for passing-reduction trigger vertices | Reuses the `orange` fill of GLL stored pops (task 259) through the existing `storedPopVertices` parameter of `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` — one color means "stored-state consumption" across both algorithms (task 261). Render priority: current > stored-pop > highlighted > normal |
 | GSS nodes at the same input position share one layer | The step visualizer passes `positionOf = Some (fun idx -> snd (vertexInfo idx))` to `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`, which constrain every vertex to the rank/layer of its input position (one `{rank=same; ...}` subgraph per position in DOT, one `{ [same layer] ... }` collection per position in TikZ). The TikZ graph grows left (`grow=left`) rather than the default `grow'=right`, because pgf's same-layer cluster chaining reverses the orientation under the default grow direction — `grow=left` keeps input position 0 rightmost, matching the DOT rendering and the previous no-layer layout. GLL passes `None`, so its GSS figures are unchanged |

@@ -20,10 +20,12 @@
 ## Module Functions
 
 ```fsharp
-val toTeX: Regexp<string, string> -> string
+val toTeX: ('t -> string) -> ('nt -> string) -> Regexp<'t, 'nt> -> string
 ```
 
-`toTeX r` renders a regexp as a math-mode formula:
+`toTeX terminal nonterm r` renders a regexp as a math-mode formula. The `terminal` and
+`nonterm` printers map each symbol to its display name; the single-character check in the
+terminal rendering applies to the printed name.
 
 | Constructor | Rendering | Example |
 | --- | --- | --- |

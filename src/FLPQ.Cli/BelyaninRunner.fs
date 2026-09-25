@@ -43,7 +43,7 @@ module BelyaninRunner =
         let sources = graph.StartStates |> Set.toArray |> Array.sort
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (renderResult dfa finalP sources)
 
-        let vizSteps = BelyaninStepVisualizer.renderSteps string dfa graph steps
+        let vizSteps = BelyaninStepVisualizer.renderSteps id dfa graph steps
         Helpers.writeBelyaninStepsVisualization outputDir useDot vizSteps
 
         let sourceStrs =

@@ -60,15 +60,7 @@ module GllRunner =
 
         // Write step-by-step visualization
         let vizSteps =
-            GllStepVisualizer.renderSteps
-                (SymbolTeX.toLaTeX string string)
-                string
-                string
-                ersm
-                steps
-                pathIndex
-                vertexCount
-                inputGraph
+            GllStepVisualizer.renderSteps string string ersm steps pathIndex vertexCount inputGraph
 
         Helpers.writeGllStepsVisualization outputDir useDot vizSteps
 

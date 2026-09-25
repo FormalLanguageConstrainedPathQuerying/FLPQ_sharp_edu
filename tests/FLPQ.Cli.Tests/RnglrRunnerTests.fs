@@ -33,7 +33,9 @@ let private cleanup (outDir: string) =
 
 [<Fact>]
 let ``runRnglr produces grammar_ebnf.tex`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "grammar_ebnf.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -41,7 +43,9 @@ let ``runRnglr produces grammar_ebnf.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces input.tex`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "input.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -49,7 +53,9 @@ let ``runRnglr produces input.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces rnglr_table.tex`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "rnglr_table.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -57,7 +63,9 @@ let ``runRnglr produces rnglr_table.tex`` () =
 
 [<Fact>]
 let ``runRnglr dot mode produces ext_rsm.dot`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "ext_rsm.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -65,7 +73,9 @@ let ``runRnglr dot mode produces ext_rsm.dot`` () =
 
 [<Fact>]
 let ``runRnglr dot mode produces lr_automaton.dot`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "lr_automaton.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -73,13 +83,17 @@ let ``runRnglr dot mode produces lr_automaton.dot`` () =
 
 [<Fact>]
 let ``runRnglr no longer produces rsm_blocks.dot`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     Assert.False(File.Exists(Path.Combine(outDir, "rsm_blocks.dot")))
     cleanup outDir
 
 [<Fact>]
 let ``runRnglr produces path_index.tex`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "path_index.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -87,7 +101,9 @@ let ``runRnglr produces path_index.tex`` () =
 
 [<Fact>]
 let ``runRnglr produces sppf.dot`` () =
-    let (outDir, _) = runRnglrRunner "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunner TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "sppf.dot")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -123,7 +139,9 @@ let private runRnglrRunnerTikz (grammarText: string) (inputText: string) : strin
 
 [<Fact>]
 let ``runRnglr tikz mode produces input.tikz.tex`` () =
-    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "input.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -131,7 +149,9 @@ let ``runRnglr tikz mode produces input.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
-    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "ext_rsm.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -139,7 +159,9 @@ let ``runRnglr tikz mode produces ext_rsm.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode produces lr_automaton.tikz.tex`` () =
-    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "lr_automaton.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -147,7 +169,9 @@ let ``runRnglr tikz mode produces lr_automaton.tikz.tex`` () =
 
 [<Fact>]
 let ``runRnglr tikz mode produces sppf.tikz.tex`` () =
-    let (outDir, _) = runRnglrRunnerTikz "S -> a S b | eps" "a a b b"
+    let (outDir, _) =
+        runRnglrRunnerTikz TestGrammarFiles.anbnEbnf TestGrammarFiles.anbnInput
+
     let f = Path.Combine(outDir, "sppf.tikz.tex")
     Assert.True(File.Exists f)
     Assert.True(FileInfo(f).Length > 0L)
@@ -232,7 +256,7 @@ let ``runRnglr passing-reductions step highlights GSS vertex orange (tikz mode)`
 
 [<Fact>]
 let ``runRnglr reports Rejected status for unbalanced input`` () =
-    let (outDir, output) = runRnglrRunner "S -> a S b | eps" "a a a"
+    let (outDir, output) = runRnglrRunner TestGrammarFiles.anbnEbnf "a a a"
 
     Assert.Contains("RNGLR: Rejected", output)
 

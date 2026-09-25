@@ -26,7 +26,7 @@ let private testRegexp: Regexp<string, string> =
 
 let private steps, finalMatrix = ArroyueloRPQ.evaluateWithTrace testGraph testRegexp
 
-let private rendered = ArroyueloStepVisualizer.renderSteps string testGraph steps
+let private rendered = ArroyueloStepVisualizer.renderSteps id id testGraph steps
 
 // --- Golden tests (TikZ mode) ---
 

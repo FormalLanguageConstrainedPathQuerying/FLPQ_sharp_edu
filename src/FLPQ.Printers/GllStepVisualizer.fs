@@ -139,7 +139,6 @@ module GllStepVisualizer =
 
     /// Render a single GLL parsing step to visualization output.
     let renderStep
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -222,7 +221,6 @@ module GllStepVisualizer =
     /// no GSS/RSM/input vertices are highlighted; no new descriptor coloring;
     /// path index has no cell highlights.
     let renderInit
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -297,7 +295,6 @@ module GllStepVisualizer =
 
     /// Render a list of GLL parsing steps to visualization steps.
     let renderSteps
-        (symbolVisualizer: Symbol<'t, 'nt> -> string)
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
         (ersm: ExtendedRSM<'t, 'nt>)
@@ -309,23 +306,5 @@ module GllStepVisualizer =
         steps
         |> List.map (fun step ->
             match step.CurrentDescriptor with
-            | None ->
-                renderInit
-                    symbolVisualizer
-                    terminalPrinter
-                    nonterminalPrinter
-                    ersm
-                    step
-                    pathIndex
-                    vertexCount
-                    inputGraph
-            | Some _ ->
-                renderStep
-                    symbolVisualizer
-                    terminalPrinter
-                    nonterminalPrinter
-                    ersm
-                    step
-                    pathIndex
-                    vertexCount
-                    inputGraph)
+            | None -> renderInit terminalPrinter nonterminalPrinter ersm step pathIndex vertexCount inputGraph
+            | Some _ -> renderStep terminalPrinter nonterminalPrinter ersm step pathIndex vertexCount inputGraph)

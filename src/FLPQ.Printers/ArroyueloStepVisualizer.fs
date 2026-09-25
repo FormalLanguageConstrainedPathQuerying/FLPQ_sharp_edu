@@ -24,25 +24,35 @@ module ArroyueloStepVisualizer =
 
     /// All regexp tree nodes (one per trace step; the steps are in post-order, so the list
     /// index is the NodeIndex).
-    let private treeNodeSet (steps: ArroyueloTraceStep<string, string> list) : Set<int> =
+    let private treeNodeSet (steps: ArroyueloTraceStep<'t, 'nt> list) : Set<int> =
         Set.ofList
             [ for i in 0 .. List.length steps - 1 do
                   i ]
 
     /// Parent -> child edges of the regexp tree.
-    let private treeEdgeSet (steps: ArroyueloTraceStep<string, string> list) : Set<int * int> =
+    let private treeEdgeSet (steps: ArroyueloTraceStep<'t, 'nt> list) : Set<int * int> =
         steps
         |> List.collect (fun s -> s.Children |> List.map (fun c -> (s.NodeIndex, c)))
         |> Set.ofList
 
     /// The subexpression at a tree node, as a math-mode TeX formula.
-    let private treeVertexLabel (steps: ArroyueloTraceStep<string, string> list) (idx: int) : string =
-        RegexpTeX.toTeX (List.item idx steps).Expr
+    let private treeVertexLabel
+        (terminal: 't -> string)
+        (nonterm: 'nt -> string)
+        (steps: ArroyueloTraceStep<'t, 'nt> list)
+        (idx: int)
+        : string =
+        RegexpTeX.toTeX terminal nonterm (List.item idx steps).Expr
 
     /// Tree node label for TikZ: the formula is math-mode content, so it is wrapped in $...$
     /// (as={...} is text mode; see LRAutomatonTikz.stateContentToTikzAs).
-    let private treeVertexLabelTikz (steps: ArroyueloTraceStep<string, string> list) (idx: int) : string =
-        "$" + treeVertexLabel steps idx + "$"
+    let private treeVertexLabelTikz
+        (terminal: 't -> string)
+        (nonterm: 'nt -> string)
+        (steps: ArroyueloTraceStep<'t, 'nt> list)
+        (idx: int)
+        : string =
+        "$" + treeVertexLabel terminal nonterm steps idx + "$"
 
     /// One path semiring matrix with vertex row/column labels.
     let private matrixBlock (m: Matrix<Set<int list>>) : string =
@@ -51,11 +61,15 @@ module ArroyueloStepVisualizer =
     /// The step's matrix equation as a vertical stack: Base shows the formula above the result
     /// matrix; Alt/Seq show operand matrices joined by \oplus / \times and =; Star shows
     /// TC( child ) = result.
-    let private renderMatrices (step: ArroyueloTraceStep<string, string>) : string =
+    let private renderMatrices
+        (terminal: 't -> string)
+        (nonterm: 'nt -> string)
+        (step: ArroyueloTraceStep<'t, 'nt>)
+        : string =
         let result = matrixBlock step.Result
 
         match step.Operation with
-        | Base -> sprintf "$%s$\n%s" (RegexpTeX.toTeX step.Expr) result
+        | Base -> sprintf "$%s$\n%s" (RegexpTeX.toTeX terminal nonterm step.Expr) result
         | Alt ->
             sprintf "%s\n$\\oplus$\n%s\n$=$\n%s" (matrixBlock step.Operands.[0]) (matrixBlock step.Operands.[1]) result
         | Seq ->
@@ -65,9 +79,10 @@ module ArroyueloStepVisualizer =
     /// Render every trace step to its visualization artifacts (both DOT and TikZ; the runner
     /// writes only one format per step).
     let renderSteps
-        (terminalPrinter: string -> string)
-        (graph: NFA<string, int>)
-        (steps: ArroyueloTraceStep<string, string> list)
+        (terminalPrinter: 't -> string)
+        (nontermPrinter: 'nt -> string)
+        (graph: NFA<'t, int>)
+        (steps: ArroyueloTraceStep<'t, 'nt> list)
         : ArroyueloVisualizationStep list =
         steps
         |> List.map (fun step ->
@@ -76,7 +91,7 @@ module ArroyueloStepVisualizer =
 
             let treeDot =
                 GssDot.toDotFromSets
-                    (treeVertexLabel steps)
+                    (treeVertexLabel terminalPrinter nontermPrinter steps)
                     (fun _ -> "")
                     treeNodes
                     tEdges
@@ -88,7 +103,7 @@ module ArroyueloStepVisualizer =
 
             let treeTikz =
                 GssTikz.toTikzFromSets
-                    (treeVertexLabelTikz steps)
+                    (treeVertexLabelTikz terminalPrinter nontermPrinter steps)
                     (fun _ -> "")
                     treeNodes
                     tEdges
@@ -108,6 +123,6 @@ module ArroyueloStepVisualizer =
 
             { TreeDot = treeDot
               TreeTikz = treeTikz
-              Matrices = renderMatrices step
+              Matrices = renderMatrices terminalPrinter nontermPrinter step
               GraphDot = graphDot
               GraphTikz = graphTikz })

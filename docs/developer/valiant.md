@@ -130,6 +130,8 @@ DU representing trace steps for the modified Valiant algorithm. `LayerForward` r
 - `writeSliceUnion(target, m, slice)` — union a slice into the target submatrix
 - `extractSlice(matrix, m)` — extract a submatrix slice
 
+Binary rules are `ValiantBinaryRule` records `{ Lhs; Pair; ProdIdx }` — the left-hand nonterminal, the right-hand pair, and the production index (used to recover the original production for SPPF construction).
+
 ### Modified Valiant additions
 
 | Function | Signature | Description |

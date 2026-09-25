@@ -5,6 +5,9 @@ open FLPQ.Languages
 open FLPQ.GraphAnalysis
 open FLPQ.LinearAlgebra
 
+/// Step-by-step visualization of RNGLR parsing (book: sec:CFPQ_RNGLR).
+/// Each substep renders the GSS figure, the path index, and the input graph, plus the LR
+/// table with exactly the substep's single action cell highlighted.
 module RnglrStepVisualizer =
 
     /// Rendered artifacts of one RNGLR action substep: GSS figure (DOT and TikZ), path index,

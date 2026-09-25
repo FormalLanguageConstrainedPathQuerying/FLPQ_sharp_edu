@@ -32,10 +32,11 @@ One record per trace step (`ArroyueloRPQ.ArroyueloTraceStep`).
 ## Module Functions
 
 ```fsharp
-val renderSteps: (string -> string) -> NFA<string, int> -> ArroyueloTraceStep<string, string> list -> ArroyueloVisualizationStep list
+val renderSteps: ('t -> string) -> ('nt -> string) -> NFA<'t, int> -> ArroyueloTraceStep<'t, 'nt> list -> ArroyueloVisualizationStep list
 ```
 
-`renderSteps terminalPrinter graph steps` renders every trace step. The terminal printer labels the graph's edges.
+`renderSteps terminalPrinter nontermPrinter graph steps` renders every trace step. The
+terminal and nonterminal printers label the graph's edges and the regexp tree subexpressions.
 
 ## Step Artifacts
 
