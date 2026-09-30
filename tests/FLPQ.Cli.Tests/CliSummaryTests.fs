@@ -400,8 +400,9 @@ let ``BelyaninRPQ summary dot mode merged TeX compiles with lualatex`` () =
     assertMergedTexCompiles outDir "BelyaninRPQ"
 
 /// Compiles the merged RPQ summary and asserts that the lualatex log left in the output
-/// directory by compileTexFile contains no Overfull boxes: the column-width figure wraps
-/// and the whole-step adjustbox must keep every step on one page.
+/// directory by compileTexFile contains no Overfull boxes: the per-column figure wraps and the
+/// per-line `\hfill%` separators must keep every line within \textwidth (Belyanin no longer
+/// uses a whole-step box, so a step may span pages).
 let private assertRpqMergedTexCompilesWithoutOverfull (outDir: string) (algorithm: string) =
     let texPath = mergedTexPath outDir algorithm
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)

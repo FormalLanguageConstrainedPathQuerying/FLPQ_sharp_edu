@@ -110,3 +110,35 @@ let ``boolMatrixToTeX of a 3x3 boolean matrix compiles with lualatex`` () =
         PathSemiringTeX.boolMatrixToTeX (fun i -> sprintf "q_%d" i) (fun j -> sprintf "q_%d" j) m
 
     Assert.True(ExternalTools.compileTexStringWithTemplate adjustboxTemplatePath tex)
+
+// --- body variants (no adjustbox, no math delimiters) ---
+
+[<Fact>]
+let ``matrixToTeXBody emits a bare pNiceMatrix with no adjustbox and no math delimiters`` () =
+    let m =
+        Matrix.create 2 2 (fun i j ->
+            if (i, j) = (0, 1) then
+                Set.singleton [ 0; 1 ]
+            else
+                Set.empty)
+
+    let tex =
+        PathSemiringTeX.matrixToTeXBody (fun i -> sprintf "q_%d" i) (fun j -> sprintf "v_%d" j) m
+
+    Assert.Contains("pNiceMatrix", tex)
+    Assert.DoesNotContain("adjustbox", tex)
+    Assert.DoesNotContain("$", tex)
+    Assert.Contains(@"(v_0, v_1)", tex)
+
+[<Fact>]
+let ``boolMatrixToTeXBody emits a bare pNiceMatrix with no adjustbox and no math delimiters`` () =
+    let m = Matrix.init 2 2 false
+    m.[0, 1] <- true
+
+    let tex =
+        PathSemiringTeX.boolMatrixToTeXBody (fun i -> sprintf "q_%d" i) (fun j -> sprintf "q_%d" j) m
+
+    Assert.Contains("pNiceMatrix", tex)
+    Assert.DoesNotContain("adjustbox", tex)
+    Assert.DoesNotContain("$", tex)
+    Assert.Contains(@"\bullet", tex)

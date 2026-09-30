@@ -98,24 +98,25 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "tree.tikz.tex")) steps.[idx].TreeTikz
                 writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
 
-    /// Writes one directory per trace step with the three-line step layout: the start-of-step
-    /// state (matrices_start + automaton/graph figures), one quad of files per active label
-    /// (label_i_select/extend formulas + automaton/graph figures), and — for non-init steps —
-    /// the end-of-step state (matrices_end + automaton/graph figures). The init step has no
-    /// end artifacts and no label quads.
+    /// Writes one directory per trace step with the line-per-substep layout: the start-of-step
+    /// state (frontier/visited matrices + automaton/graph figures), one quad of files per active
+    /// label (label_i_select/extend formulas + automaton/graph figures), and — for non-init
+    /// steps — the end-of-step state (frontier/visited matrices + automaton/graph figures). The
+    /// init step has no end artifacts and no label quads.
     let writeBelyaninStepsVisualization
         (outputDir: string)
         (useDot: bool)
         (steps: BelyaninStepVisualizer.BelyaninVisualizationStep list)
         =
-        // One step-boundary trio: the matrices file plus the automaton/graph figures in the
-        // selected format.
+        // One step-boundary group: the frontier/visited matrix files plus the automaton/graph
+        // figures in the selected format.
         let writeBoundary
             (stepDir: string)
             (suffix: string)
             (boundary: BelyaninStepVisualizer.BelyaninBoundaryVisual)
             : unit =
-            writeOutputFile (Path.Combine(stepDir, sprintf "matrices_%s.tex" suffix)) boundary.Matrices
+            writeOutputFile (Path.Combine(stepDir, sprintf "frontier_%s.tex" suffix)) boundary.Frontier
+            writeOutputFile (Path.Combine(stepDir, sprintf "visited_%s.tex" suffix)) boundary.Visited
 
             if useDot then
                 writeOutputFile (Path.Combine(stepDir, sprintf "automaton_%s.dot" suffix)) boundary.AutomatonDot

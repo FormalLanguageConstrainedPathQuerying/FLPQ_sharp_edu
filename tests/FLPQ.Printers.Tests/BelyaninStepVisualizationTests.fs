@@ -85,14 +85,24 @@ let private labelTerminal (label: AutomatonLabel<string>) : string =
 module BelyaninStepGoldenTests =
 
     [<Fact>]
-    let ``all steps: matrices start goldens`` () =
+    let ``all steps: frontier start goldens`` () =
         for i in 0 .. rendered.Length - 1 do
-            verifyGolden (sprintf "belyanin_step_%d_matrices_start.tex" i) rendered.[i].Start.Matrices
+            verifyGolden (sprintf "belyanin_step_%d_frontier_start.tex" i) rendered.[i].Start.Frontier
 
     [<Fact>]
-    let ``non-init steps: matrices end goldens`` () =
+    let ``all steps: visited start goldens`` () =
+        for i in 0 .. rendered.Length - 1 do
+            verifyGolden (sprintf "belyanin_step_%d_visited_start.tex" i) rendered.[i].Start.Visited
+
+    [<Fact>]
+    let ``non-init steps: frontier end goldens`` () =
         for i in 1 .. rendered.Length - 1 do
-            verifyGolden (sprintf "belyanin_step_%d_matrices_end.tex" i) rendered.[i].End.Value.Matrices
+            verifyGolden (sprintf "belyanin_step_%d_frontier_end.tex" i) rendered.[i].End.Value.Frontier
+
+    [<Fact>]
+    let ``non-init steps: visited end goldens`` () =
+        for i in 1 .. rendered.Length - 1 do
+            verifyGolden (sprintf "belyanin_step_%d_visited_end.tex" i) rendered.[i].End.Value.Visited
 
     [<Fact>]
     let ``all steps: automaton start tikz goldens`` () =
@@ -282,7 +292,7 @@ let ``select formulas name the product with otimes and write three explicit matr
             let l = labelTerminal ls.Label
             let tex = rendered.[i].Labels.[j].SelectFormula
 
-            Assert.Contains(sprintf @"$(N^{%s})^T \otimes F =$" l, tex)
+            Assert.Contains(sprintf @"$(N^{%s})^T \otimes F = " l, tex)
             Assert.Equal(3, countOccurrences tex @"\begin{pNiceMatrix}")
             Assert.DoesNotContain(@"\times", tex)
 
@@ -294,7 +304,7 @@ let ``extend formulas name the product with otimes and write three explicit matr
             let l = labelTerminal ls.Label
             let tex = rendered.[i].Labels.[j].ExtendFormula
 
-            Assert.Contains(sprintf @"$F^{%s} \otimes G^{%s} =$" l l, tex)
+            Assert.Contains(sprintf @"$F^{%s} \otimes G^{%s} = " l l, tex)
             Assert.Equal(3, countOccurrences tex @"\begin{pNiceMatrix}")
             Assert.DoesNotContain(@"\times", tex)
 
@@ -318,47 +328,65 @@ let ``extend formulas whose Extend is empty keep only the F^a path tuples`` () =
         Assert.Equal(nonEmptyCells ls.Select, countOccurrences rendered.[i].Labels.[j].ExtendFormula @"\{(v_")
 
 [<Fact>]
-let ``matrices start has exactly the F and V blocks`` () =
+let ``frontier start has exactly the F block`` () =
     for i in 0 .. rendered.Length - 1 do
-        let m = rendered.[i].Start.Matrices
+        let m = rendered.[i].Start.Frontier
 
-        Assert.Equal(2, countOccurrences m @"\begin{pNiceMatrix}")
+        Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
         Assert.Contains(@"$\text{F}$", m)
-        Assert.Contains(@"$\text{V}$", m)
-        Assert.DoesNotContain(@"$\text{M}$", m)
-        Assert.DoesNotContain(@"$\text{P}$", m)
+        Assert.DoesNotContain(@"$\text{V}$", m)
 
 [<Fact>]
-let ``matrices end has exactly the New F and V blocks`` () =
+let ``visited start has exactly the V block`` () =
+    for i in 0 .. rendered.Length - 1 do
+        let m = rendered.[i].Start.Visited
+
+        Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
+        Assert.Contains(@"$\text{V}$", m)
+        Assert.DoesNotContain(@"$\text{F}$", m)
+
+[<Fact>]
+let ``frontier end has exactly the New F block`` () =
     for i in 1 .. rendered.Length - 1 do
-        let m = rendered.[i].End.Value.Matrices
+        let m = rendered.[i].End.Value.Frontier
 
-        Assert.Equal(2, countOccurrences m @"\begin{pNiceMatrix}")
+        Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
         Assert.Contains(@"$\text{New } F =$", m)
+        Assert.DoesNotContain(@"$\text{V}$", m)
+
+[<Fact>]
+let ``visited end has exactly the V block`` () =
+    for i in 1 .. rendered.Length - 1 do
+        let m = rendered.[i].End.Value.Visited
+
+        Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
         Assert.Contains(@"$\text{V}$", m)
 
 [<Fact>]
-let ``matrices start V block holds the visited paths P minus the frontier M`` () =
-    // Step 1: nothing visited before the first iteration — the only path in the whole
-    // artifact is F's (v_0).
-    Assert.Equal(1, countOccurrences rendered.[1].Start.Matrices @"(v_0)")
+let ``visited start block holds the visited paths P minus the frontier M`` () =
+    // Step 1: nothing visited before the first iteration — the V block is empty.
+    Assert.DoesNotContain(@"(v_0)", rendered.[1].Start.Visited)
 
     // Step 2: V holds exactly (v_0) at q_0.
-    Assert.Contains(@"q_0 & \{(v_0)\}", rendered.[2].Start.Matrices)
+    Assert.Contains(@"q_0 & \{(v_0)\}", rendered.[2].Start.Visited)
 
     // Step 5: V holds every earlier frontier path, including both of step 4's M.
-    let v5 = rendered.[5].Start.Matrices
+    let v5 = rendered.[5].Start.Visited
     Assert.Contains(@"(v_0, v_1, v_2, v_3)", v5)
     Assert.Contains(@"(v_0, v_1, v_2, v_5)", v5)
 
 [<Fact>]
-let ``matrices use q_i row headers for |Q|x|V| blocks`` () =
-    let m1 = rendered.[1].Start.Matrices
+let ``frontier and visited use q_i row headers for |Q|x|V| blocks`` () =
+    let frontier = rendered.[1].Start.Frontier
 
     // F block: the frontier path (v_0) sits at state q_0, vertex column v_0.
-    Assert.Contains(@"q_0 & \{(v_0)\}", m1)
+    Assert.Contains(@"q_0 & \{(v_0)\}", frontier)
     // The old mislabeling (v_i row headers on |Q|x|V| matrices) is gone.
-    Assert.DoesNotContain(@"v_0 & \{(v_0)\}", m1)
+    Assert.DoesNotContain(@"v_0 & \{(v_0)\}", frontier)
+
+    let visited = rendered.[2].Start.Visited
+    Assert.Contains(@"q_0 & \{(v_0)\}", visited)
+    Assert.DoesNotContain(@"v_0 & \{(v_0)\}", visited)
 
 [<Fact>]
 let ``step 1 label a writes N^a^T and G^a explicitly`` () =
@@ -374,6 +402,23 @@ let ``step 1 label a writes N^a^T and G^a explicitly`` () =
     Assert.Contains(@"v_0 & \cdot & \bullet & \cdot & \cdot & \cdot & \cdot \\", extend)
     Assert.Contains(@"v_2 & \cdot & \cdot & \cdot & \cdot & \cdot & \bullet \\", extend)
     Assert.Contains(@"v_3 & \cdot & \cdot & \cdot & \cdot & \bullet & \cdot \\", extend)
+
+[<Fact>]
+let ``all labels: formulas are single horizontal lines`` () =
+    // Every select/extend formula is one math expression holding the three matrices side by
+    // side: one adjustbox wrap, one `$...$` pair, three matrices, two `\otimes`, and no blank
+    // line between the matrices (which would stack them).
+    for i in 0 .. rendered.Length - 1 do
+        for j in 0 .. rendered.[i].Labels.Length - 1 do
+            let label = rendered.[i].Labels.[j]
+
+            for formula in [ label.SelectFormula; label.ExtendFormula ] do
+                Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth}", formula)
+                Assert.EndsWith(@"\end{adjustbox}", formula)
+                Assert.Equal(3, countOccurrences formula @"\begin{pNiceMatrix}")
+                Assert.Equal(2, countOccurrences formula @"\otimes")
+                Assert.Equal(2, countOccurrences formula "$")
+                Assert.DoesNotContain("\n\n", formula)
 
 [<Fact>]
 let ``step 4 label b shows the I_simple drop as an empty Extend`` () =
@@ -409,7 +454,8 @@ let private realTemplates: SummaryTeX.StepTemplates =
 
 /// Writes one rendered step to a step dir exactly as the runner does (TikZ mode).
 let private writeStepDir (stepDir: string) (step: BelyaninStepVisualizer.BelyaninVisualizationStep) : unit =
-    File.WriteAllText(Path.Combine(stepDir, "matrices_start.tex"), step.Start.Matrices)
+    File.WriteAllText(Path.Combine(stepDir, "frontier_start.tex"), step.Start.Frontier)
+    File.WriteAllText(Path.Combine(stepDir, "visited_start.tex"), step.Start.Visited)
     File.WriteAllText(Path.Combine(stepDir, "automaton_start.tikz.tex"), step.Start.AutomatonTikz)
     File.WriteAllText(Path.Combine(stepDir, "graph_start.tikz.tex"), step.Start.GraphTikz)
 
@@ -423,12 +469,13 @@ let private writeStepDir (stepDir: string) (step: BelyaninStepVisualizer.Belyani
 
     match step.End with
     | Some end_ ->
-        File.WriteAllText(Path.Combine(stepDir, "matrices_end.tex"), end_.Matrices)
+        File.WriteAllText(Path.Combine(stepDir, "frontier_end.tex"), end_.Frontier)
+        File.WriteAllText(Path.Combine(stepDir, "visited_end.tex"), end_.Visited)
         File.WriteAllText(Path.Combine(stepDir, "automaton_end.tikz.tex"), end_.AutomatonTikz)
         File.WriteAllText(Path.Combine(stepDir, "graph_end.tikz.tex"), end_.GraphTikz)
     | None -> ()
 
-/// The adjustbox-wrapped filled step template as produced by the real section builder
+/// The filled step template (no whole-step adjustbox) as produced by the real section builder
 /// (SummaryTeX.belyaninStepSection), which scans the step dir for label rows.
 let private filledStep (stepDir: string) (i: int) : string =
     SummaryTeX.belyaninStepSection stepDir i realTemplates true |> List.item 1

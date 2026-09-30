@@ -554,15 +554,16 @@ module SummaryTeX =
         replacements
         |> List.fold (fun t (placeholder, value) -> t.Replace(placeholder, value)) template
 
-    /// Builds the content lines for a single Belyanin RPQ step using the three-line layout:
-    /// the start-of-step state (matrices F/V, automaton with frontier states highlighted,
-    /// graph with green sources and lightblue frontier vertices), one row per active label
-    /// with the explicit propagation products and the used transitions / followed edges
-    /// highlighted red bold, and — when the step has end artifacts (non-init) — the
-    /// end-of-step state. In TikZ mode the figures are wrapped in adjustbox (shrink-only, at
-    /// most \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled
-    /// PDFs. The filled template is wrapped whole in `wrapStepAdjustbox` (at most \textwidth
-    /// and 0.9\textheight) so the step fits one page; the step heading stays outside the box.
+    /// Builds the content lines for a single Belyanin RPQ step using the line-per-substep
+    /// layout: the start-of-step state (frontier/visited matrices, automaton with frontier
+    /// states highlighted, graph with green sources and lightblue frontier vertices), one row
+    /// per active label with the explicit propagation products and the used transitions /
+    /// followed edges highlighted red bold, and — when the step has end artifacts (non-init) —
+    /// the end-of-step state. In TikZ mode the figures are wrapped in adjustbox (shrink-only, at
+    /// most \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled PDFs.
+    /// The filled template is NOT wrapped whole (unlike Arroyuelo), so a tall step can break
+    /// across pages; each component keeps its own width-limited adjustbox and the step heading
+    /// stays outside any box.
     let belyaninStepSection (stepDir: string) (stepNum: int) (templates: StepTemplates) (useTikz: bool) : string list =
         let header = section (sprintf "Step %d" stepNum)
 
@@ -607,19 +608,22 @@ module SummaryTeX =
 
         // The end-of-step line is present only when the step has end artifacts (non-init).
         let rowEnd =
-            if File.Exists(Path.Combine(stepDir, "matrices_end.tex")) then
-                let matricesEnd = readArtifact "matrices_end.tex"
+            if File.Exists(Path.Combine(stepDir, "frontier_end.tex")) then
+                let frontierEnd = readArtifact "frontier_end.tex"
+                let visitedEnd = readArtifact "visited_end.tex"
 
                 if useTikz then
                     fill
                         templates.BelyaninRowEndTikz
-                        [ ("__MATRICES_END__", matricesEnd)
+                        [ ("__FRONTIER_END__", frontierEnd)
+                          ("__VISITED_END__", visitedEnd)
                           ("__AUTOMATON_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_end.tikz.tex"))
                           ("__GRAPH_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_end.tikz.tex")) ]
                 else
                     fill
                         templates.BelyaninRowEnd
-                        [ ("__MATRICES_END__", matricesEnd)
+                        [ ("__FRONTIER_END__", frontierEnd)
+                          ("__VISITED_END__", visitedEnd)
                           ("__AUTOMATON_END_PDF__", sprintf "dot_pdfs/%s_automaton_end.pdf" stepName)
                           ("__GRAPH_END_PDF__", sprintf "dot_pdfs/%s_graph_end.pdf" stepName) ]
             else
@@ -629,7 +633,8 @@ module SummaryTeX =
             if useTikz then
                 fill
                     templates.BelyaninTikz
-                    [ ("__MATRICES_START__", readArtifact "matrices_start.tex")
+                    [ ("__FRONTIER_START__", readArtifact "frontier_start.tex")
+                      ("__VISITED_START__", readArtifact "visited_start.tex")
                       ("__AUTOMATON_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_start.tikz.tex"))
                       ("__GRAPH_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_start.tikz.tex"))
                       ("__LABEL_ROWS__", labelRows)
@@ -637,13 +642,14 @@ module SummaryTeX =
             else
                 fill
                     templates.Belyanin
-                    [ ("__MATRICES_START__", readArtifact "matrices_start.tex")
+                    [ ("__FRONTIER_START__", readArtifact "frontier_start.tex")
+                      ("__VISITED_START__", readArtifact "visited_start.tex")
                       ("__AUTOMATON_START_PDF__", sprintf "dot_pdfs/%s_automaton_start.pdf" stepName)
                       ("__GRAPH_START_PDF__", sprintf "dot_pdfs/%s_graph_start.pdf" stepName)
                       ("__LABEL_ROWS__", labelRows)
                       ("__ROW_END__", rowEnd) ]
 
-        [ header; wrapStepAdjustbox filledTemplate; "" ]
+        [ header; filledTemplate; "" ]
 
     /// Builds the SPPF section using TikZ if available, falling back to DOT PDF.
     /// In TikZ mode the figure is wrapped in an adjustbox limited to at most \textwidth

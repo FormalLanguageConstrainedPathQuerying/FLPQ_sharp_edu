@@ -1,5 +1,34 @@
 # Code Review Report
 
+## Task 286 Review (2026-09-30)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S1: `BelyaninBoundaryVisual.Matrices` split into `Frontier`/`Visited`, `renderMatricesStart/End` into four single-block renderers; S2: `selectFormula`/`extendFormula` rendered as one horizontal math line via a private `wrapFormula`), `src/FLPQ.Printers/PathSemiringTeX.fs` (S2: `matrixToTeXWith`/`boolMatrixToTeXWith` private dispatchers plus the public `matrixToTeXBody`, `matrixWithStateVertexLabelsBody`, `boolMatrixToTeXBody`), `src/FLPQ.Cli/Helpers.fs` (S1: writer emits `frontier_{start,end}.tex` + `visited_{start,end}.tex`), `src/FLPQ.Printers/SummaryTeX.fs` (S1: `belyaninStepSection` fills the new placeholders and no longer wraps the filled template), the six `data/Belyanin_*_template.tex` (S1: four `[t]` minipages F/V/graph/automaton per boundary line, `\noindent` + `\hfill%`, 0.6/0.38 label rows), tests (`BelyaninStepVisualizationTests`, `SummaryTexSectionTests`, `BelyaninRunnerTests`, `CliSummaryTests`, `PathSemiringTexTests`, regenerated Belyanin goldens), and docs (`belyanin-step-viz.md`, `summary-tex.md`, `path-semiring-tex.md`, `FLPQ.Cli.md`, `cli.md`).
+
+**Findings resolved this review (commit 89a3103):**
+
+Round 1 (2 findings — 1 src, 1 tests):
+
+- §13 (no duplication) — the `\begin{adjustbox}{max width=\textwidth} ... \end{adjustbox}` wrapper was copied in `selectFormula` and `extendFormula`; extracted to a private `wrapFormula` helper.
+- §15/§19 (test coverage) — the new `matrixToTeXBody` / `boolMatrixToTeXBody` had no direct test (only indirect golden coverage); added facts asserting the body emits a bare `pNiceMatrix` with no `adjustbox` and no `$`.
+
+**Verified:** build 0 errors; FLPQ.Printers.Tests Belyanin and PathSemiring suites green; Fantomas clean; mdformat clean; commit gate PASS. The example Belyanin summary compiles with lualatex with zero Overfull boxes and spans 8 pages (was 3) — the whole-step height cap is gone for Belyanin only, and the page-count increase confirms steps can break.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — records unchanged in shape apart from the field split; no new tuples.
+- §6 (doc comments) — `Frontier`/`Visited`, the four boundary renderers, `wrapFormula`, `selectFormula`/`extendFormula`, and every new `PathSemiringTeX` function carry XML docs; the `belyaninStepSection` doc is updated for the no-whole-box behavior.
+- §7 (genericity) — the visualizer remains generic over `'t`; no hardcoded string types.
+- §9 (separation) — `BelyaninRPQ` untouched; all TeX lives in `FLPQ.Printers`; the runner does file I/O only.
+- §13 (no duplication) — see resolved finding; the matrix adjustbox dispatchers (`matrixToTeXWith`, `boolMatrixToTeXWith`) are the single place the adjustbox flag is applied, and existing callers keep byte-identical output.
+- §15/§16 (test fidelity / Fact vs Property) — the new structure fact asserts a real property (one adjustbox, one `$...$`, three matrices, two `\otimes`, no blank line); all deterministic `[<Fact>]`.
+- §19 (test coverage) — `BelyaninStepVisualizer` → changed golden and structure facts; `PathSemiringTeX` body variants → new direct facts; `SummaryTeX.belyaninStepSection` → placeholder/box tests; runner artifacts → `BelyaninRunnerTests`; end-to-end → `CliSummaryTests`.
+- §20 (documentation) — `belyanin-step-viz.md` (artifact table, template section, design decisions), `summary-tex.md` (line-per-substep row and the Arroyuelo-only `wrapStepAdjustbox` note), `path-semiring-tex.md` (body variants), `FLPQ.Cli.md` and `cli.md` (artifact names and description) all match the implementation.
+- §21 (book traceability) — `algo:RPQ_BFS_semiring` retained on the module; the products still render the book's `(N^a)^T ⊗ F` and `F^a ⊗ G^a` terms.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+---
+
 ## Task 285 Review (2026-09-26)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/RpqGraphViz.fs` (S1: `renderGraph` gains the green `startVertices` and lightblue `frontierVertices` tiers; review: parameter order aligned with the GSS renderers), `src/FLPQ.Printers/{AutomatonDot,AutomatonTikz}.fs` (S2: highlighted DFA transition edges, red bold), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S3: three-line step layout — start boundary, per-label select/extend rows with split product formulas, end boundary; new `BelyaninBoundaryVisual` record and `End: option` on `BelyaninVisualizationStep`), `src/FLPQ.Printers/SummaryTeX.fs` (S3: `belyaninStepSection` rewritten for the step-dir file layout with label rows discovered by scanning `label_i_select.tex`), `src/FLPQ.Cli/{Helpers,Summary}.fs` (S3: per-step directory writer, six Belyanin template loads, root input graph renders source vertices green), `data/Belyanin_{step,row_end,label_row}_(tikz_)template.tex` (six rewritten templates), tests (`BelyaninStepVisualizationTests`, `RpqGraphVizTests`, `GssDotTests`, `SummaryTexSectionTests`, `AutomatonVisualizationTests`, `BelyaninRunnerTests`, `SummaryTests`, `TexCompilationTests`, `CykSummaryGoldenTests`, `BelyaninTraceTests`, shared `TestHelpers` fixtures, 77 regenerated goldens), and docs (`belyanin-step-viz.md`, `arroyuelo-step-viz.md`, `rpq-graph-viz.md`, `summary-tex.md`, `gss-dot.md`, `gss-tikz.md`, `automaton-viz.md`, `FLPQ.Cli.md`, `cli.md`).

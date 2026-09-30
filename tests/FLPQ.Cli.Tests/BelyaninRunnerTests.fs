@@ -114,13 +114,15 @@ let ``runBelyanin produces one step dir per trace step in both modes`` () =
             let stepDir = Path.Combine(outDir, sprintf "step_%d" i)
 
             let expectedFiles =
-                [ "matrices_start.tex"
+                [ "frontier_start.tex"
+                  "visited_start.tex"
                   sprintf "automaton_start.%s" ext
                   sprintf "graph_start.%s" ext ]
                 @ (if step.IsInit then
                        []
                    else
-                       [ "matrices_end.tex"
+                       [ "frontier_end.tex"
+                         "visited_end.tex"
                          sprintf "automaton_end.%s" ext
                          sprintf "graph_end.%s" ext ])
 
@@ -213,13 +215,18 @@ let ``runBelyanin dot mode step 0 produces the start artifacts only`` () =
     let (outDir, _) = runBelyaninRunner true
     let step0 = Path.Combine(outDir, "step_0")
 
-    for f in [ "matrices_start.tex"; "automaton_start.dot"; "graph_start.dot" ] do
+    for f in
+        [ "frontier_start.tex"
+          "visited_start.tex"
+          "automaton_start.dot"
+          "graph_start.dot" ] do
         let path = Path.Combine(step0, f)
         Assert.True(File.Exists path, sprintf "Missing: %s" f)
         Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
 
     // The init step has no end artifacts.
-    Assert.False(File.Exists(Path.Combine(step0, "matrices_end.tex")))
+    Assert.False(File.Exists(Path.Combine(step0, "frontier_end.tex")))
+    Assert.False(File.Exists(Path.Combine(step0, "visited_end.tex")))
     Assert.False(File.Exists(Path.Combine(step0, "automaton_end.dot")))
     Assert.False(File.Exists(Path.Combine(step0, "graph_end.dot")))
 

@@ -9,15 +9,15 @@
 **Book reference:** Chapter 11, Section 02_BFS.tex, Algorithm algo:RPQ_BFS_semiring
 
 > **Abstract:** Renders each step of Belyanin's path-semiring evaluation (one main-loop
-> iteration of the BFS-like traversal, plus an initialization step) into a three-line
-> layout: the start-of-step state (frontier F and visited V matrices, the query DFA with
-> the frontier states highlighted, the input graph with green sources, lightblue frontier
-> vertices, and lightred frontier path edges), one row per active label with the two
-> explicit propagation products `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and
-> `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` plus the used transitions / followed edges
-> highlighted red bold, and — for non-init steps — the end-of-step state (New F, V). Both
-> DOT and TikZ are produced per step; the runner writes only one format (TikZ by default,
-> DOT with `--use-dot`).
+> iteration of the BFS-like traversal, plus an initialization step) as one line per substep:
+> the start-of-step line (frontier F, visited V, the input graph with green sources,
+> lightblue frontier vertices, and lightred frontier path edges, and the query DFA with the
+> frontier states highlighted — left to right), two lines per active label with the explicit
+> propagation products `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and
+> `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` (each product on one horizontal line) plus the used
+> transitions / followed edges highlighted red bold, and — for non-init steps — the
+> end-of-step line (New F, V, graph, DFA). Both DOT and TikZ are produced per step; the
+> runner writes only one format (TikZ by default, DOT with `--use-dot`).
 
 ## Contents
 
@@ -36,15 +36,16 @@ type BelyaninLabelVisual =
     { SelectFormula: string; ExtendFormula: string; AutomatonDot: string; AutomatonTikz: string; GraphDot: string; GraphTikz: string }
 
 type BelyaninBoundaryVisual =
-    { Matrices: string; AutomatonDot: string; AutomatonTikz: string; GraphDot: string; GraphTikz: string }
+    { Frontier: string; Visited: string; AutomatonDot: string; AutomatonTikz: string; GraphDot: string; GraphTikz: string }
 
 type BelyaninVisualizationStep =
     { Start: BelyaninBoundaryVisual; Labels: BelyaninLabelVisual list; End: BelyaninBoundaryVisual option }
 ```
 
 One record per trace step (`BelyaninRPQ.BelyaninTraceStep`), one `BelyaninLabelVisual`
-per active label in trace order. A boundary is the F/V matrices (F/V at the start, New
-F/V at the end) plus the automaton/graph figures with that boundary's frontier
+per active label in trace order. A boundary is the frontier F and visited V matrices as
+**separate** artifacts (F/V at the start, New F/V at the end; the step template places
+them side by side) plus the automaton/graph figures with that boundary's frontier
 highlighted. The init step has no end state (`End = None`) and no label rows — the
 absence is unrepresentable by accident, so the writer and the tests match on `End`
 instead of checking for empty strings.
@@ -67,18 +68,20 @@ Every highlight set is derived from the trace only (no cross-step data):
 ## Step Artifacts
 
 The runner (`Helpers.writeBelyaninStepsVisualization`) writes one directory per trace
-step; the init step has only the start trio:
+step; the init step has only the start artifacts:
 
 | File | Content |
 | --- | --- |
-| `matrices_start.tex` | `$F$` + matrix(M), then `$V$` + matrix(P \\ M) — visited before the step |
+| `frontier_start.tex` | `$F$` + matrix(M) — the current frontier |
+| `visited_start.tex` | `$V$` + matrix(P \\ M) — visited before the step |
 | `automaton_start.{tikz.tex\|dot}` | DFA, frontier states of M highlighted (no edge highlights) |
 | `graph_start.{tikz.tex\|dot}` | green sources, lightblue frontier vertices of M, lightred path edges of M |
-| `label_i_select.tex` | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` — every matrix written out |
-| `label_i_extend.tex` | `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` — every matrix written out |
+| `label_i_select.tex` | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` — every matrix written out, one line |
+| `label_i_extend.tex` | `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` — every matrix written out, one line |
 | `label_i_automaton.{tikz.tex\|dot}` | DFA, the label's used a-transitions red bold (no state highlights) |
 | `label_i_graph.{tikz.tex\|dot}` | green sources, red followed a-edges, lightblue from-endpoints, lightyellow targets, lightred path edges of M |
-| `matrices_end.tex` | `$New F$` + matrix(NewM), then `$V$` + matrix(P) — non-init steps only |
+| `frontier_end.tex` | `$New F$` + matrix(NewM) — non-init steps only |
+| `visited_end.tex` | `$V$` + matrix(P) — non-init steps only |
 | `automaton_end.{tikz.tex\|dot}` | DFA, frontier states of NewM highlighted — non-init steps only |
 | `graph_end.{tikz.tex\|dot}` | green sources, lightblue frontier vertices of NewM, lightred path edges of NewM — non-init steps only |
 
@@ -111,27 +114,31 @@ start state — see [AutomatonTikz](automaton-viz.md)).
 
 Six templates replace the old two (`data/`):
 
-- `Belyanin_step_(tikz_)template.tex` — the start-of-step line: three minipages
-  (0.34/0.33/0.33 of `\textwidth`) with `__MATRICES_START__`,
-  `__AUTOMATON_START_TIKZ__` / `__AUTOMATON_START_PDF__`, and
-  `__GRAPH_START_TIKZ__` / `__GRAPH_START_PDF__`, then the `__LABEL_ROWS__` and
+- `Belyanin_step_(tikz_)template.tex` — the start-of-step line: four minipages in
+  order F, V, graph, automaton (0.24 × `\textwidth`, `[t]`-aligned, `\hfill%`-separated)
+  with `__FRONTIER_START__`, `__VISITED_START__`,
+  `__GRAPH_START_TIKZ__` / `__GRAPH_START_PDF__`, and
+  `__AUTOMATON_START_TIKZ__` / `__AUTOMATON_START_PDF__`, then the `__LABEL_ROWS__` and
   `__ROW_END__` slots. Init step: both slots empty.
-- `Belyanin_row_end_(tikz_)template.tex` — the end-of-step line: same three minipages
-  with `__MATRICES_END__`, `__AUTOMATON_END_TIKZ__` / `__AUTOMATON_END_PDF__`, and
-  `__GRAPH_END_TIKZ__` / `__GRAPH_END_PDF__`.
+- `Belyanin_row_end_(tikz_)template.tex` — the end-of-step line: the same four minipages
+  with `__FRONTIER_END__`, `__VISITED_END__`,
+  `__GRAPH_END_TIKZ__` / `__GRAPH_END_PDF__`, and
+  `__AUTOMATON_END_TIKZ__` / `__AUTOMATON_END_PDF__`.
 - `Belyanin_label_row_(tikz_)template.tex` — one per-label block: two lines of
-  `[math | figure]` minipages (0.56/0.44) with `__SELECT_FORMULA__`,
-  `__LABEL_AUTOMATON_TIKZ__` / `__LABEL_AUTOMATON_PDF__`, `__EXTEND_FORMULA__`, and
-  `__LABEL_GRAPH_TIKZ__` / `__LABEL_GRAPH_PDF__`.
+  `[formula | figure]` minipages (0.6/0.38, `\hfill%`-separated) with
+  `__SELECT_FORMULA__`, `__LABEL_AUTOMATON_TIKZ__` / `__LABEL_AUTOMATON_PDF__`,
+  `__EXTEND_FORMULA__`, and `__LABEL_GRAPH_TIKZ__` / `__LABEL_GRAPH_PDF__`.
 
-The matrix minipages keep the `\begingroup \setlength{\textwidth}{\linewidth}` group so
-the adjustbox-wrapped matrices shrink to the column. At summary time the section builder
+Every minipage line starts with `\noindent` (the lines are separate paragraphs, and the
+paragraph indent would otherwise overfull the line). The matrix minipages keep the
+`\begingroup \setlength{\textwidth}{\linewidth}` group so the adjustbox-wrapped matrices
+shrink to the column. At summary time the section builder
 (`SummaryTeX.belyaninStepSection`) fills the templates file-driven from the step dir,
 wraps the TikZ figures in `SummaryTeX.wrapTikzAdjustboxColumn` (DOT mode includes
-`dot_pdfs/{stepName}_*.pdf`), concatenates the label rows in numeric label-index order,
-and wraps the whole filled template in `SummaryTeX.wrapStepAdjustbox` (at most
-`\textwidth` and `0.9\textheight`) so every step fits one page — see
-[SummaryTeX module](summary-tex.md).
+`dot_pdfs/{stepName}_*.pdf`), and concatenates the label rows in numeric label-index
+order. The filled template is **not** wrapped whole: each component keeps its own
+width-limited adjustbox, so a tall step can break across pages (unlike Arroyuelo RPQ,
+which keeps `SummaryTeX.wrapStepAdjustbox`) — see [SummaryTeX module](summary-tex.md).
 
 ## Design Decisions
 
@@ -143,6 +150,10 @@ and wraps the whole filled template in `SummaryTeX.wrapStepAdjustbox` (at most
 | Green sources in every step graph and the root Input Graph | Matches the automaton's initial-state fill, so the two figures of a line read as one system (user guidance; shared with Arroyuelo RPQ's root graph) |
 | Per-label rows only for non-empty Select | All-empty products add noise; the book's I_simple drop is visible as a non-empty Select with an empty Extend (example: step 4, label b) |
 | Both DOT and TikZ produced per step, runner picks one | Matches the existing runner convention (TikZ default, DOT via `--use-dot`) without rendering twice |
+| F and V as separate boundary artifacts | The start/end line places F and V in separate side-by-side minipages, so the boundary record exposes `Frontier` and `Visited` instead of one combined string the template cannot split |
+| One substep per line; start/end use F, V, graph, automaton (`\noindent`, `\hfill%`) | Splitting the packed row into one line per substep makes every component full-column-width and readable; the `\noindent` removes the paragraph indent that would overfull the line, and the `\hfill%` separators keep the widths within `\textwidth` |
+| Products rendered as one horizontal line | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` are single math expressions (matrices side by side) wrapped once in an adjustbox, instead of a vertical matrix stack — user guidance (`PathSemiringTeX` body variants supply the un-wrapped matrices) |
+| No whole-step adjustbox for Belyanin | User guidance: a step may span pages; each component is wrapped in its own width-limited adjustbox instead. Arroyuelo RPQ keeps `wrapStepAdjustbox` |
 
 ## Book Reference
 

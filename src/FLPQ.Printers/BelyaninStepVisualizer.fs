@@ -9,10 +9,11 @@ open FLPQ.RPQ.BelyaninRPQ
 /// Step-by-step visualization of Belyanin's RPQ evaluation (book: Chapter 11, 02_BFS.tex,
 /// algo:RPQ_BFS_semiring). Each step renders the state at the start of the step (frontier F,
 /// visited V = P \ F, the query DFA with the frontier states highlighted, and the input graph
-/// with green sources, lightblue frontier vertices, and lightred frontier path edges), one row
-/// per active label with the explicit propagation products (N^a)^T ⊗ F = F^a and
+/// with green sources, lightblue frontier vertices, and lightred frontier path edges), one pair
+/// of rows per active label with the explicit propagation products (N^a)^T ⊗ F = F^a and
 /// F^a ⊗ G^a = Extend plus the used transitions / followed edges highlighted red bold, and the
-/// state at the end of the step (New F, V).
+/// state at the end of the step (New F, V). F and V are separate artifacts (the step template
+/// places them side by side); each row is one substep.
 module BelyaninStepVisualizer =
 
     /// One label's propagation row: the two explicit products as TeX and the automaton/graph
@@ -26,11 +27,13 @@ module BelyaninStepVisualizer =
           GraphDot: string
           GraphTikz: string }
 
-    /// The state at a step boundary: the F/V matrices (F/V at the start, New F/V at the end)
-    /// and the automaton/graph figures with that boundary's frontier highlighted — each figure
-    /// in DOT and TikZ form (the runner picks one).
+    /// The state at a step boundary: the F (frontier) and V (visited) matrices (F/V at the
+    /// start, New F/V at the end) and the automaton/graph figures with that boundary's
+    /// frontier highlighted — each figure in DOT and TikZ form (the runner picks one). F
+    /// and V are separate artifacts so the step template can place them side by side.
     type BelyaninBoundaryVisual =
-        { Matrices: string
+        { Frontier: string
+          Visited: string
           AutomatonDot: string
           AutomatonTikz: string
           GraphDot: string
@@ -95,8 +98,18 @@ module BelyaninStepVisualizer =
                           if g.[u, v] then
                               (u, v) ]
 
+    /// Wrap a one-line formula expression in a single shrink-only adjustbox so the three
+    /// side-by-side matrices fit the formula column.
+    let private wrapFormula (expression: string) : string =
+        @"\begin{adjustbox}{max width=\textwidth}"
+        + "\n"
+        + expression
+        + "\n"
+        + @"\end{adjustbox}"
+
     /// The first line of a label's propagation — the book's per-label term (N^a)^T ⊗ M ⊗ G^a
-    /// split at F^a: (N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <F^a>.
+    /// split at F^a: (N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <F^a>, rendered as one horizontal line
+    /// (all three matrices side by side in one math expression, wrapped once in an adjustbox).
     let private selectFormula
         (terminalPrinter: 't -> string)
         (f: Matrix<Set<int list>>)
@@ -104,57 +117,49 @@ module BelyaninStepVisualizer =
         : string =
         let l = labelToTeX terminalPrinter ls.Label
 
-        sprintf @"$(N^{%s})^T \otimes F =$" l
-        + "\n"
-        + PathSemiringTeX.boolMatrixToTeX stateLabel stateLabel (Matrix.transpose ls.N)
-        + "\n"
-        + @"$\otimes$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels f
-        + "\n"
-        + @"$=$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels ls.Select
+        sprintf @"$(N^{%s})^T \otimes F = " l
+        + PathSemiringTeX.boolMatrixToTeXBody stateLabel stateLabel (Matrix.transpose ls.N)
+        + @" \otimes "
+        + PathSemiringTeX.matrixWithStateVertexLabelsBody f
+        + @" = "
+        + PathSemiringTeX.matrixWithStateVertexLabelsBody ls.Select
+        + @"$"
+        |> wrapFormula
 
-    /// The second line of a label's propagation: F^a ⊗ G^a = <F^a> ⊗ <G^a> = <Extend>.
+    /// The second line of a label's propagation: F^a ⊗ G^a = <F^a> ⊗ <G^a> = <Extend>, also
+    /// rendered as one horizontal line.
     let private extendFormula (terminalPrinter: 't -> string) (ls: BelyaninLabelStep<'t>) : string =
         let l = labelToTeX terminalPrinter ls.Label
 
-        sprintf @"$F^{%s} \otimes G^{%s} =$" l l
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels ls.Select
-        + "\n"
-        + @"$\otimes$"
-        + "\n"
-        + PathSemiringTeX.boolMatrixToTeX vertexLabel vertexLabel ls.G
-        + "\n"
-        + @"$=$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels ls.Extend
+        sprintf @"$F^{%s} \otimes G^{%s} = " l l
+        + PathSemiringTeX.matrixWithStateVertexLabelsBody ls.Select
+        + @" \otimes "
+        + PathSemiringTeX.boolMatrixToTeXBody vertexLabel vertexLabel ls.G
+        + @" = "
+        + PathSemiringTeX.matrixWithStateVertexLabelsBody ls.Extend
+        + @"$"
+        |> wrapFormula
 
-    /// The start-of-step matrices as a vertical stack: F (frontier) and V (visited before
-    /// the step). V = P \ F is the exact inverse of the trace's P <- P + F, so no trace
-    /// change is needed.
-    let private renderMatricesStart (step: BelyaninTraceStep<'t>) : string =
+    /// The start-of-step frontier block: F = M (the current frontier).
+    let private renderFrontierStart (step: BelyaninTraceStep<'t>) : string =
+        @"$\text{F}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.M
+
+    /// The start-of-step visited block: V = P \ F (cell-wise set difference). V is the
+    /// exact inverse of the trace's P <- P + F, so no trace change is needed.
+    let private renderVisitedStart (step: BelyaninTraceStep<'t>) : string =
         let vBefore = Matrix.map2 Set.difference step.P step.M
 
-        @"$\text{F}$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels step.M
-        + "\n"
-        + @"$\text{V}$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels vBefore
+        @"$\text{V}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels vBefore
 
-    /// The end-of-step matrices as a vertical stack: New F (next frontier) and V (visited).
-    let private renderMatricesEnd (step: BelyaninTraceStep<'t>) : string =
+    /// The end-of-step frontier block: New F = NewM (the next frontier).
+    let private renderFrontierEnd (step: BelyaninTraceStep<'t>) : string =
         @"$\text{New } F =$"
         + "\n"
         + PathSemiringTeX.matrixWithStateVertexLabels step.NewM
-        + "\n"
-        + @"$\text{V}$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels step.P
+
+    /// The end-of-step visited block: V = P (everything visited after the step).
+    let private renderVisitedEnd (step: BelyaninTraceStep<'t>) : string =
+        @"$\text{V}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.P
 
     /// The query DFA as (dot, tikz) figures with the given states and transitions
     /// highlighted.
@@ -260,7 +265,8 @@ module BelyaninStepVisualizer =
             let graphStartDot, graphStartTikz = boundaryGraph terminalPrinter graph step.M
 
             let start =
-                { Matrices = renderMatricesStart step
+                { Frontier = renderFrontierStart step
+                  Visited = renderVisitedStart step
                   AutomatonDot = automatonStartDot
                   AutomatonTikz = automatonStartTikz
                   GraphDot = graphStartDot
@@ -281,7 +287,8 @@ module BelyaninStepVisualizer =
                 let graphEndDot, graphEndTikz = boundaryGraph terminalPrinter graph step.NewM
 
                 let end_ =
-                    { Matrices = renderMatricesEnd step
+                    { Frontier = renderFrontierEnd step
+                      Visited = renderVisitedEnd step
                       AutomatonDot = automatonEndDot
                       AutomatonTikz = automatonEndTikz
                       GraphDot = graphEndDot
