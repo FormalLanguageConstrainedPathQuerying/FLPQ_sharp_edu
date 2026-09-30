@@ -7,7 +7,7 @@
 **Depends on:** AutomatonTikz (header, layered layout options, label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer, ArroyueloStepVisualizer, RpqGraphViz
 
-> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's layered layout. Vertices get fill colors for the highlighted, stored-pop, and current states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs can be bent into symmetric arcs so they do not draw on top of each other.
+> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's layered layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs can be bent into symmetric arcs so they do not draw on top of each other.
 
 ## Contents
 
@@ -30,15 +30,16 @@ visualizers reuse the same set-based rendering for the input graph.
 
 ## Function Signatures
 
-### `toTikzFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> string -> bool -> (int -> int) option -> bool -> string`
+### `toTikzFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> string -> bool -> (int -> int) option -> bool -> string`
 
 Renders directly from vertex/edge sets. Parameters in order: vertex label printer,
-edge label printer, activeVertices, activeEdges, highlightedVertices, highlightedEdges,
-pathEdges, storedPopVertices, currentVertex, shape, skipEscaping, positionOf,
-bendReciprocalEdges.
+edge label printer, activeVertices, activeEdges, highlightedVertices, startVertices,
+frontierVertices, highlightedEdges, pathEdges, storedPopVertices, currentVertex,
+shape, skipEscaping, positionOf, bendReciprocalEdges.
 
-- Vertex fills: current = lightblue!20 (overrides all), stored-pop = orange!30,
-  highlighted = yellow!20, else plain.
+- Vertex fills (highest precedence first): start = green!30, current = lightblue!20,
+  frontier = lightblue!20, stored-pop = orange!30, highlighted = yellow!20, else
+  plain. A vertex in several tiers renders the highest-precedence fill only.
 - Edge tiers: highlighted = `red, thick`; path = `red!40` (an edge in both sets
   renders as highlighted); else plain.
 - `positionOf`: when `Some`, one `{ [same layer] ... }` collection per position and the

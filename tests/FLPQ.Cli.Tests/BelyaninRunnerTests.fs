@@ -95,18 +95,51 @@ let ``runBelyanin produces result.tex`` () =
 
 // a / (b | c)* / a: init + 5 BFS iterations (the last one produces an empty frontier).
 [<Fact>]
-let ``runBelyanin produces one step dir per trace step`` () =
-    let (outDir, _) = runBelyaninRunner false
-    let stepDirs = Directory.GetDirectories(outDir, "step_*")
-    Assert.Equal(6, stepDirs.Length)
+let ``runBelyanin produces one step dir per trace step in both modes`` () =
+    // The start/end artifacts and the label quads per step follow the trace; the figure
+    // files differ only by extension between TikZ and DOT mode.
+    let regexp = RpqInput.parseRegexpFile exampleRegexp
+    let dfa = Regexp.toDfa regexp
+    let graph = GraphReader.parseGraphFile exampleGraph
+    let traceSteps, _ = BelyaninRPQ.evaluateWithTrace dfa graph
 
-    for stepDir in stepDirs do
-        for f in [ "matrices.tex"; "automaton.tikz.tex"; "graph.tikz.tex" ] do
-            let path = Path.Combine(stepDir, f)
-            Assert.True(File.Exists path, sprintf "Missing: %s" f)
-            Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
+    for useDot in [ false; true ] do
+        let (outDir, _) = runBelyaninRunner useDot
+        let ext = if useDot then "dot" else "tikz.tex"
 
-    cleanup outDir
+        Assert.Equal(List.length traceSteps, Array.length (Directory.GetDirectories(outDir, "step_*")))
+
+        for i in 0 .. List.length traceSteps - 1 do
+            let step = traceSteps.[i]
+            let stepDir = Path.Combine(outDir, sprintf "step_%d" i)
+
+            let expectedFiles =
+                [ "matrices_start.tex"
+                  sprintf "automaton_start.%s" ext
+                  sprintf "graph_start.%s" ext ]
+                @ (if step.IsInit then
+                       []
+                   else
+                       [ "matrices_end.tex"
+                         sprintf "automaton_end.%s" ext
+                         sprintf "graph_end.%s" ext ])
+
+            for f in expectedFiles do
+                let path = Path.Combine(stepDir, f)
+                Assert.True(File.Exists path, sprintf "Missing: %s" f)
+                Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
+
+            for j in 0 .. List.length step.Labels - 1 do
+                for f in
+                    [ sprintf "label_%d_select.tex" j
+                      sprintf "label_%d_extend.tex" j
+                      sprintf "label_%d_automaton.%s" j ext
+                      sprintf "label_%d_graph.%s" j ext ] do
+                    let path = Path.Combine(stepDir, f)
+                    Assert.True(File.Exists path, sprintf "Missing: %s" f)
+                    Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
+
+        cleanup outDir
 
 [<Fact>]
 let ``runBelyanin result.tex lists the hand-computed reachable vertices`` () =
@@ -176,14 +209,19 @@ let ``runBelyanin dot mode produces dfa.dot and graph.dot`` () =
     cleanup outDir
 
 [<Fact>]
-let ``runBelyanin dot mode step 0 produces automaton.dot and graph.dot`` () =
+let ``runBelyanin dot mode step 0 produces the start artifacts only`` () =
     let (outDir, _) = runBelyaninRunner true
     let step0 = Path.Combine(outDir, "step_0")
 
-    for f in [ "matrices.tex"; "automaton.dot"; "graph.dot" ] do
+    for f in [ "matrices_start.tex"; "automaton_start.dot"; "graph_start.dot" ] do
         let path = Path.Combine(step0, f)
         Assert.True(File.Exists path, sprintf "Missing: %s" f)
         Assert.True(FileInfo(path).Length > 0L, sprintf "Empty: %s" f)
+
+    // The init step has no end artifacts.
+    Assert.False(File.Exists(Path.Combine(step0, "matrices_end.tex")))
+    Assert.False(File.Exists(Path.Combine(step0, "automaton_end.dot")))
+    Assert.False(File.Exists(Path.Combine(step0, "graph_end.dot")))
 
     cleanup outDir
 

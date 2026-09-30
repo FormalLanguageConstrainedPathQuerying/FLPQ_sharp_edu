@@ -96,6 +96,22 @@
       <Link>Belyanin_step_tikz_template.tex</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\data\Belyanin_row_end_template.tex">
+      <Link>Belyanin_row_end_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Belyanin_row_end_tikz_template.tex">
+      <Link>Belyanin_row_end_tikz_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Belyanin_label_row_template.tex">
+      <Link>Belyanin_label_row_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Belyanin_label_row_tikz_template.tex">
+      <Link>Belyanin_label_row_tikz_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\data\tex_math_wrap_template.tex">
       <Link>tex_math_wrap_template.tex</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -27,7 +27,10 @@ module SummaryTeX =
             | BelyaninRPQ -> "belyaninrpq"
 
     /// Per-algorithm step templates (DOT and TikZ variants). Fields are empty strings for
-    /// algorithms that do not use a step template.
+    /// algorithms that do not use a step template. Belyanin uses four templates: the
+    /// start-of-step line (Belyanin/BelyaninTikz), the end-of-step line (BelyaninRowEnd/
+    /// BelyaninRowEndTikz), and one per-label propagation row (BelyaninLabelRow/
+    /// BelyaninLabelRowTikz).
     type StepTemplates =
         { Gll: string
           GllTikz: string
@@ -36,7 +39,11 @@ module SummaryTeX =
           Arroyuelo: string
           ArroyueloTikz: string
           Belyanin: string
-          BelyaninTikz: string }
+          BelyaninTikz: string
+          BelyaninRowEnd: string
+          BelyaninRowEndTikz: string
+          BelyaninLabelRow: string
+          BelyaninLabelRowTikz: string }
 
     /// Wraps TeX content in a centered display math environment.
     let wrapMath (tex: string) : string =
@@ -156,6 +163,7 @@ module SummaryTeX =
 
         legendTable rows
 
+    /// Generates the color legend for RNGLR summary visualization.
     let private rnglrColorLegend () : string =
         let rows =
             [ colorBox "yellow", "Modified path index cells"
@@ -166,6 +174,7 @@ module SummaryTeX =
 
         legendTable rows
 
+    /// Generates the color legend for Arroyuelo RPQ summary visualization.
     let private arroyueloColorLegend () : string =
         let rows =
             [ colorBox "lightblue!20", "Current regexp tree node"
@@ -175,11 +184,14 @@ module SummaryTeX =
 
         legendTable rows
 
+    /// Generates the color legend for Belyanin RPQ summary visualization.
     let private belyaninColorLegend () : string =
         let rows =
-            [ colorBox "lightblue!20", "Frontier automaton states (non-empty M[q,\\*])"
-              colorBox "yellow!20", "Vertices of the current frontier paths"
-              coloredEdge "red", "Edges of the current frontier paths"
+            [ colorBox "green!30", "Start vertex / initial automaton state"
+              colorBox "lightblue!20", "Frontier automaton states and frontier (initial) vertices"
+              colorBox "yellow!20", "Target vertices (newly reached on the step)"
+              coloredEdge "red", "Current transition edges (used on the step)"
+              coloredEdge "red!40", "Frontier path edges"
               @"$\cdot$", "Empty matrix cell" ]
 
         legendTable rows
@@ -537,53 +549,99 @@ module SummaryTeX =
 
         [ header; wrapStepAdjustbox filledTemplate; "" ]
 
-    /// Builds the content lines for a single Belyanin RPQ step using the two-column template
-    /// layout (left: query DFA figure with frontier states highlighted + matrix stack; right:
-    /// graph with the current frontier path vertices/edges highlighted). In TikZ mode the
-    /// step's automaton and graph figures are wrapped in adjustbox (shrink-only, at most
-    /// \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled PDFs.
-    /// The filled template is wrapped whole in `wrapStepAdjustbox` (at most \textwidth and
-    /// 0.9\textheight) so the step fits one page; the step heading stays outside the box.
-    let belyaninStepSection
-        (stepDir: string)
-        (stepNum: int)
-        (template: string)
-        (tikzTemplate: string)
-        (useTikz: bool)
-        : string list =
+    /// Applies placeholder replacements to a template in order.
+    let private fill (template: string) (replacements: (string * string) list) : string =
+        replacements
+        |> List.fold (fun t (placeholder, value) -> t.Replace(placeholder, value)) template
+
+    /// Builds the content lines for a single Belyanin RPQ step using the three-line layout:
+    /// the start-of-step state (matrices F/V, automaton with frontier states highlighted,
+    /// graph with green sources and lightblue frontier vertices), one row per active label
+    /// with the explicit propagation products and the used transitions / followed edges
+    /// highlighted red bold, and — when the step has end artifacts (non-init) — the
+    /// end-of-step state. In TikZ mode the figures are wrapped in adjustbox (shrink-only, at
+    /// most \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled
+    /// PDFs. The filled template is wrapped whole in `wrapStepAdjustbox` (at most \textwidth
+    /// and 0.9\textheight) so the step fits one page; the step heading stays outside the box.
+    let belyaninStepSection (stepDir: string) (stepNum: int) (templates: StepTemplates) (useTikz: bool) : string list =
         let header = section (sprintf "Step %d" stepNum)
 
         let stepName = Path.GetFileName(stepDir)
 
-        let matrices =
-            match readIfExists (Path.Combine(stepDir, "matrices.tex")) with
+        let readArtifact (file: string) : string =
+            match readIfExists (Path.Combine(stepDir, file)) with
             | Some tex -> tex
             | None -> ""
 
-        let automatonPdf = sprintf "dot_pdfs/%s_automaton.pdf" stepName
-        let graphPdf = sprintf "dot_pdfs/%s_graph.pdf" stepName
+        // Per-label rows in numeric label-index order; the index is the position of the
+        // label in the trace's Labels list (the visualizer and this builder must agree on
+        // the index-based naming).
+        let labelRows =
+            Directory.GetFiles(stepDir, "label_*_select.tex")
+            |> Array.map Path.GetFileName
+            |> Array.filter (fun f -> Regex.IsMatch(f, @"^label_\d+_select\.tex$"))
+            |> Array.map (fun f -> Int32.Parse(Regex.Match(f, @"^label_(\d+)_select\.tex$").Groups.[1].Value))
+            |> Array.sort
+            |> Array.map (fun i ->
+                let selectFormula = readArtifact (sprintf "label_%d_select.tex" i)
+                let extendFormula = readArtifact (sprintf "label_%d_extend.tex" i)
+
+                if useTikz then
+                    fill
+                        templates.BelyaninLabelRowTikz
+                        [ ("__SELECT_FORMULA__", selectFormula)
+                          ("__LABEL_AUTOMATON_TIKZ__",
+                           wrapTikzAdjustboxColumn (readArtifact (sprintf "label_%d_automaton.tikz.tex" i)))
+                          ("__EXTEND_FORMULA__", extendFormula)
+                          ("__LABEL_GRAPH_TIKZ__",
+                           wrapTikzAdjustboxColumn (readArtifact (sprintf "label_%d_graph.tikz.tex" i))) ]
+                else
+                    fill
+                        templates.BelyaninLabelRow
+                        [ ("__SELECT_FORMULA__", selectFormula)
+                          ("__LABEL_AUTOMATON_PDF__", sprintf "dot_pdfs/%s_label_%d_automaton.pdf" stepName i)
+                          ("__EXTEND_FORMULA__", extendFormula)
+                          ("__LABEL_GRAPH_PDF__", sprintf "dot_pdfs/%s_label_%d_graph.pdf" stepName i) ])
+            |> Array.toList
+            |> String.concat "\n"
+
+        // The end-of-step line is present only when the step has end artifacts (non-init).
+        let rowEnd =
+            if File.Exists(Path.Combine(stepDir, "matrices_end.tex")) then
+                let matricesEnd = readArtifact "matrices_end.tex"
+
+                if useTikz then
+                    fill
+                        templates.BelyaninRowEndTikz
+                        [ ("__MATRICES_END__", matricesEnd)
+                          ("__AUTOMATON_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_end.tikz.tex"))
+                          ("__GRAPH_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_end.tikz.tex")) ]
+                else
+                    fill
+                        templates.BelyaninRowEnd
+                        [ ("__MATRICES_END__", matricesEnd)
+                          ("__AUTOMATON_END_PDF__", sprintf "dot_pdfs/%s_automaton_end.pdf" stepName)
+                          ("__GRAPH_END_PDF__", sprintf "dot_pdfs/%s_graph_end.pdf" stepName) ]
+            else
+                ""
 
         let filledTemplate =
             if useTikz then
-                let automatonTikz =
-                    match readIfExists (Path.Combine(stepDir, "automaton.tikz.tex")) with
-                    | Some tikz -> tikz
-                    | None -> ""
-
-                let graphTikz =
-                    match readIfExists (Path.Combine(stepDir, "graph.tikz.tex")) with
-                    | Some tikz -> tikz
-                    | None -> ""
-
-                tikzTemplate
-                    .Replace("__STEP_AUTOMATON_TIKZ__", wrapTikzAdjustboxColumn automatonTikz)
-                    .Replace("__MATRICES__", matrices)
-                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustboxColumn graphTikz)
+                fill
+                    templates.BelyaninTikz
+                    [ ("__MATRICES_START__", readArtifact "matrices_start.tex")
+                      ("__AUTOMATON_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_start.tikz.tex"))
+                      ("__GRAPH_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_start.tikz.tex"))
+                      ("__LABEL_ROWS__", labelRows)
+                      ("__ROW_END__", rowEnd) ]
             else
-                template
-                    .Replace("__STEP_AUTOMATON_PDF__", automatonPdf)
-                    .Replace("__MATRICES__", matrices)
-                    .Replace("__STEP_GRAPH_PDF__", graphPdf)
+                fill
+                    templates.Belyanin
+                    [ ("__MATRICES_START__", readArtifact "matrices_start.tex")
+                      ("__AUTOMATON_START_PDF__", sprintf "dot_pdfs/%s_automaton_start.pdf" stepName)
+                      ("__GRAPH_START_PDF__", sprintf "dot_pdfs/%s_graph_start.pdf" stepName)
+                      ("__LABEL_ROWS__", labelRows)
+                      ("__ROW_END__", rowEnd) ]
 
         [ header; wrapStepAdjustbox filledTemplate; "" ]
 
@@ -665,8 +723,7 @@ module SummaryTeX =
                     arroyueloStepSection stepDir stepNum templates.Arroyuelo templates.ArroyueloTikz useTikz
                     |> List.toArray
                 elif isBelyanin then
-                    belyaninStepSection stepDir stepNum templates.Belyanin templates.BelyaninTikz useTikz
-                    |> List.toArray
+                    belyaninStepSection stepDir stepNum templates useTikz |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName useTikz |> List.toArray)
             |> Array.toList

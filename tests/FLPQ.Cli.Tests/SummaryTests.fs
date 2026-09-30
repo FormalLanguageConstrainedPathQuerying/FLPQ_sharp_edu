@@ -219,7 +219,7 @@ let ``buildSummary for BelyaninRPQ in tikz mode embeds the step automaton TikZ``
     withTempDirs (fun (vizDir, resultDir) ->
         let stepDir = Path.Combine(vizDir, "step_0")
         Directory.CreateDirectory stepDir |> ignore
-        File.WriteAllText(Path.Combine(stepDir, "automaton.tikz.tex"), "AUTOMATONTIKZMARKER")
+        File.WriteAllText(Path.Combine(stepDir, "automaton_start.tikz.tex"), "AUTOMATONTIKZMARKER")
 
         let ok =
             Summary.buildSummary (Helpers.findSummaryTemplate ()) BelyaninRPQ vizDir resultDir false

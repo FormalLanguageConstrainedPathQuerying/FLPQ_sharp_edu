@@ -41,6 +41,7 @@ module AutomatonDot =
     let private transitionEdges
         (labelPrinter: 't -> string)
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
+        (highlightedEdges: Set<int * int>)
         (sb: System.Text.StringBuilder)
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
@@ -59,7 +60,17 @@ module AutomatonDot =
                     if not (List.isEmpty termLabels) then
                         let label = termLabels |> String.concat ", " |> DerivationTreeDot.escapeLabel
 
-                        sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"];" i j label) |> ignore
+                        // Highlighted edges render red and bold (same style as GssDot's
+                        // highlighted tier); the label is preserved. Epsilon-only cells
+                        // render no edge here, so they can never be highlighted.
+                        let hlAttr =
+                            if Set.contains (i, j) highlightedEdges then
+                                ", color=red, penwidth=2.0"
+                            else
+                                ""
+
+                        sb.AppendLine(sprintf "  s%d -> s%d [label=\"%s\"%s];" i j label hlAttr)
+                        |> ignore
                     else
                         ()
                 | None -> ()
@@ -83,19 +94,21 @@ module AutomatonDot =
         sb.AppendLine("  rankdir=LR;") |> ignore
 
         stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates Set.empty sb
-        transitionEdges labelPrinter nfa.Transitions sb
+        transitionEdges labelPrinter nfa.Transitions Set.empty sb
         epsEdges nfa.Transitions sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
     /// Render a DFA as a Graphviz dot graph with the given states highlighted (fillcolor=lightblue,
-    /// overriding the start state's green fill).
+    /// overriding the start state's green fill) and the given transitions rendered red and bold
+    /// (`color=red, penwidth=2.0`, label preserved).
     let dfaToDotWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)
         (dfa: DFA<'t, 's>)
         (highlightedStates: Set<int>)
+        (highlightedEdges: Set<int * int>)
         : string =
         let sb = System.Text.StringBuilder()
 
@@ -111,11 +124,11 @@ module AutomatonDot =
             highlightedStates
             sb
 
-        transitionEdges labelPrinter dfa.Transitions sb
+        transitionEdges labelPrinter dfa.Transitions highlightedEdges sb
 
         sb.AppendLine("}") |> ignore
         sb.ToString()
 
     /// Render a DFA as a Graphviz dot graph.
     let dfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
-        dfaToDotWithHighlights labelPrinter stateVisualizer dfa Set.empty
+        dfaToDotWithHighlights labelPrinter stateVisualizer dfa Set.empty Set.empty

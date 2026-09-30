@@ -155,13 +155,13 @@ module Summary =
                 else
                     "", ""
 
-            let belyaninStepTemplate, belyaninStepTikzTemplate =
-                if algoKind = SummaryTeX.SummaryKind.BelyaninRPQ then
-                    let templatePath = Helpers.findBelyaninStepTemplate ()
-                    let tikzTemplatePath = Helpers.findBelyaninStepTikzTemplate ()
-                    File.ReadAllText templatePath, File.ReadAllText tikzTemplatePath
-                else
-                    "", ""
+            // Belyanin uses four templates (start line, end line, label row, each in DOT and
+            // TikZ form); the finders run only for Belyanin so other algorithms never touch
+            // the files.
+            let isBelyanin = algoKind = SummaryTeX.SummaryKind.BelyaninRPQ
+
+            let loadBelyaninTemplate (find: unit -> string) : string =
+                if isBelyanin then File.ReadAllText(find ()) else ""
 
             let templates: SummaryTeX.StepTemplates =
                 { Gll = gllStepTemplate
@@ -170,8 +170,12 @@ module Summary =
                   RnglrTikz = rnglrStepTikzTemplate
                   Arroyuelo = arroyueloStepTemplate
                   ArroyueloTikz = arroyueloStepTikzTemplate
-                  Belyanin = belyaninStepTemplate
-                  BelyaninTikz = belyaninStepTikzTemplate }
+                  Belyanin = loadBelyaninTemplate Helpers.findBelyaninStepTemplate
+                  BelyaninTikz = loadBelyaninTemplate Helpers.findBelyaninStepTikzTemplate
+                  BelyaninRowEnd = loadBelyaninTemplate Helpers.findBelyaninRowEndTemplate
+                  BelyaninRowEndTikz = loadBelyaninTemplate Helpers.findBelyaninRowEndTikzTemplate
+                  BelyaninLabelRow = loadBelyaninTemplate Helpers.findBelyaninLabelRowTemplate
+                  BelyaninLabelRowTikz = loadBelyaninTemplate Helpers.findBelyaninLabelRowTikzTemplate }
 
             let content =
                 SummaryTeX.buildContent

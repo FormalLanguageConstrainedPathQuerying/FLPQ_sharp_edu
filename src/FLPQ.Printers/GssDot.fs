@@ -10,6 +10,17 @@ open FLPQ.Languages
 /// Renders active vertices and edges with optional highlighting for newly added elements.
 module GssDot =
 
+    /// The DOT attribute list for a vertex: label and shape always; style and fillcolor when
+    /// a fill color applies.
+    let private vertexAttrs (label: string) (fillColor: string option) : string list =
+        match fillColor with
+        | Some c ->
+            [ sprintf "label=\"%s\"" label
+              "shape=ellipse"
+              "style=filled"
+              sprintf "fillcolor=%s" c ]
+        | None -> [ sprintf "label=\"%s\"" label; "shape=ellipse" ]
+
     /// Renders a GSS as a Graphviz DOT digraph.
     /// Only active vertices (those with outgoing edges) are rendered.
     /// Highlighted vertices are filled with yellow!30, highlighted edges are red with penwidth=2.
@@ -56,21 +67,12 @@ module GssDot =
 
             let isHighlighted = Set.contains vidx highlightedVertices
 
-            let parts =
-                if isCurrent then
-                    [ sprintf "label=\"%s\"" label
-                      "shape=ellipse"
-                      "style=filled"
-                      "fillcolor=lightblue" ]
-                elif isHighlighted then
-                    [ sprintf "label=\"%s\"" label
-                      "shape=ellipse"
-                      "style=filled"
-                      "fillcolor=lightyellow" ]
-                else
-                    [ sprintf "label=\"%s\"" label; "shape=ellipse" ]
+            let fillColor =
+                if isCurrent then Some "lightblue"
+                elif isHighlighted then Some "lightyellow"
+                else None
 
-            let attrs = String.concat ", " parts
+            let attrs = vertexAttrs label fillColor |> String.concat ", "
 
             sb.AppendLine(sprintf "  v%d [%s];" vidx attrs) |> ignore
 
@@ -95,6 +97,10 @@ module GssDot =
     /// Used for step visualization where only active elements are known.
     /// highlightedEdges are red with penwidth=2.0, pathEdges are light red (#FF9999); an
     /// edge in both sets renders as highlighted.
+    /// startVertices get filled green (graph sources, matching the automaton's
+    /// initial-state fill), frontierVertices get filled lightblue (current frontier
+    /// positions). Vertex fill precedence: start > current > frontier > storedPop >
+    /// highlighted (current and frontier share the lightblue fill).
     /// storedPopVertices get filled with orange (stored pops handling triggered at these vertices).
     /// When positionOf is Some, every vertex is constrained to the rank of its input position
     /// (one {rank=same; ...} subgraph per position), so all nodes at the same input position share
@@ -105,6 +111,8 @@ module GssDot =
         (activeVertices: Set<int>)
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
+        (startVertices: Set<int>)
+        (frontierVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
         (pathEdges: Set<int * int>)
         (storedPopVertices: Set<int>)
@@ -128,30 +136,25 @@ module GssDot =
                 | Some cv -> cv = vidx
                 | None -> false
 
+            let isStart = Set.contains vidx startVertices
+
+            let isFrontier = Set.contains vidx frontierVertices
+
             let isStoredPop = Set.contains vidx storedPopVertices
 
             let isHighlighted = Set.contains vidx highlightedVertices
 
-            let parts =
-                if isCurrent then
-                    [ sprintf "label=\"%s\"" label
-                      "shape=ellipse"
-                      "style=filled"
-                      "fillcolor=lightblue" ]
-                elif isStoredPop then
-                    [ sprintf "label=\"%s\"" label
-                      "shape=ellipse"
-                      "style=filled"
-                      "fillcolor=orange" ]
-                elif isHighlighted then
-                    [ sprintf "label=\"%s\"" label
-                      "shape=ellipse"
-                      "style=filled"
-                      "fillcolor=lightyellow" ]
-                else
-                    [ sprintf "label=\"%s\"" label; "shape=ellipse" ]
+            // Vertex fill precedence: start > current > frontier > storedPop >
+            // highlighted (current and frontier share the lightblue fill).
+            let fillColor =
+                if isStart then Some "green"
+                elif isCurrent then Some "lightblue"
+                elif isFrontier then Some "lightblue"
+                elif isStoredPop then Some "orange"
+                elif isHighlighted then Some "lightyellow"
+                else None
 
-            let attrs = String.concat ", " parts
+            let attrs = vertexAttrs label fillColor |> String.concat ", "
 
             sb.AppendLine(sprintf "  v%d [%s];" vidx attrs) |> ignore
 

@@ -98,22 +98,54 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "tree.tikz.tex")) steps.[idx].TreeTikz
                 writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
 
+    /// Writes one directory per trace step with the three-line step layout: the start-of-step
+    /// state (matrices_start + automaton/graph figures), one quad of files per active label
+    /// (label_i_select/extend formulas + automaton/graph figures), and — for non-init steps —
+    /// the end-of-step state (matrices_end + automaton/graph figures). The init step has no
+    /// end artifacts and no label quads.
     let writeBelyaninStepsVisualization
         (outputDir: string)
         (useDot: bool)
         (steps: BelyaninStepVisualizer.BelyaninVisualizationStep list)
         =
-        for idx in 0 .. steps.Length - 1 do
-            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
-
-            writeOutputFile (Path.Combine(stepDir, "matrices.tex")) steps.[idx].Matrices
+        // One step-boundary trio: the matrices file plus the automaton/graph figures in the
+        // selected format.
+        let writeBoundary
+            (stepDir: string)
+            (suffix: string)
+            (boundary: BelyaninStepVisualizer.BelyaninBoundaryVisual)
+            : unit =
+            writeOutputFile (Path.Combine(stepDir, sprintf "matrices_%s.tex" suffix)) boundary.Matrices
 
             if useDot then
-                writeOutputFile (Path.Combine(stepDir, "automaton.dot")) steps.[idx].AutomatonDot
-                writeOutputFile (Path.Combine(stepDir, "graph.dot")) steps.[idx].GraphDot
+                writeOutputFile (Path.Combine(stepDir, sprintf "automaton_%s.dot" suffix)) boundary.AutomatonDot
+                writeOutputFile (Path.Combine(stepDir, sprintf "graph_%s.dot" suffix)) boundary.GraphDot
             else
-                writeOutputFile (Path.Combine(stepDir, "automaton.tikz.tex")) steps.[idx].AutomatonTikz
-                writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) steps.[idx].GraphTikz
+                writeOutputFile (Path.Combine(stepDir, sprintf "automaton_%s.tikz.tex" suffix)) boundary.AutomatonTikz
+                writeOutputFile (Path.Combine(stepDir, sprintf "graph_%s.tikz.tex" suffix)) boundary.GraphTikz
+
+        for idx in 0 .. steps.Length - 1 do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
+            let step = steps.[idx]
+
+            writeBoundary stepDir "start" step.Start
+
+            for i in 0 .. step.Labels.Length - 1 do
+                let label = step.Labels.[i]
+
+                writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_select.tex" i)) label.SelectFormula
+                writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_extend.tex" i)) label.ExtendFormula
+
+                if useDot then
+                    writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_automaton.dot" i)) label.AutomatonDot
+                    writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_graph.dot" i)) label.GraphDot
+                else
+                    writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_automaton.tikz.tex" i)) label.AutomatonTikz
+                    writeOutputFile (Path.Combine(stepDir, sprintf "label_%d_graph.tikz.tex" i)) label.GraphTikz
+
+            match step.End with
+            | Some end_ -> writeBoundary stepDir "end" end_
+            | None -> ()
 
     /// Shared RPQ root artifacts (Arroyuelo and Belyanin): the query regexp in TeX, the
     /// query DFA, and the input graph — DOT sources or inline TikZ depending on useDot.
@@ -126,20 +158,21 @@ module Helpers =
         : unit =
         writeOutputFile (Path.Combine(outputDir, "regexp.tex")) (RegexpTeX.toTeX id id regexp)
 
+        // The input graph's sources render green (matching the automaton's initial state
+        // fill) — shared with the Belyanin step figures.
+        let graphDot, graphTikz =
+            RpqGraphViz.renderGraph id graph Set.empty graph.StartStates Set.empty Set.empty Set.empty
+
         if useDot then
             writeOutputFile
                 (Path.Combine(outputDir, "dfa.dot"))
                 (AutomatonDot.dfaToDot string (fun idx _ -> sprintf "q_%d" idx) dfa)
-
-            let graphDot, _ = RpqGraphViz.renderGraph id graph Set.empty Set.empty Set.empty
 
             writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
         else
             writeOutputFile
                 (Path.Combine(outputDir, "dfa.tikz.tex"))
                 (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
-
-            let _, graphTikz = RpqGraphViz.renderGraph id graph Set.empty Set.empty Set.empty
 
             writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
 
@@ -184,6 +217,18 @@ module Helpers =
 
     let findBelyaninStepTikzTemplate () : string =
         findTemplateFile "Belyanin_step_tikz_template.tex"
+
+    let findBelyaninRowEndTemplate () : string =
+        findTemplateFile "Belyanin_row_end_template.tex"
+
+    let findBelyaninRowEndTikzTemplate () : string =
+        findTemplateFile "Belyanin_row_end_tikz_template.tex"
+
+    let findBelyaninLabelRowTemplate () : string =
+        findTemplateFile "Belyanin_label_row_template.tex"
+
+    let findBelyaninLabelRowTikzTemplate () : string =
+        findTemplateFile "Belyanin_label_row_tikz_template.tex"
 
     let findGllStepTikzTemplate () : string =
         findTemplateFile "GLL_step_tikz_template.tex"

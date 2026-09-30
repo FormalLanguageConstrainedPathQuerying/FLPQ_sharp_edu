@@ -163,6 +163,8 @@ module GllStepVisualizer =
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
+                Set.empty
+                Set.empty
                 step.NewGssEdges
                 Set.empty
                 step.StoredPopVertices
@@ -184,6 +186,8 @@ module GllStepVisualizer =
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
+                Set.empty
+                Set.empty
                 step.NewGssEdges
                 Set.empty
                 step.StoredPopVertices
@@ -250,6 +254,8 @@ module GllStepVisualizer =
                 Set.empty
                 Set.empty
                 Set.empty
+                Set.empty
+                Set.empty
                 None
                 None
 
@@ -267,6 +273,8 @@ module GllStepVisualizer =
                     sprintf "$%s$" (rangeToTeX s1 v1 s2 v2))
                 step.ActiveGssVertices
                 step.ActiveGssEdges
+                Set.empty
+                Set.empty
                 Set.empty
                 Set.empty
                 Set.empty

@@ -14,7 +14,26 @@ let private emptyTemplates: SummaryTeX.StepTemplates =
       Arroyuelo = ""
       ArroyueloTikz = ""
       Belyanin = ""
-      BelyaninTikz = "" }
+      BelyaninTikz = ""
+      BelyaninRowEnd = ""
+      BelyaninRowEndTikz = ""
+      BelyaninLabelRow = ""
+      BelyaninLabelRowTikz = "" }
+
+/// Step templates with the four Belyanin slots filled from the given template strings.
+let private belyaninTemplates (step: string) (rowEnd: string) (labelRow: string) : SummaryTeX.StepTemplates =
+    { Gll = ""
+      GllTikz = ""
+      Rnglr = ""
+      RnglrTikz = ""
+      Arroyuelo = ""
+      ArroyueloTikz = ""
+      Belyanin = step
+      BelyaninTikz = step
+      BelyaninRowEnd = rowEnd
+      BelyaninRowEndTikz = rowEnd
+      BelyaninLabelRow = labelRow
+      BelyaninLabelRowTikz = labelRow }
 
 [<Fact>]
 let ``SummaryKind ToString renders each kind`` () =
@@ -394,9 +413,15 @@ let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA bef
             && graphIdx > dfaIdx
         )
 
-        // The Belyanin legend describes the frontier automaton states, not a tree node.
-        Assert.Contains("Frontier automaton states", text)
+        // The Belyanin legend maps all five step-figure colors, not a tree node; the old
+        // "current frontier paths" wording is gone.
+        Assert.Contains("Start vertex / initial automaton state", text)
+        Assert.Contains("Frontier automaton states and frontier (initial) vertices", text)
+        Assert.Contains("Target vertices (newly reached on the step)", text)
+        Assert.Contains("Current transition edges (used on the step)", text)
+        Assert.Contains("Frontier path edges", text)
         Assert.DoesNotContain("Current regexp tree node", text)
+        Assert.DoesNotContain("Vertices of the current frontier paths", text)
 
         Assert.Contains("REGEXPTX", text)
         Assert.Contains("DFATIKZ", text)
@@ -427,16 +452,20 @@ let ``belyaninStepSection in dot mode fills empty placeholders for missing files
         let stepDir = Path.Combine(dir, "step_0")
         Directory.CreateDirectory stepDir |> ignore
 
-        let template = "M=__MATRICES__|A=__STEP_AUTOMATON_PDF__|G=__STEP_GRAPH_PDF__"
+        let templates =
+            belyaninTemplates
+                "S=__MATRICES_START__|A=__AUTOMATON_START_PDF__|G=__GRAPH_START_PDF__|L=__LABEL_ROWS__|E=__ROW_END__"
+                ""
+                ""
 
-        let lines = SummaryTeX.belyaninStepSection stepDir 0 template "" false
+        let lines = SummaryTeX.belyaninStepSection stepDir 0 templates false
 
         Assert.Equal(3, List.length lines)
         Assert.Equal(SummaryTeX.section "Step 0", lines.[0])
         // The filled template is wrapped whole in the step adjustbox (shrink-only).
         Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
         Assert.EndsWith(@"\end{adjustbox}", lines.[1])
-        Assert.Contains("M=|A=dot_pdfs/step_0_automaton.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1])
+        Assert.Contains("S=|A=dot_pdfs/step_0_automaton_start.pdf|G=dot_pdfs/step_0_graph_start.pdf|L=|E=", lines.[1])
         Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
 
 [<Fact>]
@@ -445,9 +474,10 @@ let ``belyaninStepSection in tikz mode fills empty placeholders for missing file
         let stepDir = Path.Combine(dir, "step_1")
         Directory.CreateDirectory stepDir |> ignore
 
-        let template = "A=__STEP_AUTOMATON_TIKZ__|G=__STEP_GRAPH_TIKZ__"
+        let templates =
+            belyaninTemplates "A=__AUTOMATON_START_TIKZ__|G=__GRAPH_START_TIKZ__" "" ""
 
-        let lines = SummaryTeX.belyaninStepSection stepDir 1 template template true
+        let lines = SummaryTeX.belyaninStepSection stepDir 1 templates true
 
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
         // Missing tikz files are replaced by empty strings; the column-width figure wrap and
@@ -457,6 +487,84 @@ let ``belyaninStepSection in tikz mode fills empty placeholders for missing file
         Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}")
         Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
         Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
+
+[<Fact>]
+let ``belyaninStepSection init step leaves label rows and row end empty`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let stepDir = Path.Combine(dir, "step_0")
+        Directory.CreateDirectory stepDir |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "matrices_start.tex"), "FVSTART")
+
+        let templates =
+            belyaninTemplates "S=__MATRICES_START__|L=__LABEL_ROWS__|E=__ROW_END__" "RE=__MATRICES_END__" ""
+
+        let lines = SummaryTeX.belyaninStepSection stepDir 0 templates true
+        let text = String.concat "\n" lines
+
+        Assert.Contains("S=FVSTART", text)
+        // No label files and no end artifacts: both placeholders stay empty.
+        Assert.Contains("|L=|E=", text)
+        Assert.DoesNotContain("RE=", text))
+
+[<Fact>]
+let ``belyaninStepSection interleaves label rows in numeric order`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let stepDir = Path.Combine(dir, "step_2")
+        Directory.CreateDirectory stepDir |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "matrices_start.tex"), "FVSTART")
+        File.WriteAllText(Path.Combine(stepDir, "matrices_end.tex"), "FVEND")
+        // Write label 1 before label 0 to prove numeric (not filesystem) ordering.
+        File.WriteAllText(Path.Combine(stepDir, "label_1_select.tex"), "SEL1")
+        File.WriteAllText(Path.Combine(stepDir, "label_1_extend.tex"), "EXT1")
+        File.WriteAllText(Path.Combine(stepDir, "label_0_select.tex"), "SEL0")
+        File.WriteAllText(Path.Combine(stepDir, "label_0_extend.tex"), "EXT0")
+
+        let templates =
+            belyaninTemplates
+                "S=__MATRICES_START__|L=__LABEL_ROWS__|E=__ROW_END__"
+                "RE=__MATRICES_END__|A=__AUTOMATON_END_PDF__|G=__GRAPH_END_PDF__"
+                "S=__SELECT_FORMULA__|A=__LABEL_AUTOMATON_PDF__|G=__LABEL_GRAPH_PDF__|E=__EXTEND_FORMULA__"
+
+        let lines = SummaryTeX.belyaninStepSection stepDir 2 templates false
+        let text = String.concat "\n" lines
+
+        Assert.Contains("S=FVSTART", text)
+        // Label 0's row precedes label 1's row despite the write order.
+        let idx0 =
+            text.IndexOf("S=SEL0|A=dot_pdfs/step_2_label_0_automaton.pdf|G=dot_pdfs/step_2_label_0_graph.pdf|E=EXT0")
+
+        let idx1 =
+            text.IndexOf("S=SEL1|A=dot_pdfs/step_2_label_1_automaton.pdf|G=dot_pdfs/step_2_label_1_graph.pdf|E=EXT1")
+
+        Assert.True(idx0 >= 0 && idx1 > idx0)
+        // The end line references the dot-compiled end figures.
+        Assert.Contains("RE=FVEND|A=dot_pdfs/step_2_automaton_end.pdf|G=dot_pdfs/step_2_graph_end.pdf", text))
+
+[<Fact>]
+let ``belyaninStepSection in tikz mode fills missing label figures with empty wraps`` () =
+    TestHelpers.withTempDir (fun dir ->
+        let stepDir = Path.Combine(dir, "step_3")
+        Directory.CreateDirectory stepDir |> ignore
+        File.WriteAllText(Path.Combine(stepDir, "matrices_start.tex"), "FVSTART")
+        // The label has formulas but no figure files; the row is still rendered.
+        File.WriteAllText(Path.Combine(stepDir, "label_0_select.tex"), "SEL0")
+        File.WriteAllText(Path.Combine(stepDir, "label_0_extend.tex"), "EXT0")
+        // An extend file without a select file is not a label row.
+        File.WriteAllText(Path.Combine(stepDir, "label_1_extend.tex"), "EXT1")
+
+        let templates =
+            belyaninTemplates
+                "S=__MATRICES_START__|A=__AUTOMATON_START_TIKZ__|G=__GRAPH_START_TIKZ__|L=__LABEL_ROWS__|E=__ROW_END__"
+                ""
+                "S=__SELECT_FORMULA__|A=__LABEL_AUTOMATON_TIKZ__|G=__LABEL_GRAPH_TIKZ__|E=__EXTEND_FORMULA__"
+
+        let lines = SummaryTeX.belyaninStepSection stepDir 3 templates true
+        let text = String.concat "\n" lines
+
+        Assert.Contains("S=SEL0", text)
+        Assert.DoesNotContain("EXT1", text)
+        // Two start-figure wraps plus two empty label-figure wraps.
+        Assert.Equal(4, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}"))
 
 [<Fact>]
 let ``buildContent for the LL kind renders stack step sections`` () =

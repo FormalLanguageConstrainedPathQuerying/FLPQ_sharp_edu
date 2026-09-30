@@ -183,6 +183,23 @@ module TestHelpers =
         let states = [ 0 .. vCount - 1 ]
         Nfa.fromTransitions states edges Set.empty (Set.ofArray sources) Set.empty
 
+    /// The shared RPQ example (the CLI data files data/example_graph.txt +
+    /// data/example_regexp.txt): regexp a / (b | c)* / a on the graph 0 a 1, 1 b 2, 2 c 3,
+    /// 3 b 2, 3 a 4, 2 a 5 with source v_0.
+    let rpqExampleGraph: NFA<string, int> =
+        nfaFromEdges
+            6
+            [ { From = 0; Label = "a"; To = 1 }
+              { From = 1; Label = "b"; To = 2 }
+              { From = 2; Label = "c"; To = 3 }
+              { From = 3; Label = "b"; To = 2 }
+              { From = 3; Label = "a"; To = 4 }
+              { From = 2; Label = "a"; To = 5 } ]
+            [| 0 |]
+
+    let rpqExampleRegexp: Regexp<string, string> =
+        RSeq(RTerm(Terminal "a"), RSeq(RStar(RAlt(RTerm(Terminal "b"), RTerm(Terminal "c"))), RTerm(Terminal "a")))
+
     /// Shared pipeline for acceptance check: create ExtendedRSM → build path index → check acceptance → build SPPF → validate tree leaves.
     /// Returns (accepted, sppfOption) — the SPPF is Some if the input was accepted and tree validation succeeded.
     let private acceptsInternal

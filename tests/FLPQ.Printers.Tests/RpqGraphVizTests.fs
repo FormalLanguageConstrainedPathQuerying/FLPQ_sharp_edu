@@ -6,16 +6,8 @@ open FLPQ.Languages
 open FLPQ.Printers
 open FLPQ.TestUtilities
 
-let private exampleGraph: NFA<string, int> =
-    TestHelpers.nfaFromEdges
-        6
-        [ { From = 0; Label = "a"; To = 1 }
-          { From = 1; Label = "b"; To = 2 }
-          { From = 2; Label = "c"; To = 3 }
-          { From = 3; Label = "b"; To = 2 }
-          { From = 3; Label = "a"; To = 4 }
-          { From = 2; Label = "a"; To = 5 } ]
-        [| 0 |]
+/// The shared RPQ example (see TestHelpers.rpqExampleGraph).
+let private exampleGraph: NFA<string, int> = TestHelpers.rpqExampleGraph
 
 [<Fact>]
 let ``pathHighlights: two paths yield their vertices and edges`` () =
@@ -82,9 +74,49 @@ let ``edgeEndpoints: both endpoints of every edge`` () =
     Assert.True(Set.isEmpty (RpqGraphViz.edgeEndpoints Set.empty))
 
 [<Fact>]
+let ``frontierVertices: the last vertex of every non-empty path`` () =
+    let m =
+        Matrix.create 3 3 (fun i j ->
+            if i = 0 && j = 2 then
+                Set.ofList [ [ 0; 1; 2 ] ]
+            elif i = 1 && j = 1 then
+                // A trivial path [5] marks vertex 5 as a frontier position.
+                Set.singleton [ 5 ]
+            else
+                Set.empty)
+
+    Assert.True(Set.ofList [ 2; 5 ] = RpqGraphViz.frontierVertices m)
+
+[<Fact>]
+let ``frontierVertices: empty matrix yields the empty set`` () =
+    let m = Matrix.init 2 2 Set.empty
+
+    Assert.True(Set.isEmpty (RpqGraphViz.frontierVertices m))
+
+[<Fact>]
+let ``renderGraph: start vertices render green and frontier vertices lightblue in both formats`` () =
+    let dot, tikz =
+        RpqGraphViz.renderGraph id exampleGraph Set.empty (Set.ofList [ 0 ]) (Set.ofList [ 1; 2 ]) Set.empty Set.empty
+
+    Assert.Contains("fillcolor=green", dot)
+    Assert.Contains("fillcolor=lightblue", dot)
+    Assert.Contains("fill=green!30", tikz)
+    Assert.Contains("fill=lightblue!20", tikz)
+
+[<Fact>]
+let ``renderGraph: empty start and frontier sets leave the plain graph unchanged`` () =
+    let dot, tikz =
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty
+
+    Assert.DoesNotContain("green", dot)
+    Assert.DoesNotContain("lightblue", dot)
+    Assert.DoesNotContain("green", tikz)
+    Assert.DoesNotContain("lightblue", tikz)
+
+[<Fact>]
 let ``renderGraph: plain graph has no highlights in either format`` () =
     let dot, tikz =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty
 
     Assert.Contains("digraph", dot)
     Assert.Contains("v_0", dot)
@@ -96,25 +128,39 @@ let ``renderGraph: plain graph has no highlights in either format`` () =
 [<Fact>]
 let ``renderGraph: highlighted vertices and edges appear in both formats`` () =
     let dot, tikz =
-        RpqGraphViz.renderGraph id exampleGraph (Set.ofList [ 1; 2 ]) Set.empty (Set.ofList [ (1, 2) ])
+        RpqGraphViz.renderGraph
+            id
+            exampleGraph
+            (Set.ofList [ 1; 2 ])
+            Set.empty
+            Set.empty
+            (Set.ofList [ (1, 2) ])
+            Set.empty
 
     Assert.Contains("v_1", dot)
     Assert.Contains("v_2", dot)
     // The highlighted vertex style differs from the plain one in both formats.
     let plainDot, _ =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty
 
     Assert.NotEqual<string>(plainDot, dot)
 
     let _, plainTikz =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty
 
     Assert.NotEqual<string>(plainTikz, tikz)
 
 [<Fact>]
 let ``renderGraph: path edges render light red and current edges red bold in both formats`` () =
     let dot, tikz =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty (Set.ofList [ (0, 1) ]) (Set.ofList [ (1, 2) ])
+        RpqGraphViz.renderGraph
+            id
+            exampleGraph
+            Set.empty
+            Set.empty
+            Set.empty
+            (Set.ofList [ (1, 2) ])
+            (Set.ofList [ (0, 1) ])
 
     // The hex color is quoted: an unquoted # would start a DOT comment.
     Assert.Contains("v0 -> v1 [label=\"a\", color=\"#FF9999\"];", dot)
@@ -125,7 +171,7 @@ let ``renderGraph: path edges render light red and current edges red bold in bot
 [<Fact>]
 let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
     let dot, tikz =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty
 
     // The example graph carries both 2->3 ("c") and 3->2 ("b").
     Assert.Contains("v2 ->[\"c\", bend left=15] v3;", tikz)
@@ -138,7 +184,7 @@ let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
 [<Fact>]
 let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
     let _, tikz =
-        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty (Set.ofList [ (2, 3) ])
+        RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty (Set.ofList [ (2, 3) ]) Set.empty
 
     Assert.Contains("v2 ->[\"c\", red, thick, bend left=15] v3;", tikz)
     Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)

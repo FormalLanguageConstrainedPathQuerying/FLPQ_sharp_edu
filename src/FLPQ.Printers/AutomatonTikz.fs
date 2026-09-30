@@ -75,6 +75,7 @@ module AutomatonTikz =
     let private transitionEdges
         (labelPrinter: 't -> string)
         (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>)
+        (highlightedEdges: Set<int * int>)
         (sb: StringBuilder)
         : unit =
         for i in 0 .. Matrix.rows transitions - 1 do
@@ -94,13 +95,24 @@ module AutomatonTikz =
                         let label = termLabels |> String.concat ", " |> escapeLatex
                         let loopAttr = if i = j then ",loop above" else ""
 
+                        // Highlighted edges render red and bold (same style as GssTikz's
+                        // highlighted tier); the label and loop attributes are preserved.
+                        // Epsilon-only cells render no edge here, so they can never be
+                        // highlighted.
+                        let hlAttr =
+                            if Set.contains (i, j) highlightedEdges then
+                                ", red, thick"
+                            else
+                                ""
+
                         if label = "" then
                             if i = j then
                                 sb.AppendLine(sprintf "    s%d ->[loop above] s%d;" i j) |> ignore
                             else
                                 sb.AppendLine(sprintf "    s%d -> s%d;" i j) |> ignore
                         else
-                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s] s%d;" i label loopAttr j) |> ignore
+                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i label hlAttr loopAttr j)
+                            |> ignore
                 | None -> ()
 
     let private epsEdges (transitions: Matrix<Option<NonEmptySet<AutomatonLabel<'t>>>>) (sb: StringBuilder) : unit =
@@ -165,20 +177,22 @@ module AutomatonTikz =
             shape
             sb
 
-        transitionEdges labelPrinter nfa.Transitions sb
+        transitionEdges labelPrinter nfa.Transitions Set.empty sb
         epsEdges nfa.Transitions sb
 
         tikzFooter sb
         sb.ToString()
 
     /// Render a DFA as a Tikz tikzpicture using layered layout, with the given states highlighted
-    /// (fill=lightblue!20, overriding the start state's green fill).
+    /// (fill=lightblue!20, overriding the start state's green fill) and the given transitions
+    /// rendered red and bold (`red, thick`, label and loop attributes preserved).
     let dfaToTikzWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)
         (shape: string)
         (dfa: DFA<'t, 's>)
         (highlightedStates: Set<int>)
+        (highlightedEdges: Set<int * int>)
         : string =
         let sb = StringBuilder()
 
@@ -194,7 +208,7 @@ module AutomatonTikz =
             shape
             sb
 
-        transitionEdges labelPrinter dfa.Transitions sb
+        transitionEdges labelPrinter dfa.Transitions highlightedEdges sb
 
         tikzFooter sb
         sb.ToString()
@@ -206,4 +220,4 @@ module AutomatonTikz =
         (shape: string)
         (dfa: DFA<'t, 's>)
         : string =
-        dfaToTikzWithHighlights labelPrinter stateVisualizer shape dfa Set.empty
+        dfaToTikzWithHighlights labelPrinter stateVisualizer shape dfa Set.empty Set.empty

@@ -60,6 +60,8 @@ module RnglrStepVisualizer =
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
+                Set.empty
+                Set.empty
                 step.NewGssEdges
                 Set.empty
                 step.PassingReductionVertices
@@ -88,6 +90,8 @@ module RnglrStepVisualizer =
                 step.ActiveGssVertices
                 step.ActiveGssEdges
                 step.NewGssVertices
+                Set.empty
+                Set.empty
                 step.NewGssEdges
                 Set.empty
                 step.PassingReductionVertices

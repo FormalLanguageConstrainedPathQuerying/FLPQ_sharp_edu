@@ -7,7 +7,7 @@
 **Depends on:** GssDot, GssTikz, AutomatonTikz, PathSemiring
 **Used by:** ArroyueloStepVisualizer, BelyaninStepVisualizer, ArroyueloRunner, BelyaninRunner
 
-> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus highlighted vertices (yellow). Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
+> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier (light blue), and highlighted (yellow) vertices. Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
 
 ## Contents
 
@@ -37,17 +37,25 @@ nothing. This is the "current step" edge set for a frontier matrix.
 
 Both endpoints of every edge in the set.
 
+### `frontierVertices: Matrix<Set<int list>> -> Set<int>`
+
+The vertices at which the stored paths end — the frontier's positions in the graph
+(the graph-side counterpart of the automaton's frontier states). A path contributes its
+last vertex; trivial single-vertex paths mark their vertex as a frontier position.
+
 ### `pathHighlights: Matrix<Set<int list>> -> Set<int> * Set<int * int>`
 
 `(pathVertices, pathEdges)` — vertices and edges used by the stored paths.
 
-### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int * int> -> Set<int * int> -> string * string`
+### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> string * string`
 
 Render the graph with the given highlights (pass empty sets for the plain input
-graph): highlightedVertices get the vertex fill, pathEdges render light red,
-currentEdges render red and bold (an edge in both sets renders as current). Returns
-`(dot, tikz)`. Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels are the
-comma-joined terminal labels of the pair (epsilon-only edges label as "ε").
+graph): highlightedVertices get the yellow vertex fill, startVertices the green source
+fill, frontierVertices the light blue frontier fill, currentEdges render red and bold,
+pathEdges light red (an edge in both sets renders as current). The vertex/edge tier
+order mirrors `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`. Returns `(dot, tikz)`.
+Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels are the comma-joined terminal
+labels of the pair (epsilon-only edges label as "ε").
 
 ## Design Decisions
 

@@ -1,5 +1,49 @@
 # Code Review Report
 
+## Task 285 Review (2026-09-26)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/RpqGraphViz.fs` (S1: `renderGraph` gains the green `startVertices` and lightblue `frontierVertices` tiers; review: parameter order aligned with the GSS renderers), `src/FLPQ.Printers/{AutomatonDot,AutomatonTikz}.fs` (S2: highlighted DFA transition edges, red bold), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S3: three-line step layout — start boundary, per-label select/extend rows with split product formulas, end boundary; new `BelyaninBoundaryVisual` record and `End: option` on `BelyaninVisualizationStep`), `src/FLPQ.Printers/SummaryTeX.fs` (S3: `belyaninStepSection` rewritten for the step-dir file layout with label rows discovered by scanning `label_i_select.tex`), `src/FLPQ.Cli/{Helpers,Summary}.fs` (S3: per-step directory writer, six Belyanin template loads, root input graph renders source vertices green), `data/Belyanin_{step,row_end,label_row}_(tikz_)template.tex` (six rewritten templates), tests (`BelyaninStepVisualizationTests`, `RpqGraphVizTests`, `GssDotTests`, `SummaryTexSectionTests`, `AutomatonVisualizationTests`, `BelyaninRunnerTests`, `SummaryTests`, `TexCompilationTests`, `CykSummaryGoldenTests`, `BelyaninTraceTests`, shared `TestHelpers` fixtures, 77 regenerated goldens), and docs (`belyanin-step-viz.md`, `arroyuelo-step-viz.md`, `rpq-graph-viz.md`, `summary-tex.md`, `gss-dot.md`, `gss-tikz.md`, `automaton-viz.md`, `FLPQ.Cli.md`, `cli.md`).
+
+**Findings resolved this review (commits 7b3888a, 78ff5b0, 876c4c9):**
+
+Round 1 (19 findings — 9 src, 8 tests, 2 docs):
+
+- §9/§23 (compile-time safety) — the step writer gated the end-boundary files on `String.IsNullOrEmpty` of rendered strings; the visualizer now returns a dedicated `BelyaninBoundaryVisual` record and `BelyaninVisualizationStep.End : BelyaninBoundaryVisual option`, so the init step's missing end state is expressed in the type and the writer matches on `End`.
+- §13 (no duplication) — `frontierStates` recomputed row non-emptiness inline; it now reuses `rowNonEmpty`; the duplicated DFA figure rendering for the start/end boundaries was extracted to a `dfaFigures` helper; the six Belyanin template loads in `Summary.fs` were consolidated into a local `loadBelyaninTemplate`; the repeated placeholder-substitution lines in `SummaryTeX` were consolidated into a private `fill` helper; `GssDot`'s per-tier vertex-attribute construction was extracted to a shared `vertexAttrs`.
+- §23 (consistency) — `renderGraph`'s parameter order was arbitrary relative to the GSS renderers it mirrors; it is now `(terminalPrinter, graph, highlightedVertices, startVertices, frontierVertices, currentEdges, pathEdges)` matching `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`, with every call site updated.
+- §6 (doc comments) — added doc comments to the split `stateLabel`/`vertexLabel` printers and the three legend functions; both step records documented for the new shape.
+- §21 (book traceability) — the visualizer module doc now cites `algo:RPQ_BFS_semiring`; the select-formula comment references the book's per-label propagation terminology.
+- §13/§14 (test fixtures) — the example RPQ graph and regexp were copy-pasted across three test files; they are now shared `TestHelpers.rpqExampleGraph` / `rpqExampleRegexp`.
+- §15 (test fidelity) — the template-fill facts filled placeholders by hand against a synthetic step record; they now run the real pipeline (`writeStepDir` → `SummaryTeX.belyaninStepSection`) so the lualatex facts exercise the on-disk label-row discovery.
+- §15/§19 (test coverage) — the legend fact asserted 3 of the 5 rows; it now asserts all 5. The runner summary fact ran TikZ mode only; it is now parameterized over both modes. `SummaryTexSectionTests` did not assert the dot-mode PDF names; it now does.
+- §13 (test hygiene) — `loopDfa` was rebuilt per fact; hoisted to a module-level binding. The empty-Extend fact could pass vacuously; guarded with `Assert.NotEmpty`.
+- §19 (test coverage) — the start-over-current vertex-tier priority was untested; facts added for both DOT and TikZ.
+- §20 (documentation, single source of truth) — `summary-tex.md` enumerated the step colors inline; it now links to the `belyanin-step-viz.md` color table. `arroyuelo-step-viz.md` gained an explicit asymmetry row (Arroyuelo step graphs keep the pre-285 look by design).
+- §20 (documentation) — `belyanin-step-viz.md`'s Data Structure section and `rpq-graph-viz.md`'s `renderGraph` signature were stale against the post-review shape; updated.
+
+Gate-driven fix (surfaced by the hard gate, commit 876c4c9):
+
+- FL0072 (`failwithBadUsage`) in `BelyaninStepVisualizationTests` — the select-formula and extend-formula facts duplicated the same three-line trace-label extraction (and its `failwith` message); hoisted to a shared `labelTerminal` helper.
+
+**Verified:** build 0 errors; suites green — FLPQ.Printers.Tests 386, FLPQ.RPQ.Tests 80, FLPQ.Cli.Tests 232 (incl. all Belyanin/Arroyuelo goldens and the dot-mode lualatex summary compiles); Fantomas clean; mdformat clean; commit gate PASS. A second review pass over the changed surface confirmed every finding fixed with no new findings; the hard gate reports `STATUS: PASS` (all 16 steps, all six test projects 0 failed / 0 skipped, total coverage line 98.7% / branch 97.3%, every changed project lints at 0 warnings).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — `BelyaninBoundaryVisual` and `BelyaninVisualizationStep` are records; `renderGraph` takes seven scalar parameters; no tuple expression larger than two items introduced.
+- §6 (doc comments) — all new/changed public API carries XML docs: both step records, `renderGraph` (updated), `belyaninStepSection` (updated); the private helpers (`rowNonEmpty`, `frontierStates`, `dfaFigures`, `fill`, `loadBelyaninTemplate`) follow each file's existing convention.
+- §7 (genericity) — no new hardcoding: the visualizer stays generic over `'t` with an explicit terminal printer; the templates are data files; the color and width decisions are documented in `belyanin-step-viz.md`.
+- §9 (separation) — `BelyaninRPQ` is untouched (algorithm); all TeX/DOT strings live in `FLPQ.Printers`; the runner does file I/O only.
+- §13 (no duplication) — see resolved findings; after consolidation, row non-emptiness, DFA figure rendering, template loading, and placeholder filling each exist in exactly one place.
+- §14 (language registry) — the RPQ test examples use the shared `TestHelpers` fixtures (the book's Chapter 11 example graph/regexp, not a grammar-registry entry); no new hardcoded grammars.
+- §15/§16 (test fidelity / Fact vs Property) — every new fact asserts a concrete property: per-step file presence/absence (init step has no end/label files), exact red-bold transition sets per label row, the I_simple drop at step 4, all five legend rows, both render modes end-to-end, lualatex compilation. All deterministic `[<Fact>]`.
+- §19 (test coverage) — every changed module has a correspondent: `RpqGraphViz` tiers → `RpqGraphVizTests`; `AutomatonDot`/`AutomatonTikz` highlights → `GssDotTests` / `AutomatonVisualizationTests`; `BelyaninStepVisualizer` → `BelyaninStepVisualizationTests`; `SummaryTeX.belyaninStepSection` → `SummaryTexSectionTests`; runner artifacts → `BelyaninRunnerTests` / `SummaryTests`; end-to-end → `CliSummaryTests` / `TexCompilationTests`.
+- §20 (documentation) — `belyanin-step-viz.md` (color table as single source of truth, new record shape, step-dir file layout), `rpq-graph-viz.md` (new tiers and signature), `summary-tex.md` (file-driven label discovery, width decision linking to the step-viz docs), `arroyuelo-step-viz.md` (asymmetry row, explicit column widths), `gss-dot.md` / `gss-tikz.md` / `automaton-viz.md` (highlight tiers), `FLPQ.Cli.md`, and `cli.md` (Belyanin step-artifact table) all match the implemented behavior.
+- §21 (book traceability) — book references retained: `algo:RPQ_BFS_semiring` on the visualizer module, per-label propagation terminology in the formula comments; the F^a naming and `\otimes` rendering follow the book's path-semiring notation for the Chapter 11 example.
+
+**No blocking findings.** The second pass over the changed surface found no additional problems.
+
+---
+
 ## Task 284 Review (2026-09-25)
 
 Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: `BelyaninLabelStep` gains the per-label `N`/`G` matrices), `src/FLPQ.Printers/PathSemiringTeX.fs` (S2: `matrixWithStateVertexLabels`, `boolMatrixToTeX`), `src/FLPQ.Printers/{GssDot,GssTikz}.fs` (S3: `pathEdges` parameter, two-tier edge rendering, bold strong edges) + every `toDotFromSets`/`toTikzFromSets` call site (`RpqGraphViz`, `ArroyueloStepVisualizer`, `GllStepVisualizer`, `RnglrStepVisualizer`), `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S4: F/V titles, explicit per-label product chains, q/v labels; S5: current/path edge wiring), `src/FLPQ.Printers/RpqGraphViz.fs` (S5: `pathVertices`/`pathEdges`/`pathLastEdges`/`edgeEndpoints`, 5-arg `renderGraph`), `src/FLPQ.Cli/{BelyaninRunner,Helpers}.fs` (q/v result matrix, plain-graph call sites), tests (`BelyaninTraceTests`, `PathSemiringTexTests`, `GssDotTests`, `RpqGraphVizTests`, `BelyaninStepVisualizationTests` + 12 regenerated goldens), and docs (`belyanin-rpq.md`, `path-semiring-tex.md`, `gss-dot.md` new, `gss-tikz.md` new, `rpq-graph-viz.md`, `belyanin-step-viz.md`, `FLPQ.Printers.md`, `tasks/fixes_for_book.md`).

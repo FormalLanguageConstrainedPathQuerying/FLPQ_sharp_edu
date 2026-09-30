@@ -99,6 +99,8 @@ module ArroyueloStepVisualizer =
                     Set.empty
                     Set.empty
                     Set.empty
+                    Set.empty
+                    Set.empty
                     (Some step.NodeIndex)
                     None
 
@@ -112,6 +114,8 @@ module ArroyueloStepVisualizer =
                     Set.empty
                     Set.empty
                     Set.empty
+                    Set.empty
+                    Set.empty
                     (Some step.NodeIndex)
                     "rectangle"
                     true
@@ -120,8 +124,10 @@ module ArroyueloStepVisualizer =
 
             let pathVerts, pathEdgeHl = RpqGraphViz.pathHighlights step.Result
 
+            // Arroyuelo step graphs keep the pre-285 look: no green sources, no frontier
+            // tier (only the shared root Input Graph gained the green source fill).
             let graphDot, graphTikz =
-                RpqGraphViz.renderGraph terminalPrinter graph pathVerts Set.empty pathEdgeHl
+                RpqGraphViz.renderGraph terminalPrinter graph pathVerts Set.empty Set.empty pathEdgeHl Set.empty
 
             { TreeDot = treeDot
               TreeTikz = treeTikz

@@ -7,7 +7,7 @@
 **Depends on:** DerivationTreeDot (label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer, ArroyueloStepVisualizer, RpqGraphViz
 
-> **Abstract:** Graphviz DOT rendering of the graph-structured stack (GSS). Renders active vertices as ellipses with fill colors for the highlighted, stored-pop, and current states, and edges with two highlight tiers: highlighted edges are red with penwidth=2.0, path edges are light red (#FF9999). `toDotFromSets` renders directly from vertex/edge sets (step visualization); `toDot` renders a full GSS struct.
+> **Abstract:** Graphviz DOT rendering of the graph-structured stack (GSS). Renders active vertices as ellipses with fill colors for the start, current, frontier, stored-pop, and highlighted states, and edges with two highlight tiers: highlighted edges are red with penwidth=2.0, path edges are light red (#FF9999). `toDotFromSets` renders directly from vertex/edge sets (step visualization); `toDot` renders a full GSS struct.
 
 ## Contents
 
@@ -38,15 +38,17 @@ Renders a full GSS struct. Only active vertices (those with outgoing edges) are
 rendered. Parameters: vertex label printer, edge label printer, highlightedVertices,
 highlightedEdges, currentVertex, gss.
 
-### `toDotFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> (int -> int) option -> string`
+### `toDotFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> (int -> int) option -> string`
 
 Renders directly from vertex/edge sets — used for step visualization where only the
 active elements are known. Parameters in order: vertex label printer, edge label
-printer, activeVertices, activeEdges, highlightedVertices, highlightedEdges,
-pathEdges, storedPopVertices, currentVertex, positionOf.
+printer, activeVertices, activeEdges, highlightedVertices, startVertices,
+frontierVertices, highlightedEdges, pathEdges, storedPopVertices, currentVertex,
+positionOf.
 
-- Vertex fills: current = lightblue (overrides all), stored-pop = orange,
-  highlighted = lightyellow, else plain.
+- Vertex fills (highest precedence first): start = green, current = lightblue,
+  frontier = lightblue, stored-pop = orange, highlighted = lightyellow, else plain.
+  A vertex in several tiers renders the highest-precedence fill only.
 - Edge tiers: highlighted = `color=red, penwidth=2.0`; path = `color="#FF9999"`
   (an edge in both sets renders as highlighted); else plain.
 - `positionOf`: when `Some`, one `{rank=same; ...}` subgraph per position groups the

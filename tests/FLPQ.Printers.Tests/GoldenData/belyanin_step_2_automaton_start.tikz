@@ -1,0 +1,10 @@
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+    s0 [as={$q_0$}, label=above:Start, fill=green!30];
+    s1 [as={$q_1$}, fill=lightblue!20];
+    s2 [as={$q_2$}, double, double distance=1.5pt, fill=red!30];
+    s0 ->["a"] s1;
+    s1 ->["b, c",loop above] s1;
+    s1 ->["a"] s2;
+  };
+\end{tikzpicture}

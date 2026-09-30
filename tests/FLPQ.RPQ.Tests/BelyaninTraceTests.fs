@@ -8,21 +8,10 @@ open FLPQ.Languages
 open FLPQ.RPQ
 open FLPQ.TestUtilities
 
-/// The example from the detailed plan: regexp a / (b | c)* / a on the graph
-/// 0 a 1, 1 b 2, 2 c 3, 3 b 2, 3 a 4, 2 a 5 with source v_0.
-let private exampleNfa: NFA<string, int> =
-    TestHelpers.nfaFromEdges
-        6
-        [ { From = 0; Label = "a"; To = 1 }
-          { From = 1; Label = "b"; To = 2 }
-          { From = 2; Label = "c"; To = 3 }
-          { From = 3; Label = "b"; To = 2 }
-          { From = 3; Label = "a"; To = 4 }
-          { From = 2; Label = "a"; To = 5 } ]
-        [| 0 |]
+/// The shared RPQ example (see TestHelpers.rpqExampleGraph / rpqExampleRegexp).
+let private exampleNfa: NFA<string, int> = TestHelpers.rpqExampleGraph
 
-let private exampleRegexp: Regexp<string, string> =
-    RSeq(RTerm(Terminal "a"), RSeq(RStar(RAlt(RTerm(Terminal "b"), RTerm(Terminal "c"))), RTerm(Terminal "a")))
+let private exampleRegexp: Regexp<string, string> = TestHelpers.rpqExampleRegexp
 
 /// The query DFA for the example regexp: q0 (start) -a-> q1, q1 -b,c-> q1, q1 -a-> q2 (final).
 let private exampleDfa: DFA<string, int> = Regexp.toDfa exampleRegexp

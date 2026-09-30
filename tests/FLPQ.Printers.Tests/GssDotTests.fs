@@ -115,6 +115,8 @@ let ``toDotFromSets stored-pop vertex gets orange fill`` () =
             (set [ 5 ])
             Set.empty
             Set.empty
+            Set.empty
+            Set.empty
             (set [ 2 ])
             (Some 0)
             None
@@ -131,6 +133,110 @@ let ``toDotFromSets stored-pop vertex gets orange fill`` () =
     Assert.Equal(1, orangeNodes)
 
 [<Fact>]
+let ``toDotFromSets start vertex gets green fill`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 1 ])
+            (set [ (0, 1) ])
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            None
+
+    Assert.Contains("v0 [label=\"0\", shape=ellipse, style=filled, fillcolor=green];", dot)
+    Assert.DoesNotContain("fillcolor=lightblue", dot)
+
+[<Fact>]
+let ``toDotFromSets frontier vertex gets lightblue fill`` () =
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0; 1 ])
+            (set [ (0, 1) ])
+            Set.empty
+            Set.empty
+            (set [ 1 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            None
+
+    Assert.Contains("v1 [label=\"1\", shape=ellipse, style=filled, fillcolor=lightblue];", dot)
+    Assert.DoesNotContain("fillcolor=green", dot)
+
+[<Fact>]
+let ``toDotFromSets start vertex takes priority over frontier and highlighted`` () =
+    // Vertex 0 is in all three tiers; it must render green only.
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0 ])
+            Set.empty
+            (set [ 0 ])
+            (set [ 0 ])
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            None
+
+    Assert.Contains("fillcolor=green", dot)
+    Assert.DoesNotContain("fillcolor=lightblue", dot)
+    Assert.DoesNotContain("fillcolor=lightyellow", dot)
+
+[<Fact>]
+let ``toDotFromSets start vertex takes priority over current`` () =
+    // Vertex 0 is both a source and the current vertex; it must render green, not lightblue.
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            Set.empty
+            (Some 0)
+            None
+
+    Assert.Contains("fillcolor=green", dot)
+    Assert.DoesNotContain("fillcolor=lightblue", dot)
+
+[<Fact>]
+let ``toDotFromSets frontier vertex takes priority over highlighted`` () =
+    // Vertex 0 is both frontier and highlighted; it must render lightblue, not lightyellow.
+    let dot =
+        GssDot.toDotFromSets
+            (fun idx -> sprintf "%d" idx)
+            (fun _ -> "e")
+            (set [ 0 ])
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+            Set.empty
+            Set.empty
+            None
+            None
+
+    Assert.Contains("fillcolor=lightblue", dot)
+    Assert.DoesNotContain("fillcolor=lightyellow", dot)
+
+[<Fact>]
 let ``toDotFromSets current vertex takes priority over stored-pop`` () =
     // Vertex 0 is both current and a stored-pop vertex; it must render lightblue, not orange.
     let dot =
@@ -138,6 +244,8 @@ let ``toDotFromSets current vertex takes priority over stored-pop`` () =
             (fun idx -> sprintf "%d" idx)
             (fun _ -> "e")
             (set [ 0 ])
+            Set.empty
+            Set.empty
             Set.empty
             Set.empty
             Set.empty
@@ -162,6 +270,8 @@ let ``toDotFromSets with positionOf emits one rank=same subgraph per position`` 
             Set.empty
             Set.empty
             Set.empty
+            Set.empty
+            Set.empty
             None
             (Some(fun idx -> idx / 2))
 
@@ -176,6 +286,8 @@ let ``toDotFromSets without positionOf emits no rank=same subgraph`` () =
             (fun _ -> "e")
             (set [ 0; 1 ])
             (set [ (1, 0) ])
+            Set.empty
+            Set.empty
             Set.empty
             Set.empty
             Set.empty
@@ -197,6 +309,8 @@ let ``toDotFromSets renders the current vertex even when absent from all active 
             Set.empty
             Set.empty
             Set.empty
+            Set.empty
+            Set.empty
             (Some 5)
             None
 
@@ -211,6 +325,8 @@ let ``toDotFromSets renders path edges light red and highlighted edges red bold`
             (fun _ -> "e")
             (set [ 0; 1; 2 ])
             (set [ (0, 1); (1, 2); (0, 2) ])
+            Set.empty
+            Set.empty
             Set.empty
             (set [ (1, 2); (0, 2) ])
             (set [ (0, 1); (0, 2) ])
@@ -239,6 +355,8 @@ module GssTikzTests =
                 Set.empty
                 Set.empty
                 Set.empty
+                Set.empty
+                Set.empty
                 (Some 3)
                 "circle"
                 false
@@ -248,6 +366,125 @@ module GssTikzTests =
         Assert.Contains("v3 [as={3}, fill=lightblue!20];", tikz)
 
     [<Fact>]
+    let ``toTikzFromSets start vertex gets green fill`` () =
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0; 1 ])
+                (set [ (0, 1) ])
+                Set.empty
+                (set [ 0 ])
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                None
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("v0 [as={0}, fill=green!30];", tikz)
+        Assert.DoesNotContain("fill=lightblue", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets frontier vertex gets lightblue fill`` () =
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0; 1 ])
+                (set [ (0, 1) ])
+                Set.empty
+                Set.empty
+                (set [ 1 ])
+                Set.empty
+                Set.empty
+                Set.empty
+                None
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("v1 [as={1}, fill=lightblue!20];", tikz)
+        Assert.DoesNotContain("fill=green", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets start vertex takes priority over frontier and highlighted`` () =
+        // Vertex 0 is in all three tiers; it must render green only.
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0 ])
+                Set.empty
+                (set [ 0 ])
+                (set [ 0 ])
+                (set [ 0 ])
+                Set.empty
+                Set.empty
+                Set.empty
+                None
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("fill=green!30", tikz)
+        Assert.DoesNotContain("fill=lightblue", tikz)
+        Assert.DoesNotContain("fill=yellow", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets start vertex takes priority over current`` () =
+        // Vertex 0 is both a source and the current vertex; it must render green, not lightblue.
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0 ])
+                Set.empty
+                Set.empty
+                (set [ 0 ])
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                (Some 0)
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("fill=green!30", tikz)
+        Assert.DoesNotContain("fill=lightblue", tikz)
+
+    [<Fact>]
+    let ``toTikzFromSets frontier vertex takes priority over highlighted`` () =
+        // Vertex 0 is both frontier and highlighted; it must render lightblue, not yellow.
+        let tikz =
+            GssTikz.toTikzFromSets
+                (fun idx -> sprintf "%d" idx)
+                (fun _ -> "e")
+                (set [ 0 ])
+                Set.empty
+                (set [ 0 ])
+                Set.empty
+                (set [ 0 ])
+                Set.empty
+                Set.empty
+                Set.empty
+                None
+                "circle"
+                false
+                None
+                false
+
+        Assert.Contains("fill=lightblue!20", tikz)
+        Assert.DoesNotContain("fill=yellow", tikz)
+
+    [<Fact>]
     let ``toTikzFromSets edge with empty label renders a bare edge and a bare loop`` () =
         let tikz =
             GssTikz.toTikzFromSets
@@ -255,6 +492,8 @@ module GssTikzTests =
                 (fun _ -> "")
                 (set [ 0; 1 ])
                 (set [ (0, 1); (0, 0) ])
+                Set.empty
+                Set.empty
                 Set.empty
                 Set.empty
                 Set.empty
@@ -280,6 +519,8 @@ module GssTikzTests =
                 Set.empty
                 Set.empty
                 Set.empty
+                Set.empty
+                Set.empty
                 None
                 "circle"
                 false
@@ -297,6 +538,8 @@ module GssTikzTests =
                 (fun _ -> "")
                 (set [ 0; 1 ])
                 (set [ (0, 1); (1, 0) ])
+                Set.empty
+                Set.empty
                 Set.empty
                 Set.empty
                 Set.empty
@@ -320,6 +563,8 @@ module GssTikzTests =
                 (set [ 0; 1; 2 ])
                 (set [ (0, 1); (1, 0); (0, 2) ])
                 Set.empty
+                Set.empty
+                Set.empty
                 (set [ (1, 0) ])
                 Set.empty
                 Set.empty
@@ -341,6 +586,8 @@ module GssTikzTests =
                 (fun _ -> "e")
                 (set [ 0; 1; 2 ])
                 (set [ (0, 1); (1, 2); (0, 2) ])
+                Set.empty
+                Set.empty
                 Set.empty
                 (set [ (1, 2); (0, 2) ])
                 (set [ (0, 1); (0, 2) ])

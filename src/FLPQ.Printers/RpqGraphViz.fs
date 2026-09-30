@@ -74,19 +74,34 @@ module RpqGraphViz =
         edges
         |> Set.fold (fun acc (from, to_) -> Set.add from (Set.add to_ acc)) Set.empty
 
+    /// Vertices at which the paths stored in a path semiring matrix end — the frontier's
+    /// positions in the graph (graph-side counterpart of the automaton's frontier states).
+    let frontierVertices (result: Matrix<Set<int list>>) : Set<int> =
+        PathSemiring.allPaths result
+        |> Set.fold
+            (fun acc p ->
+                match p with
+                | [] -> acc
+                | _ -> Set.add (List.last p) acc)
+            Set.empty
+
     /// Vertices and edges used by the paths stored in a path semiring matrix.
     let pathHighlights (result: Matrix<Set<int list>>) : Set<int> * Set<int * int> =
         (pathVertices result, pathEdges result)
 
     /// Render the graph with the given highlights (pass empty sets for the plain input
-    /// graph): highlightedVertices get the vertex fill, pathEdges render light red,
-    /// currentEdges render red and bold. Returns (dot, tikz).
+    /// graph): highlightedVertices get the yellow vertex fill, startVertices the green source
+    /// fill, frontierVertices light blue, currentEdges render red and bold, pathEdges light
+    /// red. The vertex/edge tier order mirrors GssDot.toDotFromSets / GssTikz.toTikzFromSets.
+    /// Returns (dot, tikz).
     let renderGraph
         (terminalPrinter: 't -> string)
         (graph: NFA<'t, int>)
         (highlightedVertices: Set<int>)
-        (pathEdges: Set<int * int>)
+        (startVertices: Set<int>)
+        (frontierVertices: Set<int>)
         (currentEdges: Set<int * int>)
+        (pathEdges: Set<int * int>)
         : string * string =
         let n = Nfa.stateCount graph
 
@@ -105,6 +120,8 @@ module RpqGraphViz =
                 allVertices
                 gEdges
                 highlightedVertices
+                startVertices
+                frontierVertices
                 currentEdges
                 pathEdges
                 Set.empty
@@ -120,6 +137,8 @@ module RpqGraphViz =
                 allVertices
                 gEdges
                 highlightedVertices
+                startVertices
+                frontierVertices
                 currentEdges
                 pathEdges
                 Set.empty

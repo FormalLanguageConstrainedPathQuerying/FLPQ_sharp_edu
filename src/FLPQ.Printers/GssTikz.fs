@@ -12,6 +12,10 @@ module GssTikz =
     /// highlightedVertices get filled with yellow!20, highlightedEdges are red and bold
     /// (thick), pathEdges are light red (red!40); an edge in both sets renders as
     /// highlighted. The currentVertex (if specified) gets fill=lightblue!20.
+    /// startVertices get filled with green!30 (graph sources, matching the automaton's
+    /// initial-state fill), frontierVertices get fill=lightblue!20 (current frontier
+    /// positions). Vertex fill precedence: start > current > frontier > storedPop >
+    /// highlighted (current and frontier share the lightblue!20 fill).
     /// storedPopVertices get filled with orange!30 (stored pops handling triggered).
     /// When positionOf is Some, every vertex is constrained to the layer of its input position
     /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
@@ -27,6 +31,8 @@ module GssTikz =
         (activeVertices: Set<int>)
         (activeEdges: Set<int * int>)
         (highlightedVertices: Set<int>)
+        (startVertices: Set<int>)
+        (frontierVertices: Set<int>)
         (highlightedEdges: Set<int * int>)
         (pathEdges: Set<int * int>)
         (storedPopVertices: Set<int>)
@@ -66,19 +72,28 @@ module GssTikz =
                 | Some cv -> cv = vidx
                 | None -> false
 
+            let isStart = Set.contains vidx startVertices
+
+            let isFrontier = Set.contains vidx frontierVertices
+
             let isStoredPop = Set.contains vidx storedPopVertices
 
             let isHighlighted = Set.contains vidx highlightedVertices
 
+            // Vertex fill precedence: start > current > frontier > storedPop >
+            // highlighted (current and frontier share the lightblue!20 fill).
+            let fill =
+                if isStart then Some "green!30"
+                elif isCurrent then Some "lightblue!20"
+                elif isFrontier then Some "lightblue!20"
+                elif isStoredPop then Some "orange!30"
+                elif isHighlighted then Some "yellow!20"
+                else None
+
             let opts =
-                if isCurrent then
-                    sprintf "as={%s}, fill=lightblue!20" label
-                elif isStoredPop then
-                    sprintf "as={%s}, fill=orange!30" label
-                elif isHighlighted then
-                    sprintf "as={%s}, fill=yellow!20" label
-                else
-                    sprintf "as={%s}" label
+                match fill with
+                | Some c -> sprintf "as={%s}, fill=%s" label c
+                | None -> sprintf "as={%s}" label
 
             sb.AppendLine(sprintf "    v%d [%s];" vidx opts) |> ignore
 
