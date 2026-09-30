@@ -320,7 +320,7 @@ let private tikzStateLine (tikz: string) (i: int) : string =
 [<Fact>]
 let ``dfaToDotWithHighlights marks exactly the given states with lightblue`` () =
     let dot =
-        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 1 ]) Set.empty
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 1 ]) Set.empty Set.empty
 
     Assert.Contains("fillcolor=lightblue", dotStateLine dot 1)
     Assert.Contains("fillcolor=green", dotStateLine dot 0)
@@ -330,7 +330,7 @@ let ``dfaToDotWithHighlights marks exactly the given states with lightblue`` () 
 [<Fact>]
 let ``dfaToDotWithHighlights overrides the start state fill`` () =
     let dot =
-        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 0 ]) Set.empty
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 0 ]) Set.empty Set.empty
 
     Assert.Contains("fillcolor=lightblue", dotStateLine dot 0)
     Assert.DoesNotContain("green", dotStateLine dot 0)
@@ -340,14 +340,14 @@ let ``dfaToDot is byte-identical to dfaToDotWithHighlights with empty sets`` () 
     let plain = AutomatonDot.dfaToDot string (fun _i s -> s) highlightDfa
 
     let empty =
-        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty Set.empty
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty Set.empty Set.empty
 
     Assert.Equal(plain, empty)
 
 [<Fact>]
 let ``dfaToDotWithHighlights renders exactly the given edges red bold`` () =
     let dot =
-        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty (set [ (0, 1) ])
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty Set.empty (set [ (0, 1) ])
 
     Assert.Contains("s0 -> s1 [label=\"a\", color=red, penwidth=2.0];", dot)
     // The non-highlighted edge keeps the plain style.
@@ -357,7 +357,7 @@ let ``dfaToDotWithHighlights renders exactly the given edges red bold`` () =
 [<Fact>]
 let ``dfaToDotWithHighlights highlighted loop keeps its label`` () =
     let dot =
-        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) loopDfa Set.empty (set [ (1, 1) ])
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) loopDfa Set.empty Set.empty (set [ (1, 1) ])
 
     Assert.Contains("s1 -> s1 [label=\"b\", color=red, penwidth=2.0];", dot)
     Assert.Contains("s0 -> s1 [label=\"a\"];", dot)
@@ -366,7 +366,14 @@ let ``dfaToDotWithHighlights highlighted loop keeps its label`` () =
 [<Trait("Category", "TeX")>]
 let ``dfaToTikzWithHighlights marks exactly the given states with lightblue!20`` () =
     let tikz =
-        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" highlightDfa (set [ 1; 2 ]) Set.empty
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            (set [ 1; 2 ])
+            Set.empty
+            Set.empty
 
     Assert.Contains("fill=lightblue!20", tikzStateLine tikz 1)
     // Highlighted final state: lightblue wins the fill, the double ring is kept.
@@ -383,14 +390,28 @@ let ``dfaToTikz is byte-identical to dfaToTikzWithHighlights with empty sets`` (
     let plain = AutomatonTikz.dfaToTikz string (fun _i s -> s) "rectangle" highlightDfa
 
     let empty =
-        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" highlightDfa Set.empty Set.empty
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            Set.empty
+            Set.empty
+            Set.empty
 
     Assert.Equal(plain, empty)
 
 [<Fact>]
 let ``dfaToTikzWithHighlights renders exactly the given edges red thick`` () =
     let tikz =
-        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" highlightDfa Set.empty (set [ (1, 2) ])
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            Set.empty
+            Set.empty
+            (set [ (1, 2) ])
 
     Assert.Contains("s1 ->[\"b\", red, thick] s2;", tikz)
     // The non-highlighted edge keeps the plain style.
@@ -400,10 +421,94 @@ let ``dfaToTikzWithHighlights renders exactly the given edges red thick`` () =
 [<Fact>]
 let ``dfaToTikzWithHighlights highlighted loop keeps its label and loop attribute`` () =
     let tikz =
-        AutomatonTikz.dfaToTikzWithHighlights string (fun _i s -> s) "rectangle" loopDfa Set.empty (set [ (1, 1) ])
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            loopDfa
+            Set.empty
+            Set.empty
+            (set [ (1, 1) ])
 
     Assert.Contains("s1 ->[\"b\", red, thick,loop above] s1;", tikz)
     Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+
+[<Fact>]
+let ``dfaToDotWithHighlights marks target states with lightyellow`` () =
+    let dot =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty (set [ 1 ]) Set.empty
+
+    Assert.Contains("fillcolor=lightyellow", dotStateLine dot 1)
+    Assert.DoesNotContain("lightblue", dotStateLine dot 1)
+    // The start state keeps its green fill.
+    Assert.Contains("fillcolor=green", dotStateLine dot 0)
+    Assert.DoesNotContain("fillcolor", dotStateLine dot 2)
+
+[<Fact>]
+let ``dfaToDotWithHighlights precedence: start and frontier override target`` () =
+    let startTarget =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty (set [ 0 ]) Set.empty
+
+    Assert.Contains("fillcolor=green", dotStateLine startTarget 0)
+    Assert.DoesNotContain("lightyellow", dotStateLine startTarget 0)
+
+    let frontierTarget =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 1 ]) (set [ 1 ]) Set.empty
+
+    Assert.Contains("fillcolor=lightblue", dotStateLine frontierTarget 1)
+    Assert.DoesNotContain("lightyellow", dotStateLine frontierTarget 1)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``dfaToTikzWithHighlights marks target states with yellow!20`` () =
+    let tikz =
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            Set.empty
+            (set [ 1 ])
+            Set.empty
+
+    Assert.Contains("fill=yellow!20", tikzStateLine tikz 1)
+    // The start state keeps its green fill; the untouched final state is not a target.
+    Assert.Contains("fill=green!30", tikzStateLine tikz 0)
+    Assert.DoesNotContain("yellow!20", tikzStateLine tikz 2)
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``dfaToTikzWithHighlights precedence: start and frontier override target`` () =
+    // TikZ keeps every fill attribute and the last one wins, so precedence is attribute order:
+    // the start / frontier fill must come after the target fill.
+    let startTarget =
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+
+    let startLine = tikzStateLine startTarget 0
+    Assert.Contains("fill=green!30", startLine)
+    Assert.True(startLine.IndexOf("fill=green!30") > startLine.IndexOf("fill=yellow!20"))
+
+    let frontierTarget =
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            (set [ 1 ])
+            (set [ 1 ])
+            Set.empty
+
+    let frontierLine = tikzStateLine frontierTarget 1
+    Assert.Contains("fill=lightblue!20", frontierLine)
+    Assert.True(frontierLine.IndexOf("fill=lightblue!20") > frontierLine.IndexOf("fill=yellow!20"))
 
 [<Fact>]
 let ``NFA dot with terminal and epsilon on the same edge renders both`` () =

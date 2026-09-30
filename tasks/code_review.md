@@ -1,5 +1,33 @@
 # Code Review Report
 
+## Task 287 Review (2026-09-30)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S1: `matrixTile` renders the boundary title + matrix in one adjustbox/math `$F = ...$` / `$V = ...$`, end frontier titled `F`, all tiles `valign=T` except the start frontier; `wrapFormula` gains `valign=T`; S3: per-label DFA target states), `src/FLPQ.Printers/SummaryTeX.fs` (S2: option-taking `wrapTikzAdjustboxColumnWith` plus the top-aligned `wrapTikzAdjustboxColumnTop` used only by `belyaninStepSection`; S3: legend yellow row), `src/FLPQ.Printers/AutomatonTikz.fs` / `AutomatonDot.fs` (S3: `targetStates` parameter and lowest-precedence yellow/lightyellow fill), tests (`AutomatonVisualizationTests`, `BelyaninStepVisualizationTests`, `SummaryTexSectionTests`, 10 regenerated per-label automaton goldens), and docs (`belyanin-step-viz.md`, `automaton-viz.md`, `summary-tex.md`, `path-semiring-tex.md`, `user/cli.md`).
+
+**Findings resolved this review (commit 095b70b):**
+
+Round 1 (1 finding — src duplication):
+
+- §13 (no duplication) — `wrapFormula` and `matrixTile` each built their own `\begin{adjustbox}{...} ... \end{adjustbox}` block; extracted a private `wrapAdjustbox options content` helper used by both (goldens unchanged).
+
+**Verified:** build 0 errors; Belyanin goldens byte-identical after the refactor; Fantomas clean; mdformat clean; commit gate PASS. The regenerated example summary compiles with lualatex with zero Overfull boxes over all six steps (7 pages).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no new tuples; the DFA renderers gained scalar `Set<int>` parameters.
+- §6 (doc comments) — `matrixTile`, the four boundary renderers, `wrapFormula`, `wrapTikzAdjustboxColumnTop`, `nodeOptions`, `stateDeclarations`, `dfaToTikzWithHighlights`/`dfaToDotWithHighlights`, and `dfaFigures` all carry updated XML docs.
+- §7 (genericity) — the automaton renderers stay generic over `'t`/`'s`; the visualizer over `'t`.
+- §9 (separation) — `BelyaninRPQ` untouched; all TeX lives in `FLPQ.Printers`; the runner does file I/O only.
+- §13 (no duplication) — see resolved finding; the shared column-width figure wrap is parameterized (`wrapTikzAdjustboxColumnWith`) and the shared `wrapAdjustbox` backs both tiles and formulas.
+- §15/§16 (test fidelity / Fact vs Property) — new facts assert real properties: DOT target fill and precedence (single fill), TikZ target fill and precedence (attribute order, last fill wins), Belyanin per-label DFA targets exactly `frontierStates F^a`, boundary tiles' notation and per-tile valign; all deterministic `[<Fact>]`.
+- §19 (test coverage) — `AutomatonTikz`/`AutomatonDot` target tier → `AutomatonVisualizationTests`; `BelyaninStepVisualizer` boundary/targets → `BelyaninStepVisualizationTests`; `SummaryTeX` wrap → `SummaryTexSectionTests`.
+- §20 (documentation) — `belyanin-step-viz.md` (notation, valign, targets, design decisions), `automaton-viz.md` (signatures, target style, precedence decision), `summary-tex.md` (top-aligned Belyanin wrap), `path-semiring-tex.md`, and `user/cli.md` all match the implementation.
+- §21 (book traceability) — the module still cites `algo:RPQ_BFS_semiring`; the tile notation does not change the book's matrix semantics.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+---
+
 ## Task 286 Review (2026-09-30)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S1: `BelyaninBoundaryVisual.Matrices` split into `Frontier`/`Visited`, `renderMatricesStart/End` into four single-block renderers; S2: `selectFormula`/`extendFormula` rendered as one horizontal math line via a private `wrapFormula`), `src/FLPQ.Printers/PathSemiringTeX.fs` (S2: `matrixToTeXWith`/`boolMatrixToTeXWith` private dispatchers plus the public `matrixToTeXBody`, `matrixWithStateVertexLabelsBody`, `boolMatrixToTeXBody`), `src/FLPQ.Cli/Helpers.fs` (S1: writer emits `frontier_{start,end}.tex` + `visited_{start,end}.tex`), `src/FLPQ.Printers/SummaryTeX.fs` (S1: `belyaninStepSection` fills the new placeholders and no longer wraps the filled template), the six `data/Belyanin_*_template.tex` (S1: four `[t]` minipages F/V/graph/automaton per boundary line, `\noindent` + `\hfill%`, 0.6/0.38 label rows), tests (`BelyaninStepVisualizationTests`, `SummaryTexSectionTests`, `BelyaninRunnerTests`, `CliSummaryTests`, `PathSemiringTexTests`, regenerated Belyanin goldens), and docs (`belyanin-step-viz.md`, `summary-tex.md`, `path-semiring-tex.md`, `FLPQ.Cli.md`, `cli.md`).

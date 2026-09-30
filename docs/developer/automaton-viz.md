@@ -7,7 +7,7 @@
 **Depends on:** Automaton, LR parser types, RnglrItem (FLPQ.Languages)
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, epsilon transitions (dotted), and loop edges.
+> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, frontier-state and target-state fills, epsilon transitions (dotted), and loop edges.
 
 ## Contents
 
@@ -34,7 +34,7 @@
 
 - `nfaToDot: ('t -> string) -> (int -> 's -> string) -> NFA<'t,'s> -> string` — renders NFA with green start states, double-circle final states, dotted epsilon transitions
 - `dfaToDot: ('t -> string) -> (int -> 's -> string) -> DFA<'t,'s> -> string` — renders DFA to DOT
-- `dfaToDotWithHighlights: ('t -> string) -> (int -> 's -> string) -> DFA<'t,'s> -> Set<int> -> Set<int * int> -> string` — renders DFA with the given states highlighted (`style=filled, fillcolor=lightblue`, overriding the start state's green fill) and the given transitions red and bold (`color=red, penwidth=2.0`, label preserved); `dfaToDot` delegates with `Set.empty` for both
+- `dfaToDotWithHighlights: ('t -> string) -> (int -> 's -> string) -> DFA<'t,'s> -> Set<int> -> Set<int> -> Set<int * int> -> string` — renders DFA with the given frontier states highlighted (`style=filled, fillcolor=lightblue`, overriding the start state's green fill), the given target states filled `lightyellow` (lowest precedence: start and frontier override it), and the given transitions red and bold (`color=red, penwidth=2.0`, label preserved); `dfaToDot` delegates with `Set.empty` for all three sets
 
 ## AutomatonTikz Module
 
@@ -42,7 +42,7 @@
 
 - `nfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> NFA<'t,'s> -> string`
 - `dfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> string`
-- `dfaToTikzWithHighlights: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> Set<int> -> Set<int * int> -> string` — renders DFA with the given states highlighted (`fill=lightblue!20`, overriding start/final fills; a highlighted final state keeps its double ring) and the given transitions red and bold (`red, thick`, label and loop attributes preserved); `dfaToTikz` delegates with `Set.empty` for both
+- `dfaToTikzWithHighlights: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> Set<int> -> Set<int> -> Set<int * int> -> string` — renders DFA with the given frontier states highlighted (`fill=lightblue!20`, overriding start/final fills; a highlighted final state keeps its double ring), the given target states filled `fill=yellow!20` (lowest precedence), and the given transitions red and bold (`red, thick`, label and loop attributes preserved); `dfaToTikz` delegates with `Set.empty` for all three sets
 
 ### Visual Style
 
@@ -51,6 +51,7 @@
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
 - Highlighted states (`dfaToTikzWithHighlights`): `fill=lightblue!20` appended last so it wins over start/final fills (last fill wins in TikZ); the Start label and final double ring are kept
+- Target states (`dfaToTikzWithHighlights`): `fill=yellow!20` appended before the start/final/highlight fills, so it has the lowest precedence (start and frontier override it)
 - Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->["label", red, thick(,loop above)] s%d` — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
 - Loop edges: `s%d ->["label",loop above] s%d`
 - Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
@@ -106,6 +107,7 @@ A : 0 \\
 | --- | --- |
 | State visualizer callback | Allows parameterized label generation per state index and label |
 | Highlight fill appended last (Tikz) / lightblue overrides green (DOT) | A highlighted state must be recognizable even when it is also the start or a final state; final states keep their double ring so both properties stay visible |
+| Target fill (`fill=yellow!20` / `fillcolor=lightyellow`) has the lowest precedence | Target states mirror the graph's target vertices (Belyanin's newly reached states); a target that is also the start, final, or frontier state must keep the stronger fill, so the target fill is applied before the others |
 | Edge highlight is a separate parameter, not derived from state highlights | Step figures highlight exactly the transitions used on the current step (Belyanin's per-label propagation), which is unrelated to which states are in the frontier; DOT and TikZ share the GssDot/GssTikz red-bold style so the two formats stay consistent |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |

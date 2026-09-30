@@ -16,7 +16,7 @@
 > propagation products `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and
 > `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` (each product on one horizontal line) plus the used
 > transitions / followed edges highlighted red bold, and — for non-init steps — the
-> end-of-step line (New F, V, graph, DFA). Both DOT and TikZ are produced per step; the
+> end-of-step line (F, V, graph, DFA). Both DOT and TikZ are produced per step; the
 > runner writes only one format (TikZ by default, DOT with `--use-dot`).
 
 ## Contents
@@ -44,7 +44,7 @@ type BelyaninVisualizationStep =
 
 One record per trace step (`BelyaninRPQ.BelyaninTraceStep`), one `BelyaninLabelVisual`
 per active label in trace order. A boundary is the frontier F and visited V matrices as
-**separate** artifacts (F/V at the start, New F/V at the end; the step template places
+**separate** artifacts (F/V at the start and at the end; the step template places
 them side by side) plus the automaton/graph figures with that boundary's frontier
 highlighted. The init step has no end state (`End = None`) and no label rows — the
 absence is unrepresentable by accident, so the writer and the tests match on `End`
@@ -64,6 +64,8 @@ Every highlight set is derived from the trace only (no cross-step data):
 - `RpqGraphViz.frontierVertices m` — graph vertices at which m's paths end.
 - `usedAutoEdges m n` — DFA transitions q → q′ with `n.[q, q']` and a frontier path at q.
 - `followedEdges g select` — graph edges u → v with `g.[u, v]` and a selected path at u.
+- `frontierStates F^a` — per-label DFA target states: q with a non-empty `F^a[q, \*]` cell
+  (the destinations of the used a-transitions), highlighted lightyellow.
 
 ## Step Artifacts
 
@@ -72,18 +74,22 @@ step; the init step has only the start artifacts:
 
 | File | Content |
 | --- | --- |
-| `frontier_start.tex` | `$F$` + matrix(M) — the current frontier |
-| `visited_start.tex` | `$V$` + matrix(P \\ M) — visited before the step |
+| `frontier_start.tex` | `$F = $` matrix(M) — the current frontier (no `valign=T`: first box of the step) |
+| `visited_start.tex` | `$V = $` matrix(P \\ M) — visited before the step, `valign=T` |
 | `automaton_start.{tikz.tex\|dot}` | DFA, frontier states of M highlighted (no edge highlights) |
 | `graph_start.{tikz.tex\|dot}` | green sources, lightblue frontier vertices of M, lightred path edges of M |
-| `label_i_select.tex` | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` — every matrix written out, one line |
-| `label_i_extend.tex` | `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` — every matrix written out, one line |
-| `label_i_automaton.{tikz.tex\|dot}` | DFA, the label's used a-transitions red bold (no state highlights) |
+| `label_i_select.tex` | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` — every matrix written out, one line, `valign=T` |
+| `label_i_extend.tex` | `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` — every matrix written out, one line, `valign=T` |
+| `label_i_automaton.{tikz.tex\|dot}` | DFA, the label's used a-transitions red bold and its target states lightyellow |
 | `label_i_graph.{tikz.tex\|dot}` | green sources, red followed a-edges, lightblue from-endpoints, lightyellow targets, lightred path edges of M |
-| `frontier_end.tex` | `$New F$` + matrix(NewM) — non-init steps only |
-| `visited_end.tex` | `$V$` + matrix(P) — non-init steps only |
+| `frontier_end.tex` | `$F = $` matrix(NewM) — non-init steps only, `valign=T` |
+| `visited_end.tex` | `$V = $` matrix(P) — non-init steps only, `valign=T` |
 | `automaton_end.{tikz.tex\|dot}` | DFA, frontier states of NewM highlighted — non-init steps only |
 | `graph_end.{tikz.tex\|dot}` | green sources, lightblue frontier vertices of NewM, lightred path edges of NewM — non-init steps only |
+
+Every boundary tile renders the title and the matrix in one adjustbox/math as
+`$F = [F]$` / `$V = [V]$`; all step adjustboxes carry `valign=T` except the start
+frontier F (the first box of the step).
 
 Label index `i` = position in the trace's `Labels` list (Map iteration order over the
 boolean decomposition). The per-label graph figure's highlight sets: followed edges =
@@ -100,15 +106,16 @@ The single source of truth for the Belyanin step figure colors (TikZ / DOT):
 | --- | --- | --- | --- |
 | Start vertex / initial state | graph sources, DFA start state | `fill=green!30` | `fillcolor=green` |
 | Frontier states / frontier (initial) vertices | non-empty M[q, \*] / paths' endpoints | `fill=lightblue!20` | `fillcolor=lightblue` |
-| Target vertices | newly reached: Extend[?, v] ≠ ∅ | `fill=yellow!20` | `fillcolor=lightyellow` |
+| Target vertices / DFA targets | newly reached: Extend[?, v] ≠ ∅ (graph) / F^a[q, \*] ≠ ∅ (DFA) | `fill=yellow!20` | `fillcolor=lightyellow` |
 | Current transition edges | used a-transitions / followed a-edges | `red, thick` | `color=red, penwidth=2.0` |
 | Frontier path edges | edges of the frontier paths (M or NewM) | `red!40` | `color="#FF9999"` |
 | Empty matrix cell | — | `$\cdot$` | — |
 
 Vertex fill precedence in the graph figures: start > frontier > target (a source that is
-also a frontier vertex renders green). In the automaton figures the existing renderer
-precedence applies (a highlighted state renders lightblue whether or not it is also the
-start state — see [AutomatonTikz](automaton-viz.md)).
+also a frontier vertex renders green). In the automaton figures the frontier state
+highlight renders lightblue whether or not the state is also the start state, and the
+target fill has the lowest precedence (start and frontier override it) — see
+[AutomatonTikz](automaton-viz.md).
 
 ## Step Templates
 
@@ -134,11 +141,12 @@ paragraph indent would otherwise overfull the line). The matrix minipages keep t
 `\begingroup \setlength{\textwidth}{\linewidth}` group so the adjustbox-wrapped matrices
 shrink to the column. At summary time the section builder
 (`SummaryTeX.belyaninStepSection`) fills the templates file-driven from the step dir,
-wraps the TikZ figures in `SummaryTeX.wrapTikzAdjustboxColumn` (DOT mode includes
-`dot_pdfs/{stepName}_*.pdf`), and concatenates the label rows in numeric label-index
-order. The filled template is **not** wrapped whole: each component keeps its own
-width-limited adjustbox, so a tall step can break across pages (unlike Arroyuelo RPQ,
-which keeps `SummaryTeX.wrapStepAdjustbox`) — see [SummaryTeX module](summary-tex.md).
+wraps the TikZ figures in the top-aligned `SummaryTeX.wrapTikzAdjustboxColumnTop`
+(`max width=\linewidth, valign=T`; DOT mode includes `dot_pdfs/{stepName}_*.pdf`), and
+concatenates the label rows in numeric label-index order. The filled template is
+**not** wrapped whole: each component keeps its own width-limited adjustbox, so a tall
+step can break across pages (unlike Arroyuelo RPQ, which keeps
+`SummaryTeX.wrapStepAdjustbox`) — see [SummaryTeX module](summary-tex.md).
 
 ## Design Decisions
 
@@ -154,6 +162,9 @@ which keeps `SummaryTeX.wrapStepAdjustbox`) — see [SummaryTeX module](summary-
 | One substep per line; start/end use F, V, graph, automaton (`\noindent`, `\hfill%`) | Splitting the packed row into one line per substep makes every component full-column-width and readable; the `\noindent` removes the paragraph indent that would overfull the line, and the `\hfill%` separators keep the widths within `\textwidth` |
 | Products rendered as one horizontal line | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` are single math expressions (matrices side by side) wrapped once in an adjustbox, instead of a vertical matrix stack — user guidance (`PathSemiringTeX` body variants supply the un-wrapped matrices) |
 | No whole-step adjustbox for Belyanin | User guidance: a step may span pages; each component is wrapped in its own width-limited adjustbox instead. Arroyuelo RPQ keeps `wrapStepAdjustbox` |
+| Boundary tiles render `$F = [F]$` / `$V = [V]$`, end frontier titled `F` | User guidance: the title and matrix are one adjustbox/math, and the step position conveys start vs end, so "New F" is dropped |
+| `valign=T` on every step adjustbox except the start frontier F | User guidance: top-aligns the tiles so each boundary/label line reads evenly; the start F anchors the line. Belyanin only (Arroyuelo keeps the non-top-aligned wrap) |
+| Per-label DFA targets = `frontierStates F^a` | Parallels the graph's `frontierVertices Extend` (the states selected on the step, i.e. the destinations of the used a-transitions); lightyellow with lowest precedence (start > frontier > target) |
 
 ## Book Reference
 

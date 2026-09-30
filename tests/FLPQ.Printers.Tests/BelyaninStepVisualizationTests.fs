@@ -214,6 +214,24 @@ let ``per-label automaton DOT highlights exactly the used a-transitions`` () =
             Assert.Equal(Set.count expected, countOccurrences dot "color=red, penwidth=2.0")
 
 [<Fact>]
+let ``per-label automaton DOT highlights exactly the F^a target states lightyellow`` () =
+    for i in 0 .. rendered.Length - 1 do
+        for j in 0 .. rendered.[i].Labels.Length - 1 do
+            let ls = steps.[i].Labels.[j]
+            // Target states = states with a non-empty F^a row; the start state keeps green.
+            let expected = Set.remove testDfa.StartState (frontierStates ls.Select)
+            let dot = rendered.[i].Labels.[j].AutomatonDot
+
+            Assert.Equal(Set.count expected, countOccurrences dot "fillcolor=lightyellow")
+
+            for q in expected do
+                let lines =
+                    dot.Split('\n') |> Array.filter (fun l -> l.StartsWith(sprintf "  s%d [" q))
+
+                ignore (Assert.Single lines)
+                Assert.Contains("fillcolor=lightyellow", lines.[0])
+
+[<Fact>]
 let ``per-label graph DOT highlights followed edges red bold and tiers the endpoint vertices`` () =
     for i in 0 .. rendered.Length - 1 do
         for j in 0 .. rendered.[i].Labels.Length - 1 do
@@ -328,39 +346,45 @@ let ``extend formulas whose Extend is empty keep only the F^a path tuples`` () =
         Assert.Equal(nonEmptyCells ls.Select, countOccurrences rendered.[i].Labels.[j].ExtendFormula @"\{(v_")
 
 [<Fact>]
-let ``frontier start has exactly the F block`` () =
+let ``frontier start has exactly the F block and no valign`` () =
     for i in 0 .. rendered.Length - 1 do
         let m = rendered.[i].Start.Frontier
 
         Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
-        Assert.Contains(@"$\text{F}$", m)
-        Assert.DoesNotContain(@"$\text{V}$", m)
+        Assert.Contains(@"\text{F} =", m)
+        Assert.DoesNotContain(@"\text{V}", m)
+        // The first box of the step anchors the line: no valign=T.
+        Assert.DoesNotContain("valign=T", m)
 
 [<Fact>]
-let ``visited start has exactly the V block`` () =
+let ``visited start has exactly the V block and valign`` () =
     for i in 0 .. rendered.Length - 1 do
         let m = rendered.[i].Start.Visited
 
         Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
-        Assert.Contains(@"$\text{V}$", m)
-        Assert.DoesNotContain(@"$\text{F}$", m)
+        Assert.Contains(@"\text{V} =", m)
+        Assert.DoesNotContain(@"\text{F}", m)
+        Assert.Contains("valign=T", m)
 
 [<Fact>]
-let ``frontier end has exactly the New F block`` () =
+let ``frontier end has exactly the F block and valign`` () =
     for i in 1 .. rendered.Length - 1 do
         let m = rendered.[i].End.Value.Frontier
 
         Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
-        Assert.Contains(@"$\text{New } F =$", m)
-        Assert.DoesNotContain(@"$\text{V}$", m)
+        Assert.Contains(@"\text{F} =", m)
+        Assert.DoesNotContain(@"\text{New}", m)
+        Assert.DoesNotContain(@"\text{V}", m)
+        Assert.Contains("valign=T", m)
 
 [<Fact>]
-let ``visited end has exactly the V block`` () =
+let ``visited end has exactly the V block and valign`` () =
     for i in 1 .. rendered.Length - 1 do
         let m = rendered.[i].End.Value.Visited
 
         Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
-        Assert.Contains(@"$\text{V}$", m)
+        Assert.Contains(@"\text{V} =", m)
+        Assert.Contains("valign=T", m)
 
 [<Fact>]
 let ``visited start block holds the visited paths P minus the frontier M`` () =
@@ -413,7 +437,7 @@ let ``all labels: formulas are single horizontal lines`` () =
             let label = rendered.[i].Labels.[j]
 
             for formula in [ label.SelectFormula; label.ExtendFormula ] do
-                Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth}", formula)
+                Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, valign=T}", formula)
                 Assert.EndsWith(@"\end{adjustbox}", formula)
                 Assert.Equal(3, countOccurrences formula @"\begin{pNiceMatrix}")
                 Assert.Equal(2, countOccurrences formula @"\otimes")

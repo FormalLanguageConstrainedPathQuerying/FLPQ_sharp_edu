@@ -22,20 +22,27 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
-    /// The TikZ node options for one automaton state: the `as={...}` content, the Start
-    /// label/fill, the final-state double border/fill, and the highlight fill (which wins
-    /// over the others).
+    /// The TikZ node options for one automaton state: the `as={...}` content, the target fill
+    /// (lightyellow, lowest precedence), the Start label/fill, the final-state double
+    /// border/fill, and the highlight fill (which wins over the others).
     let nodeOptions
         (idx: int)
         (stateContent: string)
         (isStart: bool)
         (isFinal: bool)
+        (isTarget: bool)
         (isHighlighted: bool)
         (shape: string)
         : string =
         let parts = ResizeArray<string>()
 
         parts.Add(sprintf "as={%s}" stateContent)
+
+        // Last fill wins in TikZ. Target (lightyellow) is the lowest-precedence tier so a
+        // target that is also start/final/frontier keeps the stronger fill; the final's
+        // double ring is always kept.
+        if isTarget then
+            parts.Add("fill=yellow!20")
 
         if isStart then
             parts.Add("label=above:Start")
@@ -46,8 +53,6 @@ module AutomatonTikz =
             parts.Add("double distance=1.5pt")
             parts.Add("fill=red!30")
 
-        // Last fill wins in TikZ: a highlighted state renders lightblue whether or not it is
-        // also start (green) or final (red); the final's double ring is kept.
         if isHighlighted then
             parts.Add("fill=lightblue!20")
 
@@ -60,6 +65,7 @@ module AutomatonTikz =
         (startStates: Set<int>)
         (finalStates: Set<int>)
         (highlightedStates: Set<int>)
+        (targetStates: Set<int>)
         (shape: string)
         (sb: StringBuilder)
         : unit =
@@ -68,8 +74,9 @@ module AutomatonTikz =
             let content = stateVisualizer idx state
             let isStart = Set.contains idx startStates
             let isFinal = Set.contains idx finalStates
+            let isTarget = Set.contains idx targetStates
             let isHighlighted = Set.contains idx highlightedStates
-            let opts = nodeOptions idx content isStart isFinal isHighlighted shape
+            let opts = nodeOptions idx content isStart isFinal isTarget isHighlighted shape
             sb.AppendLine(sprintf "    s%d [%s];" idx opts) |> ignore
 
     let private transitionEdges
@@ -174,6 +181,7 @@ module AutomatonTikz =
             nfa.StartStates
             nfa.FinalStates
             Set.empty
+            Set.empty
             shape
             sb
 
@@ -184,14 +192,16 @@ module AutomatonTikz =
         sb.ToString()
 
     /// Render a DFA as a Tikz tikzpicture using layered layout, with the given states highlighted
-    /// (fill=lightblue!20, overriding the start state's green fill) and the given transitions
-    /// rendered red and bold (`red, thick`, label and loop attributes preserved).
+    /// (fill=lightblue!20, overriding the start state's green fill), the given target states
+    /// filled lightyellow (lowest precedence: start/final/frontier override it), and the given
+    /// transitions rendered red and bold (`red, thick`, label and loop attributes preserved).
     let dfaToTikzWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)
         (shape: string)
         (dfa: DFA<'t, 's>)
         (highlightedStates: Set<int>)
+        (targetStates: Set<int>)
         (highlightedEdges: Set<int * int>)
         : string =
         let sb = StringBuilder()
@@ -205,6 +215,7 @@ module AutomatonTikz =
             (set [ dfa.StartState ])
             dfa.FinalStates
             highlightedStates
+            targetStates
             shape
             sb
 
@@ -220,4 +231,4 @@ module AutomatonTikz =
         (shape: string)
         (dfa: DFA<'t, 's>)
         : string =
-        dfaToTikzWithHighlights labelPrinter stateVisualizer shape dfa Set.empty Set.empty
+        dfaToTikzWithHighlights labelPrinter stateVisualizer shape dfa Set.empty Set.empty Set.empty

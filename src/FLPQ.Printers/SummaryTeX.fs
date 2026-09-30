@@ -86,17 +86,28 @@ module SummaryTeX =
           @"\end{center}" ]
         |> String.concat "\n"
 
+    /// Wraps a TikZ figure in a centered adjustbox with the given options, shrinking it to at
+    /// most the current column width without upscaling smaller figures.
+    let private wrapTikzAdjustboxColumnWith (options: string) (tikz: string) : string =
+        [ @"\begin{center}"
+          sprintf @"\begin{adjustbox}{%s}" options
+          tikz
+          @"\end{adjustbox}"
+          @"\end{center}" ]
+        |> String.concat "\n"
+
     /// Wraps a TikZ figure in a centered adjustbox that shrinks it to at most \linewidth
     /// (the current column width) without upscaling smaller figures. Used for RPQ step
     /// figures, which sit inside minipage columns where \textwidth is still the full page
     /// width and would let an over-wide figure overflow its column.
     let wrapTikzAdjustboxColumn (tikz: string) : string =
-        [ @"\begin{center}"
-          @"\begin{adjustbox}{max width=\linewidth}"
-          tikz
-          @"\end{adjustbox}"
-          @"\end{center}" ]
-        |> String.concat "\n"
+        wrapTikzAdjustboxColumnWith @"max width=\linewidth" tikz
+
+    /// Like `wrapTikzAdjustboxColumn` but top-aligned (`valign=T`). Used by the Belyanin RPQ
+    /// step figures so each figure lines up with the matrix/formula beside it; Arroyuelo RPQ
+    /// keeps the non-top-aligned wrap.
+    let wrapTikzAdjustboxColumnTop (tikz: string) : string =
+        wrapTikzAdjustboxColumnWith @"max width=\linewidth, valign=T" tikz
 
     /// Wraps a filled RPQ step template in an adjustbox limited to at most \textwidth and
     /// 0.9\textheight (shrink-only). The 10% height headroom accommodates the step's
@@ -189,7 +200,7 @@ module SummaryTeX =
         let rows =
             [ colorBox "green!30", "Start vertex / initial automaton state"
               colorBox "lightblue!20", "Frontier automaton states and frontier (initial) vertices"
-              colorBox "yellow!20", "Target vertices (newly reached on the step)"
+              colorBox "yellow!20", "Target vertices and automaton states (newly reached on the step)"
               coloredEdge "red", "Current transition edges (used on the step)"
               coloredEdge "red!40", "Frontier path edges"
               @"$\cdot$", "Empty matrix cell" ]
@@ -559,11 +570,11 @@ module SummaryTeX =
     /// states highlighted, graph with green sources and lightblue frontier vertices), one row
     /// per active label with the explicit propagation products and the used transitions /
     /// followed edges highlighted red bold, and — when the step has end artifacts (non-init) —
-    /// the end-of-step state. In TikZ mode the figures are wrapped in adjustbox (shrink-only, at
-    /// most \linewidth) via `wrapTikzAdjustboxColumn`; DOT mode includes the dot-compiled PDFs.
-    /// The filled template is NOT wrapped whole (unlike Arroyuelo), so a tall step can break
-    /// across pages; each component keeps its own width-limited adjustbox and the step heading
-    /// stays outside any box.
+    /// the end-of-step state. In TikZ mode the figures are wrapped in a top-aligned adjustbox
+    /// (shrink-only, at most \linewidth) via `wrapTikzAdjustboxColumnTop`; DOT mode includes the
+    /// dot-compiled PDFs. The filled template is NOT wrapped whole (unlike Arroyuelo), so a tall
+    /// step can break across pages; each component keeps its own width-limited adjustbox and the
+    /// step heading stays outside any box.
     let belyaninStepSection (stepDir: string) (stepNum: int) (templates: StepTemplates) (useTikz: bool) : string list =
         let header = section (sprintf "Step %d" stepNum)
 
@@ -592,10 +603,10 @@ module SummaryTeX =
                         templates.BelyaninLabelRowTikz
                         [ ("__SELECT_FORMULA__", selectFormula)
                           ("__LABEL_AUTOMATON_TIKZ__",
-                           wrapTikzAdjustboxColumn (readArtifact (sprintf "label_%d_automaton.tikz.tex" i)))
+                           wrapTikzAdjustboxColumnTop (readArtifact (sprintf "label_%d_automaton.tikz.tex" i)))
                           ("__EXTEND_FORMULA__", extendFormula)
                           ("__LABEL_GRAPH_TIKZ__",
-                           wrapTikzAdjustboxColumn (readArtifact (sprintf "label_%d_graph.tikz.tex" i))) ]
+                           wrapTikzAdjustboxColumnTop (readArtifact (sprintf "label_%d_graph.tikz.tex" i))) ]
                 else
                     fill
                         templates.BelyaninLabelRow
@@ -617,8 +628,8 @@ module SummaryTeX =
                         templates.BelyaninRowEndTikz
                         [ ("__FRONTIER_END__", frontierEnd)
                           ("__VISITED_END__", visitedEnd)
-                          ("__AUTOMATON_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_end.tikz.tex"))
-                          ("__GRAPH_END_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_end.tikz.tex")) ]
+                          ("__AUTOMATON_END_TIKZ__", wrapTikzAdjustboxColumnTop (readArtifact "automaton_end.tikz.tex"))
+                          ("__GRAPH_END_TIKZ__", wrapTikzAdjustboxColumnTop (readArtifact "graph_end.tikz.tex")) ]
                 else
                     fill
                         templates.BelyaninRowEnd
@@ -635,8 +646,8 @@ module SummaryTeX =
                     templates.BelyaninTikz
                     [ ("__FRONTIER_START__", readArtifact "frontier_start.tex")
                       ("__VISITED_START__", readArtifact "visited_start.tex")
-                      ("__AUTOMATON_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "automaton_start.tikz.tex"))
-                      ("__GRAPH_START_TIKZ__", wrapTikzAdjustboxColumn (readArtifact "graph_start.tikz.tex"))
+                      ("__AUTOMATON_START_TIKZ__", wrapTikzAdjustboxColumnTop (readArtifact "automaton_start.tikz.tex"))
+                      ("__GRAPH_START_TIKZ__", wrapTikzAdjustboxColumnTop (readArtifact "graph_start.tikz.tex"))
                       ("__LABEL_ROWS__", labelRows)
                       ("__ROW_END__", rowEnd) ]
             else

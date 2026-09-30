@@ -12,7 +12,7 @@ open FLPQ.RPQ.BelyaninRPQ
 /// with green sources, lightblue frontier vertices, and lightred frontier path edges), one pair
 /// of rows per active label with the explicit propagation products (N^a)^T ⊗ F = F^a and
 /// F^a ⊗ G^a = Extend plus the used transitions / followed edges highlighted red bold, and the
-/// state at the end of the step (New F, V). F and V are separate artifacts (the step template
+/// state at the end of the step (F, V). F and V are separate artifacts (the step template
 /// places them side by side); each row is one substep.
 module BelyaninStepVisualizer =
 
@@ -28,7 +28,7 @@ module BelyaninStepVisualizer =
           GraphTikz: string }
 
     /// The state at a step boundary: the F (frontier) and V (visited) matrices (F/V at the
-    /// start, New F/V at the end) and the automaton/graph figures with that boundary's
+    /// start and at the end) and the automaton/graph figures with that boundary's
     /// frontier highlighted — each figure in DOT and TikZ form (the runner picks one). F
     /// and V are separate artifacts so the step template can place them side by side.
     type BelyaninBoundaryVisual =
@@ -98,14 +98,21 @@ module BelyaninStepVisualizer =
                           if g.[u, v] then
                               (u, v) ]
 
-    /// Wrap a one-line formula expression in a single shrink-only adjustbox so the three
-    /// side-by-side matrices fit the formula column.
-    let private wrapFormula (expression: string) : string =
-        @"\begin{adjustbox}{max width=\textwidth}"
+    /// Wrap `content` in a single shrink-only adjustbox with the given options.
+    let private wrapAdjustbox (options: string) (content: string) : string =
+        @"\begin{adjustbox}{"
+        + options
+        + "}"
         + "\n"
-        + expression
+        + content
         + "\n"
         + @"\end{adjustbox}"
+
+    /// Wrap a one-line formula expression in a single shrink-only adjustbox so the three
+    /// side-by-side matrices fit the formula column. Top-aligned (`valign=T`) so the formula
+    /// and its figure line up.
+    let private wrapFormula (expression: string) : string =
+        wrapAdjustbox @"max width=\textwidth, valign=T" expression
 
     /// The first line of a label's propagation — the book's per-label term (N^a)^T ⊗ M ⊗ G^a
     /// split at F^a: (N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <F^a>, rendered as one horizontal line
@@ -140,33 +147,49 @@ module BelyaninStepVisualizer =
         + @"$"
         |> wrapFormula
 
-    /// The start-of-step frontier block: F = M (the current frontier).
-    let private renderFrontierStart (step: BelyaninTraceStep<'t>) : string =
-        @"$\text{F}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.M
+    /// A boundary tile: the title and the matrix in one adjustbox/math, rendered as
+    /// `$<title> = <matrix>$` so the label line reads `F = [F]` / `V = [V]`. `valignTop` adds
+    /// adjustbox's `valign=T`; every step tile uses it except the start frontier F (the first
+    /// box of the step), which anchors the line.
+    let private matrixTile (valignTop: bool) (title: string) (m: Matrix<Set<int list>>) : string =
+        let options =
+            if valignTop then
+                @"max width=\textwidth, valign=T"
+            else
+                @"max width=\textwidth"
 
-    /// The start-of-step visited block: V = P \ F (cell-wise set difference). V is the
-    /// exact inverse of the trace's P <- P + F, so no trace change is needed.
+        wrapAdjustbox
+            options
+            ("$\n"
+             + title
+             + " =\n"
+             + PathSemiringTeX.matrixWithStateVertexLabelsBody m
+             + "\n$")
+
+    /// The start-of-step frontier tile: F = M (the current frontier). The first box of the
+    /// step, so it has no `valign=T`.
+    let private renderFrontierStart (step: BelyaninTraceStep<'t>) : string = matrixTile false @"\text{F}" step.M
+
+    /// The start-of-step visited tile: V = P \ F (cell-wise set difference). V is the exact
+    /// inverse of the trace's P <- P + F, so no trace change is needed.
     let private renderVisitedStart (step: BelyaninTraceStep<'t>) : string =
         let vBefore = Matrix.map2 Set.difference step.P step.M
 
-        @"$\text{V}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels vBefore
+        matrixTile true @"\text{V}" vBefore
 
-    /// The end-of-step frontier block: New F = NewM (the next frontier).
-    let private renderFrontierEnd (step: BelyaninTraceStep<'t>) : string =
-        @"$\text{New } F =$"
-        + "\n"
-        + PathSemiringTeX.matrixWithStateVertexLabels step.NewM
+    /// The end-of-step frontier tile: F = NewM (the next frontier).
+    let private renderFrontierEnd (step: BelyaninTraceStep<'t>) : string = matrixTile true @"\text{F}" step.NewM
 
-    /// The end-of-step visited block: V = P (everything visited after the step).
-    let private renderVisitedEnd (step: BelyaninTraceStep<'t>) : string =
-        @"$\text{V}$" + "\n" + PathSemiringTeX.matrixWithStateVertexLabels step.P
+    /// The end-of-step visited tile: V = P (everything visited after the step).
+    let private renderVisitedEnd (step: BelyaninTraceStep<'t>) : string = matrixTile true @"\text{V}" step.P
 
-    /// The query DFA as (dot, tikz) figures with the given states and transitions
-    /// highlighted.
+    /// The query DFA as (dot, tikz) figures with the given frontier states, target states, and
+    /// transitions highlighted.
     let private dfaFigures
         (terminalPrinter: 't -> string)
         (dfa: DFA<'t, int>)
         (highlightedStates: Set<int>)
+        (targetStates: Set<int>)
         (highlightedEdges: Set<int * int>)
         : string * string =
         let dot =
@@ -175,6 +198,7 @@ module BelyaninStepVisualizer =
                 (fun idx _ -> sprintf "q_%d" idx)
                 dfa
                 highlightedStates
+                targetStates
                 highlightedEdges
 
         let tikz =
@@ -184,18 +208,19 @@ module BelyaninStepVisualizer =
                 "circle"
                 dfa
                 highlightedStates
+                targetStates
                 highlightedEdges
 
         (dot, tikz)
 
-    /// The query DFA with the frontier states of a path matrix highlighted (no edge
-    /// highlights). Returns (dot, tikz).
+    /// The query DFA with the frontier states of a path matrix highlighted (no target states,
+    /// no edge highlights). Returns (dot, tikz).
     let private automatonWithFrontier
         (terminalPrinter: 't -> string)
         (dfa: DFA<'t, int>)
         (m: Matrix<Set<int list>>)
         : string * string =
-        dfaFigures terminalPrinter dfa (frontierStates m) Set.empty
+        dfaFigures terminalPrinter dfa (frontierStates m) Set.empty Set.empty
 
     /// The input graph at a step boundary: green sources, lightblue frontier vertices of the
     /// path matrix, lightred edges of its paths; no red edges, no yellow vertices. Returns
@@ -215,9 +240,9 @@ module BelyaninStepVisualizer =
             (RpqGraphViz.pathEdges m)
 
     /// One label's propagation row: the two formulas and the automaton figure with the used
-    /// a-transitions red bold (no state highlights) and the graph figure with green sources,
-    /// red followed edges, lightblue from-endpoints, lightyellow targets, and F's path edges
-    /// lightred.
+    /// a-transitions red bold and the step's target states (the states selected into F^a)
+    /// lightyellow, and the graph figure with green sources, red followed edges, lightblue
+    /// from-endpoints, lightyellow targets, and F's path edges lightred.
     let private renderLabel
         (terminalPrinter: 't -> string)
         (dfa: DFA<'t, int>)
@@ -226,7 +251,10 @@ module BelyaninStepVisualizer =
         (ls: BelyaninLabelStep<'t>)
         : BelyaninLabelVisual =
         let used = usedAutoEdges step.M ls.N
-        let automatonDot, automatonTikz = dfaFigures terminalPrinter dfa Set.empty used
+        let automatonTargets = frontierStates ls.Select
+
+        let automatonDot, automatonTikz =
+            dfaFigures terminalPrinter dfa Set.empty automatonTargets used
 
         let followed = followedEdges ls.G ls.Select
         let fromEndpoints = followed |> Set.fold (fun acc (u, _) -> Set.add u acc) Set.empty

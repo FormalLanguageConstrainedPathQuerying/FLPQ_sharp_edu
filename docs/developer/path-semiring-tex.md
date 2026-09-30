@@ -36,7 +36,7 @@ val boolMatrixToTeXBody: (int -> string) -> (int -> string) -> Matrix<bool> -> s
 - `matrixToTeX rowLabel colLabel m` — a path semiring matrix with vertex row/column headers (e.g. `fun i -> sprintf "v_%d" i`), wrapped in adjustbox. Delegates to `MatrixTeX.toTeXStyled` with `useAdjustbox = true`, `useRectangleColor = false`.
 - `matrixToTeXBody rowLabel colLabel m` — the same matrix without adjustbox and without `$` math delimiters. Used to place several matrices side by side inside one math expression (the caller wraps the whole expression once); Belyanin's one-line products use it.
 - `matrixWithVertexLabels m` — `matrixToTeX` with `v_i` vertex labels; the shared block used by both RPQ step visualizers.
-- `matrixWithStateVertexLabels m` — `matrixToTeX` with `q_i` state row labels and `v_i` vertex column labels; Belyanin's |Q|×|V| working matrices (F, V, Select, Extend, New F), whose rows are automaton states.
+- `matrixWithStateVertexLabels m` — `matrixToTeX` with `q_i` state row labels and `v_i` vertex column labels; Belyanin's |Q|×|V| working matrices (F, V, Select, Extend, the end frontier), whose rows are automaton states.
 - `matrixWithStateVertexLabelsBody m` — body form of `matrixWithStateVertexLabels`.
 - `boolMatrixToTeX rowLabel colLabel m` — a boolean matrix with row/column headers: true cells render as `\bullet`, false cells as `\cdot` (the book's figure convention for N^a and G^a); adjustbox-wrapped like the path matrices.
 - `boolMatrixToTeXBody rowLabel colLabel m` — body form of `boolMatrixToTeX`.

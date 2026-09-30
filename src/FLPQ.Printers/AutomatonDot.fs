@@ -14,6 +14,7 @@ module AutomatonDot =
         (startStates: Set<int>)
         (finalStates: Set<int>)
         (highlightedStates: Set<int>)
+        (targetStates: Set<int>)
         (sb: System.Text.StringBuilder)
         : unit =
         for idx in 0 .. stateCount - 1 do
@@ -24,12 +25,18 @@ module AutomatonDot =
                 let start = Set.contains idx startStates
                 let final = Set.contains idx finalStates
                 let highlighted = Set.contains idx highlightedStates
+                let target = Set.contains idx targetStates
 
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
 
-                if start || highlighted then
-                    let fillColor = if highlighted then "lightblue" else "green"
-                    parts <- "style=filled" :: sprintf "fillcolor=%s" fillColor :: parts
+                // Precedence: highlighted/frontier (lightblue) > start (green) > target
+                // (lightyellow); a final state's double border is always kept.
+                if highlighted then
+                    parts <- "style=filled" :: "fillcolor=lightblue" :: parts
+                elif start then
+                    parts <- "style=filled" :: "fillcolor=green" :: parts
+                elif target then
+                    parts <- "style=filled" :: "fillcolor=lightyellow" :: parts
 
                 if final then
                     parts <- "peripheries=2" :: parts
@@ -93,7 +100,16 @@ module AutomatonDot =
         sb.AppendLine("digraph Automaton {") |> ignore
         sb.AppendLine("  rankdir=LR;") |> ignore
 
-        stateDeclarations nfa.States.Length stateVisualizer nfa.States nfa.StartStates nfa.FinalStates Set.empty sb
+        stateDeclarations
+            nfa.States.Length
+            stateVisualizer
+            nfa.States
+            nfa.StartStates
+            nfa.FinalStates
+            Set.empty
+            Set.empty
+            sb
+
         transitionEdges labelPrinter nfa.Transitions Set.empty sb
         epsEdges nfa.Transitions sb
 
@@ -101,13 +117,15 @@ module AutomatonDot =
         sb.ToString()
 
     /// Render a DFA as a Graphviz dot graph with the given states highlighted (fillcolor=lightblue,
-    /// overriding the start state's green fill) and the given transitions rendered red and bold
+    /// overriding the start state's green fill), the given target states filled lightyellow
+    /// (lowest precedence), and the given transitions rendered red and bold
     /// (`color=red, penwidth=2.0`, label preserved).
     let dfaToDotWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)
         (dfa: DFA<'t, 's>)
         (highlightedStates: Set<int>)
+        (targetStates: Set<int>)
         (highlightedEdges: Set<int * int>)
         : string =
         let sb = System.Text.StringBuilder()
@@ -122,6 +140,7 @@ module AutomatonDot =
             (set [ dfa.StartState ])
             dfa.FinalStates
             highlightedStates
+            targetStates
             sb
 
         transitionEdges labelPrinter dfa.Transitions highlightedEdges sb
@@ -131,4 +150,4 @@ module AutomatonDot =
 
     /// Render a DFA as a Graphviz dot graph.
     let dfaToDot (labelPrinter: 't -> string) (stateVisualizer: int -> 's -> string) (dfa: DFA<'t, 's>) : string =
-        dfaToDotWithHighlights labelPrinter stateVisualizer dfa Set.empty Set.empty
+        dfaToDotWithHighlights labelPrinter stateVisualizer dfa Set.empty Set.empty Set.empty

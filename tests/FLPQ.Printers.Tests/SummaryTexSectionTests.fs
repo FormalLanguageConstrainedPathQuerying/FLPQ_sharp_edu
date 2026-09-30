@@ -417,7 +417,7 @@ let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA bef
         // "current frontier paths" wording is gone.
         Assert.Contains("Start vertex / initial automaton state", text)
         Assert.Contains("Frontier automaton states and frontier (initial) vertices", text)
-        Assert.Contains("Target vertices (newly reached on the step)", text)
+        Assert.Contains("Target vertices and automaton states (newly reached on the step)", text)
         Assert.Contains("Current transition edges (used on the step)", text)
         Assert.Contains("Frontier path edges", text)
         Assert.DoesNotContain("Current regexp tree node", text)
@@ -482,11 +482,11 @@ let ``belyaninStepSection in tikz mode fills empty placeholders for missing file
         let lines = SummaryTeX.belyaninStepSection stepDir 1 templates true
 
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
-        // Missing tikz files are replaced by empty strings; the column-width figure wrap is
-        // still applied and no whole-step box is added.
+        // Missing tikz files are replaced by empty strings; the top-aligned column-width figure
+        // wrap is still applied and no whole-step box is added.
         Assert.Contains("A=\\begin{center}", lines.[1])
         Assert.Contains("|G=\\begin{center}", lines.[1])
-        Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}")
+        Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth, valign=T}")
         Assert.DoesNotContain(@"max totalheight=0.9\textheight", lines.[1]))
 
 [<Fact>]
@@ -571,8 +571,8 @@ let ``belyaninStepSection in tikz mode fills missing label figures with empty wr
 
         Assert.Contains("S=SEL0", text)
         Assert.DoesNotContain("EXT1", text)
-        // Two start-figure wraps plus two empty label-figure wraps.
-        Assert.Equal(4, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}"))
+        // Two start-figure wraps plus two empty label-figure wraps (all top-aligned).
+        Assert.Equal(4, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth, valign=T}"))
 
 [<Fact>]
 let ``buildContent for the LL kind renders stack step sections`` () =
