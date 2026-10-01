@@ -48,6 +48,29 @@ let private transitionSymbolCount (rsm: RSM<string, string>) : int =
               | None -> 0 ]
     |> List.sum
 
+/// Minimal single-block RSM (start 0, final stateCount-1) over the given terminal transitions;
+/// used by the reciprocal-edge rendering tests.
+let private singleBlockRsm (edges: Trans<char> list) (stateCount: int) : RSM<string, string> =
+    let transitions = Matrix.init stateCount stateCount None
+
+    for edge in edges do
+        transitions.[edge.From, edge.To] <-
+            Some(NonEmptySet.singleton (AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal(string edge.Label)))))
+
+    let blockStart = System.Collections.Generic.Dictionary<Nonterminal<string>, int>()
+    blockStart.[Nonterminal "S"] <- 0
+
+    { Transitions = transitions
+      StateCount = stateCount
+      StateInfo =
+        [| for i in 0 .. stateCount - 1 do
+               { BlockNonterminal = Nonterminal "S"
+                 LocalState = i
+                 IsFinal = i = stateCount - 1 } |]
+      BlockStart = blockStart
+      FinalStates = set [ stateCount - 1 ]
+      StartBlock = Nonterminal "S" }
+
 [<Fact>]
 let ``RSM tikz uses top-to-bottom component packing in a single graph`` () =
     let rsm = (LanguageRegistry.findGrammar LanguageRegistry.ANBN "classic").Rsm
@@ -167,6 +190,37 @@ let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
         System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
 
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``RSM tikz bends reciprocal transitions`` () =
+    let rsm =
+        singleBlockRsm [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'a'; To = 0 } ] 2
+
+    let ersm = ExtendedRSM.create (Nonterminal "S'") rsm
+    let tikz = RsmTikz.extendedRsmToTikz string string ersm None
+
+    Assert.Contains("s0 ->[\"a\", bend left=15] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
+
+    let tikzTemplatePath =
+        System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
+
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``RSM tikz keeps one-way edges straight and never bends self-loops`` () =
+    let rsm =
+        singleBlockRsm [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'b'; To = 1 } ] 2
+
+    let ersm = ExtendedRSM.create (Nonterminal "S'") rsm
+    let tikz = RsmTikz.extendedRsmToTikz string string ersm None
+
+    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+
+    let loopLine = tikz.Split('\n') |> Array.find (fun l -> l.Contains("loop above"))
+
+    Assert.DoesNotContain("bend", loopLine)
 
 [<Fact>]
 let ``RSM tikz state content is the bare global index`` () =

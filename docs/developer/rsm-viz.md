@@ -44,6 +44,7 @@ A single `tikzpicture` with one flat `\graph`:
 - **Block order** — pgf-gd orders components by first specified node, so node declaration order controls stacking: the S′ block is declared first (on top), remaining blocks follow in global-state appearance order; within each block the start state is declared first.
 - **Labels** — state content is the bare global index. Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`) and `label=above:Start`. Every final state gets `double, double distance=1.5pt` — including a highlighted final state, which keeps the double circle. Fill priority: highlighted state `fill=lightblue!20`, else block start `fill=green!30`, else final state `fill=red!30`.
 - **Edge labels** — terminals as-is (escaped), nonterminal calls as the bare `Nt` name, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
+- **Edges** — one line per transition symbol within a direction (parallel same-direction labels are not merged). A reciprocal pair (`u→v` and `v→u`) gets `, bend left=15` on both directions so the two lines do not overlap; self-loops are never bent (shared rule `AutomatonTikz.reciprocalBendAttr`).
 
 ## Function Signatures
 

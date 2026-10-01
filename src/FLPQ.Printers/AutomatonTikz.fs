@@ -22,6 +22,17 @@ module AutomatonTikz =
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
 
+    /// TikZ edge option that separates a reciprocal pair (u->v and v->u) into two symmetric
+    /// arcs instead of one straight line drawn on top of the other. Returns ", bend left=15"
+    /// (including the leading separator) when `enabled`, the edge is not a self-loop, and the
+    /// reverse edge is drawn; otherwise returns "". Shared by AutomatonTikz, RsmTikz,
+    /// InputGraphTikz, and GssTikz so the bend rule has a single source of truth.
+    let reciprocalBendAttr (enabled: bool) (reverseDrawn: bool) (fromIdx: int) (toIdx: int) : string =
+        if enabled && fromIdx <> toIdx && reverseDrawn then
+            ", bend left=15"
+        else
+            ""
+
     /// The TikZ node options for one automaton state: the `as={...}` content, the target fill
     /// (lightyellow, lowest precedence), the Start label/fill, the final-state double
     /// border/fill, and the highlight fill (which wins over the others).
@@ -102,6 +113,10 @@ module AutomatonTikz =
                         let label = termLabels |> String.concat ", " |> escapeLatex
                         let loopAttr = if i = j then ",loop above" else ""
 
+                        // A reciprocal pair (i->j and j->i) would otherwise draw as two fully
+                        // overlapping straight lines; bend both into symmetric arcs (task 289).
+                        let bendAttr = reciprocalBendAttr true (Option.isSome transitions.[j, i]) i j
+
                         // Highlighted edges render red and bold (same style as GssTikz's
                         // highlighted tier); the label and loop attributes are preserved.
                         // Epsilon-only cells render no edge here, so they can never be
@@ -115,10 +130,13 @@ module AutomatonTikz =
                         if label = "" then
                             if i = j then
                                 sb.AppendLine(sprintf "    s%d ->[loop above] s%d;" i j) |> ignore
+                            elif bendAttr <> "" then
+                                sb.AppendLine(sprintf "    s%d ->[%s] s%d;" i (bendAttr.TrimStart(',', ' ')) j)
+                                |> ignore
                             else
                                 sb.AppendLine(sprintf "    s%d -> s%d;" i j) |> ignore
                         else
-                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i label hlAttr loopAttr j)
+                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s%s] s%d;" i label hlAttr bendAttr loopAttr j)
                             |> ignore
                 | None -> ()
 
@@ -128,10 +146,11 @@ module AutomatonTikz =
                 match transitions.[i, j] with
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
                     let loopAttr = if i = j then ",loop above" else ""
+                    let bendAttr = reciprocalBendAttr true (Option.isSome transitions.[j, i]) i j
 
                     // Math-mode label: a bare \varepsilon in text mode renders as an empty
                     // box (math symbols require math mode), silently losing the label.
-                    sb.AppendLine(sprintf "    s%d ->[dotted, \"$\\varepsilon$\"%s] s%d;" i loopAttr j)
+                    sb.AppendLine(sprintf "    s%d ->[dotted, \"$\\varepsilon$\"%s%s] s%d;" i bendAttr loopAttr j)
                     |> ignore
                 | _ -> ()
 

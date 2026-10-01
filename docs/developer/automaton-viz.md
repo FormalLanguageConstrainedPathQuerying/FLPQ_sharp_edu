@@ -54,6 +54,7 @@
 - Target states (`dfaToTikzWithHighlights`): `fill=yellow!20` appended before the start/final/highlight fills, so it has the lowest precedence (start and frontier override it)
 - Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->["label", red, thick(,loop above)] s%d` — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
 - Loop edges: `s%d ->["label",loop above] s%d`
+- Reciprocal edges (`u→v` and `v→u`): both get `, bend left=15`, so the two directions render as symmetric arcs instead of one straight line drawn on top of the other; self-loops are never bent. Applies to terminal and epsilon edges; a highlighted terminal edge keeps `red, thick` before the bend (attribute order `label, red/thick, bend, loop`).
 - Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
@@ -110,6 +111,7 @@ A : 0 \\
 | Target fill (`fill=yellow!20` / `fillcolor=lightyellow`) has the lowest precedence | Target states mirror the graph's target vertices (Belyanin's newly reached states); a target that is also the start, final, or frontier state must keep the stronger fill, so the target fill is applied before the others |
 | Edge highlight is a separate parameter, not derived from state highlights | Step figures highlight exactly the transitions used on the current step (Belyanin's per-label propagation), which is unrelated to which states are in the frontier; DOT and TikZ share the GssDot/GssTikz red-bold style so the two formats stay consistent |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
+| Reciprocal pairs bent (`bend left=15`) | A pair `u→v`/`v→u` is drawn by TikZ as two fully overlapping straight lines; bending both directions separates them into symmetric arcs, matching the rule already used by `GssTikz`/`RpqGraphViz` (Graphviz DOT separates such pairs automatically). The shared helper is `AutomatonTikz.reciprocalBendAttr`; self-loops are excluded by construction |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |
 | Enhanced arrow heads | `Latex[width=3mm,length=3mm]` for visibility |
 

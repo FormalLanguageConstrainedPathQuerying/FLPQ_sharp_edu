@@ -307,6 +307,16 @@ let private loopDfa: DFA<char, string> =
         0
         (set [ 1 ])
 
+/// DFA with a reciprocal pair and a merged parallel label: 0 -[a,b]-> 1 and 1 -[a]-> 0.
+let private reciprocalDfa: DFA<char, string> =
+    Dfa.fromTransitions
+        [ "q0"; "q1" ]
+        [ { From = 0; Label = 'a'; To = 1 }
+          { From = 0; Label = 'b'; To = 1 }
+          { From = 1; Label = 'a'; To = 0 } ]
+        0
+        (set [ 1 ])
+
 let private dotStateLine (dot: string) (i: int) : string =
     dot.Split('\n')
     |> Array.filter (fun l -> l.StartsWith(sprintf "  s%d [" i))
@@ -432,6 +442,86 @@ let ``dfaToTikzWithHighlights highlighted loop keeps its label and loop attribut
 
     Assert.Contains("s1 ->[\"b\", red, thick,loop above] s1;", tikz)
     Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``reciprocal transitions are bent to separate overlapping edges`` () =
+    // 0 -[a]-> 1 and 0 -[b]-> 1 merge into "a, b"; the reverse 1 -[a]-> 0 would draw on top
+    // of that straight line, so both directions must be bent into symmetric arcs (task 289).
+    let aut =
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 }
+              { From = 0; Label = 'b'; To = 1 }
+              { From = 1; Label = 'a'; To = 0 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("s0 ->[\"a, b\", bend left=15] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
+    Assert.DoesNotContain("s0 ->[\"a, b\"] s1;", tikz)
+    Assert.DoesNotContain("s1 ->[\"a\"] s0;", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``one-way transitions are not bent`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [ { From = 0; Label = 'a'; To = 1 } ] Set.empty (set [ 0 ]) (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+    Assert.DoesNotContain("bend", tikz)
+
+[<Fact>]
+let ``self-loops are never bent`` () =
+    let aut =
+        Nfa.fromTransitions
+            [ "q0"; "q1" ]
+            [ { From = 0; Label = 'a'; To = 1 }
+              { From = 1; Label = 'a'; To = 0 }
+              { From = 1; Label = 'b'; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("s1 ->[\"b\",loop above] s1;", tikz)
+
+    let loopLine = tikz.Split('\n') |> Array.find (fun l -> l.Contains("loop above"))
+
+    Assert.DoesNotContain("bend", loopLine)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``reciprocal epsilon transitions are bent`` () =
+    let aut =
+        Nfa.fromTransitions [ "q0"; "q1" ] [] (set [ (0, 1); (1, 0) ]) (set [ 0 ]) (set [ 1 ])
+
+    let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+
+    Assert.Contains("s0 ->[dotted, \"$\\varepsilon$\", bend left=15] s1;", tikz)
+    Assert.Contains("s1 ->[dotted, \"$\\varepsilon$\", bend left=15] s0;", tikz)
+    Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
+
+[<Fact>]
+let ``dfaToTikzWithHighlights keeps the bend on a highlighted reciprocal edge`` () =
+    let tikz =
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            reciprocalDfa
+            Set.empty
+            Set.empty
+            (set [ (0, 1) ])
+
+    Assert.Contains("s0 ->[\"a, b\", red, thick, bend left=15] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
 
 [<Fact>]
 let ``dfaToDotWithHighlights marks target states with lightyellow`` () =
@@ -626,3 +716,18 @@ module AutomatonGoldenTests =
 
         let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
         verifyGolden "nfa_aplus.tikz" tikz
+
+    [<Fact>]
+    let ``NFA reciprocal edges tikz golden`` () =
+        let aut =
+            Nfa.fromTransitions
+                [ "q0"; "q1" ]
+                [ { From = 0; Label = 'a'; To = 1 }
+                  { From = 0; Label = 'b'; To = 1 }
+                  { From = 1; Label = 'a'; To = 0 } ]
+                Set.empty
+                (set [ 0 ])
+                (set [ 1 ])
+
+        let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
+        verifyGolden "nfa_reciprocal_edges.tikz" tikz

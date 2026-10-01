@@ -43,7 +43,14 @@ module InputGraphTikz =
                 | Some tok ->
                     let edgeLabel = terminalPrinter tok |> AutomatonTikz.escapeLatex
 
-                    sb.AppendLine(sprintf "    v%d ->[\"%s\"] v%d;" i edgeLabel j) |> ignore
+                    // Input graphs are normally linear paths, but the renderer is generic over
+                    // Graph<int, Option<'t>>; split a reciprocal pair so it never draws as one
+                    // overlapping line (task 289).
+                    let bendAttr =
+                        AutomatonTikz.reciprocalBendAttr true (Option.isSome inputGraph.Edges.[j, i]) i j
+
+                    sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" i edgeLabel bendAttr j)
+                    |> ignore
                 | None -> ()
 
         AutomatonTikz.tikzFooter sb

@@ -127,17 +127,14 @@ module GssTikz =
             let loopAttr = if fromIdx = toIdx then ",loop above" else ""
 
             // A reciprocal pair (u->v and v->u) draws as two overlapping straight lines;
-            // bending both edges of the pair separates them into symmetric arcs. Self-loops
-            // are never bent.
+            // bending both edges of the pair separates them into symmetric arcs (shared rule,
+            // task 289). Self-loops are never bent.
             let bendAttr =
-                if
+                AutomatonTikz.reciprocalBendAttr
                     bendReciprocalEdges
-                    && fromIdx <> toIdx
-                    && Set.contains (toIdx, fromIdx) activeEdges
-                then
-                    ", bend left=15"
-                else
-                    ""
+                    (Set.contains (toIdx, fromIdx) activeEdges)
+                    fromIdx
+                    toIdx
 
             if isHighlighted then
                 sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
@@ -149,7 +146,8 @@ module GssTikz =
                 if fromIdx = toIdx then
                     sb.AppendLine(sprintf "    v%d ->[loop above] v%d;" fromIdx fromIdx) |> ignore
                 elif bendAttr <> "" then
-                    sb.AppendLine(sprintf "    v%d ->[bend left=15] v%d;" fromIdx toIdx) |> ignore
+                    sb.AppendLine(sprintf "    v%d ->[%s] v%d;" fromIdx (bendAttr.TrimStart(',', ' ')) toIdx)
+                    |> ignore
                 else
                     sb.AppendLine(sprintf "    v%d -> v%d;" fromIdx toIdx) |> ignore
             else

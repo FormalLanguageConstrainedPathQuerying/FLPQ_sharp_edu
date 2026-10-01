@@ -32,6 +32,7 @@
     <Compile Include="GssDotTests.fs" />
     <Compile Include="GssDotVisualizationTests.fs" />
     <Compile Include="InputGraphDotTests.fs" />
+    <Compile Include="InputGraphTikzTests.fs" />
     <Compile Include="RsmTikzTests.fs" />
     <Compile Include="RsmDotTests.fs" />
     <Compile Include="RnglrStepVisualizationTests.fs" />

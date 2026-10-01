@@ -34,7 +34,7 @@
 | [DerivationTreeDot / DerivationTreeTikz](derivation-tree-viz.md) | Dot and Tikz rendering for derivation trees with stack overlays |
 | [AutomatonDot / AutomatonTikz / LRAutomatonTikz / RnglrAutomatonTikz](automaton-viz.md) | Dot and Tikz rendering for finite automata; specialized Tikz renderers for LR and RNGLR LR automata |
 | [BasicSppfDot / BasicSppfTikz](basic-sppf-viz.md) | Dot and Tikz rendering for basic (Rekers-style) SPPF |
-| [InputGraphDot](input-graph-dot.md) | Dot rendering for the GLL input graph with input position highlighting |
+| [InputGraphDot](InputGraphDot.md) / [InputGraphTikz](input-graph-tikz.md) | Dot and Tikz rendering for the GLL input graph with input position highlighting |
 | [RsmDot / RsmTikz](rsm-viz.md) | Dot and Tikz rendering for Recursive State Machines; Tikz stacks blocks (connected components) top-to-bottom |
 | [GssDot](gss-dot.md) / [GssTikz](gss-tikz.md) | Dot and Tikz rendering for the graph-structured stack from vertex/edge sets, with two-tier edge highlighting |
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |

@@ -1,5 +1,35 @@
 # Code Review Report
 
+## Task 289 Review (2026-10-01)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/AutomatonTikz.fs` (S1: new public `reciprocalBendAttr`; `transitionEdges`/`epsEdges` append the bend), `GssTikz.fs` (S1: inline predicate replaced by the shared helper), `RsmTikz.fs` (S2: per-cell bend, one line per symbol kept), `InputGraphTikz.fs` (S3: bend on labeled edges), tests (`AutomatonVisualizationTests`, `RsmTikzTests`, new `InputGraphTikzTests` + `nfa_reciprocal_edges.tikz` golden), and docs (`automaton-viz.md`, `gss-tikz.md`, `rsm-viz.md`, new `input-graph-tikz.md`, `FLPQ.Printers.md`).
+
+**Findings resolved this review (commit b9ee856):**
+
+Round 1 (1 finding — docs, §20):
+
+- §20 (documentation) — the new `automaton-viz.md` reciprocal-edge bullet said the bend applied to "terminal and epsilon edges, including highlighted ones", which could be read as epsilon edges having a highlighted tier (they do not: epsilon-only cells emit a dotted edge with no highlight). Reworded to scope the highlight note to terminal edges.
+
+**Verified:** build 0 errors; FLPQ.Printers.Tests non-TeX suite green (351 passed, 0 skipped); the new reciprocal automaton/RSM/input-graph facts plus their lualatex compile tests pass; Fantomas clean; mdformat clean; commit gate PASS. No existing golden changed (verified earlier: the only pre-existing reciprocal edges are the Belyanin GSS graphs, which already carried `bend left=15`).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — the only tuples are existing `int * int` edge pairs; `reciprocalBendAttr` takes scalar parameters.
+- §6 (doc comments) — `reciprocalBendAttr` carries an XML doc describing the enabled gate, the self-loop guard, and the returned separator; the new `InputGraphTikzTests` module needs none.
+- §7 (genericity) — the renderers stay generic over `'t`/`'s`; the helper operates on indices only.
+- §8 (non-empty collections) — no new runtime-checked collections.
+- §9 (separation) — all changes are in `FLPQ.Printers` renderers; no algorithm or I/O touched.
+- §13 (no duplication) — the bend constant, self-loop guard, and enabled gate live once in `reciprocalBendAttr`; `GssTikz`'s previously inline copy was removed, so `grep "bend left=15"` finds exactly one implementation (plus comments/tests).
+- §15/§16 (test fidelity / Fact vs Property) — no stubs; deterministic `[<Fact>]` tests assert concrete edge strings and lualatex compilation for reciprocal, one-way, self-loop, epsilon, and highlighted cases.
+- §19 (test coverage) — `AutomatonTikz` → `AutomatonVisualizationTests`; `RsmTikz` → `RsmTikzTests`; `InputGraphTikz` → new `InputGraphTikzTests`; `GssTikz` helper adoption → existing `GssDotTests` bend facts.
+- §20 (documentation) — `automaton-viz.md`, `gss-tikz.md`, `rsm-viz.md` updated; the previously undocumented `InputGraphTikz` now has `input-graph-tikz.md` linked from the `FLPQ.Printers.md` module table (the stale `input-graph-dot.md` link was corrected to the on-disk `InputGraphDot.md`).
+- §21 (book traceability) — rendering infrastructure; comments reference task 289 and the shared-rule rationale, consistent with the existing `GssTikz`/`RpqGraphViz` reciprocal handling.
+- §22 (code clarity) — the helper is a plain 2-line predicate with no optimization; each call site passes an explicit `Option.isSome`/`Set.contains` reverse-edge test.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+---
+
 ## Task 288 Review (2026-10-01)
 
 Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: Boolean `BelyaninReachabilityTraceStep`/`BelyaninReachabilityLabelStep` + `evaluateReachabilityWithTrace`; `evaluate`/`runSingleSource` now share the private `runReachabilityWithTrace`; `evaluateWithTrace` renamed `evaluateSimplePathWithTrace`), `src/FLPQ.Printers/BelyaninStepCommon.fs` (S2: shared records + cell-generic helpers; review: shared `matrixTileWithBody`, `selectFormulaWithBodies`, `extendFormulaWithBodies`, `boundaryVisual`, `renderVisualizationSteps`), `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (renamed) and `BelyaninReachabilityStepVisualizer.fs` (S2: Boolean step rendering), `src/FLPQ.Cli/{AlgorithmTypes,Program}.fs` + `BelyaninSimplePathRunner.fs` (renamed) + `BelyaninReachabilityRunner.fs` (S3: `--semantics` dispatch), tests (`BelyaninReachabilityTraceTests`, `BelyaninReachabilityStepVisualizationTests` + 84 goldens, `BelyaninSimplePathRunnerTests`/`BelyaninReachabilityRunnerTests`, `AlgorithmTypesTests`, `ProgramDispatchTests`, `CliSummaryTests`), data (three cyclic demo files), and docs (`belyanin-rpq.md`, `belyanin-step-common.md`, `belyanin-reachability-step-viz.md`, `belyanin-step-viz.md`, `path-semiring.md`, `FLPQ.RPQ.md`, `FLPQ.Printers.md`, `FLPQ.Cli.md`, `summary-tex.md`, `main.md`, `rpq-graph-viz.md`, `architecture.md`, `user/cli.md`).

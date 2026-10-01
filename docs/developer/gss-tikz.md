@@ -46,7 +46,9 @@ shape, skipEscaping, positionOf, bendReciprocalEdges.
   grow direction switches to `grow=left` (pgf's same-layer chaining reverses the
   orientation under the default grow direction).
 - `bendReciprocalEdges`: when true, every edge whose reverse is also drawn gets
-  `bend left=15`, turning a reciprocal pair into two symmetric arcs.
+  `bend left=15`, turning a reciprocal pair into two symmetric arcs. The rule (bend constant and
+  self-loop guard) is provided by the shared `AutomatonTikz.reciprocalBendAttr` helper, also used
+  by the automaton, RSM, and input-graph renderers.
 
 ## Design Decisions
 

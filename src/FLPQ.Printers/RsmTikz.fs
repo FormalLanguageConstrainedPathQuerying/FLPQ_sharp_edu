@@ -108,6 +108,13 @@ module RsmTikz =
             for j in 0 .. stateCount - 1 do
                 match rsm.Transitions.[i, j] with
                 | Some symbols ->
+                    // Same-direction edges stay one line per symbol; only a reciprocal pair
+                    // (i->j and j->i) is split into two arcs (task 289).
+                    let bendAttr =
+                        AutomatonTikz.reciprocalBendAttr true (Option.isSome rsm.Transitions.[j, i]) i j
+
+                    let loopAttr = if i = j then ",loop above" else ""
+
                     for symbol in NonEmptySet.toSeq symbols do
                         // Escape only the printer-produced names; the epsilon label
                         // is math-mode TeX and must not be escaped.
@@ -124,9 +131,7 @@ module RsmTikz =
                             | AutomatonLabel.AEpsilon -> ", dotted"
                             | _ -> ""
 
-                        let loopAttr = if i = j then ",loop above" else ""
-
-                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i edgeLabel loopAttr style j)
+                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s%s] s%d;" i edgeLabel style bendAttr loopAttr j)
                         |> ignore
                 | None -> ()
 
