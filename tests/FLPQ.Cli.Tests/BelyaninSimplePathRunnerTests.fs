@@ -1,7 +1,7 @@
 // Shares the ConsoleCapture collection with GllRunnerTests/RnglrRunnerTests so the modules'
 // Console.SetOut calls never interleave (Console.Out is process-global).
 [<Xunit.Collection("ConsoleCapture")>]
-module BelyaninRunnerTests
+module BelyaninSimplePathRunnerTests
 
 open System.IO
 open Xunit
@@ -21,7 +21,7 @@ let private runBelyaninRunner (useDot: bool) : string * string =
 
     let output =
         RunnerTestHelpers.withCapturedOutput (fun () ->
-            BelyaninRunner.runBelyanin exampleRegexp exampleGraph outDir useDot)
+            BelyaninSimplePathRunner.runBelyanin exampleRegexp exampleGraph outDir useDot)
 
     outDir, output
 
@@ -41,7 +41,7 @@ let private runBelyaninWithText (regexpText: string) (graphText: string) (useDot
 
     let output =
         RunnerTestHelpers.withCapturedOutput (fun () ->
-            BelyaninRunner.runBelyanin
+            BelyaninSimplePathRunner.runBelyanin
                 (Path.Combine(tmpDir, "query_regexp.txt"))
                 (Path.Combine(tmpDir, "query_graph.txt"))
                 outDir
@@ -101,7 +101,7 @@ let ``runBelyanin produces one step dir per trace step in both modes`` () =
     let regexp = RpqInput.parseRegexpFile exampleRegexp
     let dfa = Regexp.toDfa regexp
     let graph = GraphReader.parseGraphFile exampleGraph
-    let traceSteps, _ = BelyaninRPQ.evaluateWithTrace dfa graph
+    let traceSteps, _ = BelyaninRPQ.evaluateSimplePathWithTrace dfa graph
 
     for useDot in [ false; true ] do
         let (outDir, _) = runBelyaninRunner useDot
@@ -195,7 +195,7 @@ let ``runBelyanin result.tex reachable lines match BelyaninRPQ.evaluate`` () =
 [<Fact>]
 let ``runBelyanin status line reports step count and reachable vertices`` () =
     let (outDir, output) = runBelyaninRunner false
-    Assert.Contains("Belyanin RPQ: 6 steps, sources: [v_0] -> reachable: [v_4, v_5]", output)
+    Assert.Contains("Belyanin RPQ (simplePath): 6 steps, sources: [v_0] -> reachable: [v_4, v_5]", output)
     cleanup outDir
 
 [<Fact>]
@@ -243,7 +243,7 @@ let ``runBelyanin with multiple sources lists per-source reachable vertices`` ()
 [<Fact>]
 let ``runBelyanin status line with multiple sources lists all sources and the union of reachable vertices`` () =
     let (outDir, output) = runBelyaninWithText "S -> a" multiSourceGraph false
-    Assert.Contains("Belyanin RPQ: 3 steps, sources: [v_0, v_2] -> reachable: [v_1]", output)
+    Assert.Contains("Belyanin RPQ (simplePath): 3 steps, sources: [v_0, v_2] -> reachable: [v_1]", output)
     cleanupTmpDir outDir
 
 [<Fact>]
@@ -252,5 +252,5 @@ let ``runBelyanin with a regexp matching no edges reports no reachable vertices`
     let content = File.ReadAllText(Path.Combine(outDir, "result.tex"))
     Assert.Contains("Source v_0: reachable (none)", content)
     Assert.Contains("Source v_2: reachable (none)", content)
-    Assert.Contains("Belyanin RPQ: 2 steps, sources: [v_0, v_2] -> reachable: []", output)
+    Assert.Contains("Belyanin RPQ (simplePath): 2 steps, sources: [v_0, v_2] -> reachable: []", output)
     cleanupTmpDir outDir

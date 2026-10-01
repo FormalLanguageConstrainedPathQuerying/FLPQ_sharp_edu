@@ -17,6 +17,13 @@ module AlgorithmTypes =
         | ArroyueloRPQ
         | BelyaninRPQ
 
+    /// RPQ semantics for Belyanin RPQ: reachability (Boolean BFS — the classical RPQ
+    /// answer, complete on cyclic graphs) or simplePath (path-semiring trace, reachable only
+    /// via an accepting simple path).
+    type RpqSemantics =
+        | Reachability
+        | SimplePath
+
     let displayName (algo: Algorithm) : string =
         match algo with
         | CYK -> "CYK"
@@ -38,6 +45,7 @@ module AlgorithmTypes =
         | [<AltCommandLine("-o")>] Output of string
         | [<AltCommandLine("-k")>] Lookahead of int
         | [<AltCommandLine("-s")>] Summary
+        | [<AltCommandLine("-semantics")>] Semantics of RpqSemantics
         | [<AltCommandLine("--use-dot")>] UseDot
         | [<AltCommandLine("--no-sppf-table")>] NoSppfTable
 
@@ -46,6 +54,8 @@ module AlgorithmTypes =
                 match this with
                 | Algorithm _ ->
                     "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, or BelyaninRPQ"
+                | Semantics _ ->
+                    "RPQ semantics for BelyaninRPQ: reachability (Boolean BFS, classical, default) or simplePath (path-semiring trace)"
                 | Query _ ->
                     "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms"
                 | Input _ ->

@@ -1,5 +1,38 @@
 # Code Review Report
 
+## Task 288 Review (2026-10-01)
+
+Scope: full branch diff vs dev — `src/FLPQ.RPQ/BelyaninRPQ.fs` (S1: Boolean `BelyaninReachabilityTraceStep`/`BelyaninReachabilityLabelStep` + `evaluateReachabilityWithTrace`; `evaluate`/`runSingleSource` now share the private `runReachabilityWithTrace`; `evaluateWithTrace` renamed `evaluateSimplePathWithTrace`), `src/FLPQ.Printers/BelyaninStepCommon.fs` (S2: shared records + cell-generic helpers; review: shared `matrixTileWithBody`, `selectFormulaWithBodies`, `extendFormulaWithBodies`, `boundaryVisual`, `renderVisualizationSteps`), `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (renamed) and `BelyaninReachabilityStepVisualizer.fs` (S2: Boolean step rendering), `src/FLPQ.Cli/{AlgorithmTypes,Program}.fs` + `BelyaninSimplePathRunner.fs` (renamed) + `BelyaninReachabilityRunner.fs` (S3: `--semantics` dispatch), tests (`BelyaninReachabilityTraceTests`, `BelyaninReachabilityStepVisualizationTests` + 84 goldens, `BelyaninSimplePathRunnerTests`/`BelyaninReachabilityRunnerTests`, `AlgorithmTypesTests`, `ProgramDispatchTests`, `CliSummaryTests`), data (three cyclic demo files), and docs (`belyanin-rpq.md`, `belyanin-step-common.md`, `belyanin-reachability-step-viz.md`, `belyanin-step-viz.md`, `path-semiring.md`, `FLPQ.RPQ.md`, `FLPQ.Printers.md`, `FLPQ.Cli.md`, `summary-tex.md`, `main.md`, `rpq-graph-viz.md`, `architecture.md`, `user/cli.md`).
+
+**Findings resolved this review (commit 9cae5a0):**
+
+Round 1 (1 finding — src duplication, §13):
+
+- §13 (no duplication) — the second visualizer copied the simple-path `renderSteps` driver, the `matrixTile` boundary-tile assembly, and the `selectFormula`/`extendFormula` string assembly. Extracted `renderVisualizationSteps` (per-step renderers + init-step shape), `boundaryVisual`, `matrixTileWithBody`, `selectFormulaWithBodies`, and `extendFormulaWithBodies` into `BelyaninStepCommon`; each visualizer now supplies only its cell-specific matrix bodies (`PathSemiringTeX.matrixWithStateVertexLabelsBody` vs `boolMatrixToTeXBody`). Simple-path goldens (39) and reachability goldens (25, incl. lualatex) stayed byte-identical.
+
+**Verified:** build 0 errors; simple-path Belyanin and reachability Belyanin printer suites green (64) with goldens byte-identical after the refactor; Fantomas clean; mdformat clean; commit gate PASS.
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — no new tuples beyond 2-item pairs (`boundaryVisual` takes two `string * string` figure pairs); the trace records are named types.
+- §6 (doc comments) — every new public function carries an XML doc: `evaluateReachabilityWithTrace`, the two trace types, the `BelyaninStepCommon` helpers, `BelyaninReachabilityStepVisualizer.renderSteps`, `BelyaninReachabilityRunner.runBelyanin`, `RpqSemantics`.
+- §7 (genericity) — `BelyaninRPQ` and the visualizers stay generic over `'t`; `BelyaninStepCommon` predicates are generic over the cell type via an `isZero: 'a -> bool` parameter.
+- §8 (non-empty collections) — no runtime-checked lists introduced; `RpqSemantics` is a closed DU.
+- §9 (separation) — the algorithm (`BelyaninRPQ`) collects data only; all TeX/DOT lives in `FLPQ.Printers`; the runners do file I/O only.
+- §10/§11 (one algorithm per file / thin variants) — `BelyaninReachabilityRunner` and `BelyaninSimplePathRunner` are thin dispatch targets over shared `BelyaninRPQ`/`Helpers`/`Summary` infrastructure; the Boolean `evaluate` and the Boolean trace share one `runReachabilityWithTrace`.
+- §12 (compile-time safety) — `RpqSemantics` makes the two semantics a closed DU; the init step's missing end state stays `BelyaninVisualizationStep.End : option` (shared type), not an empty string.
+- §13 (no duplication) — see resolved finding; additionally the Boolean loop is no longer duplicated between `runSingleSource` and the trace.
+- §15/§16 (test fidelity / Fact vs Property) — no stubbed tests: the trace property test uses FsCheck `RegexAndGraphGenerators` (cyclic graphs included) and asserts trace-vs-`evaluate` equality per vertex; the CLI/visualizer tests assert concrete reachability (`v_4`/`v_3`), file sets, and DOT color tiers.
+- §17 (shared generators) — reused the existing `RegexAndGraphGenerators`; no new generators.
+- §18 (equivalence) — new property test `reachability trace projects to evaluate for the first source`; the Boolean `evaluate` was already cross-tested vs Arroyuelo/Kronecker.
+- §19 (test coverage) — `evaluateReachabilityWithTrace` → `BelyaninReachabilityTraceTests`; `BelyaninReachabilityStepVisualizer` → `BelyaninReachabilityStepVisualizationTests` (structural + goldens + lualatex); `BelyaninReachabilityRunner` → `BelyaninReachabilityRunnerTests`; CLI dispatch → `ProgramDispatchTests`/`AlgorithmTypesTests`; summary → `CliSummaryTests`.
+- §20 (documentation) — new `.fs` files each have a doc page linked from `main.md`/`FLPQ.Printers.md`; `FLPQ.Cli.md` / `user/cli.md` describe `--semantics` and the two runners; `belyanin-rpq.md` owns the semantics description and the path-semiring doc links to it.
+- §21 (book traceability) — `BelyaninRPQ` still cites Chapter 11 `02_BFS.tex` / `algo:RPQ_BFS_semiring`; the Boolean variant is the book's Boolean semiring instance and the path variant the `I_simple` path semiring.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+---
+
 ## Task 287 Review (2026-09-30)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninStepVisualizer.fs` (S1: `matrixTile` renders the boundary title + matrix in one adjustbox/math `$F = ...$` / `$V = ...$`, end frontier titled `F`, all tiles `valign=T` except the start frontier; `wrapFormula` gains `valign=T`; S3: per-label DFA target states), `src/FLPQ.Printers/SummaryTeX.fs` (S2: option-taking `wrapTikzAdjustboxColumnWith` plus the top-aligned `wrapTikzAdjustboxColumnTop` used only by `belyaninStepSection`; S3: legend yellow row), `src/FLPQ.Printers/AutomatonTikz.fs` / `AutomatonDot.fs` (S3: `targetStates` parameter and lowest-precedence yellow/lightyellow fill), tests (`AutomatonVisualizationTests`, `BelyaninStepVisualizationTests`, `SummaryTexSectionTests`, 10 regenerated per-label automaton goldens), and docs (`belyanin-step-viz.md`, `automaton-viz.md`, `summary-tex.md`, `path-semiring-tex.md`, `user/cli.md`).

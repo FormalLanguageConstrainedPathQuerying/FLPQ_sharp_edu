@@ -106,14 +106,14 @@ module Helpers =
     let writeBelyaninStepsVisualization
         (outputDir: string)
         (useDot: bool)
-        (steps: BelyaninStepVisualizer.BelyaninVisualizationStep list)
+        (steps: BelyaninStepCommon.BelyaninVisualizationStep list)
         =
         // One step-boundary group: the frontier/visited matrix files plus the automaton/graph
         // figures in the selected format.
         let writeBoundary
             (stepDir: string)
             (suffix: string)
-            (boundary: BelyaninStepVisualizer.BelyaninBoundaryVisual)
+            (boundary: BelyaninStepCommon.BelyaninBoundaryVisual)
             : unit =
             writeOutputFile (Path.Combine(stepDir, sprintf "frontier_%s.tex" suffix)) boundary.Frontier
             writeOutputFile (Path.Combine(stepDir, sprintf "visited_%s.tex" suffix)) boundary.Visited

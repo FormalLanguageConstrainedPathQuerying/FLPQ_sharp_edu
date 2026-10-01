@@ -20,7 +20,8 @@
     <Compile Include="GllRunnerTests.fs" />
     <Compile Include="RnglrRunnerTests.fs" />
     <Compile Include="ArroyueloRunnerTests.fs" />
-    <Compile Include="BelyaninRunnerTests.fs" />
+    <Compile Include="BelyaninSimplePathRunnerTests.fs" />
+    <Compile Include="BelyaninReachabilityRunnerTests.fs" />
     <Compile Include="ProgramDispatchTests.fs" />
   </ItemGroup>
 
@@ -55,6 +56,18 @@
     </Content>
     <Content Include="..\..\data\example_graph.txt">
       <Link>example_graph.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_graph_demo_big.txt">
+      <Link>example_graph_demo_big.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_graph_demo_small.txt">
+      <Link>example_graph_demo_small.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\example_regexp_demo.txt">
+      <Link>example_regexp_demo.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="xunit.runner.json">

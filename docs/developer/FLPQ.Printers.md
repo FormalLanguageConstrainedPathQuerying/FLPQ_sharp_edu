@@ -43,7 +43,9 @@
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
 | [RpqGraphViz](rpq-graph-viz.md) | Shared rendering of the RPQ input graph with path highlights (DOT + TikZ) |
 | [ArroyueloStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's RPQ evaluation (regexp tree, matrix equations, graph highlights) |
-| [BelyaninStepVisualizer](belyanin-step-viz.md) | Step-by-step visualization of Belyanin's RPQ evaluation (DFA frontier, propagation matrices, graph highlights) |
+| [BelyaninStepCommon](belyanin-step-common.md) | Shared Belyanin step record types and cell-agnostic rendering helpers |
+| [BelyaninSimplePathStepVisualizer](belyanin-step-viz.md) | Step-by-step visualization of Belyanin's simple-path RPQ evaluation (path matrices, path edges) |
+| [BelyaninReachabilityStepVisualizer](belyanin-reachability-step-viz.md) | Step-by-step visualization of Belyanin's Boolean reachability RPQ evaluation (Boolean matrices, no path edges) |
 | [LLTableTeX](ll-table-tex.md) | TeX rendering for LL parsing tables |
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |

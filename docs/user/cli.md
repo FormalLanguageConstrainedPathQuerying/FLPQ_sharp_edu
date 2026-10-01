@@ -11,6 +11,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 ## Types
 
 - `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ | BelyaninRPQ`
+- `RpqSemantics` — DU: `Reachability | SimplePath` (Belyanin RPQ only)
 - `Arguments` — Argu argument type with `IArgParserTemplate`
 
 ## Command-line flags
@@ -23,6 +24,7 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
+| `--semantics` / `-semantics` | RPQ semantics for `-a BelyaninRPQ`: `reachability` (Boolean BFS, classical, complete on cyclic graphs) or `simplePath` (reachable only via an accepting simple path) | `reachability` |
 | `--use-dot` | Use Graphviz dot for LR automaton and LL/LR per-step tree_and_stack rendering (default: Tikz) | off |
 | `--no-sppf-table` | Render CYK/Valiant table cells as sets of nonterminal names without SPPF split points and production indices | off |
 
@@ -39,7 +41,7 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 | **LL** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Derivation tree with stack overlay: Tikz graphdrawing picture with a same-layer constraint on the stack frontier, or DOT graph; TeX input row with current position underlined |
 | **LR** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Same format as LL — the picture includes LR state frames in the stack chain |
 | **Arroyuelo RPQ** | `matrices.tex`, `tree.tikz.tex` (default) or `tree.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) | One directory per regexp tree node in post-order: the matrix equation for the node's operation, the regexp tree with the current node highlighted, and the graph with the vertices/edges of the step's result paths highlighted |
-| **Belyanin RPQ** | `frontier_start.tex`, `visited_start.tex`, `automaton_start.tikz.tex` (default) or `automaton_start.dot` (`--use-dot`), `graph_start.tikz.tex` (default) or `graph_start.dot` (`--use-dot`); per active label: `label_i_select.tex`, `label_i_extend.tex`, `label_i_automaton.tikz.tex`/`.dot`, `label_i_graph.tikz.tex`/`.dot`; for non-init steps additionally `frontier_end.tex`, `visited_end.tex`, `automaton_end.tikz.tex`/`.dot`, `graph_end.tikz.tex`/`.dot` | One directory per BFS iteration (plus `step_0` for the initialization): one line per substep — the start line shows F, V, the graph (green sources, lightblue frontier vertices), and the query DFA (highlighted frontier states) left to right; each active label gets two lines, the select product `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` (one horizontal line) with the DFA (used transitions red bold, target states lightyellow) and the extend product `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` (one horizontal line) with the graph (followed edges red bold, target vertices lightyellow); the end line (non-init steps) shows F, V, graph, and DFA. Boundary tiles render `F = [F]` / `V = [V]`, and every adjustbox is top-aligned (`valign=T`) except the start frontier F |
+| **Belyanin RPQ** | `frontier_start.tex`, `visited_start.tex`, `automaton_start.tikz.tex` (default) or `automaton_start.dot` (`--use-dot`), `graph_start.tikz.tex` (default) or `graph_start.dot` (`--use-dot`); per active label: `label_i_select.tex`, `label_i_extend.tex`, `label_i_automaton.tikz.tex`/`.dot`, `label_i_graph.tikz.tex`/`.dot`; for non-init steps additionally `frontier_end.tex`, `visited_end.tex`, `automaton_end.tikz.tex`/`.dot`, `graph_end.tikz.tex`/`.dot` | One directory per BFS iteration (plus `step_0` for the initialization): one line per substep — the start line shows F, V, the graph (green sources, lightblue frontier vertices), and the query DFA (highlighted frontier states) left to right; each active label gets two lines, the select product `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` (one horizontal line) with the DFA (used transitions red bold, target states lightyellow) and the extend product `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` (one horizontal line) with the graph (followed edges red bold, target vertices lightyellow); the end line (non-init steps) shows F, V, graph, and DFA. Boundary tiles render `F = [F]` / `V = [V]`, and every adjustbox is top-aligned (`valign=T`) except the start frontier F. With `--semantics reachability` (the default) the matrices are Boolean (`\bullet`/`\cdot`) and no light-red path edges are drawn (no path information is collected); the used automaton transitions and followed graph edges are still red bold, with lightblue current and lightyellow target states/vertices. With `--semantics simplePath` the matrices hold path tuples and path edges are shown light red. The reachability trace/visualization covers a single source (the first start vertex); `result.tex` and the status line report every source. |
 
 Root-level artifacts per algorithm:
 
@@ -52,7 +54,7 @@ Root-level artifacts per algorithm:
 | **GLL** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `rsm_blocks.dot`, `ext_rsm.tikz.tex` (default) or `ext_rsm.dot` (`--use-dot`), `path_index.tex`, `sppf.dot` |
 | **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
 | **Arroyuelo RPQ** | `regexp.tex` (query formula), `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`) — the query's DFA with `q_i` state labels, `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) — the input graph with its source vertices green, `result.tex` — final path semiring matrix plus one line per source listing its reachable vertices |
-| **Belyanin RPQ** | Same as Arroyuelo RPQ: `regexp.tex`, `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`), `result.tex` — final path semiring matrix plus one line per source listing its reachable vertices |
+| **Belyanin RPQ** | Same as Arroyuelo RPQ: `regexp.tex`, `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`), `result.tex` — with `--semantics simplePath` the final path semiring matrix, with `--semantics reachability` (default) the final Boolean matrix for the first source; both add one line per source listing its reachable vertices (reachability computes these from `BelyaninRPQ.evaluate`) |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 
@@ -65,6 +67,8 @@ When `-s` is passed, after writing the step artifacts the CLI also:
 3. Builds a merged TeX document per algorithm by substituting `__ALGORITHM__` and `__CONTENT__` in `data/tex_summary_template.tex`.
 4. Compiles the merged TeX **twice** with lualatex (for table-of-contents and cross-references).
 5. Fails with exit code 1 if any Dot or TeX compilation produces errors (exit code, stdout markers, or empty PDF).
+
+Both Belyanin `--semantics` values produce a merged summary with the same line-per-substep layout (only the matrix cell type and the absence of path edges differ), because they write the same artifact file names and are rendered by the same templates.
 
 Layout under `<output>/results/<algorithm-lower>/`:
 

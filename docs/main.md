@@ -84,7 +84,9 @@ What our standards and principles are, and why we chose them.
 - [RPQ regexp visualization](developer/rpq-regexp-viz.md)
 - [RPQ graph visualization](developer/rpq-graph-viz.md)
 - [Arroyuelo step visualization](developer/arroyuelo-step-viz.md)
-- [Belyanin step visualization](developer/belyanin-step-viz.md)
+- [Belyanin step common](developer/belyanin-step-common.md)
+- [Belyanin simple-path step visualization](developer/belyanin-step-viz.md)
+- [Belyanin reachability step visualization](developer/belyanin-reachability-step-viz.md)
 - [GLL step visualization](developer/gll-step-visualizer.md)
 - [ExternalTools module](developer/external-tools.md)
 

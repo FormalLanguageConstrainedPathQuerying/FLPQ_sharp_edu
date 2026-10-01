@@ -64,6 +64,29 @@ let ``invalid algorithm name throws`` () =
     Assert.Throws<ArguParseException>(fun () -> parser.Parse(args) |> ignore)
 
 [<Fact>]
+let ``parse --semantics simplePath`` () =
+    let args = [| "-a"; "BelyaninRPQ"; "--semantics"; "simplePath" |]
+    let parser = ArgumentParser.Create<Arguments>()
+    let results = parser.Parse(args)
+    Assert.Equal(RpqSemantics.SimplePath, results.GetResult Semantics)
+
+[<Fact>]
+let ``parse -semantics reachability (single dash)`` () =
+    let args = [| "-a"; "BelyaninRPQ"; "-semantics"; "reachability" |]
+    let parser = ArgumentParser.Create<Arguments>()
+    let results = parser.Parse(args)
+    Assert.Equal(RpqSemantics.Reachability, results.GetResult Semantics)
+
+[<Fact>]
+let ``semantics is absent by default and defaults to reachability`` () =
+    let args = [| "-a"; "BelyaninRPQ" |]
+    let parser = ArgumentParser.Create<Arguments>()
+    let results = parser.Parse(args)
+    Assert.False(results.Contains Semantics)
+
+    Assert.Equal(RpqSemantics.Reachability, results.GetResult(Semantics, defaultValue = RpqSemantics.Reachability))
+
+[<Fact>]
 let ``summary flag is parsed`` () =
     let args = [| "-a"; "CYK"; "-s" |]
     let parser = ArgumentParser.Create<Arguments>()

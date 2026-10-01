@@ -5,7 +5,7 @@
 **Module:** RpqGraphViz
 **Source:** `src/FLPQ.Printers/RpqGraphViz.fs`
 **Depends on:** GssDot, GssTikz, AutomatonTikz, PathSemiring
-**Used by:** ArroyueloStepVisualizer, BelyaninStepVisualizer, ArroyueloRunner, BelyaninRunner
+**Used by:** ArroyueloStepVisualizer, BelyaninSimplePathStepVisualizer, BelyaninReachabilityStepVisualizer, ArroyueloRunner, BelyaninSimplePathRunner, BelyaninReachabilityRunner
 
 > **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier (light blue), and highlighted (yellow) vertices. Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
 

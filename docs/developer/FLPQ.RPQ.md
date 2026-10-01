@@ -7,7 +7,7 @@
 **Used by:** FLPQ.Cli
 **Book reference:** Chapters 3, 11, 12
 
-> **Abstract:** Regular Path Querying library implementing three RPQ algorithms (Belyanin's BFS-based LARPQ, Arroyuelo's matrix-based regex evaluation, Kronecker-based automaton intersection) and graph file reading. All three algorithms accept a DFA query and an NFA labeled graph, returning a boolean reachability matrix. Property-based equivalence tests verify identical results across algorithms.
+> **Abstract:** Regular Path Querying library implementing three RPQ algorithms (Belyanin's BFS-based LARPQ, Arroyuelo's matrix-based regex evaluation, Kronecker-based automaton intersection) and graph file reading. All three algorithms accept a DFA query and an NFA labeled graph, returning a boolean reachability matrix. Property-based equivalence tests verify identical results across algorithms. Belyanin's module additionally records step traces under two semantics: Boolean reachability (`evaluate` / `evaluateReachabilityWithTrace`) and the path-semiring simplePath semantics (`evaluateSimplePathWithTrace`).
 
 ## Contents
 
@@ -38,7 +38,7 @@
 
 Implements Regular Path Querying — finding vertices reachable from source vertices along paths whose labels form a word in a given regular language:
 
-- **Belyanin's LARPQ** — BFS-based single-source RPQ: propagation through simultaneous automaton + graph transition
+- **Belyanin's LARPQ** — BFS-based single-source RPQ: propagation through simultaneous automaton + graph transition; two semantics (Boolean reachability, the classical answer, and simplePath over the path semiring)
 - **Arroyuelo's RPQ** — matrix-based regex evaluation: translates regular expression to Boolean matrix expression, evaluates post-order
 - **Kronecker-based RPQ** — Kronecker product of automaton and graph adjacency matrices with MS-BFS filtering
 - **GraphReader** — reads labeled graphs from text files, returns graph as NFA

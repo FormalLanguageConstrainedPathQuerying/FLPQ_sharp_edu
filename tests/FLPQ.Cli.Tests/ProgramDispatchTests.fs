@@ -201,6 +201,56 @@ let ``BelyaninRPQ without input file exits non-zero`` () =
     Assert.NotEqual(0, code)
 
 [<Fact>]
+let ``BelyaninRPQ with simplePath semantics runs successfully`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "BelyaninRPQ"
+           "--semantics"
+           "simplePath"
+           "-q"
+           exampleRegexp
+           "-i"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)
+
+[<Fact>]
+let ``BelyaninRPQ with reachability semantics runs successfully`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "BelyaninRPQ"
+           "-semantics"
+           "reachability"
+           "-q"
+           exampleRegexp
+           "-i"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)
+
+[<Fact>]
 let ``main delegates to runCli`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 

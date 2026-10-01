@@ -6,10 +6,13 @@ open FLPQ.LinearAlgebra
 open FLPQ.Printers
 open FLPQ.RPQ
 
-/// Belyanin RPQ runner: parses the query regexp and the graph, runs the BFS-like traversal
-/// over the path semiring with a trace, and writes the root artifacts (regexp, DFA, graph,
-/// result) plus one directory per trace step.
-module BelyaninRunner =
+/// Belyanin RPQ simplePath runner: parses the query regexp and the graph, runs the BFS-like
+/// traversal over the path semiring with a trace, and writes the root artifacts (regexp,
+/// DFA, graph, result) plus one directory per trace step. The reported answer is derived
+/// from the simple-path trace (`BelyaninRPQ.reachableFromPaths`), so a vertex is reported
+/// reachable only via an accepting simple path (see `BelyaninReachabilityRunner` for the
+/// classical reachability semantics).
+module BelyaninSimplePathRunner =
 
     let private vertexName (i: int) : string = sprintf "v_%d" i
 
@@ -36,14 +39,14 @@ module BelyaninRunner =
         let dfa = Regexp.toDfa regexp
         let graph = GraphReader.parseGraphFile inputFile
 
-        let steps, finalP = BelyaninRPQ.evaluateWithTrace dfa graph
+        let steps, finalP = BelyaninRPQ.evaluateSimplePathWithTrace dfa graph
 
         Helpers.writeRpqRootArtifacts outputDir useDot regexp dfa graph
 
         let sources = graph.StartStates |> Set.toArray |> Array.sort
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (renderResult dfa finalP sources)
 
-        let vizSteps = BelyaninStepVisualizer.renderSteps id dfa graph steps
+        let vizSteps = BelyaninSimplePathStepVisualizer.renderSteps id dfa graph steps
         Helpers.writeBelyaninStepsVisualization outputDir useDot vizSteps
 
         let sourceStrs =
@@ -57,4 +60,8 @@ module BelyaninRunner =
             |> List.map vertexName
             |> String.concat ", "
 
-        printfn "Belyanin RPQ: %d steps, sources: [%s] -> reachable: [%s]" steps.Length sourceStrs reachableStrs
+        printfn
+            "Belyanin RPQ (simplePath): %d steps, sources: [%s] -> reachable: [%s]"
+            steps.Length
+            sourceStrs
+            reachableStrs

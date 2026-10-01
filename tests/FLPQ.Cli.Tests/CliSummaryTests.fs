@@ -292,7 +292,7 @@ let ``ValiantModified summary produces merged TeX`` () =
 // regexp (math mode), the query DFA, and the input graph; each step is a two-column section
 // (figure + matrices | highlighted graph). There is no SPPF for RPQ — the trailing
 // sppfSection is skipped when the sppf files are absent.
-let private runRpqWithSummary (algorithm: string) (useDot: bool) : string =
+let private runRpqWithSummaryArgs (algorithm: string) (useDot: bool) (extraArgs: string list) : string =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     Directory.CreateDirectory outDir |> ignore
 
@@ -309,11 +309,14 @@ let private runRpqWithSummary (algorithm: string) (useDot: bool) : string =
                "-o"
                outDir
                "-s" |]
-            (Array.ofList dotFlag)
+            (Array.ofList (extraArgs @ dotFlag))
 
     let code = Program.runCli args
     Assert.Equal(0, code)
     outDir
+
+let private runRpqWithSummary (algorithm: string) (useDot: bool) : string =
+    runRpqWithSummaryArgs algorithm useDot []
 
 [<Fact>]
 [<Trait("Category", "Summary")>]
@@ -449,6 +452,41 @@ let ``BelyaninRPQ summary merged TeX compiles without Overfull boxes`` () =
 let ``BelyaninRPQ summary dot mode merged TeX compiles without Overfull boxes`` () =
     let outDir = runRpqWithSummary "BelyaninRPQ" true
     assertRpqMergedTexCompilesWithoutOverfull outDir "BelyaninRPQ"
+
+// The Belyanin summary templates are semantics-independent: both `--semantics` values write
+// the same artifact file names, so the same compiled merged-TeX pipeline applies.
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ simplePath summary produces merged TeX`` () =
+    let outDir =
+        runRpqWithSummaryArgs "BelyaninRPQ" false [ "--semantics"; "simplePath" ]
+
+    assertMergedTexExists outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ simplePath summary merged TeX compiles with lualatex`` () =
+    let outDir =
+        runRpqWithSummaryArgs "BelyaninRPQ" false [ "--semantics"; "simplePath" ]
+
+    assertMergedTexCompiles outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ simplePath summary merged TeX compiles without Overfull boxes`` () =
+    let outDir =
+        runRpqWithSummaryArgs "BelyaninRPQ" false [ "--semantics"; "simplePath" ]
+
+    assertRpqMergedTexCompilesWithoutOverfull outDir "BelyaninRPQ"
+
+[<Fact>]
+[<Trait("Category", "Summary")>]
+let ``BelyaninRPQ explicit reachability summary merged TeX compiles with lualatex`` () =
+    let outDir =
+        runRpqWithSummaryArgs "BelyaninRPQ" false [ "--semantics"; "reachability" ]
+
+    assertMergedTexCompiles outDir "BelyaninRPQ"
 
 // SPPF must appear exactly once in the GLL/RNGLR merged summary — as the trailing
 // "SPPF (Shared Packed Parse Forest)" section. The header no longer carries a

@@ -29,7 +29,7 @@ let private labelStep
 
 [<Fact>]
 let ``trace: six steps, initialization first`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
 
     Assert.Equal(6, List.length steps)
     Assert.True(steps.[0].IsInit)
@@ -40,7 +40,7 @@ let ``trace: six steps, initialization first`` () =
 
 [<Fact>]
 let ``trace: initialization step holds the trivial path at the start state`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let init = steps.[0]
 
     Assert.Equal<Set<int list>>(Set.singleton [ 0 ], init.M.[exampleDfa.StartState, 0])
@@ -50,7 +50,7 @@ let ``trace: initialization step holds the trivial path at the start state`` () 
 
 [<Fact>]
 let ``trace: step 1 propagates label a to v_1`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let step = steps.[1]
 
     Assert.Equal<int>(1, List.length step.Labels)
@@ -62,7 +62,7 @@ let ``trace: step 1 propagates label a to v_1`` () =
 
 [<Fact>]
 let ``trace: step 2 shows all three labels, only b extends`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let step = steps.[2]
 
     Assert.Equal<string list>([ "a"; "b"; "c" ], step.Labels |> List.map labelOf)
@@ -74,7 +74,7 @@ let ``trace: step 2 shows all three labels, only b extends`` () =
 
 [<Fact>]
 let ``trace: label steps store the per-label N and G matrices`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
 
     // DFA a(b|c)*a: q0 -a-> q1, q1 -b,c-> q1, q1 -a-> q2. Graph a-edges: 0->1, 2->5, 3->4.
     let nA = Matrix.init 3 3 false
@@ -110,7 +110,7 @@ let ``trace: label steps store the per-label N and G matrices`` () =
 
 [<Fact>]
 let ``trace: step 3 forks to v_5 via a and v_3 via c`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let step = steps.[3]
 
     Assert.Equal<Set<int list>>(Set.singleton [ 0; 1; 2; 5 ], (labelStep step "a").Extend.[2, 5])
@@ -121,7 +121,7 @@ let ``trace: step 3 forks to v_5 via a and v_3 via c`` () =
 
 [<Fact>]
 let ``trace: step 4 label b is dropped by I_simple`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let step = steps.[4]
 
     // The automaton side matches (q1 -b-> q1 at v_3), but the only b-edge from v_3 goes
@@ -135,7 +135,7 @@ let ``trace: step 4 label b is dropped by I_simple`` () =
 
 [<Fact>]
 let ``trace: final step has an unpropagatable frontier`` () =
-    let steps, _ = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let last = steps.[5]
 
     Assert.Equal<Set<int list>>(Set.singleton [ 0; 1; 2; 3; 4 ], last.M.[2, 4])
@@ -144,7 +144,7 @@ let ``trace: final step has an unpropagatable frontier`` () =
 
 [<Fact>]
 let ``trace: P accumulates only simple paths from sources`` () =
-    let steps, p = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let steps, p = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let all = PathSemiring.allPaths p
 
     Assert.True(all |> Set.forall PathSemiring.isSimple)
@@ -164,7 +164,7 @@ let ``trace: P accumulates only simple paths from sources`` () =
 
 [<Fact>]
 let ``reachableFromPaths: v_0 reaches v_4 and v_5`` () =
-    let _, p = BelyaninRPQ.evaluateWithTrace exampleDfa exampleNfa
+    let _, p = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa exampleNfa
     let reachable = BelyaninRPQ.reachableFromPaths exampleDfa p [| 0 |]
 
     Assert.Equal<(int * int list) list>([ (0, [ 4; 5 ]) ], reachable)
@@ -184,7 +184,7 @@ let ``reachableFromPaths: multi-source keeps per-source paths separate`` () =
               { From = 2; Label = "a"; To = 5 } ]
             [| 0; 2 |]
 
-    let _, p = BelyaninRPQ.evaluateWithTrace exampleDfa nfa
+    let _, p = BelyaninRPQ.evaluateSimplePathWithTrace exampleDfa nfa
     let reachable = BelyaninRPQ.reachableFromPaths exampleDfa p [| 0; 2 |]
 
     Assert.Equal<(int * int list) list>([ (0, [ 4; 5 ]); (2, []) ], reachable)
@@ -209,7 +209,7 @@ module BelyaninTracePropertyTests =
 
                 let nfa = TestHelpers.nfaFromEdges v d.Edges safeSources
                 let dfa = Regexp.toDfa d.Regex
-                let _, p = BelyaninRPQ.evaluateWithTrace dfa nfa
+                let _, p = BelyaninRPQ.evaluateSimplePathWithTrace dfa nfa
                 let reachable = BelyaninRPQ.reachableFromPaths dfa p safeSources
                 let boolResult = BelyaninRPQ.evaluate dfa nfa
 

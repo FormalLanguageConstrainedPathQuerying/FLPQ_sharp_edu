@@ -51,7 +51,15 @@ module Program =
             | AlgorithmTypes.BelyaninRPQ ->
                 let queryFile = results.GetResult AlgorithmTypes.Query
                 let inputFile = results.GetResult AlgorithmTypes.Input
-                BelyaninRunner.runBelyanin queryFile inputFile output useDot
+
+                let semantics =
+                    results.GetResult(AlgorithmTypes.Semantics, defaultValue = AlgorithmTypes.RpqSemantics.Reachability)
+
+                match semantics with
+                | AlgorithmTypes.RpqSemantics.Reachability ->
+                    BelyaninReachabilityRunner.runBelyanin queryFile inputFile output useDot
+                | AlgorithmTypes.RpqSemantics.SimplePath ->
+                    BelyaninSimplePathRunner.runBelyanin queryFile inputFile output useDot
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then

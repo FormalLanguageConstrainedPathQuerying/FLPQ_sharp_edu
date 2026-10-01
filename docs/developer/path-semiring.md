@@ -72,7 +72,7 @@ val booleanProjection: Matrix<Set<int list>> -> Matrix<bool>
 
 | Decision | Rationale |
 | --- | --- |
-| Only simple paths are stored | Cells must be finite on cyclic graphs; matches the book's `I_simple` semantics (02_BFS.tex). Consequence: on cyclic graphs the boolean projection may be a strict subset of full reachability (labelled walks that revisit vertices are excluded); on acyclic graphs every walk is simple, so the projection equals the Boolean result |
+| Only simple paths are stored | Cells must be finite on cyclic graphs; matches the book's `I_simple` semantics (02_BFS.tex). This is the `simplePath` RPQ semantics: a vertex is reachable only via an accepting simple path, so on cyclic graphs the boolean projection may be a strict subset of full reachability (labelled walks that revisit vertices are excluded); on acyclic graphs every walk is simple, so the projection equals the Boolean result. The classical reachability answer does **not** use this semiring — see [Belyanin RPQ](belyanin-rpq.md) `evaluate` and [Arroyuelo RPQ](arroyuelo-rpq.md) `evaluate` |
 | Concatenation drops non-simple results | Keeps the invariant that cells hold only simple paths; exactly the book's example where candidate `(v1, v2, v1)` is dropped |
 | `transitiveClosure` reuses the Boolean squaring loop | One implementation shape for both semirings: after `k` squarings the matrix contains all (simple) paths expressible with at most `2^k` segments; the loop runs until `2^k >= n`, which covers every simple path |
 | `boolSelectRows` / `boolExtendCols` live here, not in BelyaninRPQ | They are semiring-level operations (boolean × path matrix) shared by the Belyanin trace (task 281); keeping them in the semiring module avoids a second copy of the propagation algebra |

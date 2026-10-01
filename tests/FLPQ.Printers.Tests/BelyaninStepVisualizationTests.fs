@@ -17,9 +17,10 @@ let private testRegexp: Regexp<string, string> = TestHelpers.rpqExampleRegexp
 
 let private testDfa: DFA<string, int> = Regexp.toDfa testRegexp
 
-let private steps, _ = BelyaninRPQ.evaluateWithTrace testDfa testGraph
+let private steps, _ = BelyaninRPQ.evaluateSimplePathWithTrace testDfa testGraph
 
-let private rendered = BelyaninStepVisualizer.renderSteps id testDfa testGraph steps
+let private rendered =
+    BelyaninSimplePathStepVisualizer.renderSteps id testDfa testGraph steps
 
 /// The automaton states of the path matrix's frontier: q with a non-empty M[q, *] cell.
 let private frontierStates (m: Matrix<Set<int list>>) : Set<int> =
@@ -477,7 +478,7 @@ let private realTemplates: SummaryTeX.StepTemplates =
       BelyaninLabelRowTikz = read "Belyanin_label_row_tikz_template.tex" }
 
 /// Writes one rendered step to a step dir exactly as the runner does (TikZ mode).
-let private writeStepDir (stepDir: string) (step: BelyaninStepVisualizer.BelyaninVisualizationStep) : unit =
+let private writeStepDir (stepDir: string) (step: BelyaninStepCommon.BelyaninVisualizationStep) : unit =
     File.WriteAllText(Path.Combine(stepDir, "frontier_start.tex"), step.Start.Frontier)
     File.WriteAllText(Path.Combine(stepDir, "visited_start.tex"), step.Start.Visited)
     File.WriteAllText(Path.Combine(stepDir, "automaton_start.tikz.tex"), step.Start.AutomatonTikz)

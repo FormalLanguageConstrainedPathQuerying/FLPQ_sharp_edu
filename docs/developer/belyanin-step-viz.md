@@ -1,15 +1,16 @@
-# BelyaninStepVisualizer Module
+# BelyaninSimplePathStepVisualizer Module
 
-**Tags:** visualization, rpq, belyanin, dot, tikz, matrix, step-visualization
+**Tags:** visualization, rpq, belyanin, dot, tikz, matrix, step-visualization, simple-path
 **Kind:** visualization
-**Module:** BelyaninStepVisualizer
-**Source:** `src/FLPQ.Printers/BelyaninStepVisualizer.fs`
-**Depends on:** BelyaninRPQ (FLPQ.RPQ), PathSemiring, PathSemiringTeX, RpqGraphViz, AutomatonDot, AutomatonTikz
-**Used by:** FLPQ.Cli (Belyanin runner, task 281 S4)
+**Module:** BelyaninSimplePathStepVisualizer
+**Source:** `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs`
+**Depends on:** BelyaninRPQ (FLPQ.RPQ), BelyaninStepCommon, PathSemiring, PathSemiringTeX, RpqGraphViz, AutomatonDot, AutomatonTikz
+**Used by:** FLPQ.Cli (`BelyaninSimplePathRunner`, task 288)
 **Book reference:** Chapter 11, Section 02_BFS.tex, Algorithm algo:RPQ_BFS_semiring
 
-> **Abstract:** Renders each step of Belyanin's path-semiring evaluation (one main-loop
-> iteration of the BFS-like traversal, plus an initialization step) as one line per substep:
+> **Abstract:** Renders each step of Belyanin's path-semiring evaluation — the simplePath
+> semantics (`BelyaninRPQ.evaluateSimplePathWithTrace`), one main-loop iteration of the
+> BFS-like traversal plus an initialization step. Each step is one line per substep:
 > the start-of-step line (frontier F, visited V, the input graph with green sources,
 > lightblue frontier vertices, and lightred frontier path edges, and the query DFA with the
 > frontier states highlighted — left to right), two lines per active label with the explicit
@@ -42,13 +43,15 @@ type BelyaninVisualizationStep =
     { Start: BelyaninBoundaryVisual; Labels: BelyaninLabelVisual list; End: BelyaninBoundaryVisual option }
 ```
 
-One record per trace step (`BelyaninRPQ.BelyaninTraceStep`), one `BelyaninLabelVisual`
-per active label in trace order. A boundary is the frontier F and visited V matrices as
-**separate** artifacts (F/V at the start and at the end; the step template places
-them side by side) plus the automaton/graph figures with that boundary's frontier
-highlighted. The init step has no end state (`End = None`) and no label rows — the
-absence is unrepresentable by accident, so the writer and the tests match on `End`
-instead of checking for empty strings.
+The three record types are defined in [BelyaninStepCommon](belyanin-step-common.md) and
+shared with the reachability visualizer (the CLI writer and the `-s` summary consume the
+same record). One record per trace step (`BelyaninRPQ.BelyaninTraceStep`), one
+`BelyaninLabelVisual` per active label in trace order. A boundary
+is the frontier F and visited V matrices as **separate** artifacts (F/V at the start and at
+the end; the step template places them side by side) plus the automaton/graph figures with
+that boundary's frontier highlighted. The init step has no end state (`End = None`) and no
+label rows — the absence is unrepresentable by accident, so the writer and the tests match
+on `End` instead of checking for empty strings.
 
 ## Module Functions
 
@@ -60,10 +63,13 @@ val renderSteps: ('t -> string) -> DFA<'t, int> -> NFA<'t, int> -> BelyaninTrace
 printer labels the graph's edges, the query DFA transitions, and the per-label formulas.
 Every highlight set is derived from the trace only (no cross-step data):
 
-- `frontierStates m` — automaton states q with a non-empty M[q, \*] cell.
+- `BelyaninStepCommon.frontierStates PathSemiring.isZero m` — automaton states q with a
+  non-empty M[q, \*] cell.
 - `RpqGraphViz.frontierVertices m` — graph vertices at which m's paths end.
-- `usedAutoEdges m n` — DFA transitions q → q′ with `n.[q, q']` and a frontier path at q.
-- `followedEdges g select` — graph edges u → v with `g.[u, v]` and a selected path at u.
+- `BelyaninStepCommon.usedAutoEdges PathSemiring.isZero m n` — DFA transitions q → q′ with
+  `n.[q, q']` and a frontier path at q.
+- `BelyaninStepCommon.followedEdges PathSemiring.isZero g select` — graph edges u → v with
+  `g.[u, v]` and a selected path at u.
 - `frontierStates F^a` — per-label DFA target states: q with a non-empty `F^a[q, \*]` cell
   (the destinations of the used a-transitions), highlighted lightyellow.
 
@@ -174,7 +180,9 @@ propagates the frontier through `(N^a)^T ⊗ M ⊗ G^a` per label; the book exam
 
 ## See Also
 
-- [Belyanin RPQ module](belyanin-rpq.md) — `evaluateWithTrace` produces the trace steps
+- [Belyanin RPQ module](belyanin-rpq.md) — `evaluateSimplePathWithTrace` produces the trace steps
+- [Belyanin step common](belyanin-step-common.md) — shared record types and cell-agnostic helpers
+- [Belyanin reachability step visualization](belyanin-reachability-step-viz.md) — the Boolean variant (no path edges)
 - [RPQ graph visualization](rpq-graph-viz.md) — shared input-graph rendering with path highlights
 - [PathSemiringTeX module](path-semiring-tex.md) — matrix rendering
 - [FLPQ.Printers hub](FLPQ.Printers.md)

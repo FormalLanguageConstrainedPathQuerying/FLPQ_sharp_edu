@@ -41,6 +41,7 @@
     <Compile Include="RegexpTexTests.fs" />
     <Compile Include="ArroyueloStepVisualizationTests.fs" />
     <Compile Include="BelyaninStepVisualizationTests.fs" />
+    <Compile Include="BelyaninReachabilityStepVisualizationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
