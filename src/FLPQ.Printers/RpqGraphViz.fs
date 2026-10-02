@@ -92,8 +92,8 @@ module RpqGraphViz =
     /// Render the graph with the given highlights (pass empty sets for the plain input
     /// graph): highlightedVertices get the yellow vertex fill, startVertices the green source
     /// fill, frontierVertices light blue, currentEdges render red and bold, pathEdges light
-    /// red. The vertex/edge tier order mirrors GssDot.toDotFromSets / GssTikz.toTikzFromSets.
-    /// Returns (dot, tikz).
+    /// red. Delegates to the RPQ-dedicated RpqGraphDot / RpqGraphTikz renderers (independent
+    /// of the GSS renderers). Returns (dot, tikz).
     let renderGraph
         (terminalPrinter: 't -> string)
         (graph: NFA<'t, int>)
@@ -114,7 +114,7 @@ module RpqGraphViz =
         let edgeLabel = graphEdgeLabel graph terminalPrinter
 
         let dot =
-            GssDot.toDotFromSets
+            RpqGraphDot.toDot
                 (fun v -> sprintf "v_%d" v)
                 edgeLabel
                 allVertices
@@ -124,14 +124,11 @@ module RpqGraphViz =
                 frontierVertices
                 currentEdges
                 pathEdges
-                Set.empty
-                None
-                None
 
-        // bendReciprocalEdges = true: the input graph may carry both directions of a pair
-        // (e.g. v2->v3 and v3->v2), which TikZ would otherwise draw fully overlapped.
+        // Reciprocal pairs (e.g. v2->v3 and v3->v2) are bent apart by RpqGraphTikz so TikZ
+        // does not draw them fully overlapped.
         let tikz =
-            GssTikz.toTikzFromSets
+            RpqGraphTikz.toTikz
                 (fun v -> sprintf "$v_%d$" v)
                 (fun e -> AutomatonTikz.escapeLatex (edgeLabel e))
                 allVertices
@@ -141,11 +138,80 @@ module RpqGraphViz =
                 frontierVertices
                 currentEdges
                 pathEdges
+
+        (dot, tikz)
+
+    /// Render the graph with the original input edges plus derived (computed) edges. Every
+    /// derived edge is labeled with the same `derivedTikzLabel` (`derivedDotLabel` in DOT) —
+    /// the subexpression of the handled node — appended to the original label when the pair is
+    /// also an input edge (labels merge, e.g. `"a, b | c"`). Only start vertices get a fill; no
+    /// path or current-edge highlighting. `derivedTikzLabel` is already-rendered math (e.g.
+    /// `"$E$"`), `derivedDotLabel` the plain label (e.g. `Regexp.toString`). Returns (dot, tikz).
+    let renderGraphWithDerived
+        (terminalPrinter: 't -> string)
+        (graph: NFA<'t, int>)
+        (derivedEdges: Set<int * int>)
+        (derivedTikzLabel: string)
+        (derivedDotLabel: string)
+        (startVertices: Set<int>)
+        : string * string =
+        let n = Nfa.stateCount graph
+
+        let allVertices =
+            Set.ofList
+                [ for i in 0 .. n - 1 do
+                      i ]
+
+        let gEdges = graphEdgeSet graph
+        let edgeLabel = graphEdgeLabel graph terminalPrinter
+        let allEdges = Set.union gEdges derivedEdges
+
+        let merge (original: string) (derived: string) =
+            match original, derived with
+            | "", d -> d
+            | o, "" -> o
+            | o, d -> o + ", " + d
+
+        let dotEdgeLabel (e: int * int) =
+            let original = if Set.contains e gEdges then edgeLabel e else ""
+
+            let derived = if Set.contains e derivedEdges then derivedDotLabel else ""
+
+            merge original derived
+
+        let tikzEdgeLabel (e: int * int) =
+            let original =
+                if Set.contains e gEdges then
+                    AutomatonTikz.escapeLatex (edgeLabel e)
+                else
+                    ""
+
+            let derived = if Set.contains e derivedEdges then derivedTikzLabel else ""
+
+            merge original derived
+
+        let dot =
+            RpqGraphDot.toDot
+                (fun v -> sprintf "v_%d" v)
+                dotEdgeLabel
+                allVertices
+                allEdges
                 Set.empty
-                None
-                "circle"
-                true
-                None
-                true
+                startVertices
+                Set.empty
+                derivedEdges
+                Set.empty
+
+        let tikz =
+            RpqGraphTikz.toTikz
+                (fun v -> sprintf "$v_%d$" v)
+                tikzEdgeLabel
+                allVertices
+                allEdges
+                Set.empty
+                startVertices
+                Set.empty
+                derivedEdges
+                Set.empty
 
         (dot, tikz)

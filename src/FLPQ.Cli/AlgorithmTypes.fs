@@ -55,7 +55,7 @@ module AlgorithmTypes =
                 | Algorithm _ ->
                     "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, or BelyaninRPQ"
                 | Semantics _ ->
-                    "RPQ semantics for BelyaninRPQ: reachability (Boolean BFS, classical, default) or simplePath (path-semiring trace)"
+                    "RPQ semantics for ArroyueloRPQ/BelyaninRPQ: reachability (Boolean, classical, default) or simplePath (path-semiring trace)"
                 | Query _ ->
                     "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms"
                 | Input _ ->

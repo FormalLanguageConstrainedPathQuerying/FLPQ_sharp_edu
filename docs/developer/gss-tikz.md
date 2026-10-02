@@ -5,7 +5,7 @@
 **Module:** GssTikz
 **Source:** `src/FLPQ.Printers/GssTikz.fs`
 **Depends on:** AutomatonTikz (header, layered layout options, label escaping)
-**Used by:** GllStepVisualizer, RnglrStepVisualizer, ArroyueloStepVisualizer, RpqGraphViz
+**Used by:** GllStepVisualizer, RnglrStepVisualizer
 
 > **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's layered layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs can be bent into symmetric arcs so they do not draw on top of each other.
 

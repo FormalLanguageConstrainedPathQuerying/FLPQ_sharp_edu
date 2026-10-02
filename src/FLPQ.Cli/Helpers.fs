@@ -84,7 +84,7 @@ module Helpers =
     let writeArroyueloStepsVisualization
         (outputDir: string)
         (useDot: bool)
-        (steps: ArroyueloStepVisualizer.ArroyueloVisualizationStep list)
+        (steps: ArroyueloStepCommon.ArroyueloVisualizationStep list)
         =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)

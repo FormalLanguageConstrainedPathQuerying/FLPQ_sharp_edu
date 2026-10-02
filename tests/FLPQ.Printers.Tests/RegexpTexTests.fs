@@ -26,9 +26,9 @@ let ``toTeX: nonterminal via \text`` () =
     Assert.Equal(@"\text{S}", RegexpTeX.toTeX id id (RNonterm(Nonterminal "S")))
 
 [<Fact>]
-let ``toTeX: sequence with slash`` () =
+let ``toTeX: sequence with cdot`` () =
     let r = RSeq(RTerm(Terminal "a"), RTerm(Terminal "b"))
-    Assert.Equal("a / b", RegexpTeX.toTeX id id r)
+    Assert.Equal(@"a \cdot b", RegexpTeX.toTeX id id r)
 
 [<Fact>]
 let ``toTeX: alternative with mid`` () =
@@ -44,24 +44,24 @@ let ``toTeX: star parenthesizes the operand`` () =
 [<Fact>]
 let ``toTeX: nested sequence gets parentheses`` () =
     let r = RSeq(RSeq(RTerm(Terminal "a"), RTerm(Terminal "b")), RTerm(Terminal "c"))
-    Assert.Equal(@"(a / b) / c", RegexpTeX.toTeX id id r)
+    Assert.Equal(@"(a \cdot b) \cdot c", RegexpTeX.toTeX id id r)
 
 [<Fact>]
 let ``toTeX: sequence inside alternative gets parentheses`` () =
     let r = RAlt(RSeq(RTerm(Terminal "a"), RTerm(Terminal "b")), RTerm(Terminal "c"))
-    Assert.Equal(@"(a / b) \mid c", RegexpTeX.toTeX id id r)
+    Assert.Equal(@"(a \cdot b) \mid c", RegexpTeX.toTeX id id r)
 
 [<Fact>]
 let ``toTeX: star of sequence keeps its own parentheses`` () =
     let r = RStar(RSeq(RTerm(Terminal "a"), RTerm(Terminal "b")))
-    Assert.Equal(@"(a / b)^*", RegexpTeX.toTeX id id r)
+    Assert.Equal(@"(a \cdot b)^*", RegexpTeX.toTeX id id r)
 
 [<Fact>]
 let ``toTeX: book query walk/(O | R)+/walk`` () =
     let o = RTerm(Terminal "O")
     let rr = RTerm(Terminal "R")
     let r = RSeq(RTerm(Terminal "walk"), RStar(RAlt(o, rr)))
-    Assert.Equal(@"\text{walk} / (O \mid R)^*", RegexpTeX.toTeX id id r)
+    Assert.Equal(@"\text{walk} \cdot (O \mid R)^*", RegexpTeX.toTeX id id r)
 
 // --- LaTeX escaping of special characters ---
 

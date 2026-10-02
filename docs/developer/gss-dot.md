@@ -5,7 +5,7 @@
 **Module:** GssDot
 **Source:** `src/FLPQ.Printers/GssDot.fs`
 **Depends on:** DerivationTreeDot (label escaping)
-**Used by:** GllStepVisualizer, RnglrStepVisualizer, ArroyueloStepVisualizer, RpqGraphViz
+**Used by:** GllStepVisualizer, RnglrStepVisualizer
 
 > **Abstract:** Graphviz DOT rendering of the graph-structured stack (GSS). Renders active vertices as ellipses with fill colors for the start, current, frontier, stored-pop, and highlighted states, and edges with two highlight tiers: highlighted edges are red with penwidth=2.0, path edges are light red (#FF9999). `toDotFromSets` renders directly from vertex/edge sets (step visualization); `toDot` renders a full GSS struct.
 

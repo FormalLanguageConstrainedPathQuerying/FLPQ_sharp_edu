@@ -153,8 +153,8 @@ wraps the TikZ figures in the top-aligned `SummaryTeX.wrapTikzAdjustboxColumnTop
 (`max width=\linewidth, valign=T`; DOT mode includes `dot_pdfs/{stepName}_*.pdf`), and
 concatenates the label rows in numeric label-index order. The filled template is
 **not** wrapped whole: each component keeps its own width-limited adjustbox, so a tall
-step can break across pages (unlike Arroyuelo RPQ, which keeps
-`SummaryTeX.wrapStepAdjustbox`) — see [SummaryTeX module](summary-tex.md).
+step can break across pages (Arroyuelo RPQ follows the same rule since task 291) — see
+[SummaryTeX module](summary-tex.md).
 
 ## Design Decisions
 
@@ -169,9 +169,9 @@ step can break across pages (unlike Arroyuelo RPQ, which keeps
 | F and V as separate boundary artifacts | The start/end line places F and V in separate side-by-side minipages, so the boundary record exposes `Frontier` and `Visited` instead of one combined string the template cannot split |
 | One substep per line; start/end use F, V, graph, automaton (`\noindent`, `\hfill%`) | Splitting the packed row into one line per substep makes every component full-column-width and readable; the `\noindent` removes the paragraph indent that would overfull the line, and the `\hfill%` separators keep the widths within `\textwidth` |
 | Products rendered as one horizontal line | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` and `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` are single math expressions (matrices side by side) wrapped once in an adjustbox, instead of a vertical matrix stack — user guidance (`PathSemiringTeX` body variants supply the un-wrapped matrices) |
-| No whole-step adjustbox for Belyanin | User guidance: a step may span pages; each component is wrapped in its own width-limited adjustbox instead. Arroyuelo RPQ keeps `wrapStepAdjustbox` |
+| No whole-step adjustbox | User guidance: a step may span pages; each component is wrapped in its own width-limited adjustbox instead. Arroyuelo RPQ follows the same rule since task 291 |
 | Boundary tiles render `$F = [F]$` / `$V = [V]$`, end frontier titled `F` | User guidance: the title and matrix are one adjustbox/math, and the step position conveys start vs end, so "New F" is dropped |
-| `valign=T` on every step adjustbox | User guidance: top-aligns the tiles so each boundary/label line reads evenly, including the start frontier F. Belyanin only (Arroyuelo keeps the non-top-aligned wrap) |
+| `valign=T` on every step adjustbox | User guidance: top-aligns the tiles so each boundary/label line reads evenly, including the start frontier F. Arroyuelo RPQ also uses top-aligned figures since task 291 |
 | Per-label DFA targets = `frontierStates F^a` | Parallels the graph's `frontierVertices Extend` (the states selected on the step, i.e. the destinations of the used a-transitions); lightyellow with the highest precedence (target > current > start) |
 
 ## Book Reference

@@ -5,7 +5,7 @@
 **Module:** RpqInput
 **Source:** `src/FLPQ.RPQ/RpqInput.fs`
 **Depends on:** EbnfParser (Regexp)
-**Used by:** ArroyueloRunner, BelyaninRunner
+**Used by:** ArroyueloSimplePathRunner, ArroyueloReachabilityRunner, BelyaninSimplePathRunner, BelyaninReachabilityRunner
 **Book reference:** Chapter 11, Section sec:RPQ_Arroyuelo
 
 > **Abstract:** Parses RPQ query regular expressions from EBNF text or files. An RPQ query is a regular expression over graph edge labels: the first rule's right-hand side of the EBNF input is taken as the query, and every identifier in it is an edge label — nonterminal references are mapped to terminals.

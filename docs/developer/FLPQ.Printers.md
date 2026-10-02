@@ -40,9 +40,14 @@
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
 | [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of RPQ working matrices: path semiring matrices (vertex-path cells) and boolean N^a/G^a matrices |
+| [StepTeX](step-tex.md) | Generic RPQ step TeX helpers: shrink-only adjustbox and one-line formula wrapping |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
+| [RpqGraphDot](rpq-graph-dot.md) / [RpqGraphTikz](rpq-graph-tikz.md) | RPQ-dedicated DOT/TikZ rendering of the input graph with highlight tiers (independent of GSS) |
 | [RpqGraphViz](rpq-graph-viz.md) | Shared rendering of the RPQ input graph with path highlights (DOT + TikZ) |
-| [ArroyueloStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's RPQ evaluation (regexp tree, matrix equations, graph highlights) |
+| [RegexpTreeDot / RegexpTreeTikz](regexp-tree-dot.md) | DOT/TikZ rendering of the RPQ regexp AST tree (vertical, rectangle nodes) |
+| [ArroyueloStepCommon](arroyuelo-step-common.md) | Shared Arroyuelo step record, tree model, and rendering pipeline |
+| [ArroyueloSimplePathStepVisualizer](arroyuelo-step-viz.md) | Step-by-step visualization of Arroyuelo's simple-path RPQ evaluation (regexp tree, matrix equations, graph path highlights) |
+| [ArroyueloReachabilityStepVisualizer](arroyuelo-reachability-step-viz.md) | Step-by-step visualization of Arroyuelo's Boolean reachability RPQ evaluation (Boolean matrices, derived M(E) edges) |
 | [BelyaninStepCommon](belyanin-step-common.md) | Shared Belyanin step record types and cell-agnostic rendering helpers |
 | [BelyaninSimplePathStepVisualizer](belyanin-step-viz.md) | Step-by-step visualization of Belyanin's simple-path RPQ evaluation (path matrices, path edges) |
 | [BelyaninReachabilityStepVisualizer](belyanin-reachability-step-viz.md) | Step-by-step visualization of Belyanin's Boolean reachability RPQ evaluation (Boolean matrices, no path edges) |

@@ -364,11 +364,9 @@ let ``arroyueloStepSection in dot mode fills empty placeholders for missing file
 
         Assert.Equal(3, List.length lines)
         Assert.Equal(SummaryTeX.section "Step 0", lines.[0])
-        // The filled template is wrapped whole in the step adjustbox (shrink-only).
-        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
-        Assert.EndsWith(@"\end{adjustbox}", lines.[1])
-        Assert.Contains("M=|T=dot_pdfs/step_0_tree.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1])
-        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
+        // The step is no longer wrapped whole; each component keeps its own adjustbox.
+        Assert.DoesNotContain("max totalheight", lines.[1])
+        Assert.Contains("M=|T=dot_pdfs/step_0_tree.pdf|G=dot_pdfs/step_0_graph.pdf", lines.[1]))
 
 [<Fact>]
 let ``arroyueloStepSection in tikz mode fills empty placeholders for missing files`` () =
@@ -381,13 +379,12 @@ let ``arroyueloStepSection in tikz mode fills empty placeholders for missing fil
         let lines = SummaryTeX.arroyueloStepSection stepDir 1 template template true
 
         Assert.Equal(SummaryTeX.section "Step 1", lines.[0])
-        // Missing tikz files are replaced by empty strings; the column-width figure wrap and
-        // the whole-step adjustbox are still applied.
+        // Missing tikz files are replaced by empty strings; every figure still gets its own
+        // top-aligned, column-width adjustbox, and the step is not wrapped whole.
         Assert.Contains("T=\\begin{center}", lines.[1])
         Assert.Contains("|G=\\begin{center}", lines.[1])
-        Assert.Equal(2, countOccurrences lines.[1] @"\begin{adjustbox}{max width=\linewidth}")
-        Assert.StartsWith(@"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}", lines.[1])
-        Assert.Equal(1, countOccurrences lines.[1] @"max totalheight=0.9\textheight"))
+        Assert.Equal(2, countOccurrences lines.[1] @"max width=\linewidth, valign=T")
+        Assert.DoesNotContain("max totalheight", lines.[1]))
 
 [<Fact>]
 let ``BelyaninRPQ header in tikz mode orders legend before regexp before DFA before graph`` () =

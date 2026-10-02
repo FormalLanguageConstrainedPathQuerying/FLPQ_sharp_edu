@@ -1,33 +1,50 @@
-# ArroyueloStepVisualizer Module
+# Arroyuelo Simple-Path Step Visualization
 
 **Tags:** visualization, rpq, arroyuelo, dot, tikz, matrix, step-visualization
 **Kind:** visualization
-**Module:** ArroyueloStepVisualizer
-**Source:** `src/FLPQ.Printers/ArroyueloStepVisualizer.fs`
-**Depends on:** ArroyueloRPQ (FLPQ.RPQ), PathSemiring, GssDot, GssTikz, RegexpTeX, PathSemiringTeX, AutomatonTikz
-**Used by:** FLPQ.Cli (Arroyuelo runner, task 280 S7)
+**Module:** ArroyueloSimplePathStepVisualizer
+**Source:** `src/FLPQ.Printers/ArroyueloSimplePathStepVisualizer.fs`
+**Depends on:** ArroyueloStepCommon, ArroyueloRPQ (FLPQ.RPQ), RpqGraphViz, PathSemiringTeX, RegexpTeX, StepTeX
+**Used by:** ArroyueloSimplePathRunner, FLPQ.Cli
 **Book reference:** Chapter 11, Section sec:RPQ_Arroyuelo
 
-> **Abstract:** Renders each step of Arroyuelo's path-semiring evaluation (one post-order visit of a regexp tree node) into three artifacts: the regexp tree with the current node highlighted, the matrix equation for the step's operation, and the graph with the vertices/edges of the step's result paths highlighted. Both DOT and TikZ are produced per step; the runner writes only one format (TikZ by default, DOT with `--use-dot`).
+> **Abstract:** Renders the simple-path evaluation of Arroyuelo's RPQ algorithm. Each emitted step is one intermediate regexp-tree node (Alt/Seq/Star); leaves are not emitted as steps but appear in the vertical tree figure. Per step it produces the regexp tree with the current node highlighted, the path-semiring matrix equation for the step's operation, and the input graph with the vertices/edges of the step's result paths highlighted. Both DOT and TikZ are produced; the runner writes one format (TikZ by default, DOT with `--use-dot`). The shared record and tree rendering live in [ArroyueloStepCommon](arroyuelo-step-common.md).
 
 ## Contents
 
-- [Data Structure](#data-structure)
-- [Module Functions](#module-functions)
 - [Step Artifacts](#step-artifacts)
-- [Step Templates](#step-templates)
+- [Tree](#tree)
+- [Matrices](#matrices)
+- [Graph](#graph)
+- [Module Functions](#module-functions)
 - [Design Decisions](#design-decisions)
 - [Book Reference](#book-reference)
 - [See Also](#see-also)
 
-## Data Structure
+## Step Artifacts
 
-```fsharp
-type ArroyueloVisualizationStep =
-    { TreeDot: string; TreeTikz: string; Matrices: string; GraphDot: string; GraphTikz: string }
-```
+One record per emitted step (`ArroyueloStepCommon.ArroyueloVisualizationStep`), written by
+`FLPQ.Cli` as `step_N/tree.{dot,tikz.tex}`, `step_N/matrices.tex`, `step_N/graph.{dot,tikz.tex}`.
 
-One record per trace step (`ArroyueloRPQ.ArroyueloTraceStep`).
+## Tree
+
+The regexp AST rendered by `RegexpTreeDot` / `RegexpTreeTikz`. The tree is **vertical** (root at
+top; TikZ `grow'=down`, DOT `rankdir=TB`) and rectangle-shaped. Every AST node is drawn,
+including leaves; the current step's node is filled light blue. A tree node's label is its
+subexpression via `RegexpTeX.toTeX`.
+
+## Matrices
+
+One horizontal formula line of path semiring matrix bodies
+(`PathSemiringTeX.matrixToTeXBody`) per operation, wrapped in a single top-aligned adjustbox
+(`StepTeX.wrapFormula`): Alt shows `M(left) ⊕ M(right) = M(node)`; Seq shows
+`M(left) × M(right) = M(node)`; Star shows `TC(M(child)) = M(node)`.
+
+## Graph
+
+All graph vertices/edges active, edge labels = terminal names; highlighted vertices/edges
+(yellow/red) are the union over all paths in the step's Result matrix, derived via
+`RpqGraphViz.pathHighlights`. Step k's highlight set depends only on step k's Result.
 
 ## Module Functions
 
@@ -35,38 +52,32 @@ One record per trace step (`ArroyueloRPQ.ArroyueloTraceStep`).
 val renderSteps: ('t -> string) -> ('nt -> string) -> NFA<'t, int> -> ArroyueloTraceStep<'t, 'nt> list -> ArroyueloVisualizationStep list
 ```
 
-`renderSteps terminalPrinter nontermPrinter graph steps` renders every trace step. The
-terminal and nonterminal printers label the graph's edges and the regexp tree subexpressions.
-
-## Step Artifacts
-
-- **Tree** — nodes = AST node indices (the trace steps are in post-order, so the list index is the NodeIndex), edges = parent→child, node label = the subexpression via `RegexpTeX.toTeX`, current node = the step's NodeIndex (lightblue). Rendered with `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` (shape `rectangle`, `skipEscaping = true` — see Design Decisions).
-- **Matrices** — a vertical stack of path semiring matrices (`PathSemiringTeX.matrixToTeX`) per operation: Base shows the node's formula above the result matrix; Alt shows `M(left) ⊕ M(right) = M(node)`; Seq shows `M(left) × M(right) = M(node)`; Star shows `TC(M(child)) = M(node)`.
-- **Graph** — all graph vertices/edges active, edge labels = terminal names; highlighted vertices/edges (yellow/red) = the union over all paths in the step's Result matrix, derived via `PathSemiring.allPaths` (consecutive vertex pairs of each path are edges). Step k's highlight set depends only on step k's Result — no cross-step leakage.
-
-## Step Templates
-
-`data/Arroyuelo_step_template.tex` (DOT: `__STEP_TREE_PDF__`, `__STEP_GRAPH_PDF__`) and `data/Arroyuelo_step_tikz_template.tex` (TikZ: `__STEP_TREE_TIKZ__`, `__STEP_GRAPH_TIKZ__`), both with a `__MATRICES__` slot. Two-column minipage layout modeled on `data/RNGLR_step_template.tex`: left (`0.52\textwidth`) = tree figure + matrices, right (`0.46\textwidth`) = graph. The matrices sit in a group where `\textwidth` is shortened to the minipage's `\linewidth`, so the adjustbox-wrapped matrices shrink to the column instead of the page width. The DOT template's figures use `\includegraphics[width=\linewidth]` so they fit their minipage column (a minipage does not change `\textwidth`). At summary time the section builder wraps the TikZ figures in `SummaryTeX.wrapTikzAdjustboxColumn` and the whole filled template in `SummaryTeX.wrapStepAdjustbox` (at most `\textwidth` and `0.9\textheight`) so every step fits one page — see [SummaryTeX module](summary-tex.md).
+`renderSteps terminalPrinter nontermPrinter graph steps` takes the **full** post-order trace,
+builds the tree once, filters out `Base` (leaf) steps, and emits one record per remaining
+step. The terminal and nonterminal printers label the graph's edges and the tree
+subexpressions.
 
 ## Design Decisions
 
 | Decision | Rationale |
 | --- | --- |
-| Tree and graph reuse the GSS renderers (`GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`) | One implementation of "layered graph with highlighted/current vertex" for all step figures; no dedicated regexp-tree module (see [RPQ regexp visualization](rpq-regexp-viz.md)) |
-| `GssTikz.toTikzFromSets` now skips escaping vertex labels when `skipEscaping = true` | Tree node labels are already-TeX math-mode formulas (`RegexpTeX.toTeX`) that must not be escaped; the existing callers pass plain-text vertex labels with no LaTeX specials, so their output is byte-identical (golden tests unchanged) |
-| TikZ tree node labels wrap the formula in `$...$` | `as={...}` node content is text mode; math-mode formulas need an explicit math wrapper (same convention as `LRAutomatonTikz.stateContentToTikzAs`) |
-| Graph highlights derived from the step's Result only | Each step figure must show what that step computed; union over `PathSemiring.allPaths` gives exactly the vertices/edges of the stored simple paths |
-| Step graphs carry no green sources / frontier tier | The green source fill (task 285) applies to Belyanin's step figures and the shared root Input Graph only; Arroyuelo step graphs keep the pre-285 look — see [Belyanin step visualization](belyanin-step-viz.md), Colors |
-| Tree passes `bendReciprocalEdges = false`, graph inherits bending from [RpqGraphViz](rpq-graph-viz.md) | Tree edges are parent→child (one direction only, no reciprocal pairs); the input graph may carry both directions of a pair and needs the TikZ bend (task 282, S2) |
-| Both DOT and TikZ produced per step, runner picks one | Matches the existing runner convention (TikZ default, DOT via `--use-dot`) without rendering twice |
+| Only intermediate nodes (Alt/Seq/Star) are emitted | Leaf steps carry no matrix operation worth visualizing; the tree still shows the leaves for context (task 291) |
+| Tree is vertical | Matches the book's tree orientation and reads better beside the tall matrix stack (task 291) |
+| Dedicated `RegexpTreeDot` / `RegexpTreeTikz` | The regexp tree is an AST, not a GSS; RPQ must not depend on the GSS renderers (task 291) |
+| Tree includes every AST node | The highlighted current node must be locatable in the full expression |
+| Graph highlights derived from the step's Result only | Each step figure must show what that step computed; `PathSemiring.allPaths` gives exactly the stored simple paths |
+| Step graphs carry no green sources / frontier tier | The green source fill applies to the shared root Input Graph and Belyanin's step figures; Arroyuelo step graphs keep the simpler look |
 
 ## Book Reference
 
-Chapter 11, `03_Arroyuelo.tex`: Section sec:RPQ_Arroyuelo — matrix evaluation of the regexp tree; each node's matrix equation is one step.
+Chapter 11, `03_Arroyuelo.tex`: Section sec:RPQ_Arroyuelo — matrix evaluation of the regexp
+tree; each node's matrix equation is one step.
 
 ## See Also
 
+- [Arroyuelo step common](arroyuelo-step-common.md) — shared record, tree model, and rendering
 - [Arroyuelo RPQ module](arroyuelo-rpq.md) — `evaluateWithTrace` produces the trace steps
+- [Arroyuelo reachability step visualization](arroyuelo-reachability-step-viz.md) — the Boolean semantics
 - [PathSemiringTeX module](path-semiring-tex.md) — matrix rendering
-- [RPQ regexp visualization](rpq-regexp-viz.md) — RegexpTeX and the tree-rendering reuse decision
+- [RPQ graph visualization](rpq-graph-viz.md) — the graph figure
 - [FLPQ.Printers hub](FLPQ.Printers.md)

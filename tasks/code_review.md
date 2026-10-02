@@ -1,5 +1,37 @@
 # Code Review Report
 
+## Task 291 Review (2026-10-02)
+
+Scope: full branch diff vs dev — regexp rendering (`RegexpTeX.fs` `\cdot`), new RPQ renderers (`RpqGraphDot.fs`, `RpqGraphTikz.fs`, `RegexpTreeDot.fs`, `RegexpTreeTikz.fs`, `StepTeX.fs`), new/renamed Arroyuelo layers (`ArroyueloStepCommon.fs`, `ArroyueloSimplePathStepVisualizer.fs`, `ArroyueloReachabilityStepVisualizer.fs`, `ArroyueloSimplePathRunner.fs`, `ArroyueloReachabilityRunner.fs`), algorithm (`ArroyueloRPQ.fs` Boolean trace + shared core), CLI (`AlgorithmTypes.fs`, `Program.fs`), summary (`SummaryTeX.fs`, the two Arroyuelo templates), tests/goldens, and docs.
+
+**Findings resolved this review (commit 6937017):**
+
+Round 1 (2 findings):
+
+- §13 (no duplication) — `toTreeNode` (`{ Index; Expr; Children }`) was copied verbatim in `ArroyueloSimplePathStepVisualizer` and `ArroyueloReachabilityStepVisualizer`. Extracted `ArroyueloStepCommon.treeNode` and reused it in both.
+- §22/§23 (clarity/naming semantics) — `RpqGraphViz.renderGraphWithDerived` took `derivedTikzLabel`/`derivedDotLabel` as `(int * int) -> string` functions although every derived edge shares the handled node's subexpression. Changed them to plain `string` labels, matching actual use.
+
+**Verified:** `dotnet fantomas .` clean; mdformat clean; commit gate PASS; `FLPQ.RPQ.Tests` green (91 passed); `FLPQ.Cli.Tests` green (258 passed, including the DOT/TikZ Arroyuelo summary lualatex compile-without-Overfull checks); printers Arroyuelo/RPQ tests green including the `Category=TeX` compiles; the `RpqGssIndependenceTests` guard confirms no RPQ printer module references `GssDot`/`GssTikz` (after the change those renderers are used only by GLL/RNGLR).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — only existing `int * int` edge pairs; derived-edge keys remain 2-tuples.
+- §6 (doc comments) — new public modules carry `///` docs; `ArroyueloStepCommon.treeNode`, `StepTeX.wrapAdjustbox`/`wrapFormula`, the renderers, and the runners are documented.
+- §7 (genericity) — all new printers stay generic over `'t`/`'nt`; no hardcoded `string` in algorithm types; `ArroyueloRPQ` remains generic.
+- §8 (non-empty collections) — no new runtime-checked empty collections.
+- §9 (separation) — `ArroyueloRPQ.evaluateBooleanWithTrace` lives in `FLPQ.RPQ` and produces data only; all TeX/DOT generation is in `FLPQ.Printers`; runners only orchestrate I/O.
+- §11 (variants as thin layers) — the Boolean trace shares `evalBooleanWithSteps` with `evalExpression`/`evaluate`; the two Arroyuelo visualizers share `ArroyueloStepCommon.renderSteps` and differ only in matrix/graph rendering.
+- §13 (no duplication) — `ArroyueloStepCommon` owns the tree model/pipeline; `StepTeX` owns the generic adjustbox/formula helpers (Belyanin re-exports them); `RpqGraphViz` owns edge-label merging. The tiny `vertexAttrs` DOT helper is repeated in `RpqGraphDot` vs `GssDot` **deliberately**, because the user explicitly required not modifying GSS while removing the RPQ dependency on it; extracting it would reintroduce the coupling. Recorded here as an accepted, constraint-driven duplication.
+- §15/§16 (test fidelity / Fact vs Property) — no stubs; the Boolean trace has a FsCheck `[<Property>]` equivalence against `KroneckerRPQ` plus `[<Fact>]` regression facts (non-simple walk, source projection); renderer tests assert concrete DOT/TikZ strings.
+- §18 (equivalence tests) — `evaluateBooleanWithTrace` projection is checked against both `ArroyueloRPQ.evaluate` and `KroneckerRPQ`.
+- §19 (test coverage) — every new module has a correspondent: `RpqGraph*` → `RpqGraphRendererTests`; Arroyuelo visualizers → `Arroyuelo{SimplePath,Reachability}StepVisualizationTests`; Boolean trace → `ArroyueloBooleanTraceTests`; runners → `Arroyuelo{SimplePath,Reachability}RunnerTests`; GSS independence → `RpqGssIndependenceTests`.
+- §20 (documentation) — new docs for every new module; hubs (`FLPQ.Printers.md`, `FLPQ.RPQ.md`, `FLPQ.Cli.md`), `docs/project/architecture.md`, and `docs/main.md` updated; `arroyuelo-step-viz.md` / `summary-tex.md` reflect the new layout; `belyanin-step-viz.md` / `rpq-input.md` stale references fixed.
+- §21 (book traceability) — new modules reference Chapter 11 / `03_Arroyuelo.tex`; `RegexpTeX` still references `walk/(O \mid R)+/walk`.
+- §22 (code clarity) — plain recursive cores and string assembly; no optimization introduced. The Boolean trace is a direct post-order mirror of the book's matrix evaluation.
+- §23 (naming semantics) — `ArroyueloSimplePathStepVisualizer` vs `ArroyueloReachabilityStepVisualizer` mirror the Belyanin split; `renderGraphWithDerived` and `treeNode` names match their semantics.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
 ## Task 290 Review (2026-10-02)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (S1: current vertices = selected `F^a` columns; S2: start tile `valign=T`), `BelyaninReachabilityStepVisualizer.fs` (same), `BelyaninStepCommon.fs` (S2: `matrixTileWithBody` valign parameter dropped), `GssDot.fs` / `GssTikz.fs` (S3: vertex fill precedence `current > stored-pop > highlighted > frontier > start`), `AutomatonDot.fs` / `AutomatonTikz.fs` (S3: `target > current > start` / `target > current > final > start`), tests (`GssDotTests`, `AutomatonVisualizationTests`, `BelyaninStepVisualizationTests`, `BelyaninReachabilityStepVisualizationTests`), goldens (20 Belyanin graph/automaton/frontier updates), and docs (`gss-dot.md`, `gss-tikz.md`, `automaton-viz.md`, `belyanin-step-viz.md`, `belyanin-reachability-step-viz.md`, `rpq-graph-viz.md`).

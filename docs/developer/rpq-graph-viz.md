@@ -4,10 +4,10 @@
 **Kind:** visualization
 **Module:** RpqGraphViz
 **Source:** `src/FLPQ.Printers/RpqGraphViz.fs`
-**Depends on:** GssDot, GssTikz, AutomatonTikz, PathSemiring
-**Used by:** ArroyueloStepVisualizer, BelyaninSimplePathStepVisualizer, BelyaninReachabilityStepVisualizer, ArroyueloRunner, BelyaninSimplePathRunner, BelyaninReachabilityRunner
+**Depends on:** RpqGraphDot, RpqGraphTikz, AutomatonTikz, PathSemiring
+**Used by:** ArroyueloSimplePathStepVisualizer, ArroyueloReachabilityStepVisualizer, BelyaninSimplePathStepVisualizer, BelyaninReachabilityStepVisualizer, ArroyueloSimplePathRunner, ArroyueloReachabilityRunner, BelyaninSimplePathRunner, BelyaninReachabilityRunner
 
-> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier/current (light blue), and highlighted/target (yellow) vertices with target > current > start precedence. Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
+> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier/current (light blue), and highlighted/target (yellow) vertices with target > current > start precedence. Delegates the actual emission to the RPQ-dedicated `RpqGraphDot`/`RpqGraphTikz` renderers (independent of GSS), so the graph figure has one source of truth.
 
 ## Contents
 
@@ -54,22 +54,32 @@ graph): highlightedVertices get the yellow target fill, startVertices the green 
 fill, frontierVertices the light blue current fill, currentEdges render red and bold,
 pathEdges light red (an edge in both sets renders as current). Vertex fill precedence is
 target > current > start, so a target that is also current or start renders yellow and a
-source that is also current renders lightblue (the tier order mirrors
-`GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`). Returns `(dot, tikz)`.
+source that is also current renders lightblue. Delegates emission to `RpqGraphDot.toDot` /
+`RpqGraphTikz.toTikz`. Returns `(dot, tikz)`.
 Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels are the comma-joined terminal
 labels of the pair (epsilon-only edges label as "ε").
+
+### `renderGraphWithDerived: ('t -> string) -> NFA<'t, int> -> Set<int * int> -> string -> string -> Set<int> -> string * string`
+
+Render the graph with the original input edges plus derived (computed) edges. Every derived
+edge renders red bold, labeled with `derivedTikzLabel`/`derivedDotLabel` appended to the
+original label when the pair is also an input edge (labels merge, e.g. `"a, b | c"`). Only
+`startVertices` get a fill; no path or current-edge highlighting. `derivedTikzLabel` is the
+already-rendered math label (e.g. `"$E$"`), `derivedDotLabel` the plain label (e.g.
+`Regexp.toString`). Used by [Arroyuelo reachability step visualization](arroyuelo-reachability-step-viz.md).
 
 ## Design Decisions
 
 | Decision | Rationale |
 | --- | --- |
-| Extracted from ArroyueloStepVisualizer | Both RPQ step visualizers and both runners render the same graph figure — one shared module instead of duplicated logic (task 281, S2) |
-| Reuses `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` | The input graph is an NFA with states = vertices; all vertices/edges active, step paths as highlights, no stored-pop/current-vertex state |
+| Extracted from the Arroyuelo step visualizer | Both RPQ step visualizers and both runners render the same graph figure — one shared module instead of duplicated logic (task 281, S2) |
+| Delegates to the RPQ-dedicated `RpqGraphDot` / `RpqGraphTikz` | The input graph is an NFA, not a graph-structured stack. GSS is a GLL/RNGLR artifact, so RPQ must not depend on it; the dedicated renderers reproduce the previous output byte-for-byte (task 291) |
 | TikZ rendering passes `bendReciprocalEdges = true` | An input graph may carry both directions of a pair (e.g. `v2 -> v3` and `v3 -> v2`); TikZ would draw the two straight edges fully on top of each other, while `bend left=15` on both turns the pair into two symmetric arcs. DOT needs no equivalent — Graphviz separates reciprocal pairs automatically (task 282, S2) |
 | Two edge tiers: path (light red) and current (red, bold) | A step figure must distinguish the accumulated frontier paths from the single edge traversed on that step; `pathLastEdges` of the next frontier is exactly the traversed edges (task 284, S5) |
+| Derived edges merge labels with input edges on the same pair | The reachability semantics draws the computed relation M(E) on top of the input graph; a pair may be both, and both labels are meaningful. Merging keeps one edge per pair (task 291) |
 
 ## See Also
 
 - [Arroyuelo step visualization](arroyuelo-step-viz.md) — regexp tree + matrix equations + this graph figure
 - [Path semiring](path-semiring.md) — the path matrices consumed by `pathHighlights`
-- [GSS DOT](gss-dot.md) / [GSS TikZ](gss-tikz.md) — the underlying set-based graph renderers
+- [RPQ graph DOT](rpq-graph-dot.md) / [RPQ graph TikZ](rpq-graph-tikz.md) — the RPQ-dedicated graph renderers

@@ -14,7 +14,8 @@
     <Compile Include="LRRunner.fs" />
     <Compile Include="GllRunner.fs" />
     <Compile Include="RnglrRunner.fs" />
-    <Compile Include="ArroyueloRunner.fs" />
+    <Compile Include="ArroyueloSimplePathRunner.fs" />
+    <Compile Include="ArroyueloReachabilityRunner.fs" />
     <Compile Include="BelyaninSimplePathRunner.fs" />
     <Compile Include="BelyaninReachabilityRunner.fs" />
     <Compile Include="Summary.fs" />

@@ -4,7 +4,7 @@
 **Kind:** visualization
 **Module:** BelyaninStepCommon
 **Source:** `src/FLPQ.Printers/BelyaninStepCommon.fs`
-**Depends on:** FLPQ.LinearAlgebra, FLPQ.Languages, FLPQ.RPQ, PathSemiringTeX, RpqGraphViz, AutomatonDot, AutomatonTikz
+**Depends on:** FLPQ.LinearAlgebra, FLPQ.Languages, FLPQ.RPQ, PathSemiringTeX, StepTeX, RpqGraphViz, AutomatonDot, AutomatonTikz
 **Used by:** BelyaninSimplePathStepVisualizer, BelyaninReachabilityStepVisualizer, FLPQ.Cli (step writer)
 **Book reference:** Chapter 11, Section 02_BFS.tex, Algorithm algo:RPQ_BFS_semiring
 
@@ -69,8 +69,8 @@ non-init steps — an end boundary. The init step has `End = None` and no label 
 val labelToTeX: ('t -> string) -> AutomatonLabel<'t> -> string
 val stateLabel: int -> string   // q_i
 val vertexLabel: int -> string  // v_i
-val wrapAdjustbox: string -> string -> string
-val wrapFormula: string -> string
+val wrapAdjustbox: string -> string -> string   (* re-exported from StepTeX *)
+val wrapFormula: string -> string                (* re-exported from StepTeX *)
 
 val rowNonEmpty: ('a -> bool) -> Matrix<'a> -> int -> bool
 val colNonEmpty: ('a -> bool) -> Matrix<'a> -> int -> bool

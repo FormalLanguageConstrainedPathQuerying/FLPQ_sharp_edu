@@ -22,13 +22,13 @@ module RegexpTeX =
         | _ -> toTeX terminal nonterm r
 
     /// Render a regexp as a math-mode formula: REps → \varepsilon, REmpty → \varnothing,
-    /// RTerm → name, RNonterm → \text{X}, RSeq → l / r, RAlt → l \mid r, RStar → (l)^*.
+    /// RTerm → name, RNonterm → \text{X}, RSeq → l \cdot r, RAlt → l \mid r, RStar → (l)^*.
     and toTeX (terminal: 't -> string) (nonterm: 'nt -> string) (r: Regexp<'t, 'nt>) : string =
         match r with
         | REps -> @"\varepsilon"
         | REmpty -> @"\varnothing"
         | RTerm(Terminal t) -> termToTeX (terminal t)
         | RNonterm(Nonterminal nt) -> @"\text{" + AutomatonTikz.escapeLatex (nonterm nt) + "}"
-        | RSeq(l, rr) -> paren terminal nonterm l + " / " + paren terminal nonterm rr
+        | RSeq(l, rr) -> paren terminal nonterm l + @" \cdot " + paren terminal nonterm rr
         | RAlt(l, rr) -> paren terminal nonterm l + " \mid " + paren terminal nonterm rr
         | RStar rp -> "(" + toTeX terminal nonterm rp + ")^*"

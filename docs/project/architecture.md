@@ -45,6 +45,18 @@ FLPQ.slnx
 │   │   ├── BasicSppfDot.fs         # DOT rendering for basic (Rekers-style) SPPF
 │   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
 │   │   ├── AutomatonDot.fs         # Dot rendering for finite automata
+│   │   ├── RegexpTreeDot.fs        # DOT rendering of the RPQ regexp AST tree (vertical)
+│   │   ├── RegexpTreeTikz.fs       # TikZ rendering of the RPQ regexp AST tree (vertical)
+│   │   ├── RpqGraphDot.fs          # RPQ-dedicated DOT rendering of the input graph
+│   │   ├── RpqGraphTikz.fs         # RPQ-dedicated TikZ rendering of the input graph
+│   │   ├── RpqGraphViz.fs          # Shared RPQ input-graph rendering with path highlights
+│   │   ├── StepTeX.fs              # Generic RPQ step TeX helpers (adjustbox, formula)
+│   │   ├── ArroyueloStepCommon.fs  # Shared Arroyuelo step record, tree model, pipeline
+│   │   ├── ArroyueloSimplePathStepVisualizer.fs  # Arroyuelo simple-path step visualization
+│   │   ├── ArroyueloReachabilityStepVisualizer.fs  # Arroyuelo Boolean reachability step visualization
+│   │   ├── BelyaninStepCommon.fs   # Shared Belyanin step record types and helpers
+│   │   ├── BelyaninSimplePathStepVisualizer.fs  # Belyanin simple-path step visualization
+│   │   ├── BelyaninReachabilityStepVisualizer.fs  # Belyanin Boolean reachability step visualization
 │   │   ├── CykTeX.fs               # TeX rendering for CYK tables
 │   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps
 │   │   ├── LLTableTeX.fs           # TeX rendering for LL parsing tables
@@ -69,7 +81,8 @@ FLPQ.slnx
  │       ├── LRRunner.fs             # LR(0)/SLR(1)/CLR(1) CLI runner
  │       ├── GllRunner.fs            # GLL CLI runner
  │       ├── RnglrRunner.fs          # RNGLR CLI runner
-  │       ├── ArroyueloRunner.fs      # Arroyuelo RPQ CLI runner (regexp + graph input)
+  │       ├── ArroyueloSimplePathRunner.fs  # Arroyuelo RPQ simplePath-semantics CLI runner
+  │       ├── ArroyueloReachabilityRunner.fs # Arroyuelo RPQ reachability-semantics CLI runner (default)
   │       ├── BelyaninSimplePathRunner.fs  # Belyanin RPQ simplePath-semantics CLI runner
   │       ├── BelyaninReachabilityRunner.fs # Belyanin RPQ reachability-semantics CLI runner (default)
   │       └── Summary.fs              # Merged TeX summary generation (--summary)

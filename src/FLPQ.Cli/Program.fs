@@ -47,7 +47,15 @@ module Program =
             | AlgorithmTypes.ArroyueloRPQ ->
                 let queryFile = results.GetResult AlgorithmTypes.Query
                 let inputFile = results.GetResult AlgorithmTypes.Input
-                ArroyueloRunner.runArroyuelo queryFile inputFile output useDot
+
+                let semantics =
+                    results.GetResult(AlgorithmTypes.Semantics, defaultValue = AlgorithmTypes.RpqSemantics.Reachability)
+
+                match semantics with
+                | AlgorithmTypes.RpqSemantics.Reachability ->
+                    ArroyueloReachabilityRunner.runArroyuelo queryFile inputFile output useDot
+                | AlgorithmTypes.RpqSemantics.SimplePath ->
+                    ArroyueloSimplePathRunner.runArroyuelo queryFile inputFile output useDot
             | AlgorithmTypes.BelyaninRPQ ->
                 let queryFile = results.GetResult AlgorithmTypes.Query
                 let inputFile = results.GetResult AlgorithmTypes.Input

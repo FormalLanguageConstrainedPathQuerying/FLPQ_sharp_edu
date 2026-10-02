@@ -20,6 +20,8 @@
     <Compile Include="InputGraphDot.fs" />
     <Compile Include="AutomatonDot.fs" />
     <Compile Include="AutomatonTikz.fs" />
+    <Compile Include="RegexpTreeDot.fs" />
+    <Compile Include="RegexpTreeTikz.fs" />
     <Compile Include="PathSemiringTeX.fs" />
     <Compile Include="RegexpTeX.fs" />
     <Compile Include="LRAutomatonTikz.fs" />
@@ -33,9 +35,14 @@
     <Compile Include="GllStepVisualizer.fs" />
     <Compile Include="RnglrTableTeX.fs" />
     <Compile Include="RnglrStepVisualizer.fs" />
+    <Compile Include="RpqGraphDot.fs" />
+    <Compile Include="RpqGraphTikz.fs" />
     <Compile Include="RpqGraphViz.fs" />
+    <Compile Include="StepTeX.fs" />
     <Compile Include="BelyaninStepCommon.fs" />
-    <Compile Include="ArroyueloStepVisualizer.fs" />
+    <Compile Include="ArroyueloStepCommon.fs" />
+    <Compile Include="ArroyueloSimplePathStepVisualizer.fs" />
+    <Compile Include="ArroyueloReachabilityStepVisualizer.fs" />
     <Compile Include="BelyaninSimplePathStepVisualizer.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizer.fs" />
     <Compile Include="CykTeX.fs" />

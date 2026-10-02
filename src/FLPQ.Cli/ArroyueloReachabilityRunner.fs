@@ -6,21 +6,18 @@ open FLPQ.LinearAlgebra
 open FLPQ.Printers
 open FLPQ.RPQ
 
-/// Arroyuelo RPQ runner: parses the query regexp and the graph, evaluates the regexp over
-/// the path semiring with a trace, and writes the root artifacts (regexp, DFA, graph, result)
-/// plus one directory per trace step.
-module ArroyueloRunner =
+/// Arroyuelo RPQ reachability runner: parses the query regexp and the graph, evaluates the
+/// regexp over the Boolean semiring with a trace (the classical reachability semantics), and
+/// writes the root artifacts (regexp, DFA, graph, result) plus one directory per intermediate
+/// trace step. The reported answer comes from `ArroyueloRPQ.evaluate` (all sources).
+module ArroyueloReachabilityRunner =
 
     let private vertexName (i: int) : string = sprintf "v_%d" i
 
-    /// The result file: the final path semiring matrix plus one line per source listing its
+    /// The result file: the final full Boolean matrix plus one line per source listing its
     /// reachable vertices (the boolean projection from ArroyueloRPQ.evaluate).
-    let private renderResult
-        (boolResult: Matrix<bool>)
-        (sources: int array)
-        (finalMatrix: Matrix<Set<int list>>)
-        : string =
-        let matrixTex = PathSemiringTeX.matrixToTeX vertexName vertexName finalMatrix
+    let private renderResult (boolResult: Matrix<bool>) (sources: int array) (finalMatrix: Matrix<bool>) : string =
+        let matrixTex = PathSemiringTeX.boolMatrixToTeX vertexName vertexName finalMatrix
         let vCount = Matrix.cols boolResult
 
         let sourceLines =
@@ -48,16 +45,15 @@ module ArroyueloRunner =
         let dfa = Regexp.toDfa regexp
         let graph = GraphReader.parseGraphFile inputFile
 
-        let steps, finalMatrix = ArroyueloRPQ.evaluateWithTrace graph regexp
+        let steps, finalMatrix = ArroyueloRPQ.evaluateBooleanWithTrace graph regexp
+        let boolResult = ArroyueloRPQ.evaluate graph regexp
 
         Helpers.writeRpqRootArtifacts outputDir useDot regexp dfa graph
 
-        let boolResult = ArroyueloRPQ.evaluate graph regexp
         let sources = graph.StartStates |> Set.toArray |> Array.sort
-
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (renderResult boolResult sources finalMatrix)
 
-        let vizSteps = ArroyueloStepVisualizer.renderSteps id id graph steps
+        let vizSteps = ArroyueloReachabilityStepVisualizer.renderSteps id id graph steps
         Helpers.writeArroyueloStepsVisualization outputDir useDot vizSteps
 
         let vCount = Nfa.stateCount graph
@@ -74,4 +70,8 @@ module ArroyueloRunner =
             |> List.sort
             |> String.concat ", "
 
-        printfn "Arroyuelo RPQ: %d steps, sources: [%s] -> reachable: [%s]" steps.Length sourceStrs reachableStrs
+        printfn
+            "Arroyuelo RPQ (reachability): %d steps, sources: [%s] -> reachable: [%s]"
+            vizSteps.Length
+            sourceStrs
+            reachableStrs

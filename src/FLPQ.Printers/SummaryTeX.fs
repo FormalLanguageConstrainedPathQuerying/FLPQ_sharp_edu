@@ -103,21 +103,10 @@ module SummaryTeX =
     let wrapTikzAdjustboxColumn (tikz: string) : string =
         wrapTikzAdjustboxColumnWith @"max width=\linewidth" tikz
 
-    /// Like `wrapTikzAdjustboxColumn` but top-aligned (`valign=T`). Used by the Belyanin RPQ
-    /// step figures so each figure lines up with the matrix/formula beside it; Arroyuelo RPQ
-    /// keeps the non-top-aligned wrap.
+    /// Like `wrapTikzAdjustboxColumn` but top-aligned (`valign=T`). Used by the Belyanin and
+    /// Arroyuelo RPQ step figures so each figure lines up with the matrix/formula beside it.
     let wrapTikzAdjustboxColumnTop (tikz: string) : string =
         wrapTikzAdjustboxColumnWith @"max width=\linewidth, valign=T" tikz
-
-    /// Wraps a filled RPQ step template in an adjustbox limited to at most \textwidth and
-    /// 0.9\textheight (shrink-only). The 10% height headroom accommodates the step's
-    /// \subsection* heading, which must stay outside the box: sectioning commands cannot
-    /// run inside an adjustbox. Short steps are never scaled.
-    let wrapStepAdjustbox (tex: string) : string =
-        [ @"\begin{adjustbox}{max width=\textwidth, max totalheight=0.9\textheight}"
-          tex
-          @"\end{adjustbox}" ]
-        |> String.concat "\n"
 
     /// Wraps a raw TeX tabular in a centered, resizable box (no math mode, no inner center).
     let wrapTabularResized (tabular: string) : string =
@@ -185,12 +174,15 @@ module SummaryTeX =
 
         legendTable rows
 
-    /// Generates the color legend for Arroyuelo RPQ summary visualization.
+    /// Generates the color legend for Arroyuelo RPQ summary visualization. Covers both
+    /// semantics: simplePath highlights result paths (light red edges, yellow vertices);
+    /// reachability draws computed M(E) edges red bold.
     let private arroyueloColorLegend () : string =
         let rows =
             [ colorBox "lightblue!20", "Current regexp tree node"
-              colorBox "yellow!20", "Vertices of the step's result paths"
-              coloredEdge "red", "Edges of the step's result paths"
+              colorBox "yellow!20", "Vertices of the step's result paths (simplePath)"
+              coloredEdge "red!40", "Result-path edges (simplePath)"
+              coloredEdge "red", "Computed M(E) edges (reachability)"
               @"$\cdot$", "Empty matrix cell" ]
 
         legendTable rows
@@ -511,12 +503,12 @@ module SummaryTeX =
         [ header; filledTemplate; "" ]
 
     /// Builds the content lines for a single Arroyuelo RPQ step using the two-column template
-    /// layout (left: regexp tree figure + matrix equation; right: graph with the step's result
-    /// path vertices/edges highlighted). In TikZ mode the step's tree and graph figures are
-    /// wrapped in adjustbox (shrink-only, at most \linewidth) via `wrapTikzAdjustboxColumn`;
-    /// DOT mode includes the dot-compiled PDFs. The filled template is wrapped whole in
-    /// `wrapStepAdjustbox` (at most \textwidth and 0.9\textheight) so the step fits one page;
-    /// the step heading stays outside the box.
+    /// layout (left: regexp tree figure; right: the matrix equation line and, below it, the
+    /// graph figure). In TikZ mode the step's tree and graph figures are wrapped in a
+    /// top-aligned adjustbox (shrink-only, at most \linewidth) via `wrapTikzAdjustboxColumnTop`;
+    /// DOT mode includes the dot-compiled PDFs. The filled template is NOT wrapped whole (unlike
+    /// the legacy layout) so a tall step can span pages; each component keeps its own
+    /// width-limited adjustbox.
     let arroyueloStepSection
         (stepDir: string)
         (stepNum: int)
@@ -549,16 +541,16 @@ module SummaryTeX =
                     | None -> ""
 
                 tikzTemplate
-                    .Replace("__STEP_TREE_TIKZ__", wrapTikzAdjustboxColumn treeTikz)
+                    .Replace("__STEP_TREE_TIKZ__", wrapTikzAdjustboxColumnTop treeTikz)
                     .Replace("__MATRICES__", matrices)
-                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustboxColumn graphTikz)
+                    .Replace("__STEP_GRAPH_TIKZ__", wrapTikzAdjustboxColumnTop graphTikz)
             else
                 template
                     .Replace("__STEP_TREE_PDF__", treePdf)
                     .Replace("__MATRICES__", matrices)
                     .Replace("__STEP_GRAPH_PDF__", graphPdf)
 
-        [ header; wrapStepAdjustbox filledTemplate; "" ]
+        [ header; filledTemplate; "" ]
 
     /// Applies placeholder replacements to a template in order.
     let private fill (template: string) (replacements: (string * string) list) : string =

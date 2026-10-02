@@ -1,9 +1,8 @@
-module ArroyueloStepVisualizationTests
+module ArroyueloSimplePathStepVisualizationTests
 
 open System.IO
 open Xunit
 open FLPQ.Languages
-open FLPQ.LinearAlgebra
 open FLPQ.Printers
 open FLPQ.RPQ
 open FLPQ.TestUtilities
@@ -26,7 +25,12 @@ let private testRegexp: Regexp<string, string> =
 
 let private steps, finalMatrix = ArroyueloRPQ.evaluateWithTrace testGraph testRegexp
 
-let private rendered = ArroyueloStepVisualizer.renderSteps id id testGraph steps
+/// Only intermediate nodes (Alt/Seq/Star) are emitted as steps.
+let private intermediate =
+    steps |> List.filter (fun s -> s.Operation <> ArroyueloRPQ.Base)
+
+let private rendered =
+    ArroyueloSimplePathStepVisualizer.renderSteps id id testGraph steps
 
 // --- Golden tests (TikZ mode) ---
 
@@ -34,6 +38,8 @@ module ArroyueloStepGoldenTests =
 
     [<Fact>]
     let ``all steps: tree tikz goldens`` () =
+        Assert.Equal(intermediate.Length, rendered.Length)
+
         for i in 0 .. rendered.Length - 1 do
             verifyGolden (sprintf "arroyuelo_step_%d_tree.tikz" i) rendered.[i].TreeTikz
 
@@ -50,6 +56,27 @@ module ArroyueloStepGoldenTests =
 // --- Structural facts ---
 
 [<Fact>]
+let ``only intermediate nodes are emitted as steps`` () =
+    Assert.All(intermediate, (fun s -> Assert.NotEqual(ArroyueloRPQ.Base, s.Operation)))
+
+    // The test regexp a (b | a)* has three intermediate nodes: Alt, Star, Seq.
+    Assert.Equal(3, rendered.Length)
+
+[<Fact>]
+let ``tree is vertical and rectangle-shaped`` () =
+    for i in 0 .. rendered.Length - 1 do
+        Assert.Contains("rankdir=TB;", rendered.[i].TreeDot)
+        Assert.Contains("shape=rectangle", rendered.[i].TreeDot)
+        Assert.Contains("grow'=down", rendered.[i].TreeTikz)
+
+[<Fact>]
+let ``tree includes every regexp node, including leaves`` () =
+    // The tree figure always renders all six AST nodes, even though only three steps are emitted.
+    for i in 0 .. rendered.Length - 1 do
+        for node in 0 .. steps.Length - 1 do
+            Assert.Contains(sprintf "v%d [" node, rendered.[i].TreeTikz)
+
+[<Fact>]
 let ``tree DOT of each step highlights exactly the current node`` () =
     for i in 0 .. rendered.Length - 1 do
         let lightblueCount = countOccurrences rendered.[i].TreeDot "fillcolor=lightblue"
@@ -57,12 +84,14 @@ let ``tree DOT of each step highlights exactly the current node`` () =
         Assert.True(isSingle, sprintf "step %d: expected 1 lightblue node, got %d" i lightblueCount)
 
 [<Fact>]
-let ``tree DOT of step k marks node k as current`` () =
+let ``tree DOT of step k marks its trace node as current`` () =
     for i in 0 .. rendered.Length - 1 do
+        let nodeIndex = intermediate.[i].NodeIndex
         let dot = rendered.[i].TreeDot
 
         let currentLine =
-            dot.Split('\n') |> Array.filter (fun l -> l.StartsWith(sprintf "  v%d [" i))
+            dot.Split('\n')
+            |> Array.filter (fun l -> l.StartsWith(sprintf "  v%d [" nodeIndex))
 
         let _line = Assert.Single currentLine
         Assert.Contains("fillcolor=lightblue", currentLine.[0])
@@ -78,13 +107,13 @@ let ``matrices TeX has the right number of pNiceMatrix blocks per operation`` ()
 
     for i in 0 .. rendered.Length - 1 do
         let blocks = countOccurrences rendered.[i].Matrices @"\begin{pNiceMatrix}"
-        Assert.Equal(expectedBlocks steps.[i].Operation, blocks)
+        Assert.Equal(expectedBlocks intermediate.[i].Operation, blocks)
 
 [<Fact>]
 let ``graph DOT highlights exactly the edges of the step's result paths`` () =
     for i in 0 .. rendered.Length - 1 do
         let expectedEdges =
-            PathSemiring.allPaths steps.[i].Result
+            PathSemiring.allPaths intermediate.[i].Result
             |> Set.fold
                 (fun acc p ->
                     p
@@ -112,7 +141,7 @@ let ``graph DOT highlights exactly the edges of the step's result paths`` () =
 let ``graph DOT highlights exactly the vertices of the step's result paths`` () =
     for i in 0 .. rendered.Length - 1 do
         let expectedVerts =
-            PathSemiring.allPaths steps.[i].Result
+            PathSemiring.allPaths intermediate.[i].Result
             |> Set.fold (fun acc p -> p |> List.fold (fun a v -> Set.add v a) acc) Set.empty
 
         let dot = rendered.[i].GraphDot
@@ -126,11 +155,11 @@ let private summaryTemplatePath =
 
 /// Mirrors the real pipeline (SummaryTeX.arroyueloStepSection): figures are wrapped in the
 /// column-width adjustbox before being inserted into the template.
-let private fillStepTemplate (template: string) (step: ArroyueloStepVisualizer.ArroyueloVisualizationStep) : string =
+let private fillStepTemplate (template: string) (step: ArroyueloStepCommon.ArroyueloVisualizationStep) : string =
     template
-        .Replace("__STEP_TREE_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumn step.TreeTikz)
+        .Replace("__STEP_TREE_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumnTop step.TreeTikz)
         .Replace("__MATRICES__", step.Matrices)
-        .Replace("__STEP_GRAPH_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumn step.GraphTikz)
+        .Replace("__STEP_GRAPH_TIKZ__", SummaryTeX.wrapTikzAdjustboxColumnTop step.GraphTikz)
 
 [<Fact>]
 let ``filled tikz step template has no leftover placeholders and wraps matrices in adjustbox`` () =
@@ -172,7 +201,7 @@ let ``filled tikz step template compiles with lualatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``every filled step wrapped in the step adjustbox compiles without Overfull boxes`` () =
+let ``every filled step compiles without Overfull boxes`` () =
     let templatePath =
         Path.Combine(System.AppContext.BaseDirectory, "Arroyuelo_step_tikz_template.tex")
 
@@ -180,9 +209,9 @@ let ``every filled step wrapped in the step adjustbox compiles without Overfull 
     let summaryTemplate = File.ReadAllText summaryTemplatePath
 
     for i in 0 .. rendered.Length - 1 do
-        // The whole-step adjustbox (at most \textwidth and 0.9\textheight) is what the
-        // summary section builder applies around the filled template.
-        let filled = SummaryTeX.wrapStepAdjustbox (fillStepTemplate template rendered.[i])
+        // Each component keeps its own width-limited, top-aligned adjustbox; the step is not
+        // wrapped whole, so a tall step can span pages.
+        let filled = fillStepTemplate template rendered.[i]
 
         let document =
             summaryTemplate.Replace("__ALGORITHM__", "Arroyuelo RPQ").Replace("__CONTENT__", filled)

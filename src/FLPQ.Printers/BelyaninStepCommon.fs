@@ -90,21 +90,14 @@ module BelyaninStepCommon =
                           if g.[u, v] then
                               (u, v) ]
 
-    /// Wrap `content` in a single shrink-only adjustbox with the given options.
-    let wrapAdjustbox (options: string) (content: string) : string =
-        @"\begin{adjustbox}{"
-        + options
-        + "}"
-        + "\n"
-        + content
-        + "\n"
-        + @"\end{adjustbox}"
+    /// Wrap `content` in a single shrink-only adjustbox with the given options. Re-exported
+    /// from [StepTeX](step-tex.md) so existing Belyanin callers keep their API.
+    let wrapAdjustbox (options: string) (content: string) : string = StepTeX.wrapAdjustbox options content
 
     /// Wrap a one-line formula expression in a single shrink-only adjustbox so the three
     /// side-by-side matrices fit the formula column. Top-aligned (`valign=T`) so the formula
-    /// and its figure line up.
-    let wrapFormula (expression: string) : string =
-        wrapAdjustbox @"max width=\textwidth, valign=T" expression
+    /// and its figure line up. Re-exported from [StepTeX](step-tex.md).
+    let wrapFormula (expression: string) : string = StepTeX.wrapFormula expression
 
     /// A boundary tile from an already-rendered matrix body: `$<title> = <body>$` in one
     /// top-aligned adjustbox, so every step tile lines up with its neighbours.

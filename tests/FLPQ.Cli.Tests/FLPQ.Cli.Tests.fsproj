@@ -19,7 +19,8 @@
     <Compile Include="CliSummaryTests.fs" />
     <Compile Include="GllRunnerTests.fs" />
     <Compile Include="RnglrRunnerTests.fs" />
-    <Compile Include="ArroyueloRunnerTests.fs" />
+    <Compile Include="ArroyueloSimplePathRunnerTests.fs" />
+    <Compile Include="ArroyueloReachabilityRunnerTests.fs" />
     <Compile Include="BelyaninSimplePathRunnerTests.fs" />
     <Compile Include="BelyaninReachabilityRunnerTests.fs" />
     <Compile Include="ProgramDispatchTests.fs" />

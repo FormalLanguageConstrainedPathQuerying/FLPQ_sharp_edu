@@ -1,177 +1,168 @@
-# Detailed Plan: Task 290 — Improve Belyanin RPQ rendering
+# Detailed Plan: Task 291 — Improve regexp rendering and Arroyuelo RPQ rendering
 
 ## Task description (verbatim)
 
 ```
-290. Improve Belyanin RPQ algorthm rendering. 1. In steps, in case when no transition edges do not miss highlighting of current vertex in the graph. 2. Add 'valign=T' option for first adjustbox of first line in step too (box with F=[F] V=[V]). It leads to better layout. 3. Unify colors priority in graph and automata. For example, in current version if garph vertex is start and current it colored as start (in green), but in the same case automata vertex colored as current (blue). I propose: current dominates start (as in automata), target dominates current.
-**[USER GUIDANCE]**: (1) The graph's lightblue current vertices in a per-label figure must be the selected vertices (the non-empty columns of F^a), which always exist for an active label, not only the sources of followed edges; followed sources are a subset. (2) The start frontier F tile also gets `valign=T` (the only step box still lacking it). (3) Unified fill priority: target > current > start in both graph and automaton; in the automaton the final-state fill sits between current and start, i.e. target > current > final > start (the double ring is always kept).
+291. Improve regexp rendering and Arroyuelo RPQ rendering. Regexp rendering (all places): use dot for concatenation. Arroyuelo RPQ rendering: 1. Use vertical layout for tree. 2. Visualize only steps for intermediate nodes, not leafs. 3. Add default CLI option for reachability only, not path, similarly to BelyaninRPQ semantics. 4. Check that adjust boxes used for tikz and matrices (look at Belyanin RPQ). 5. Improve step layout. Two columns. First is for tree. Second consists of two lines. First one is matrices formula, second is graph figure. 6. On each step for boolean reachability semantics do not highlight paths or edges, but add edges with respect to result matrix with label of form of respective part of regular expression (handled node).
+**[USER GUIDANCE]**: (A) Regexp: TeX concatenation renders as `\cdot` in RegexpTeX only; `/` remains the EBNF input syntax; plain-text `Regexp.toString` is unchanged. (B) Arroyuelo gains a `--semantics` option (`reachability` default, `simplePath`), mirroring Belyanin task 288: a Boolean reachability trace plus visualizer, while simplePath preserves the existing path-semiring trace/visualizer (renamed to reflect simple paths). (C) RPQ must not depend on GSS: introduce dedicated RPQ renderers (`RpqGraphDot`/`RpqGraphTikz`, `RegexpTreeDot`/`RegexpTreeTikz`) reusing `AutomatonTikz` primitives; `RpqGraph*` output must stay byte-identical so Belyanin goldens do not change; do not modify `GssDot`/`GssTikz`, which should end up referenced only by the GLL/RNGLR visualizers. (D) Reachability step graph keeps the original input edges and adds one red-bold edge per true cell (u,v) of the handled node's Boolean result matrix M(E), labeled with that node's subexpression; when a derived edge collides with an input edge, the two labels merge into one edge. No path/edge highlighting for reachability. (E) Tree is vertical (root at top, `grow'=down`; DOT `rankdir=TB`). (F) Only intermediate AST nodes (Alt, Seq, Star) produce step directories; the tree figure still shows all nodes including leaves; a single-leaf query produces no step directories (the result is still written). (G) Step layout: left column = regexp tree; right column = two lines, first the matrix formula, second the graph figure; per-component top-aligned adjustboxes (`valign=T`, column width), no whole-step adjustbox, following Belyanin.
 ```
 
 ## Overview
 
-Three rendering improvements for the Belyanin RPQ step visualizations (simple-path and
-reachability). They touch the two Belyanin step visualizers, the shared Belyanin step helpers, the
-shared GSS graph renderers, and the DFA renderers.
+Five workstreams:
 
-Root causes found during planning:
-
-1. **Current vertex missed without transition edges** — `BelyaninSimplePathStepVisualizer.renderLabel`
-   and `BelyaninReachabilityStepVisualizer.renderLabel` derive the graph's lightblue "current"
-   vertices as the sources of the followed (red) edges. When a label's `Select` is non-empty but
-   `G^a` has no outgoing edge from a selected vertex, `followed` is empty and the current vertex is
-   not highlighted (concrete case: example step 4 label 2, `c`: `Select` has a path at `v3` but
-   `G^c` has no edge from `v3`, so `v3` is currently plain). The current vertices must be the
-   selected vertices — the non-empty columns of `F^a` (`ls.Select`).
-2. **Missing `valign=T`** — `BelyaninStepCommon.matrixTileWithBody false` is used only by
-   `renderFrontierStart` (both visualizers); every other tile passes `true`. The start frontier F
-   tile must also be top-aligned, after which the boolean parameter is dead.
-3. **Color priority divergence** — the shared graph renderers
-   (`GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`) order fills
-   `start > current > frontier > storedPop > highlighted`, so an RPQ start vertex that is also a
-   frontier/current vertex stays green, while the automaton renders the same overlap blue. The
-   desired unified order is **target > current > start** in both, with the automaton final fill at
-   **target > current > final > start**. RPQ passes target as `highlightedVertices`, current as
-   `frontierVertices`, start as `startVertices`; GLL/RNGLR/Arroyuelo pass `startVertices = ∅` and
-   `frontierVertices = ∅`, so a reorder to
-   `currentVertex > storedPop > highlighted > frontier > start` is byte-preserving for them and
-   yields exactly `target > current > start` for RPQ.
+1. **Regexp TeX** — concatenation renders as `\cdot` instead of `/` (`RegexpTeX` only).
+2. **Decouple RPQ from GSS** — the RPQ input graph (via `RpqGraphViz`) and the regexp AST tree are currently rendered through the GSS stack renderers. Introduce dedicated `RpqGraphDot`/`RpqGraphTikz` (byte-identical output) and `RegexpTreeDot`/`RegexpTreeTikz` (vertical tree). `GssDot`/`GssTikz` are not modified.
+3. **Arroyuelo simple-path step visualizer** — split shared code into `ArroyueloStepCommon`, rename the visualizer, render a vertical tree, emit only intermediate (Alt/Seq/Star) steps.
+4. **Arroyuelo Boolean reachability** — new Boolean trace in `ArroyueloRPQ`, new reachability visualizer; per-step graph keeps input edges and adds one red-bold edge per true M(E) cell labeled by the handled node's subexpression (labels merged on collision), no path highlights.
+5. **CLI + layout + summary** — `--semantics` for Arroyuelo, two-column/two-row step template, per-component top-aligned adjustboxes, summary legend.
 
 ## Reuse analysis
 
-- Q1/Q3: reuse `RpqGraphViz.frontierVertices` (path string) and the reachability private
-  `frontierVertices` (bool) to obtain the non-empty `F^a` columns — no new helper.
-- Q1/Q3: `BelyaninStepCommon.colNonEmpty` / `rowNonEmpty` remain the single source of truth for the
-  cell-emptiness notion; no change.
-- Q4: generalize `BelyaninStepCommon.matrixTileWithBody` by dropping the now-always-true
-  `valignTop` parameter.
-- Q3: the precedence is data-driven through the existing `startVertices` / `frontierVertices` /
-  `highlightedVertices` / `storedPopVertices` / `currentVertex` parameters; only the branch order
-  changes. No new parameter.
-- Q3: `AutomatonTikz.nodeOptions` and `AutomatonDot.stateDeclarations` keep their existing fill
-  attributes (`green!30`, `red!30`, `lightblue!20`, `yellow!20`; `green`, `lightyellow`), only the
-  order changes.
+- Reuse `BelyaninStepCommon` patterns (`renderVisualizationSteps`, `wrapAdjustbox`, `matrixTileWithBody`) as the template for `ArroyueloStepCommon` (same project, same style).
+- Reuse `AutomatonTikz` primitives in the new renderers: `escapeLatex`, `reciprocalBendAttr`, `tikzHeaderWithOptions`, `tikzFooter`, `layeredGraphOptions`, `defaultGrowDirection`; add `treeGrowDirection`/`treeRankDirection`.
+- Reuse `DerivationTreeDot.escapeLabel` for DOT labels (as `GssDot` does).
+- Reuse `PathSemiringTeX.matrixWithVertexLabels` (simplePath) and `PathSemiringTeX.boolMatrixToTeXWith` (reachability).
+- Reuse `RegexpTeX.toTeX` (TikZ derived labels) and `Regexp.toString` (DOT derived labels).
+- Reuse `RpqGraphViz` path helpers (`pathHighlights`, `frontierVertices`, `edgeEndpoints`) unchanged.
+- Reuse the existing `RpqSemantics` DU and `-semantics` CLI flag; only the `Program`/usage dispatch changes.
+- Reuse the Belyanin reachability runner/visualizer as the structural model for the Arroyuelo ones.
 
-## Subtasks
+---
 
-### S1: Graph current vertices from the selected `F^a` columns
+### S1: Regexp concatenation renders as `\cdot`
 
-**Code:** `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (`renderLabel`),
-`src/FLPQ.Printers/BelyaninReachabilityStepVisualizer.fs` (`renderLabel`).
-**Tests:** `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (the `fromEndpoints`
-computation in `per-label graph DOT highlights followed edges red bold and tiers the endpoint vertices` and the corresponding TikZ fact),
-`tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs` (same). Regenerate the
-affected `belyanin_step_*_label_*_graph.tikz` and `belyanin_reach_step_*_label_*_graph.tikz`
-goldens.
-**Docs:** `docs/developer/belyanin-step-viz.md`, `docs/developer/belyanin-reachability-step-viz.md`.
+**Code:** `src/FLPQ.Printers/RegexpTeX.fs` — in `toTeX`, change the `RSeq` separator from `" / "` to `" \cdot "`; update the module/`toTeX` doc comment.
+
+**Tests:** `tests/FLPQ.Printers.Tests/RegexpTexTests.fs` — update the expected strings of every case containing a sequence: `a \cdot b`, `(a \cdot b) \cdot c`, `(a \cdot b) \mid c`, `(a \cdot b)^*`, `\text{walk} \cdot (O \mid R)^*`. Keep the lualatex compile test (update its regexp if it asserts text). Regenerate goldens that embed `RegexpTeX.toTeX` (`arroyuelo_step_*_tree.tikz`, `arroyuelo_step_*_matrices.tex`, and any runner `regexp.tex` assertions).
+
+**Docs:** `docs/developer/rpq-regexp-viz.md` — table row for `RSeq`, the abstract, and the "Sequence renders as `/`" design-decision row.
 
 **Spec:**
 
-- In `BelyaninSimplePathStepVisualizer.renderLabel`, replace
-  `let fromEndpoints = followed |> Set.fold ...` with
-  `let currentVertices = RpqGraphViz.frontierVertices ls.Select`.
-  Pass `currentVertices` in the `frontierVertices` slot of `RpqGraphViz.renderGraph`.
-- In `BelyaninReachabilityStepVisualizer.renderLabel`, replace `fromEndpoints` with
-  `let currentVertices = frontierVertices ls.Select` (the existing private boolean helper).
-  Keep `targets = frontierVertices ls.Extend`.
-- Rename the local to `currentVertices` in both (clearer; the followed edges stay `followed`).
-- Rationale: `followedEdges` already requires `colNonEmpty select u`, so followed sources are a
-  subset of the selected vertices; using the selected vertices never removes a highlight and adds
-  the missing current vertex when no edge is followed.
+- Only the TeX renderer changes; `EbnfParser.toString` (plain text) and the EBNF input syntax (`/`) are untouched.
+- Parenthesization logic is unchanged.
+- Golden indices/contents that contain the sequence label must be regenerated (they also change again in S3; regenerate here to keep S1 self-contained).
 
-### S2: Top-align the start frontier F tile
+---
 
-**Code:** `src/FLPQ.Printers/BelyaninStepCommon.fs` (`matrixTileWithBody`),
-`src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (`renderFrontierStart` and the three other
-tiles), `src/FLPQ.Printers/BelyaninReachabilityStepVisualizer.fs` (same).
-**Tests:** `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (`frontier start has exactly the F block and no valign`), `tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs`
-(`visited start block is P minus M and frontier start has no valign`). Regenerate all
-`belyanin_step_*_frontier_start.tex` and `belyanin_reach_step_*_frontier_start.tex` goldens.
-**Docs:** `docs/developer/belyanin-step-viz.md` (Step Artifacts table and the `valign=T` design
-decision), `docs/developer/belyanin-reachability-step-viz.md` (Step Artifacts table).
+### S2: Dedicated RPQ graph renderers (decouple from GSS)
+
+**Code:**
+
+- New `src/FLPQ.Printers/RpqGraphDot.fs` — `toDot (vertexLabelPrinter: int -> string) (edgeLabelPrinter: int*int -> string) (activeVertices) (activeEdges) (highlightedVertices) (startVertices) (frontierVertices) (highlightedEdges) (pathEdges) : string`. Emits the RPQ input graph in Graphviz DOT, byte-identical to the current `GssDot.toDotFromSets` output for the RPQ parameterization (`rankdir=LR`, `compound=true`, ellipse vertices, fill priority `highlighted > frontier > start`, `color=red, penwidth=2.0` for current edges, `color="#FF9999"` for path edges).
+- New `src/FLPQ.Printers/RpqGraphTikz.fs` — `toTikz (...)` with the same parameter set; byte-identical to `GssTikz.toTikzFromSets` for RPQ (`layered layout, nodes={draw, circle}, grow'=right`, fill priority `highlighted > frontier > start` with fills `yellow!20 > lightblue!20 > green!30`, edge styles `red, thick` / `red!40`, reciprocal `bend left=15` via `AutomatonTikz.reciprocalBendAttr`).
+- `src/FLPQ.Printers/RpqGraphViz.fs` — replace the `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets` calls in `renderGraph` with `RpqGraphDot.toDot` / `RpqGraphTikz.toTikz`. Public API and all other functions unchanged.
+- `src/FLPQ.Printers/FLPQ.Printers.fsproj` — add `RpqGraphDot.fs`/`RpqGraphTikz.fs` after `AutomatonTikz.fs` and before `RpqGraphViz.fs`.
+
+**Tests:** `tests/FLPQ.Printers.Tests/RpqGraphVizTests.fs` — add unit tests for the new modules (vertex fill tiers, edge styles, reciprocal bend, empty-label edges). The existing Belyanin step-visualization golden tests (`BelyaninStepVisualizationTests`, `BelyaninReachabilityStepVisualizationTests`) act as the byte-identity regression: they must pass unchanged.
+
+**Docs:** update `docs/developer/rpq-graph-viz.md` (renderers are now RPQ-dedicated and independent of GSS); new `docs/developer/rpq-graph-dot.md` and `docs/developer/rpq-graph-tikz.md` (new modules); update `docs/developer/FLPQ.Printers.md` and `docs/project/architecture.md`.
 
 **Spec:**
 
-- Change both `renderFrontierStart` calls to `matrixTileWithBody true ...` and simplify
-  `matrixTileWithBody` to a two-argument function that always emits
-  `max width=\textwidth, valign=T`; update the four call sites per visualizer and the doc comment.
-- Update the two tests to assert `Assert.Contains("valign=T", frontier)` instead of
-  `DoesNotContain`, and rename the facts (`... and frontier start is top-aligned`).
-- Update the docs: the start frontier F tile is now top-aligned like every other step box.
+- The new renderers reuse `AutomatonTikz` and `DerivationTreeDot` primitives only; they must not reference `GssDot`/`GssTikz`.
+- Output must be byte-identical to today's `RpqGraphViz` output (empty-label edge handling, self-loop `loop above`, reciprocal bends, escape rules included).
+- Keep all highlight parameters so Belyanin/Arroyuelo callers are untouched.
 
-### S3: Unified target > current > start color priority
+---
 
-**Code:** `src/FLPQ.Printers/GssDot.fs` (`renderVertex`), `src/FLPQ.Printers/GssTikz.fs` (vertex
-fill block), `src/FLPQ.Printers/AutomatonDot.fs` (`stateDeclarations`),
-`src/FLPQ.Printers/AutomatonTikz.fs` (`nodeOptions`).
-**Tests:** `tests/FLPQ.Printers.Tests/GssDotTests.fs` (the DOT and TikZ precedence facts),
-`tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs`
-(`dfaToDotWithHighlights precedence: ...`, `dfaToTikzWithHighlights precedence: ...`),
-`tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (the `lightblue`/`lightyellow` tier
-computations), `tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs` (same).
-Regenerate the affected `*_graph_*` and `*_automaton*.tikz` goldens. Verify GLL/RNGLR/Arroyuelo
-tests and goldens are unchanged.
-**Docs:** `docs/developer/gss-dot.md`, `docs/developer/gss-tikz.md`,
-`docs/developer/automaton-viz.md`, `docs/developer/belyanin-step-viz.md` (Colors + design
-decision), `docs/developer/belyanin-reachability-step-viz.md` (Colors),
-`docs/developer/rpq-graph-viz.md`.
+### S3: Dedicated vertical regexp tree renderer + Arroyuelo simple-path restructure
+
+**Code:**
+
+- New `src/FLPQ.Printers/RegexpTreeDot.fs` — `toDot (label: int -> string) (nodes: Set<int>) (edges: Set<int*int>) (current: int) : string`: `digraph { rankdir=TB; ... }`, rectangle nodes, label via `DerivationTreeDot.escapeLabel`, current node `fillcolor=lightblue`.
+- New `src/FLPQ.Printers/RegexpTreeTikz.fs` — `toTikz (label: int -> string) (nodes) (edges) (current) : string`: `layered layout, nodes={draw, rectangle}, grow'=down`, labels already TeX (`$...$`, no escaping), current node `fill=lightblue!20`.
+- `src/FLPQ.Printers/AutomatonTikz.fs` — add `treeGrowDirection = "grow'=down"` (and `treeRankDirection = "TB"` if kept there).
+- New `src/FLPQ.Printers/ArroyueloStepCommon.fs` — the `ArroyueloVisualizationStep` record, `treeNodeSet`/`treeEdgeSet`/`treeVertexLabel`/`treeVertexLabelTikz`, tree rendering via `RegexpTree*`, and a shared `renderSteps` parameterized by `buildMatrices`/`buildGraph` (mirrors `BelyaninStepCommon.renderVisualizationSteps`). `renderSteps` builds the tree from the **full** trace, filters out `Base` steps, and emits one record per remaining step.
+- Rename `src/FLPQ.Printers/ArroyueloStepVisualizer.fs` → `ArroyueloSimplePathStepVisualizer.fs`; module `ArroyueloSimplePathStepVisualizer`; its `renderSteps` supplies path matrices (`PathSemiringTeX.matrixWithVertexLabels`) and the path-highlight graph (`RpqGraphViz.renderGraph` with `pathHighlights`).
+- `src/FLPQ.Printers/FLPQ.Printers.fsproj` — order: `RegexpTreeDot/Tikz` before `ArroyueloStepCommon`, then `ArroyueloSimplePathStepVisualizer`.
+- `src/FLPQ.Cli/Helpers.fs` — record type now `ArroyueloStepCommon.ArroyueloVisualizationStep`.
+
+**Tests:** rewrite `tests/FLPQ.Printers.Tests/ArroyueloStepVisualizationTests.fs` for the new step set (intermediate only) and vertical tree; regenerate `arroyuelo_step_*` goldens. Add a structural test that the RPQ printer sources contain no reference to `Gss` (locate `src/` from the test base directory). Keep the template-fill and lualatex tests with the existing placeholders.
+
+**Docs:** update `docs/developer/arroyuelo-step-viz.md` (vertical tree, intermediate-only steps, shared `ArroyueloStepCommon`); update `docs/developer/rpq-regexp-viz.md` (tree no longer uses GSS); new `docs/developer/regexp-tree-dot.md`, `docs/developer/regexp-tree-tikz.md`, `docs/developer/arroyuelo-step-common.md`; update `docs/developer/FLPQ.Printers.md` and `docs/project/architecture.md`.
 
 **Spec:**
 
-- `GssDot` / `GssTikz` vertex fill precedence (highest first):
-  `currentVertex (lightblue) > storedPop (orange) > highlighted (yellow/lightyellow) > frontierVertices (lightblue) > startVertices (green)`.
-  RPQ (no currentVertex/storedPop) therefore renders `target > current > start`; GLL/RNGLR
-  (`start = ∅`, `frontier = ∅`) keep their effective `current > storedPop > highlighted`.
-- `AutomatonDot.stateDeclarations` first-match order:
-  `if target then lightyellow elif highlighted then lightblue elif start then green` with
-  `peripheries=2` appended whenever the state is final.
-- `AutomatonTikz.nodeOptions` last-wins fill order: `start` fill, `final` fill, `highlighted`
-  (current) fill, `target` fill — i.e. `target > current > final > start`. Keep the
-  `label=above:Start`, `double`, and `double distance=1.5pt` attributes unchanged.
+- The tree figure shows every AST node (leaves included); the current node is highlighted; layout vertical.
+- `renderSteps` receives the full trace and outputs only non-`Base` steps; `NodeIndex`/`Children` remain the full-trace post-order indices.
+- A single-leaf query yields an empty visualization-step list (runner still writes root artifacts and `result.tex`).
 
-### S4: Regenerate Belyanin goldens and run the Printers test project
+---
 
-**Code:** none (golden data only).
-**Tests:** `tests/FLPQ.Printers.Tests/GoldenData/` (`belyanin_*` simple-path and reachability
-Belyanin goldens).
-**Docs:** none.
+### S4: Arroyuelo Boolean reachability trace + visualizer
 
-**Spec:**
+**Code:**
 
-- Delete the affected committed goldens and their copies under
-  `tests/FLPQ.Printers.Tests/bin/Debug/net10.0/GoldenData/`, run the test project to regenerate the
-  output goldens, copy the regenerated files back into `tests/FLPQ.Printers.Tests/GoldenData/`, then
-  re-run the test project and confirm zero failures.
-- Confirm `GssDotTests`, `GssDotVisualizationTests`, `AutomatonVisualizationTests`, the Belyanin
-  visualization tests, `RpqGraphVizTests`, and `SummaryTexSectionTests` all pass, and that no
-  GLL/RNGLR/Arroyuelo golden changed.
+- `src/FLPQ.RPQ/ArroyueloRPQ.fs`:
+  - `[<Struct>] type ArroyueloBooleanTraceStep<'t,'nt> = { NodeIndex: int; Expr: Regexp<'t,'nt>; Operation: ArroyueloOperation; Operands: Matrix<bool> list; Result: Matrix<bool>; Children: int list }`.
+  - Refactor the recursive Boolean evaluation so `evalExpression` and the new tracing entry point share one core (one source of truth for ε/I, term adjacency, ∨, ×, TC).
+  - `evaluateBooleanWithTrace : NFA<'t,int> -> Regexp<'t,'nt> -> ArroyueloBooleanTraceStep<'t,'nt> list * Matrix<bool>` — full `|V|×|V|` Boolean matrix, post-order steps.
+  - `evaluate` keeps its public signature (`|sources|×|V|`) and delegates to the shared core.
+- New `src/FLPQ.Printers/ArroyueloReachabilityStepVisualizer.fs` — module `ArroyueloReachabilityStepVisualizer`; uses `ArroyueloStepCommon` for the tree; Boolean matrix equation via `PathSemiringTeX.boolMatrixToTeXWith BelyaninStepCommon.vertexLabel BelyaninStepCommon.vertexLabel` (row/col both `v_i`); graph built with `RpqGraphViz.renderGraphWithDerived`.
+- `src/FLPQ.Printers/RpqGraphViz.fs` — add `renderGraphWithDerived (terminalPrinter) (graph) (derivedTikzLabel: int*int -> string option) (derivedDotLabel: int*int -> string option) (startVertices) : string * string`. Merges original and derived edge sets: original label + `", "` + derived label; edges present in the derived set render red bold; TikZ uses `skipEscaping=true` with pre-escaped original labels and `$<TeX>$` derived labels; DOT uses the plain derived label.
+- `src/FLPQ.Printers/FLPQ.Printers.fsproj` — add `ArroyueloReachabilityStepVisualizer.fs` after `ArroyueloSimplePathStepVisualizer.fs`.
 
-### S5: Documentation pass and full-repo code review
+**Tests:** new `tests/FLPQ.Printers.Tests/ArroyueloReachabilityStepVisualizationTests.fs` (Boolean matrices, derived-edge count/labels/merge, no path edges, compile); add a `[<Property>]` equivalence test that the reachability trace's final matrix projected to the sources equals `ArroyueloRPQ.evaluate`; add `ArroyueloBoolean` trace tests in `tests/FLPQ.RPQ.Tests`.
 
-**Code:** none expected; fix any finding from the `code-review` skill.
-**Tests:** re-run the affected test projects after any fix.
-**Docs:** finish the documentation updates listed in S1–S3 and keep `docs/developer/FLPQ.Printers.md`
-and related hubs consistent if they enumerate the changed behavior.
+**Docs:** new `docs/developer/arroyuelo-reachability-step-viz.md`; update `docs/developer/arroyuelo-rpq.md` (Boolean trace type/functions); update `docs/developer/rpq-graph-viz.md` (derived-edge rendering); update `docs/developer/FLPQ.RPQ.md`, `docs/developer/FLPQ.Printers.md`, `docs/project/architecture.md`.
 
 **Spec:**
 
-- Load the `code-review` skill and iterate the full-repo review (architecture, duplication,
-  signature consistency, naming, test gaps) to zero findings.
-- Ensure every `.md` touched is `mdformat`-clean.
+- Derived edge label: the handled node's subexpression (`RegexpTeX.toTeX` for TikZ, `Regexp.toString` for DOT).
+- One derived edge per true cell `(u,v)` of `step.Result`; self-loops included.
+- Collision with an input edge merges labels into one edge (derived styling wins, red bold).
+- No path-edge (`red!40`) or result-vertex (`yellow!20`) highlights; start vertices stay green.
+- Boolean semantics is genuine reachability (TC), not a projection of the simple-path trace.
+
+---
+
+### S5: CLI semantics, step templates, and summary integration
+
+**Code:**
+
+- `src/FLPQ.Cli/AlgorithmTypes.fs` — extend the `Semantics` usage text to cover Arroyuelo.
+- `src/FLPQ.Cli/Program.fs` — for `ArroyueloRPQ`, read `Semantics` with default `Reachability` and dispatch to `ArroyueloReachabilityRunner` / `ArroyueloSimplePathRunner`.
+- Rename `src/FLPQ.Cli/ArroyueloRunner.fs` → `ArroyueloSimplePathRunner.fs` (module `ArroyueloSimplePathRunner`); new `src/FLPQ.Cli/ArroyueloReachabilityRunner.fs` (Boolean `result.tex` + per-source reachable lines, modeled on `BelyaninReachabilityRunner`); update `FLPQ.Cli.fsproj`.
+- `data/Arroyuelo_step_template.tex` and `data/Arroyuelo_step_tikz_template.tex` — two columns: left minipage = tree figure; right minipage = matrices line (`\begingroup\setlength{\textwidth}{\linewidth}`) then graph figure; per-figure top alignment.
+- `src/FLPQ.Printers/SummaryTeX.fs` — `arroyueloStepSection`: wrap tree/graph with `wrapTikzAdjustboxColumnTop`, drop `wrapStepAdjustbox`; add a reachability-aware `arroyueloColorLegend` (or one shared legend covering both semantics).
+
+**Tests:** rename/extend `tests/FLPQ.Cli.Tests/ArroyueloRunnerTests.fs` (simplePath) and add `ArroyueloReachabilityRunnerTests.fs`; add CLI dispatch tests for the default and `simplePath`; update `SummaryTests`/`CliSummaryTests` and the lualatex step-template compile test for the new layout.
+
+**Docs:** update `docs/user/cli.md` (Arroyuelo `--semantics`, output file list/layout), `docs/developer/summary-tex.md` (Arroyuelo step section/legend), `docs/developer/FLPQ.Cli.md` (runners).
+
+**Spec:**
+
+- Default `-a ArroyueloRPQ` behavior becomes `reachability`; `--semantics simplePath` restores the path rendering.
+- Both semantics share the same step directory/file names so the summary pipeline is reused.
+- The layouts' `valign=T` and per-component adjustboxes follow the Belyanin pattern; the whole-step `0.9\textheight` box is removed so tall steps can break pages.
+
+---
+
+### S6: Cross-cutting documentation and navigation
+
+**Code:** none (documentation-only subtask).
+
+**Tests:** none (documentation-only).
+
+**Docs:**
+
+- `docs/developer/FLPQ.Printers.md` and `docs/developer/FLPQ.RPQ.md` and `docs/developer/FLPQ.Cli.md` — module/runner lists.
+- `docs/project/architecture.md` — add all new files.
+- `docs/main.md` — add the new doc pages under the appropriate section.
+- `docs/developer/rpq-graph-viz.md`, `docs/developer/rpq-regexp-viz.md` — cross-reference the new renderers.
+- Verify every `.md` touched in S1–S6 is mdformat-clean.
+
+**Spec:**
+
+- No duplicate ownership: each new module has exactly one doc; hubs and `main.md` link to it.
+- No dangling references to the old `ArroyueloStepVisualizer` module or GSS-based RPQ rendering.
+
+---
 
 ## Verification
 
-- Per subtask: `dotnet fantomas .`, `python3 tools/quality_check.py`, affected `dotnet test`, and
-  `mdformat` on every touched `.md`.
-- Final: `python3 tools/hard_gate.py` (async) until `STATUS: PASS`, then merge to `dev` and mark
-  task 290 `[done]`.
-
-## Status
-
-- S1 — done (49c782a): current graph vertices = selected `F^a` columns in both visualizers.
-- S2 — done (e152bc9): start frontier F tile top-aligned; `matrixTileWithBody` param dropped.
-- S3 — done (d8cfd71): unified fill priority target > current > start (graph and automaton),
-  automaton target > current > final > start.
-- S4 — done: full `FLPQ.Printers.Tests` project green (433 passed, 0 skipped).
-- S5 — done (961b2ef): code review fix — final-target precedence coverage and Belyanin color
-  doc blockquote; report recorded in `tasks/code_review.md`.
-- Hard gate and merge pending.
+After S1–S6 are committed: run code review to zero findings, then the hard gate
+(`nohup python3 tools/hard_gate.py ...`) until `STATUS: PASS`, merge to `dev`, and mark
+291 `[done]` in `tasks/tasks.md`.

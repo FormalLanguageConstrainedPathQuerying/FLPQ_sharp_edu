@@ -8,7 +8,7 @@
 **Used by:** FLPQ.Cli
 **Book reference:** Chapter 11, Section 03_Arroyuelo.tex
 
-> **Abstract:** Implements Arroyuelo's matrix-based Regular Path Querying algorithm. Translates a regular expression AST into a Boolean matrix expression and evaluates it in post-order: M(ε) = I, M(a) = M_a, M(E1|E2) = M(E1) ∨ M(E2), M(E1/E2) = M(E1) × M(E2), M(E\*) = I ∨ M(E)^+. Returns a |sources| × |V| boolean reachability matrix. Also provides `evaluateWithTrace`, the same evaluation over the path semiring that records one step per AST node for visualization.
+> **Abstract:** Implements Arroyuelo's matrix-based Regular Path Querying algorithm. Translates a regular expression AST into a Boolean matrix expression and evaluates it in post-order: M(ε) = I, M(a) = M_a, M(E1|E2) = M(E1) ∨ M(E2), M(E1/E2) = M(E1) × M(E2), M(E\*) = I ∨ M(E)^+. Returns a |sources| × |V| boolean reachability matrix. Also provides `evaluateBooleanWithTrace` (the Boolean evaluation with one trace step per AST node) and `evaluateWithTrace` (the same post-order walk over the path semiring, for the simple-path semantics).
 
 ## Contents
 
@@ -60,11 +60,36 @@ type ArroyueloTraceStep<'t, 'nt> =
 
 One step of the path-semiring evaluation: one post-order visit of a regexp tree node. `NodeIndex` is the post-order position (the last step is the root); `Children` holds the post-order indices of the node's children (empty for leaves); `Operands` are the child results (`[]` for Base, `[left; right]` for Alt/Seq, `[child]` for Star).
 
+### `ArroyueloBooleanTraceStep<'t, 'nt>`
+
+```fsharp
+[<Struct>]
+type ArroyueloBooleanTraceStep<'t, 'nt> =
+    { NodeIndex: int
+      Expr: Regexp<'t, 'nt>
+      Operation: ArroyueloOperation
+      Operands: Matrix<bool> list
+      Result: Matrix<bool>
+      Children: int list }
+```
+
+One step of the Boolean (reachability) evaluation. Same shape as `ArroyueloTraceStep`, with
+Boolean result matrices instead of path sets. The Boolean evaluation uses `MsBfs.boolAdd` /
+`MsBfs.boolMul` and `transitiveClosure`, so it is complete on cyclic graphs.
+
 ## Function Signatures
 
 ### `evaluate: NFA<'t, int> -> Regexp<'t, 'nt> -> Matrix<bool>`
 
 Evaluate a regular expression AST on the given graph. The graph is provided as an NFA where states are vertices and transitions are labeled edges. Per-label boolean adjacency matrices are derived via `BooleanDecomposition.decomposeNonEmptySet`. Returns a |sources| × |V| boolean reachability matrix where sources are taken from the NFA's start states.
+
+### `evaluateBooleanWithTrace: NFA<'t, int> -> Regexp<'t, 'nt> -> ArroyueloBooleanTraceStep<'t, 'nt> list * Matrix<bool>`
+
+Evaluate the regexp over the Boolean semiring, recording one trace step per AST node in
+post-order (children before parent; the last step is the root). Returns the steps and the full
+|V| × |V| Boolean matrix. Shares its recursive evaluation core with the private
+`evalExpression` used by `evaluate`, so `evaluate` remains behavior-identical. Used by
+[ArroyueloReachabilityStepVisualizer](arroyuelo-reachability-step-viz.md).
 
 ### `evaluateWithTrace: NFA<'t, int> -> Regexp<'t, 'nt> -> ArroyueloTraceStep<'t, 'nt> list * Matrix<Set<int list>>`
 

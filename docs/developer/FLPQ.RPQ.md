@@ -7,7 +7,7 @@
 **Used by:** FLPQ.Cli
 **Book reference:** Chapters 3, 11, 12
 
-> **Abstract:** Regular Path Querying library implementing three RPQ algorithms (Belyanin's BFS-based LARPQ, Arroyuelo's matrix-based regex evaluation, Kronecker-based automaton intersection) and graph file reading. All three algorithms accept a DFA query and an NFA labeled graph, returning a boolean reachability matrix. Property-based equivalence tests verify identical results across algorithms. Belyanin's module additionally records step traces under two semantics: Boolean reachability (`evaluate` / `evaluateReachabilityWithTrace`) and the path-semiring simplePath semantics (`evaluateSimplePathWithTrace`).
+> **Abstract:** Regular Path Querying library implementing three RPQ algorithms (Belyanin's BFS-based LARPQ, Arroyuelo's matrix-based regex evaluation, Kronecker-based automaton intersection) and graph file reading. All three algorithms accept a DFA query and an NFA labeled graph, returning a boolean reachability matrix. Property-based equivalence tests verify identical results across algorithms. Belyanin's module additionally records step traces under two semantics: Boolean reachability (`evaluate` / `evaluateReachabilityWithTrace`) and the path-semiring simplePath semantics (`evaluateSimplePathWithTrace`). Arroyuelo's module records a Boolean reachability trace (`evaluateBooleanWithTrace`) and a path-semiring trace (`evaluateWithTrace`) for the two Arroyuelo step visualizers.
 
 ## Contents
 

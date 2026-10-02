@@ -125,6 +125,31 @@ let ``ArroyueloRPQ runs successfully with query and input files`` () =
     Assert.Equal(0, code)
 
 [<Fact>]
+let ``ArroyueloRPQ with simplePath semantics runs successfully`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "ArroyueloRPQ"
+           "--semantics"
+           "simplePath"
+           "-q"
+           exampleRegexp
+           "-i"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.Equal(0, code)
+
+[<Fact>]
 let ``ArroyueloRPQ without query file exits non-zero`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 

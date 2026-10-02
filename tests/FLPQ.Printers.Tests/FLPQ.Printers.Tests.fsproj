@@ -10,6 +10,7 @@
     <Compile Include="ExternalToolsTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="RpqGraphVizTests.fs" />
+    <Compile Include="RpqGraphRendererTests.fs" />
     <Compile Include="AutomatonVisualizationTests.fs" />
     <Compile Include="RnglrAutomatonTikzTests.fs" />
     <Compile Include="DerivationTreeVisualizationTests.fs" />
@@ -40,7 +41,9 @@
     <Compile Include="SppfTikzTests.fs" />
     <Compile Include="PathSemiringTexTests.fs" />
     <Compile Include="RegexpTexTests.fs" />
-    <Compile Include="ArroyueloStepVisualizationTests.fs" />
+    <Compile Include="ArroyueloSimplePathStepVisualizationTests.fs" />
+    <Compile Include="ArroyueloReachabilityStepVisualizationTests.fs" />
+    <Compile Include="RpqGssIndependenceTests.fs" />
     <Compile Include="BelyaninStepVisualizationTests.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizationTests.fs" />
   </ItemGroup>
