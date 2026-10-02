@@ -144,9 +144,11 @@ module RpqGraphViz =
     /// Render the graph with the original input edges plus derived (computed) edges. Every
     /// derived edge is labeled with the same `derivedTikzLabel` (`derivedDotLabel` in DOT) —
     /// the subexpression of the handled node — appended to the original label when the pair is
-    /// also an input edge (labels merge, e.g. `"a, b | c"`). Only start vertices get a fill; no
-    /// path or current-edge highlighting. `derivedTikzLabel` is already-rendered math (e.g.
-    /// `"$E$"`), `derivedDotLabel` the plain label (e.g. `Regexp.toString`). Returns (dot, tikz).
+    /// also an input edge (labels merge, e.g. `"a, b | c"`). Exact repeated components are
+    /// removed during the merge (`"X, X"` -> `"X"`), so no edge label repeats the same text.
+    /// Only start vertices get a fill; no path or current-edge highlighting. `derivedTikzLabel`
+    /// is already-rendered math (e.g. `"$E$"`), `derivedDotLabel` the plain label (e.g.
+    /// `Regexp.toString`). Returns (dot, tikz).
     let renderGraphWithDerived
         (terminalPrinter: 't -> string)
         (graph: NFA<'t, int>)
@@ -166,11 +168,17 @@ module RpqGraphViz =
         let edgeLabel = graphEdgeLabel graph terminalPrinter
         let allEdges = Set.union gEdges derivedEdges
 
+        // Join the input-edge label and the derived label, dropping exact repeated components
+        // so a label never repeats the same text (e.g. "X, X" -> "X", "X, Y, X" -> "X, Y").
+        // `original` is comma-joined already, `derived` is a single label and stays whole.
         let merge (original: string) (derived: string) =
-            match original, derived with
-            | "", d -> d
-            | o, "" -> o
-            | o, d -> o + ", " + d
+            let parts =
+                [ if original <> "" then
+                      yield! original.Split(", ")
+                  if derived <> "" then
+                      yield derived ]
+
+            parts |> List.distinct |> String.concat ", "
 
         let dotEdgeLabel (e: int * int) =
             let original = if Set.contains e gEdges then edgeLabel e else ""

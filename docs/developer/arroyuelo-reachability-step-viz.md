@@ -8,7 +8,7 @@
 **Used by:** ArroyueloReachabilityRunner (FLPQ.Cli)
 **Book reference:** Chapter 11, Section sec:RPQ_Arroyuelo
 
-> **Abstract:** Renders the Boolean reachability evaluation of Arroyuelo's RPQ algorithm. Each emitted step is one intermediate regexp-tree node (Alt/Seq/Star); leaves are not emitted as steps but appear in the vertical tree figure. Per step it produces the regexp tree with the current node highlighted, the Boolean matrix equation for the node's operation, and the input graph with derived edges: for every true cell (u, v) of the handled node's Boolean result matrix M(E), an edge u -> v labeled with the node's subexpression is added (red bold). No paths or input edges are highlighted; when a derived edge collides with an input edge, the labels merge.
+> **Abstract:** Renders the Boolean reachability evaluation of Arroyuelo's RPQ algorithm. Each emitted step is one intermediate regexp-tree node (Alt/Seq/Star); leaves are not emitted as steps but appear in the vertical tree figure. Per step it produces the regexp tree with the current node highlighted, the Boolean matrix equation for the node's operation, and the input graph with derived edges: for every true cell (u, v) of the handled node's Boolean result matrix M(E), an edge u -> v labeled with the node's subexpression is added (red bold). No paths or input edges are highlighted; when a derived edge collides with an input edge, the labels merge, dropping exact repeated components (`"X, X"` -> `"X"`).
 
 ## Contents
 
@@ -37,7 +37,8 @@ rows and columns both `v_i`): Alt shows `M(left) ∨ M(right) = M(node)`; Seq sh
 The graph keeps the original input edges (plain) and adds one red-bold edge per true cell
 `(u, v)` of the handled node's Boolean result matrix M(E), labeled with the node's
 subexpression (`RegexpTeX.toTeX` in TikZ, `Regexp.toString` in DOT). A derived edge that
-collides with an input edge merges the two labels into one edge (e.g. `a, b | c`).
+collides with an input edge merges the two labels into one edge (e.g. `a, b | c`), removing
+exact repeated components (`"X, X"` -> `"X"`).
 No path (`red!40`) or result-vertex (`yellow!20`) highlights are drawn; start vertices stay
 green. The rendering is done by `RpqGraphViz.renderGraphWithDerived`.
 
@@ -59,6 +60,7 @@ remaining step.
 | No path/edge highlighting | Boolean cells identify a relation, not a witness path; there are no paths to draw (task 291) |
 | Added M(E) edges labeled with the handled node | Visualizes the matrix as the relation the node computes, tying the figure back to the regular expression (task 291) |
 | Derived-edge labels merge with input-edge labels on the same pair | Both are meaningful (input symbol and computed relation); merging keeps a single edge per pair without parallel-edge support |
+| The merge removes exact repeated components | An input label can equal the derived subexpression; deduplicating the merged text (`"X, X"` -> `"X"`) keeps the edge free of verbatim repeats while still showing every distinct component (task 292) |
 | Same emitted-step set as the simple-path variant | Leaves carry no operation; the tree still shows them for context |
 
 ## Book Reference

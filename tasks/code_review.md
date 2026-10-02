@@ -1,5 +1,27 @@
 # Code Review Report
 
+## Task 292 Review (2026-10-02)
+
+Scope: branch diff vs dev — `src/FLPQ.Printers/RpqGraphViz.fs` (private `merge` in `renderGraphWithDerived` now drops exact repeated label components), `tests/FLPQ.Printers.Tests/RpqGraphVizTests.fs` (two new `[<Fact>]` tests), and docs (`rpq-graph-viz.md`, `arroyuelo-reachability-step-viz.md`).
+
+**No findings.** One review pass over the changed surface found no problems; no fixes were required.
+
+**Findings against the constraint sources:**
+
+- §1–§5 (naming/style/tuples/formatting) — automated checks clean (`fantomas`, FSharpLint through the gate).
+- §6 (doc comments) — `renderGraphWithDerived`'s `///` doc updated to state the dedup rule.
+- §7 (genericity) — signature unchanged and still generic over `'t`; the helper is pure `string` manipulation on already-rendered labels.
+- §8 (non-empty collections) — none introduced.
+- §9/§10/§11 (separation, one algorithm per file, thin variants) — untouched; `merge` stays inside the printer and does not leak into algorithm modules.
+- §13 (no duplication) — no new logic duplicated; the merge point remains single-source in `RpqGraphViz`.
+- §15/§16 (test fidelity, Fact vs Property) — both new tests assert concrete rendered substrings (label present once, repeat absent); hardcoded example data makes `[<Fact>]` correct.
+- §18 (equivalence) — not applicable (label formatting, not an algorithm variant).
+- §19 (coverage) — the changed private helper is covered through `renderGraphWithDerived` DOT and TikZ tests.
+- §20 (documentation) — both affected module docs updated and mdformat-clean.
+- §21/§22/§23 (book traceability, clarity, naming) — no algorithm change; the helper name `merge` and the documented `"X, X" -> "X"` rule match the behaviour.
+
+**No blocking findings.**
+
 ## Task 291 Review (2026-10-02)
 
 Scope: full branch diff vs dev — regexp rendering (`RegexpTeX.fs` `\cdot`), new RPQ renderers (`RpqGraphDot.fs`, `RpqGraphTikz.fs`, `RegexpTreeDot.fs`, `RegexpTreeTikz.fs`, `StepTeX.fs`), new/renamed Arroyuelo layers (`ArroyueloStepCommon.fs`, `ArroyueloSimplePathStepVisualizer.fs`, `ArroyueloReachabilityStepVisualizer.fs`, `ArroyueloSimplePathRunner.fs`, `ArroyueloReachabilityRunner.fs`), algorithm (`ArroyueloRPQ.fs` Boolean trace + shared core), CLI (`AlgorithmTypes.fs`, `Program.fs`), summary (`SummaryTeX.fs`, the two Arroyuelo templates), tests/goldens, and docs.

@@ -188,3 +188,33 @@ let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
 
     Assert.Contains("v2 ->[\"c\", red, thick, bend left=15] v3;", tikz)
     Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)
+
+[<Fact>]
+let ``renderGraphWithDerived: an input label equal to the derived label is shown once`` () =
+    // The example graph carries 0 -[a]-> 1; deriving the same "a" must not yield "a, a".
+    let dot, tikz =
+        RpqGraphViz.renderGraphWithDerived id exampleGraph (Set.singleton (0, 1)) "a" "a" (Set.singleton 0)
+
+    Assert.Contains("v0 -> v1 [label=\"a\", color=red, penwidth=2.0];", dot)
+    Assert.DoesNotContain("a, a", dot)
+    Assert.Contains("v0 ->[\"a\", red, thick] v1;", tikz)
+    Assert.DoesNotContain("a, a", tikz)
+
+[<Fact>]
+let ``renderGraphWithDerived: a derived component already in the input label is not repeated`` () =
+    let twoSymbolGraph =
+        Nfa.fromTransitions
+            [ 0; 1 ]
+            [ { From = 0; Label = "a"; To = 1 }; { From = 0; Label = "b"; To = 1 } ]
+            Set.empty
+            (set [ 0 ])
+            Set.empty
+
+    // Input label "a, b" merged with derived "a" stays "a, b" (the trailing "a" is dropped).
+    let dot, tikz =
+        RpqGraphViz.renderGraphWithDerived id twoSymbolGraph (Set.singleton (0, 1)) "a" "a" (Set.singleton 0)
+
+    Assert.Contains("label=\"a, b\"", dot)
+    Assert.DoesNotContain("a, b, a", dot)
+    Assert.Contains("[\"a, b\", red, thick]", tikz)
+    Assert.DoesNotContain("a, b, a", tikz)

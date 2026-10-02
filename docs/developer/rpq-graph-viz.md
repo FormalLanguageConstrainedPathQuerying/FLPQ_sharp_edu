@@ -63,10 +63,12 @@ labels of the pair (epsilon-only edges label as "ε").
 
 Render the graph with the original input edges plus derived (computed) edges. Every derived
 edge renders red bold, labeled with `derivedTikzLabel`/`derivedDotLabel` appended to the
-original label when the pair is also an input edge (labels merge, e.g. `"a, b | c"`). Only
-`startVertices` get a fill; no path or current-edge highlighting. `derivedTikzLabel` is the
-already-rendered math label (e.g. `"$E$"`), `derivedDotLabel` the plain label (e.g.
-`Regexp.toString`). Used by [Arroyuelo reachability step visualization](arroyuelo-reachability-step-viz.md).
+original label when the pair is also an input edge (labels merge, e.g. `"a, b | c"`). The
+merge drops exact repeated components (`"X, X"` -> `"X"`), so no edge label repeats the same
+text. Only `startVertices` get a fill; no path or current-edge highlighting.
+`derivedTikzLabel` is the already-rendered math label (e.g. `"$E$"`), `derivedDotLabel` the
+plain label (e.g. `Regexp.toString`). Used by
+[Arroyuelo reachability step visualization](arroyuelo-reachability-step-viz.md).
 
 ## Design Decisions
 
@@ -77,6 +79,7 @@ already-rendered math label (e.g. `"$E$"`), `derivedDotLabel` the plain label (e
 | TikZ rendering passes `bendReciprocalEdges = true` | An input graph may carry both directions of a pair (e.g. `v2 -> v3` and `v3 -> v2`); TikZ would draw the two straight edges fully on top of each other, while `bend left=15` on both turns the pair into two symmetric arcs. DOT needs no equivalent — Graphviz separates reciprocal pairs automatically (task 282, S2) |
 | Two edge tiers: path (light red) and current (red, bold) | A step figure must distinguish the accumulated frontier paths from the single edge traversed on that step; `pathLastEdges` of the next frontier is exactly the traversed edges (task 284, S5) |
 | Derived edges merge labels with input edges on the same pair | The reachability semantics draws the computed relation M(E) on top of the input graph; a pair may be both, and both labels are meaningful. Merging keeps one edge per pair (task 291) |
+| Merged labels drop exact repeated components | The input label and the derived label can name the same text (e.g. a graph edge already labeled with the subexpression); `"X, X"` -> `"X"` keeps the label free of verbatim repeats without suppressing distinct components (task 292) |
 
 ## See Also
 
