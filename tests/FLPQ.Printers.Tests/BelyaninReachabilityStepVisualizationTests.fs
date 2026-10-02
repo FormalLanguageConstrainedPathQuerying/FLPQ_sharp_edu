@@ -206,10 +206,9 @@ let ``per-label automaton DOT highlights the used transitions red bold and the t
 
             Assert.Equal(Set.count expected, countOccurrences dot "color=red, penwidth=2.0")
 
-            // Target states = states with a non-empty F^a row; start > frontier > target
-            // precedence means a state that is also on the current frontier stays lightblue.
-            let targets =
-                Set.difference (Set.remove testDfa.StartState (frontierStates ls.Select)) (frontierStates steps.[i].M)
+            // Target states = states with a non-empty F^a row; target > frontier > start
+            // precedence means a target that is also on the current frontier stays lightyellow.
+            let targets = frontierStates ls.Select
 
             Assert.Equal(Set.count targets, countOccurrences dot "fillcolor=lightyellow")
 
@@ -219,7 +218,9 @@ let ``per-label graph DOT highlights followed edges red bold with endpoint tiers
         for j in 0 .. rendered.[i].Labels.Length - 1 do
             let ls = steps.[i].Labels.[j]
             let followed = followedEdges ls.G ls.Select
-            let fromEndpoints = followed |> Set.fold (fun acc (u, _) -> Set.add u acc) Set.empty
+            // Current vertices = the selected vertices (non-empty Select columns), not the
+            // followed-edge sources (a selected vertex with no outgoing a-edge is still current).
+            let currentVertices = frontierVertices ls.Select
             let targets = frontierVertices ls.Extend
             let dot = rendered.[i].Labels.[j].GraphDot
 
@@ -240,10 +241,13 @@ let ``per-label graph DOT highlights followed edges red bold with endpoint tiers
 
             let starts = testGraph.StartStates
 
-            let lightblue = Set.difference fromEndpoints starts
-            let lightyellow = Set.difference (Set.difference targets starts) fromEndpoints
+            // Vertex tiers (precedence target > current > start): lightyellow targets,
+            // lightblue current vertices, green remaining sources.
+            let lightyellow = targets
+            let lightblue = Set.difference currentVertices targets
+            let green = Set.difference starts (Set.union currentVertices targets)
 
-            Assert.Equal(Set.count starts, countOccurrences dot "fillcolor=green")
+            Assert.Equal(Set.count green, countOccurrences dot "fillcolor=green")
             Assert.Equal(Set.count lightblue, countOccurrences dot "fillcolor=lightblue")
             Assert.Equal(Set.count lightyellow, countOccurrences dot "fillcolor=lightyellow")
 
@@ -271,12 +275,12 @@ let ``extend formulas name the product and write three Boolean matrices`` () =
             Assert.DoesNotContain(@"\times", tex)
 
 [<Fact>]
-let ``visited start block is P minus M and frontier start has no valign`` () =
+let ``visited start block is P minus M and frontier start is top-aligned`` () =
     for i in 0 .. rendered.Length - 1 do
         let frontier = rendered.[i].Start.Frontier
         Assert.Contains(@"\text{F} =", frontier)
         Assert.DoesNotContain(@"\text{V}", frontier)
-        Assert.DoesNotContain("valign=T", frontier)
+        Assert.Contains("valign=T", frontier)
 
         let visited = rendered.[i].Start.Visited
         Assert.Contains(@"\text{V} =", visited)

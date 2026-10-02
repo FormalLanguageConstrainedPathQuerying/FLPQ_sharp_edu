@@ -1,5 +1,35 @@
 # Code Review Report
 
+## Task 290 Review (2026-10-02)
+
+Scope: full branch diff vs dev — `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (S1: current vertices = selected `F^a` columns; S2: start tile `valign=T`), `BelyaninReachabilityStepVisualizer.fs` (same), `BelyaninStepCommon.fs` (S2: `matrixTileWithBody` valign parameter dropped), `GssDot.fs` / `GssTikz.fs` (S3: vertex fill precedence `current > stored-pop > highlighted > frontier > start`), `AutomatonDot.fs` / `AutomatonTikz.fs` (S3: `target > current > start` / `target > current > final > start`), tests (`GssDotTests`, `AutomatonVisualizationTests`, `BelyaninStepVisualizationTests`, `BelyaninReachabilityStepVisualizationTests`), goldens (20 Belyanin graph/automaton/frontier updates), and docs (`gss-dot.md`, `gss-tikz.md`, `automaton-viz.md`, `belyanin-step-viz.md`, `belyanin-reachability-step-viz.md`, `rpq-graph-viz.md`).
+
+**Findings resolved this review (commit 961b2ef):**
+
+Round 1 (2 findings):
+
+- §20 (documentation) — mdformat reinterpreted the wrapped `> start` line of the new Belyanin Colors precedence paragraph as a blockquote, splitting the sentence. Reworded the precedence text to avoid a leading `>`, and verified no other edited doc gained a spurious blockquote.
+- §19 (test coverage) — target-over-final precedence was exercised only by goldens; added direct DOT and TikZ facts for a final target state (lightyellow / `yellow!20` fill, `peripheries=2` / `double` kept, target fill after final fill).
+
+**Verified:** `dotnet fantomas .` clean; mdformat clean; commit gate PASS; full `FLPQ.Printers.Tests` project green (433 passed, 0 skipped) after the fixes; GLL/RNGLR/Arroyuelo tests and goldens unchanged (the shared GSS reorder is behavior-preserving for callers that pass no start/frontier).
+
+**Findings against the constraint sources:**
+
+- §4 (tuples ≤ 2) — only pre-existing `int * int` edge pairs; no new tuples.
+- §6 (doc comments) — updated XML/`///` docs on `matrixTileWithBody`, `nodeOptions`, `dfaToDotWithHighlights`, `dfaToTikzWithHighlights`, `toDotFromSets`, `toTikzFromSets`, and both Belyanin `renderLabel`s; no new public API.
+- §7 (genericity) — renderers stay generic over `'t`/`'s`; all changes are index/fill ordering.
+- §8 (non-empty collections) — no new runtime-checked collections.
+- §9 (separation) — all changes in `FLPQ.Printers` renderers; no algorithm or I/O touched.
+- §13 (no duplication) — the graph current-vertex derivation reuses `RpqGraphViz.frontierVertices` (path) and the reachability private `frontierVertices` (Boolean); no copied logic. The Req 1 fix removes the separately-computed `fromEndpoints` from both labels.
+- §15/§16 (test fidelity / Fact vs Property) — no stubs; deterministic `[<Fact>]` tests assert concrete DOT/TikZ fill strings and the updated precedence facts; the tests match the new semantics instead of being weakened.
+- §19 (test coverage) — `GssDot`/`GssTikz` precedence facts (both formats) cover every tier pair; `AutomatonDot`/`AutomatonTikz` precedence facts now cover start+target, current+target, and final+target; the Belyanin graph/automaton tier facts cover the new target/current/start ordering for both semantics.
+- §20 (documentation) — the six affected developer docs updated; the Belyanin step-viz Colors section is the single source of truth, with gss/automaton docs cross-referenced.
+- §21 (book traceability) — rendering infrastructure; unchanged references to Chapter 11 `02_BFS.tex` remain in the visualizer module docs.
+- §22 (code clarity) — plain branch reorderings; no optimization introduced. The `AutomatonTikz` split of label/double from fills is explicit and commented so the last-wins order is readable.
+- §23 (naming semantics) — `currentVertices` replaces the misleading `fromEndpoints`; `matrixTileWithBody` no longer carries a dead flag.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
 ## Task 289 Review (2026-10-01)
 
 Scope: full branch diff vs dev — `src/FLPQ.Printers/AutomatonTikz.fs` (S1: new public `reciprocalBendAttr`; `transitionEdges`/`epsEdges` append the bend), `GssTikz.fs` (S1: inline predicate replaced by the shared helper), `RsmTikz.fs` (S2: per-cell bend, one line per symbol kept), `InputGraphTikz.fs` (S3: bend on labeled edges), tests (`AutomatonVisualizationTests`, `RsmTikzTests`, new `InputGraphTikzTests` + `nfa_reciprocal_edges.tikz` golden), and docs (`automaton-viz.md`, `gss-tikz.md`, `rsm-viz.md`, new `input-graph-tikz.md`, `FLPQ.Printers.md`).

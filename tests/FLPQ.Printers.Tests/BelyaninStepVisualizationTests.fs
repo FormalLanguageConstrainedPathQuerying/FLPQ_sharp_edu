@@ -219,8 +219,9 @@ let ``per-label automaton DOT highlights exactly the F^a target states lightyell
     for i in 0 .. rendered.Length - 1 do
         for j in 0 .. rendered.[i].Labels.Length - 1 do
             let ls = steps.[i].Labels.[j]
-            // Target states = states with a non-empty F^a row; the start state keeps green.
-            let expected = Set.remove testDfa.StartState (frontierStates ls.Select)
+            // Target states = states with a non-empty F^a row; target > start precedence
+            // means a target that is also the start state stays lightyellow.
+            let expected = frontierStates ls.Select
             let dot = rendered.[i].Labels.[j].AutomatonDot
 
             Assert.Equal(Set.count expected, countOccurrences dot "fillcolor=lightyellow")
@@ -238,7 +239,9 @@ let ``per-label graph DOT highlights followed edges red bold and tiers the endpo
         for j in 0 .. rendered.[i].Labels.Length - 1 do
             let ls = steps.[i].Labels.[j]
             let followed = followedEdges ls.G ls.Select
-            let fromEndpoints = followed |> Set.fold (fun acc (u, _) -> Set.add u acc) Set.empty
+            // Current vertices = the selected vertices (non-empty Select columns), not the
+            // followed-edge sources (a selected vertex with no outgoing a-edge is still current).
+            let currentVertices = RpqGraphViz.frontierVertices ls.Select
             let targets = RpqGraphViz.frontierVertices ls.Extend
             let dot = rendered.[i].Labels.[j].GraphDot
 
@@ -258,13 +261,14 @@ let ``per-label graph DOT highlights followed edges red bold and tiers the endpo
 
             Assert.Equal(Set.count followed, countOccurrences dot "color=red, penwidth=2.0")
 
-            // Vertex tiers (precedence start > frontier > highlighted): green sources,
-            // lightblue from-endpoints, lightyellow targets.
+            // Vertex tiers (precedence target > current > start): lightyellow targets,
+            // lightblue current vertices, green remaining sources.
             let starts = testGraph.StartStates
-            let lightblue = Set.difference fromEndpoints starts
-            let lightyellow = Set.difference (Set.difference targets starts) fromEndpoints
+            let lightyellow = targets
+            let lightblue = Set.difference currentVertices targets
+            let green = Set.difference starts (Set.union currentVertices targets)
 
-            Assert.Equal(Set.count starts, countOccurrences dot "fillcolor=green")
+            Assert.Equal(Set.count green, countOccurrences dot "fillcolor=green")
             Assert.Equal(Set.count lightblue, countOccurrences dot "fillcolor=lightblue")
             Assert.Equal(Set.count lightyellow, countOccurrences dot "fillcolor=lightyellow")
 
@@ -285,14 +289,17 @@ let ``per-label graph DOT highlights followed edges red bold and tiers the endpo
             Assert.Equal(Set.count pathEdges, countOccurrences dot "color=\"#FF9999\"")
 
 [<Fact>]
-let ``start and end graphs show green sources, lightblue frontier vertices, and lightred path edges only`` () =
+let ``start and end graphs show remaining green sources, lightblue frontier vertices, and lightred path edges only``
+    ()
+    =
     let check (m: Matrix<Set<int list>>) (dot: string) =
-        Assert.Equal(Set.count testGraph.StartStates, countOccurrences dot "fillcolor=green")
-
+        // Current/frontier wins over start, so only non-frontier sources stay green.
         Assert.Equal(
-            Set.count (Set.difference (RpqGraphViz.frontierVertices m) testGraph.StartStates),
-            countOccurrences dot "fillcolor=lightblue"
+            Set.count (Set.difference testGraph.StartStates (RpqGraphViz.frontierVertices m)),
+            countOccurrences dot "fillcolor=green"
         )
+
+        Assert.Equal(Set.count (RpqGraphViz.frontierVertices m), countOccurrences dot "fillcolor=lightblue")
 
         Assert.Equal(0, countOccurrences dot "color=red, penwidth=2.0")
         Assert.Equal(Set.count (RpqGraphViz.pathEdges m), countOccurrences dot "color=\"#FF9999\"")
@@ -347,15 +354,14 @@ let ``extend formulas whose Extend is empty keep only the F^a path tuples`` () =
         Assert.Equal(nonEmptyCells ls.Select, countOccurrences rendered.[i].Labels.[j].ExtendFormula @"\{(v_")
 
 [<Fact>]
-let ``frontier start has exactly the F block and no valign`` () =
+let ``frontier start has exactly the F block and is top-aligned`` () =
     for i in 0 .. rendered.Length - 1 do
         let m = rendered.[i].Start.Frontier
 
         Assert.Equal(1, countOccurrences m @"\begin{pNiceMatrix}")
         Assert.Contains(@"\text{F} =", m)
         Assert.DoesNotContain(@"\text{V}", m)
-        // The first box of the step anchors the line: no valign=T.
-        Assert.DoesNotContain("valign=T", m)
+        Assert.Contains("valign=T", m)
 
 [<Fact>]
 let ``visited start has exactly the V block and valign`` () =

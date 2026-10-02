@@ -535,18 +535,25 @@ let ``dfaToDotWithHighlights marks target states with lightyellow`` () =
     Assert.DoesNotContain("fillcolor", dotStateLine dot 2)
 
 [<Fact>]
-let ``dfaToDotWithHighlights precedence: start and frontier override target`` () =
+let ``dfaToDotWithHighlights precedence: target overrides start and frontier`` () =
     let startTarget =
         AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty (set [ 0 ]) Set.empty
 
-    Assert.Contains("fillcolor=green", dotStateLine startTarget 0)
-    Assert.DoesNotContain("lightyellow", dotStateLine startTarget 0)
+    Assert.Contains("fillcolor=lightyellow", dotStateLine startTarget 0)
+    Assert.DoesNotContain("fillcolor=green", dotStateLine startTarget 0)
 
     let frontierTarget =
         AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa (set [ 1 ]) (set [ 1 ]) Set.empty
 
-    Assert.Contains("fillcolor=lightblue", dotStateLine frontierTarget 1)
-    Assert.DoesNotContain("lightyellow", dotStateLine frontierTarget 1)
+    Assert.Contains("fillcolor=lightyellow", dotStateLine frontierTarget 1)
+    Assert.DoesNotContain("fillcolor=lightblue", dotStateLine frontierTarget 1)
+
+    // A target that is also final takes the target fill; the double border is kept.
+    let finalTarget =
+        AutomatonDot.dfaToDotWithHighlights string (fun _i s -> s) highlightDfa Set.empty (set [ 2 ]) Set.empty
+
+    Assert.Contains("fillcolor=lightyellow", dotStateLine finalTarget 2)
+    Assert.Contains("peripheries=2", dotStateLine finalTarget 2)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -569,9 +576,9 @@ let ``dfaToTikzWithHighlights marks target states with yellow!20`` () =
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
 [<Fact>]
-let ``dfaToTikzWithHighlights precedence: start and frontier override target`` () =
+let ``dfaToTikzWithHighlights precedence: target overrides start and frontier`` () =
     // TikZ keeps every fill attribute and the last one wins, so precedence is attribute order:
-    // the start / frontier fill must come after the target fill.
+    // the target fill must come after the start / frontier fill.
     let startTarget =
         AutomatonTikz.dfaToTikzWithHighlights
             string
@@ -583,8 +590,8 @@ let ``dfaToTikzWithHighlights precedence: start and frontier override target`` (
             Set.empty
 
     let startLine = tikzStateLine startTarget 0
-    Assert.Contains("fill=green!30", startLine)
-    Assert.True(startLine.IndexOf("fill=green!30") > startLine.IndexOf("fill=yellow!20"))
+    Assert.Contains("fill=yellow!20", startLine)
+    Assert.True(startLine.IndexOf("fill=yellow!20") > startLine.IndexOf("fill=green!30"))
 
     let frontierTarget =
         AutomatonTikz.dfaToTikzWithHighlights
@@ -597,8 +604,23 @@ let ``dfaToTikzWithHighlights precedence: start and frontier override target`` (
             Set.empty
 
     let frontierLine = tikzStateLine frontierTarget 1
-    Assert.Contains("fill=lightblue!20", frontierLine)
-    Assert.True(frontierLine.IndexOf("fill=lightblue!20") > frontierLine.IndexOf("fill=yellow!20"))
+    Assert.Contains("fill=yellow!20", frontierLine)
+    Assert.True(frontierLine.IndexOf("fill=yellow!20") > frontierLine.IndexOf("fill=lightblue!20"))
+
+    let finalTarget =
+        AutomatonTikz.dfaToTikzWithHighlights
+            string
+            (fun _i s -> s)
+            "rectangle"
+            highlightDfa
+            Set.empty
+            (set [ 2 ])
+            Set.empty
+
+    let finalLine = tikzStateLine finalTarget 2
+    Assert.Contains("fill=yellow!20", finalLine)
+    Assert.Contains("double", finalLine)
+    Assert.True(finalLine.IndexOf("fill=yellow!20") > finalLine.IndexOf("fill=red!30"))
 
 [<Fact>]
 let ``NFA dot with terminal and epsilon on the same edge renders both`` () =

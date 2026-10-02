@@ -99,8 +99,10 @@ module GssDot =
     /// edge in both sets renders as highlighted.
     /// startVertices get filled green (graph sources, matching the automaton's
     /// initial-state fill), frontierVertices get filled lightblue (current frontier
-    /// positions). Vertex fill precedence: start > current > frontier > storedPop >
-    /// highlighted (current and frontier share the lightblue fill).
+    /// positions). Vertex fill precedence (highest first): current > stored-pop >
+    /// highlighted > frontier > start. RPQ passes target as highlighted and current as
+    /// frontier, so the RPQ graph renders target > current > start; GLL/RNGLR pass no
+    /// start/frontier and therefore keep current > stored-pop > highlighted.
     /// storedPopVertices get filled with orange (stored pops handling triggered at these vertices).
     /// When positionOf is Some, every vertex is constrained to the rank of its input position
     /// (one {rank=same; ...} subgraph per position), so all nodes at the same input position share
@@ -144,14 +146,14 @@ module GssDot =
 
             let isHighlighted = Set.contains vidx highlightedVertices
 
-            // Vertex fill precedence: start > current > frontier > storedPop >
-            // highlighted (current and frontier share the lightblue fill).
+            // Vertex fill precedence (highest first): current > stored-pop > highlighted >
+            // frontier > start (current and frontier share the lightblue fill).
             let fillColor =
-                if isStart then Some "green"
-                elif isCurrent then Some "lightblue"
-                elif isFrontier then Some "lightblue"
+                if isCurrent then Some "lightblue"
                 elif isStoredPop then Some "orange"
                 elif isHighlighted then Some "lightyellow"
+                elif isFrontier then Some "lightblue"
+                elif isStart then Some "green"
                 else None
 
             let attrs = vertexAttrs label fillColor |> String.concat ", "

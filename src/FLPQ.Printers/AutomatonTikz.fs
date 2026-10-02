@@ -33,9 +33,10 @@ module AutomatonTikz =
         else
             ""
 
-    /// The TikZ node options for one automaton state: the `as={...}` content, the target fill
-    /// (lightyellow, lowest precedence), the Start label/fill, the final-state double
-    /// border/fill, and the highlight fill (which wins over the others).
+    /// The TikZ node options for one automaton state: the `as={...}` content, the Start label,
+    /// the final-state double border, and the fills in ascending precedence (start, final,
+    /// current/frontier, target) so the last-filled target wins. A final state always keeps its
+    /// double ring.
     let nodeOptions
         (idx: int)
         (stateContent: string)
@@ -49,23 +50,27 @@ module AutomatonTikz =
 
         parts.Add(sprintf "as={%s}" stateContent)
 
-        // Last fill wins in TikZ. Target (lightyellow) is the lowest-precedence tier so a
-        // target that is also start/final/frontier keeps the stronger fill; the final's
-        // double ring is always kept.
-        if isTarget then
-            parts.Add("fill=yellow!20")
-
+        // Last fill wins in TikZ. Fill precedence (highest first): target > current/frontier
+        // > final > start, so the fills are appended in the reverse order. The Start label and
+        // the final state's double ring are appended first and always kept.
         if isStart then
             parts.Add("label=above:Start")
-            parts.Add("fill=green!30")
 
         if isFinal then
             parts.Add("double")
             parts.Add("double distance=1.5pt")
+
+        if isStart then
+            parts.Add("fill=green!30")
+
+        if isFinal then
             parts.Add("fill=red!30")
 
         if isHighlighted then
             parts.Add("fill=lightblue!20")
+
+        if isTarget then
+            parts.Add("fill=yellow!20")
 
         String.concat ", " parts
 
@@ -211,9 +216,10 @@ module AutomatonTikz =
         sb.ToString()
 
     /// Render a DFA as a Tikz tikzpicture using layered layout, with the given states highlighted
-    /// (fill=lightblue!20, overriding the start state's green fill), the given target states
-    /// filled lightyellow (lowest precedence: start/final/frontier override it), and the given
-    /// transitions rendered red and bold (`red, thick`, label and loop attributes preserved).
+    /// (fill=lightblue!20, the current/frontier tier), the given target states filled lightyellow
+    /// (highest precedence: over current, final, and start), and the given transitions rendered
+    /// red and bold (`red, thick`, label and loop attributes preserved). A final state's double
+    /// ring is always kept.
     let dfaToTikzWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)

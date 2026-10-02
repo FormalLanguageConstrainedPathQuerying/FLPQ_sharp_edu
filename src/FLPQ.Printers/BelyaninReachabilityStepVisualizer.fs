@@ -26,21 +26,22 @@ module BelyaninReachabilityStepVisualizer =
     let private booleanBody (m: Matrix<bool>) : string =
         PathSemiringTeX.boolMatrixToTeXBody stateLabel vertexLabel m
 
-    /// The start-of-step frontier tile: F = M (the current frontier).
+    /// The start-of-step frontier tile: F = M (the current frontier), top-aligned like every
+    /// other step tile.
     let private renderFrontierStart (step: BelyaninReachabilityTraceStep<'t>) : string =
-        matrixTileWithBody false @"\text{F}" (booleanBody step.M)
+        matrixTileWithBody @"\text{F}" (booleanBody step.M)
 
     /// The start-of-step visited tile: V = P \ F, i.e. P ∧ ¬M cell-wise.
     let private renderVisitedStart (step: BelyaninReachabilityTraceStep<'t>) : string =
-        matrixTileWithBody true @"\text{V}" (booleanBody (Matrix.map2 (fun pv mv -> pv && not mv) step.P step.M))
+        matrixTileWithBody @"\text{V}" (booleanBody (Matrix.map2 (fun pv mv -> pv && not mv) step.P step.M))
 
     /// The end-of-step frontier tile: F = NewM (the next frontier).
     let private renderFrontierEnd (step: BelyaninReachabilityTraceStep<'t>) : string =
-        matrixTileWithBody true @"\text{F}" (booleanBody step.NewM)
+        matrixTileWithBody @"\text{F}" (booleanBody step.NewM)
 
     /// The end-of-step visited tile: V = P (everything visited after the step).
     let private renderVisitedEnd (step: BelyaninReachabilityTraceStep<'t>) : string =
-        matrixTileWithBody true @"\text{V}" (booleanBody step.P)
+        matrixTileWithBody @"\text{V}" (booleanBody step.P)
 
     /// The first line of a label's propagation: (N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <F^a>, one
     /// horizontal line of Boolean matrices.
@@ -98,8 +99,9 @@ module BelyaninReachabilityStepVisualizer =
     /// One label's propagation row: the two formulas and the automaton figure with the
     /// current frontier states lightblue, the target states (selected into F^a) lightyellow,
     /// and the used a-transitions red bold; the graph figure with green sources, lightblue
-    /// from-endpoints, lightyellow targets, and the followed edges red bold. No path edges
-    /// are drawn (the reachability trace collects no path information).
+    /// current vertices (the non-empty Select columns), lightyellow targets, and the followed
+    /// edges red bold. No path edges are drawn (the reachability trace collects no path
+    /// information).
     let private renderLabel
         (terminalPrinter: 't -> string)
         (dfa: DFA<'t, int>)
@@ -115,11 +117,15 @@ module BelyaninReachabilityStepVisualizer =
             dfaFigures terminalPrinter dfa automatonFrontier automatonTargets used
 
         let followed = followedEdges isZero ls.G ls.Select
-        let fromEndpoints = followed |> Set.fold (fun acc (u, _) -> Set.add u acc) Set.empty
+
+        // The current vertices are the vertices where F^a is selected (the non-empty columns of
+        // Select), not just the sources of the followed edges: a selected vertex with no outgoing
+        // a-edge must still be highlighted as current (the followed sources are a subset).
+        let currentVertices = frontierVertices ls.Select
         let targets = frontierVertices ls.Extend
 
         let graphDot, graphTikz =
-            RpqGraphViz.renderGraph terminalPrinter graph targets graph.StartStates fromEndpoints followed Set.empty
+            RpqGraphViz.renderGraph terminalPrinter graph targets graph.StartStates currentVertices followed Set.empty
 
         { SelectFormula = selectFormula terminalPrinter step.M ls
           ExtendFormula = extendFormula terminalPrinter ls

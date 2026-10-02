@@ -37,9 +37,11 @@ edge label printer, activeVertices, activeEdges, highlightedVertices, startVerti
 frontierVertices, highlightedEdges, pathEdges, storedPopVertices, currentVertex,
 shape, skipEscaping, positionOf, bendReciprocalEdges.
 
-- Vertex fills (highest precedence first): start = green!30, current = lightblue!20,
-  frontier = lightblue!20, stored-pop = orange!30, highlighted = yellow!20, else
-  plain. A vertex in several tiers renders the highest-precedence fill only.
+- Vertex fills (highest precedence first): current = lightblue!20, stored-pop = orange!30,
+  highlighted = yellow!20, frontier = lightblue!20, start = green!30, else plain.
+  A vertex in several tiers renders the highest-precedence fill only. RPQ passes target as
+  highlighted and current as frontier, so an RPQ graph renders target > current > start;
+  GLL/RNGLR pass no start/frontier and keep current > stored-pop > highlighted.
 - Edge tiers: highlighted = `red, thick`; path = `red!40` (an edge in both sets
   renders as highlighted); else plain.
 - `positionOf`: when `Some`, one `{ [same layer] ... }` collection per position and the

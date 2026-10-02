@@ -14,8 +14,11 @@ module GssTikz =
     /// highlighted. The currentVertex (if specified) gets fill=lightblue!20.
     /// startVertices get filled with green!30 (graph sources, matching the automaton's
     /// initial-state fill), frontierVertices get fill=lightblue!20 (current frontier
-    /// positions). Vertex fill precedence: start > current > frontier > storedPop >
-    /// highlighted (current and frontier share the lightblue!20 fill).
+    /// positions). Vertex fill precedence (highest first): current > stored-pop >
+    /// highlighted > frontier > start. RPQ passes target as highlighted and current as
+    /// frontier, so the RPQ graph renders target > current > start; GLL/RNGLR pass no
+    /// start/frontier and therefore keep current > stored-pop > highlighted
+    /// (current and frontier share the lightblue!20 fill).
     /// storedPopVertices get filled with orange!30 (stored pops handling triggered).
     /// When positionOf is Some, every vertex is constrained to the layer of its input position
     /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
@@ -80,14 +83,14 @@ module GssTikz =
 
             let isHighlighted = Set.contains vidx highlightedVertices
 
-            // Vertex fill precedence: start > current > frontier > storedPop >
-            // highlighted (current and frontier share the lightblue!20 fill).
+            // Vertex fill precedence (highest first): current > stored-pop > highlighted >
+            // frontier > start (current and frontier share the lightblue!20 fill).
             let fill =
-                if isStart then Some "green!30"
-                elif isCurrent then Some "lightblue!20"
-                elif isFrontier then Some "lightblue!20"
+                if isCurrent then Some "lightblue!20"
                 elif isStoredPop then Some "orange!30"
                 elif isHighlighted then Some "yellow!20"
+                elif isFrontier then Some "lightblue!20"
+                elif isStart then Some "green!30"
                 else None
 
             let opts =

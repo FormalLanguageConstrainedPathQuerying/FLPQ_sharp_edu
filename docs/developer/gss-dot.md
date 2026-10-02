@@ -46,9 +46,11 @@ printer, activeVertices, activeEdges, highlightedVertices, startVertices,
 frontierVertices, highlightedEdges, pathEdges, storedPopVertices, currentVertex,
 positionOf.
 
-- Vertex fills (highest precedence first): start = green, current = lightblue,
-  frontier = lightblue, stored-pop = orange, highlighted = lightyellow, else plain.
-  A vertex in several tiers renders the highest-precedence fill only.
+- Vertex fills (highest precedence first): current = lightblue,
+  stored-pop = orange, highlighted = lightyellow, frontier = lightblue, start = green, else plain.
+  A vertex in several tiers renders the highest-precedence fill only. RPQ passes target as
+  highlighted and current as frontier, so an RPQ graph renders target > current > start;
+  GLL/RNGLR pass no start/frontier and keep current > stored-pop > highlighted.
 - Edge tiers: highlighted = `color=red, penwidth=2.0`; path = `color="#FF9999"`
   (an edge in both sets renders as highlighted); else plain.
 - `positionOf`: when `Some`, one `{rank=same; ...}` subgraph per position groups the

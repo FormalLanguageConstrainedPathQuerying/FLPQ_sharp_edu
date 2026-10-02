@@ -46,25 +46,25 @@ module BelyaninSimplePathStepVisualizer =
             (PathSemiringTeX.boolMatrixToTeXBody vertexLabel vertexLabel ls.G)
             (PathSemiringTeX.matrixWithStateVertexLabelsBody ls.Extend)
 
-    /// The start-of-step frontier tile: F = M (the current frontier). The first box of the
-    /// step, so it has no `valign=T`.
+    /// The start-of-step frontier tile: F = M (the current frontier), top-aligned like every
+    /// other step tile.
     let private renderFrontierStart (step: BelyaninTraceStep<'t>) : string =
-        matrixTileWithBody false @"\text{F}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.M)
+        matrixTileWithBody @"\text{F}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.M)
 
     /// The start-of-step visited tile: V = P \ F (cell-wise set difference). V is the exact
     /// inverse of the trace's P <- P + F, so no trace change is needed.
     let private renderVisitedStart (step: BelyaninTraceStep<'t>) : string =
         let vBefore = Matrix.map2 Set.difference step.P step.M
 
-        matrixTileWithBody true @"\text{V}" (PathSemiringTeX.matrixWithStateVertexLabelsBody vBefore)
+        matrixTileWithBody @"\text{V}" (PathSemiringTeX.matrixWithStateVertexLabelsBody vBefore)
 
     /// The end-of-step frontier tile: F = NewM (the next frontier).
     let private renderFrontierEnd (step: BelyaninTraceStep<'t>) : string =
-        matrixTileWithBody true @"\text{F}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.NewM)
+        matrixTileWithBody @"\text{F}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.NewM)
 
     /// The end-of-step visited tile: V = P (everything visited after the step).
     let private renderVisitedEnd (step: BelyaninTraceStep<'t>) : string =
-        matrixTileWithBody true @"\text{V}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.P)
+        matrixTileWithBody @"\text{V}" (PathSemiringTeX.matrixWithStateVertexLabelsBody step.P)
 
     /// The query DFA with the frontier states of a path matrix highlighted (no target states,
     /// no edge highlights). Returns (dot, tikz).
@@ -95,7 +95,8 @@ module BelyaninSimplePathStepVisualizer =
     /// One label's propagation row: the two formulas and the automaton figure with the used
     /// a-transitions red bold and the step's target states (the states selected into F^a)
     /// lightyellow, and the graph figure with green sources, red followed edges, lightblue
-    /// from-endpoints, lightyellow targets, and F's path edges lightred.
+    /// current vertices (the non-empty Select columns), lightyellow targets, and F's path edges
+    /// lightred.
     let private renderLabel
         (terminalPrinter: 't -> string)
         (dfa: DFA<'t, int>)
@@ -110,7 +111,11 @@ module BelyaninSimplePathStepVisualizer =
             dfaFigures terminalPrinter dfa Set.empty automatonTargets used
 
         let followed = followedEdges PathSemiring.isZero ls.G ls.Select
-        let fromEndpoints = followed |> Set.fold (fun acc (u, _) -> Set.add u acc) Set.empty
+
+        // The current vertices are the vertices where F^a is selected (the non-empty columns of
+        // Select), not just the sources of the followed edges: a selected vertex with no outgoing
+        // a-edge must still be highlighted as current (the followed sources are a subset).
+        let currentVertices = RpqGraphViz.frontierVertices ls.Select
         let targets = RpqGraphViz.frontierVertices ls.Extend
 
         let graphDot, graphTikz =
@@ -119,7 +124,7 @@ module BelyaninSimplePathStepVisualizer =
                 graph
                 targets
                 graph.StartStates
-                fromEndpoints
+                currentVertices
                 followed
                 (RpqGraphViz.pathEdges step.M)
 

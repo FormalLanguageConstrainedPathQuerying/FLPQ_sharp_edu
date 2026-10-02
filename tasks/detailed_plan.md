@@ -1,176 +1,177 @@
-# Detailed Plan: Task 289 — Split overlapped reciprocal edges in TikZ graph/automaton renderers
+# Detailed Plan: Task 290 — Improve Belyanin RPQ rendering
 
 ## Task description (verbatim)
 
 ```
-289. Improve automata rendering in TikZ. Now several edges between same vertices overlapped (eg `0 -[a]-> 1`; `1 -[a]-> 0`; `0 -[b]-> 1` visually is one line with several labels). It should be fixed by visual splitting of edges (two edges in our case: `0 -[a,b]-> 1`; `1 -[a]-> 0`). Apply always-on reciprocal-edge bending to all TikZ graph renderers that can contain reciprocal edges (AutomatonTikz covering NFA/DFA/LR/RNGLR, RsmTikz, InputGraphTikz), reusing the existing GssTikz/RpqGraphViz `bend left=15` approach through a shared helper. Self-loops are never bent. Acyclic tree renderers (SppfTikz, BasicSppfTikz, DerivationTreeTikz) are out of scope. Add tests (unit, golden, lualatex-compile) and update documentation.
-**[USER GUIDANCE]**: Preserve RSM same-direction edges as-is — RsmTikz keeps one edge line per transition symbol within a direction; only reciprocal pairs are split. GssTikz keeps its opt-out flag for GLL/RNGLR (behavior unchanged for RPQ).
+290. Improve Belyanin RPQ algorthm rendering. 1. In steps, in case when no transition edges do not miss highlighting of current vertex in the graph. 2. Add 'valign=T' option for first adjustbox of first line in step too (box with F=[F] V=[V]). It leads to better layout. 3. Unify colors priority in graph and automata. For example, in current version if garph vertex is start and current it colored as start (in green), but in the same case automata vertex colored as current (blue). I propose: current dominates start (as in automata), target dominates current.
+**[USER GUIDANCE]**: (1) The graph's lightblue current vertices in a per-label figure must be the selected vertices (the non-empty columns of F^a), which always exist for an active label, not only the sources of followed edges; followed sources are a subset. (2) The start frontier F tile also gets `valign=T` (the only step box still lacking it). (3) Unified fill priority: target > current > start in both graph and automaton; in the automaton the final-state fill sits between current and start, i.e. target > current > final > start (the double ring is always kept).
 ```
 
-## Problem
+## Overview
 
-`AutomatonTikz.transitionEdges` (`src/FLPQ.Printers/AutomatonTikz.fs:82`) merges parallel labels per
-matrix cell, so `0 -[a]-> 1` and `0 -[b]-> 1` render as one edge `0 -[a,b]-> 1`. The reverse edge
-`1 -[a]-> 0` is emitted as a straight line, and TikZ draws it exactly on top of the first, so the
-figure reads as a single line carrying all labels. The fix already exists in `GssTikz`
-(`src/FLPQ.Printers/GssTikz.fs:129-140`): when the reverse edge is also drawn, both directions get
-`, bend left=15`, turning the pair into two symmetric arcs. `RpqGraphViz` enables it for RPQ graphs
-(task 282). No existing golden/snapshot has reciprocal automaton/RSM edges (verified by per-picture
-scan), so the change adds new snapshots but rewrites none.
+Three rendering improvements for the Belyanin RPQ step visualizations (simple-path and
+reachability). They touch the two Belyanin step visualizers, the shared Belyanin step helpers, the
+shared GSS graph renderers, and the DFA renderers.
 
-## Reuse decisions (reusing skill)
+Root causes found during planning:
 
-- Reused: the `bend left=15` reciprocal rule and its wording already present in `GssTikz.fs:129-140`
-  and documented in `docs/developer/gss-tikz.md`, `docs/developer/rpq-graph-viz.md`.
-- Extracted (Q5): a single shared helper `AutomatonTikz.reciprocalBendAttr` holding the bend
-  constant, the self-loop guard, and the `enabled` gate. `GssTikz` adopts it so the rule has one
-  source of truth.
-- Reused test infrastructure: `ExternalTools.compileTexStringWithTemplate` + `tex_tikz_template.tex`
-  for lualatex compile tests, `GoldenHelpers.verifyGolden` for snapshots, `Graph.fromEdges` for the
-  InputGraphTikz reciprocal fixture, the minimal-RSM construction pattern from `RsmTikzTests.fs:138-156`.
+1. **Current vertex missed without transition edges** — `BelyaninSimplePathStepVisualizer.renderLabel`
+   and `BelyaninReachabilityStepVisualizer.renderLabel` derive the graph's lightblue "current"
+   vertices as the sources of the followed (red) edges. When a label's `Select` is non-empty but
+   `G^a` has no outgoing edge from a selected vertex, `followed` is empty and the current vertex is
+   not highlighted (concrete case: example step 4 label 2, `c`: `Select` has a path at `v3` but
+   `G^c` has no edge from `v3`, so `v3` is currently plain). The current vertices must be the
+   selected vertices — the non-empty columns of `F^a` (`ls.Select`).
+2. **Missing `valign=T`** — `BelyaninStepCommon.matrixTileWithBody false` is used only by
+   `renderFrontierStart` (both visualizers); every other tile passes `true`. The start frontier F
+   tile must also be top-aligned, after which the boolean parameter is dead.
+3. **Color priority divergence** — the shared graph renderers
+   (`GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`) order fills
+   `start > current > frontier > storedPop > highlighted`, so an RPQ start vertex that is also a
+   frontier/current vertex stays green, while the automaton renders the same overlap blue. The
+   desired unified order is **target > current > start** in both, with the automaton final fill at
+   **target > current > final > start**. RPQ passes target as `highlightedVertices`, current as
+   `frontierVertices`, start as `startVertices`; GLL/RNGLR/Arroyuelo pass `startVertices = ∅` and
+   `frontierVertices = ∅`, so a reorder to
+   `currentVertex > storedPop > highlighted > frontier > start` is byte-preserving for them and
+   yields exactly `target > current > start` for RPQ.
 
-## Scope
+## Reuse analysis
 
-Always-on reciprocal bending in:
+- Q1/Q3: reuse `RpqGraphViz.frontierVertices` (path string) and the reachability private
+  `frontierVertices` (bool) to obtain the non-empty `F^a` columns — no new helper.
+- Q1/Q3: `BelyaninStepCommon.colNonEmpty` / `rowNonEmpty` remain the single source of truth for the
+  cell-emptiness notion; no change.
+- Q4: generalize `BelyaninStepCommon.matrixTileWithBody` by dropping the now-always-true
+  `valignTop` parameter.
+- Q3: the precedence is data-driven through the existing `startVertices` / `frontierVertices` /
+  `highlightedVertices` / `storedPopVertices` / `currentVertex` parameters; only the branch order
+  changes. No new parameter.
+- Q3: `AutomatonTikz.nodeOptions` and `AutomatonDot.stateDeclarations` keep their existing fill
+  attributes (`green!30`, `red!30`, `lightblue!20`, `yellow!20`; `green`, `lightyellow`), only the
+  order changes.
 
-| Renderer | Edge kinds |
-| --- | --- |
-| `AutomatonTikz` | terminal (`transitionEdges`) + epsilon (`epsEdges`); covers NFA/DFA/LR/RNGLR via delegation |
-| `RsmTikz` | one line per symbol (unchanged); reciprocal pairs get the bend |
-| `InputGraphTikz` | labeled edges |
-| `GssTikz` | refactored to reuse the shared helper; keeps `bendReciprocalEdges` opt-out |
+## Subtasks
 
-Out of scope: `SppfTikz`, `BasicSppfTikz`, `DerivationTreeTikz` (acyclic — reciprocal edges cannot
-occur), DOT renderers (Graphviz separates pairs automatically).
+### S1: Graph current vertices from the selected `F^a` columns
 
----
-
-## S1: Shared reciprocal-bend helper + `AutomatonTikz` + `GssTikz` reuse
-
-**Status:** Resolved
-
-**Code:**
-
-- `src/FLPQ.Printers/AutomatonTikz.fs`:
-  - Add `reciprocalBendAttr (enabled: bool) (reverseDrawn: bool) (fromIdx: int) (toIdx: int) : string`
-    returning `", bend left=15"` when `enabled && fromIdx <> toIdx && reverseDrawn`, else `""`.
-    Place near `escapeLatex`.
-  - `transitionEdges`: compute
-    `let bendAttr = reciprocalBendAttr true (Option.isSome transitions.[j, i]) i j` inside the
-    `Some symbols` arm; emit options in the order `label, hlAttr, bendAttr, loopAttr`; update the
-    empty-label arm to use the trimmed bend when present.
-  - `epsEdges`: same `bendAttr`; emit `dotted, "$\varepsilon$", bendAttr, loopAttr`.
-- `src/FLPQ.Printers/GssTikz.fs`: replace the inline predicate/constant (lines 129-140) with
-  `reciprocalBendAttr bendReciprocalEdges (Set.contains (toIdx, fromIdx) activeEdges) fromIdx toIdx`;
-  the bare-edge branch trims the leading `", "` from the attribute.
-
-**Tests:**
-
-- `tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs`:
-  - `reciprocal transitions are bent to separate overlapping edges`: NFA `0-[a]->1, 0-[b]->1, 1-[a]->0`; assert `s0 ->["a, b", bend left=15] s1;` and `s1 ->["a", bend left=15] s0;` and that
-    the unbent straight forms are absent.
-  - `one-way edges are not bent`: NFA `0-[a]->1`; assert no `bend`.
-  - `self-loops are not bent`: NFA `0-[a]->0` (and a loop with a reverse-labelled sibling); assert
-    `loop above` present and no `bend` on the loop line.
-  - `reciprocal epsilon transitions are bent`: minimal NFA with epsilon both directions; assert
-    `dotted, "$\varepsilon$", bend left=15`.
-  - `dfaToTikzWithHighlights keeps the bend on a highlighted reciprocal edge`: assert
-    `s0 ->["a, b", red, thick, bend left=15] s1;`.
-  - `[<Trait("Category","TeX")>]` lualatex compile of the reciprocal NFA.
-  - Golden `GoldenData/nfa_reciprocal_edges.tikz` created with `CREATE_GOLDEN_FILES=1`.
-- Existing `tests/FLPQ.Printers.Tests/GssDotTests.fs` bend tests must pass unchanged (helper
-  adoption is behavior-preserving).
-
-**Docs:**
-
-- `docs/developer/automaton-viz.md`: add a Visual Style bullet for reciprocal edges and a Design
-  Decisions row; note self-loops are never bent.
-- `docs/developer/gss-tikz.md`: note the reciprocal rule is provided by
-  `AutomatonTikz.reciprocalBendAttr`.
+**Code:** `src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (`renderLabel`),
+`src/FLPQ.Printers/BelyaninReachabilityStepVisualizer.fs` (`renderLabel`).
+**Tests:** `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (the `fromEndpoints`
+computation in `per-label graph DOT highlights followed edges red bold and tiers the endpoint vertices` and the corresponding TikZ fact),
+`tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs` (same). Regenerate the
+affected `belyanin_step_*_label_*_graph.tikz` and `belyanin_reach_step_*_label_*_graph.tikz`
+goldens.
+**Docs:** `docs/developer/belyanin-step-viz.md`, `docs/developer/belyanin-reachability-step-viz.md`.
 
 **Spec:**
 
-- `fromIdx <> toIdx` guard means self-loops never bend.
-- Bend applies to highlighted and path tiers alike; attribute order keeps the label first.
-- No public signature changes.
+- In `BelyaninSimplePathStepVisualizer.renderLabel`, replace
+  `let fromEndpoints = followed |> Set.fold ...` with
+  `let currentVertices = RpqGraphViz.frontierVertices ls.Select`.
+  Pass `currentVertices` in the `frontierVertices` slot of `RpqGraphViz.renderGraph`.
+- In `BelyaninReachabilityStepVisualizer.renderLabel`, replace `fromEndpoints` with
+  `let currentVertices = frontierVertices ls.Select` (the existing private boolean helper).
+  Keep `targets = frontierVertices ls.Extend`.
+- Rename the local to `currentVertices` in both (clearer; the followed edges stay `followed`).
+- Rationale: `followedEdges` already requires `colNonEmpty select u`, so followed sources are a
+  subset of the selected vertices; using the selected vertices never removes a highlight and adds
+  the missing current vertex when no edge is followed.
 
----
+### S2: Top-align the start frontier F tile
 
-## S2: `RsmTikz` reciprocal bending
-
-**Status:** Resolved
-
-**Code:**
-
-- `src/FLPQ.Printers/RsmTikz.fs`: inside the per-symbol loop compute
-  `let bendAttr = AutomatonTikz.reciprocalBendAttr true (Option.isSome rsm.Transitions.[j, i]) i j`;
-  emit options in the order `label, style, bendAttr, loopAttr`. Same-direction edges stay one line
-  per symbol (no label merging).
-
-**Tests:**
-
-- `tests/FLPQ.Printers.Tests/RsmTikzTests.fs`: add `RSM tikz bends reciprocal transitions` building a
-  minimal 2-state RSM with `0-[a]->1` and `1-[a]->0` (pattern from the epsilon test at
-  `RsmTikzTests.fs:138-156`); assert both `s0 ->["a", bend left=15] s1;` and
-  `s1 ->["a", bend left=15] s0;`; also assert a one-way RSM transition is not bent and a self-loop
-  is not bent. Add a `[<Trait("Category","TeX")>]` lualatex compile of the reciprocal RSM.
-
-**Docs:**
-
-- `docs/developer/rsm-viz.md`: Edge-labels bullet noting reciprocal transitions are bent
-  (`bend left=15`) while same-direction edges remain one line per symbol.
+**Code:** `src/FLPQ.Printers/BelyaninStepCommon.fs` (`matrixTileWithBody`),
+`src/FLPQ.Printers/BelyaninSimplePathStepVisualizer.fs` (`renderFrontierStart` and the three other
+tiles), `src/FLPQ.Printers/BelyaninReachabilityStepVisualizer.fs` (same).
+**Tests:** `tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (`frontier start has exactly the F block and no valign`), `tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs`
+(`visited start block is P minus M and frontier start has no valign`). Regenerate all
+`belyanin_step_*_frontier_start.tex` and `belyanin_reach_step_*_frontier_start.tex` goldens.
+**Docs:** `docs/developer/belyanin-step-viz.md` (Step Artifacts table and the `valign=T` design
+decision), `docs/developer/belyanin-reachability-step-viz.md` (Step Artifacts table).
 
 **Spec:**
 
-- Same-direction per-symbol emission unchanged (`RSM tikz emits one edge line per transition symbol`
-  must still pass).
+- Change both `renderFrontierStart` calls to `matrixTileWithBody true ...` and simplify
+  `matrixTileWithBody` to a two-argument function that always emits
+  `max width=\textwidth, valign=T`; update the four call sites per visualizer and the doc comment.
+- Update the two tests to assert `Assert.Contains("valign=T", frontier)` instead of
+  `DoesNotContain`, and rename the facts (`... and frontier start is top-aligned`).
+- Update the docs: the start frontier F tile is now top-aligned like every other step box.
 
----
+### S3: Unified target > current > start color priority
 
-## S3: `InputGraphTikz` reciprocal bending
-
-**Status:** Resolved
-
-**Code:**
-
-- `src/FLPQ.Printers/InputGraphTikz.fs`: emit
-  `v%d ->["%s"%s] v%d;` with
-  `AutomatonTikz.reciprocalBendAttr true (Option.isSome inputGraph.Edges.[j, i]) i j`.
-
-**Tests:**
-
-- New `tests/FLPQ.Printers.Tests/InputGraphTikzTests.fs` (add to
-  `tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj`): build a reciprocal graph with
-  `Graph.fromEdges [0;1] (Matrix.init 2 2 None)` setting `[0,1]`/`[1,0]` to `Some "a"`; assert both
-  edges carry `, bend left=15`; assert the linear-path graph from `GLL.stringToGraph` has no `bend`
-  and `[<Trait("Category","TeX")>]` compiles.
-
-**Docs:**
-
-- New `docs/developer/input-graph-tikz.md` (InputGraphTikz currently has no doc) describing the
-  renderer and the reciprocal-bend rule; add it to the module table in
-  `docs/developer/FLPQ.Printers.md`.
+**Code:** `src/FLPQ.Printers/GssDot.fs` (`renderVertex`), `src/FLPQ.Printers/GssTikz.fs` (vertex
+fill block), `src/FLPQ.Printers/AutomatonDot.fs` (`stateDeclarations`),
+`src/FLPQ.Printers/AutomatonTikz.fs` (`nodeOptions`).
+**Tests:** `tests/FLPQ.Printers.Tests/GssDotTests.fs` (the DOT and TikZ precedence facts),
+`tests/FLPQ.Printers.Tests/AutomatonVisualizationTests.fs`
+(`dfaToDotWithHighlights precedence: ...`, `dfaToTikzWithHighlights precedence: ...`),
+`tests/FLPQ.Printers.Tests/BelyaninStepVisualizationTests.fs` (the `lightblue`/`lightyellow` tier
+computations), `tests/FLPQ.Printers.Tests/BelyaninReachabilityStepVisualizationTests.fs` (same).
+Regenerate the affected `*_graph_*` and `*_automaton*.tikz` goldens. Verify GLL/RNGLR/Arroyuelo
+tests and goldens are unchanged.
+**Docs:** `docs/developer/gss-dot.md`, `docs/developer/gss-tikz.md`,
+`docs/developer/automaton-viz.md`, `docs/developer/belyanin-step-viz.md` (Colors + design
+decision), `docs/developer/belyanin-reachability-step-viz.md` (Colors),
+`docs/developer/rpq-graph-viz.md`.
 
 **Spec:**
 
-- Input graphs are normally linear paths (no reciprocal edges), so the rule is defensive for the
-  generic `Graph<int, Option<'t>>` input; it is exercised by the synthetic reciprocal fixture.
+- `GssDot` / `GssTikz` vertex fill precedence (highest first):
+  `currentVertex (lightblue) > storedPop (orange) > highlighted (yellow/lightyellow) > frontierVertices (lightblue) > startVertices (green)`.
+  RPQ (no currentVertex/storedPop) therefore renders `target > current > start`; GLL/RNGLR
+  (`start = ∅`, `frontier = ∅`) keep their effective `current > storedPop > highlighted`.
+- `AutomatonDot.stateDeclarations` first-match order:
+  `if target then lightyellow elif highlighted then lightblue elif start then green` with
+  `peripheries=2` appended whenever the state is final.
+- `AutomatonTikz.nodeOptions` last-wins fill order: `start` fill, `final` fill, `highlighted`
+  (current) fill, `target` fill — i.e. `target > current > final > start`. Keep the
+  `label=above:Start`, `double`, and `double distance=1.5pt` attributes unchanged.
 
----
+### S4: Regenerate Belyanin goldens and run the Printers test project
 
-## Testing strategy summary
+**Code:** none (golden data only).
+**Tests:** `tests/FLPQ.Printers.Tests/GoldenData/` (`belyanin_*` simple-path and reachability
+Belyanin goldens).
+**Docs:** none.
 
-| Level | Coverage |
-| --- | --- |
-| Unit | Exact edge-string assertions for reciprocal/one-way/self-loop/epsilon/highlighted cases in Automaton, RSM, InputGraph |
-| Golden | `nfa_reciprocal_edges.tikz` |
-| TeX | lualatex compile of reciprocal automaton, RSM, input graph |
-| Regression | Existing GssTikz bend tests and all renderer goldens unchanged |
+**Spec:**
 
-## Execution Log
+- Delete the affected committed goldens and their copies under
+  `tests/FLPQ.Printers.Tests/bin/Debug/net10.0/GoldenData/`, run the test project to regenerate the
+  output goldens, copy the regenerated files back into `tests/FLPQ.Printers.Tests/GoldenData/`, then
+  re-run the test project and confirm zero failures.
+- Confirm `GssDotTests`, `GssDotVisualizationTests`, `AutomatonVisualizationTests`, the Belyanin
+  visualization tests, `RpqGraphVizTests`, and `SummaryTexSectionTests` all pass, and that no
+  GLL/RNGLR/Arroyuelo golden changed.
 
-| Subtask | Commit | Status |
-| --- | --- | --- |
-| S1 | `8604ea2` | Resolved |
-| S2 | `a3293e5` | Resolved |
-| S3 | `4867257` | Resolved |
+### S5: Documentation pass and full-repo code review
+
+**Code:** none expected; fix any finding from the `code-review` skill.
+**Tests:** re-run the affected test projects after any fix.
+**Docs:** finish the documentation updates listed in S1–S3 and keep `docs/developer/FLPQ.Printers.md`
+and related hubs consistent if they enumerate the changed behavior.
+
+**Spec:**
+
+- Load the `code-review` skill and iterate the full-repo review (architecture, duplication,
+  signature consistency, naming, test gaps) to zero findings.
+- Ensure every `.md` touched is `mdformat`-clean.
+
+## Verification
+
+- Per subtask: `dotnet fantomas .`, `python3 tools/quality_check.py`, affected `dotnet test`, and
+  `mdformat` on every touched `.md`.
+- Final: `python3 tools/hard_gate.py` (async) until `STATUS: PASS`, then merge to `dev` and mark
+  task 290 `[done]`.
+
+## Status
+
+- S1 — done (49c782a): current graph vertices = selected `F^a` columns in both visualizers.
+- S2 — done (e152bc9): start frontier F tile top-aligned; `matrixTileWithBody` param dropped.
+- S3 — done (d8cfd71): unified fill priority target > current > start (graph and automaton),
+  automaton target > current > final > start.
+- S4 — done: full `FLPQ.Printers.Tests` project green (433 passed, 0 skipped).
+- S5 — done (961b2ef): code review fix — final-target precedence coverage and Belyanin color
+  doc blockquote; report recorded in `tasks/code_review.md`.
+- Hard gate and merge pending.

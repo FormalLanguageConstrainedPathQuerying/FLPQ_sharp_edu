@@ -173,8 +173,8 @@ let ``toDotFromSets frontier vertex gets lightblue fill`` () =
     Assert.DoesNotContain("fillcolor=green", dot)
 
 [<Fact>]
-let ``toDotFromSets start vertex takes priority over frontier and highlighted`` () =
-    // Vertex 0 is in all three tiers; it must render green only.
+let ``toDotFromSets highlighted vertex takes priority over frontier and start`` () =
+    // Vertex 0 is highlighted, frontier, and start; the target fill wins.
     let dot =
         GssDot.toDotFromSets
             (fun idx -> sprintf "%d" idx)
@@ -190,13 +190,13 @@ let ``toDotFromSets start vertex takes priority over frontier and highlighted`` 
             None
             None
 
-    Assert.Contains("fillcolor=green", dot)
+    Assert.Contains("fillcolor=lightyellow", dot)
     Assert.DoesNotContain("fillcolor=lightblue", dot)
-    Assert.DoesNotContain("fillcolor=lightyellow", dot)
+    Assert.DoesNotContain("fillcolor=green", dot)
 
 [<Fact>]
-let ``toDotFromSets start vertex takes priority over current`` () =
-    // Vertex 0 is both a source and the current vertex; it must render green, not lightblue.
+let ``toDotFromSets current vertex takes priority over start`` () =
+    // Vertex 0 is both a source and the current vertex; it must render lightblue, not green.
     let dot =
         GssDot.toDotFromSets
             (fun idx -> sprintf "%d" idx)
@@ -212,12 +212,12 @@ let ``toDotFromSets start vertex takes priority over current`` () =
             (Some 0)
             None
 
-    Assert.Contains("fillcolor=green", dot)
-    Assert.DoesNotContain("fillcolor=lightblue", dot)
+    Assert.Contains("fillcolor=lightblue", dot)
+    Assert.DoesNotContain("fillcolor=green", dot)
 
 [<Fact>]
-let ``toDotFromSets frontier vertex takes priority over highlighted`` () =
-    // Vertex 0 is both frontier and highlighted; it must render lightblue, not lightyellow.
+let ``toDotFromSets highlighted vertex takes priority over frontier`` () =
+    // Vertex 0 is both frontier and highlighted; it must render lightyellow, not lightblue.
     let dot =
         GssDot.toDotFromSets
             (fun idx -> sprintf "%d" idx)
@@ -233,8 +233,8 @@ let ``toDotFromSets frontier vertex takes priority over highlighted`` () =
             None
             None
 
-    Assert.Contains("fillcolor=lightblue", dot)
-    Assert.DoesNotContain("fillcolor=lightyellow", dot)
+    Assert.Contains("fillcolor=lightyellow", dot)
+    Assert.DoesNotContain("fillcolor=lightblue", dot)
 
 [<Fact>]
 let ``toDotFromSets current vertex takes priority over stored-pop`` () =
@@ -412,8 +412,8 @@ module GssTikzTests =
         Assert.DoesNotContain("fill=green", tikz)
 
     [<Fact>]
-    let ``toTikzFromSets start vertex takes priority over frontier and highlighted`` () =
-        // Vertex 0 is in all three tiers; it must render green only.
+    let ``toTikzFromSets highlighted vertex takes priority over frontier and start`` () =
+        // Vertex 0 is highlighted, frontier, and start; the target fill wins.
         let tikz =
             GssTikz.toTikzFromSets
                 (fun idx -> sprintf "%d" idx)
@@ -432,13 +432,13 @@ module GssTikzTests =
                 None
                 false
 
-        Assert.Contains("fill=green!30", tikz)
+        Assert.Contains("fill=yellow!20", tikz)
         Assert.DoesNotContain("fill=lightblue", tikz)
-        Assert.DoesNotContain("fill=yellow", tikz)
+        Assert.DoesNotContain("fill=green", tikz)
 
     [<Fact>]
-    let ``toTikzFromSets start vertex takes priority over current`` () =
-        // Vertex 0 is both a source and the current vertex; it must render green, not lightblue.
+    let ``toTikzFromSets current vertex takes priority over start`` () =
+        // Vertex 0 is both a source and the current vertex; it must render lightblue, not green.
         let tikz =
             GssTikz.toTikzFromSets
                 (fun idx -> sprintf "%d" idx)
@@ -457,12 +457,12 @@ module GssTikzTests =
                 None
                 false
 
-        Assert.Contains("fill=green!30", tikz)
-        Assert.DoesNotContain("fill=lightblue", tikz)
+        Assert.Contains("fill=lightblue!20", tikz)
+        Assert.DoesNotContain("fill=green", tikz)
 
     [<Fact>]
-    let ``toTikzFromSets frontier vertex takes priority over highlighted`` () =
-        // Vertex 0 is both frontier and highlighted; it must render lightblue, not yellow.
+    let ``toTikzFromSets highlighted vertex takes priority over frontier`` () =
+        // Vertex 0 is both frontier and highlighted; it must render yellow, not lightblue.
         let tikz =
             GssTikz.toTikzFromSets
                 (fun idx -> sprintf "%d" idx)
@@ -481,8 +481,8 @@ module GssTikzTests =
                 None
                 false
 
-        Assert.Contains("fill=lightblue!20", tikz)
-        Assert.DoesNotContain("fill=yellow", tikz)
+        Assert.Contains("fill=yellow!20", tikz)
+        Assert.DoesNotContain("fill=lightblue", tikz)
 
     [<Fact>]
     let ``toTikzFromSets edge with empty label renders a bare edge and a bare loop`` () =

@@ -7,7 +7,7 @@
 **Depends on:** GssDot, GssTikz, AutomatonTikz, PathSemiring
 **Used by:** ArroyueloStepVisualizer, BelyaninSimplePathStepVisualizer, BelyaninReachabilityStepVisualizer, ArroyueloRunner, BelyaninSimplePathRunner, BelyaninReachabilityRunner
 
-> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier (light blue), and highlighted (yellow) vertices. Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
+> **Abstract:** Shared rendering of the RPQ input graph (a labeled NFA) with path highlights. Given a path semiring matrix, extracts the vertices and edges used by its stored paths and renders the graph in DOT and TikZ with two edge highlight tiers: path edges (light red) and current-step edges (red, bold), plus vertex fills for start (green), frontier/current (light blue), and highlighted/target (yellow) vertices with target > current > start precedence. Used by both RPQ step visualizers and runners so the graph figure has one source of truth.
 
 ## Contents
 
@@ -50,10 +50,12 @@ last vertex; trivial single-vertex paths mark their vertex as a frontier positio
 ### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> string * string`
 
 Render the graph with the given highlights (pass empty sets for the plain input
-graph): highlightedVertices get the yellow vertex fill, startVertices the green source
-fill, frontierVertices the light blue frontier fill, currentEdges render red and bold,
-pathEdges light red (an edge in both sets renders as current). The vertex/edge tier
-order mirrors `GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`. Returns `(dot, tikz)`.
+graph): highlightedVertices get the yellow target fill, startVertices the green source
+fill, frontierVertices the light blue current fill, currentEdges render red and bold,
+pathEdges light red (an edge in both sets renders as current). Vertex fill precedence is
+target > current > start, so a target that is also current or start renders yellow and a
+source that is also current renders lightblue (the tier order mirrors
+`GssDot.toDotFromSets` / `GssTikz.toTikzFromSets`). Returns `(dot, tikz)`.
 Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels are the comma-joined terminal
 labels of the pair (epsilon-only edges label as "ε").
 

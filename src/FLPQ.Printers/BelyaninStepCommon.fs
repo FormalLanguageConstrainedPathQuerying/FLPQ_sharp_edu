@@ -107,16 +107,9 @@ module BelyaninStepCommon =
         wrapAdjustbox @"max width=\textwidth, valign=T" expression
 
     /// A boundary tile from an already-rendered matrix body: `$<title> = <body>$` in one
-    /// adjustbox. `valignTop` adds `valign=T`; every step tile uses it except the start
-    /// frontier F (the first box of the step), which anchors the line.
-    let matrixTileWithBody (valignTop: bool) (title: string) (body: string) : string =
-        let options =
-            if valignTop then
-                @"max width=\textwidth, valign=T"
-            else
-                @"max width=\textwidth"
-
-        wrapAdjustbox options ("$\n" + title + " =\n" + body + "\n$")
+    /// top-aligned adjustbox, so every step tile lines up with its neighbours.
+    let matrixTileWithBody (title: string) (body: string) : string =
+        wrapAdjustbox @"max width=\textwidth, valign=T" ("$\n" + title + " =\n" + body + "\n$")
 
     /// The first per-label product line from already-rendered matrix bodies:
     /// `(N^a)^T ⊗ F = <N^a^T> ⊗ <F> = <F^a>`.

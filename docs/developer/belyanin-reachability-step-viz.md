@@ -66,6 +66,8 @@ step. Highlights (all via the cell-generic helpers in `BelyaninStepCommon`, with
 - current graph vertices = `frontierVertices step.M` (columns of `M` with a true cell);
 - per-label used transitions = `usedAutoEdges step.M ls.N` (red bold);
 - per-label target automaton states = `frontierStates ls.Select` (lightyellow);
+- per-label current graph vertices = `frontierVertices ls.Select` (lightblue; the selected
+  `F^a` columns, a superset of the followed-edge sources);
 - per-label followed edges = `followedEdges ls.G ls.Select` (red bold);
 - per-label target graph vertices = `frontierVertices ls.Extend` (lightyellow).
 
@@ -76,14 +78,14 @@ and `SummaryTeX.belyaninStepSection` are reused. The init step has only the star
 
 | File | Content |
 | --- | --- |
-| `frontier_start.tex` | `$F = $` Boolean matrix(M) — no `valign=T` (first box) |
+| `frontier_start.tex` | `$F = $` Boolean matrix(M), `valign=T` |
 | `visited_start.tex` | `$V = $` Boolean matrix(P ∧ ¬M), `valign=T` |
 | `automaton_start.{tikz.tex\|dot}` | DFA, frontier states of M highlighted (no edge highlights) |
 | `graph_start.{tikz.tex\|dot}` | green sources, lightblue current vertices of M (no edges) |
 | `label_i_select.tex` | `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]`, Boolean, one line |
 | `label_i_extend.tex` | `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]`, Boolean, one line |
 | `label_i_automaton.{tikz.tex\|dot}` | DFA, current frontier states lightblue, target states lightyellow, used a-transitions red bold |
-| `label_i_graph.{tikz.tex\|dot}` | green sources, lightblue from-endpoints, lightyellow targets, followed a-edges red bold — no path edges |
+| `label_i_graph.{tikz.tex\|dot}` | green sources, lightblue current vertices (non-empty `Select` columns), lightyellow targets, followed a-edges red bold — no path edges |
 | `frontier_end.tex` | `$F = $` Boolean matrix(NewM) — non-init only |
 | `visited_end.tex` | `$V = $` Boolean matrix(P) — non-init only |
 | `automaton_end.{tikz.tex\|dot}` | DFA, frontier states of NewM — non-init only |

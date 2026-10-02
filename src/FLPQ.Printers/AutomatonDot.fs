@@ -29,14 +29,14 @@ module AutomatonDot =
 
                 let mutable parts = [ sprintf "label=\"%s\"" label ]
 
-                // Precedence: highlighted/frontier (lightblue) > start (green) > target
-                // (lightyellow); a final state's double border is always kept.
-                if highlighted then
+                // Precedence (highest first): target (lightyellow) > current/frontier
+                // (lightblue) > start (green); a final state's double border is always kept.
+                if target then
+                    parts <- "style=filled" :: "fillcolor=lightyellow" :: parts
+                elif highlighted then
                     parts <- "style=filled" :: "fillcolor=lightblue" :: parts
                 elif start then
                     parts <- "style=filled" :: "fillcolor=green" :: parts
-                elif target then
-                    parts <- "style=filled" :: "fillcolor=lightyellow" :: parts
 
                 if final then
                     parts <- "peripheries=2" :: parts
@@ -117,9 +117,9 @@ module AutomatonDot =
         sb.ToString()
 
     /// Render a DFA as a Graphviz dot graph with the given states highlighted (fillcolor=lightblue,
-    /// overriding the start state's green fill), the given target states filled lightyellow
-    /// (lowest precedence), and the given transitions rendered red and bold
-    /// (`color=red, penwidth=2.0`, label preserved).
+    /// the current/frontier tier), the given target states filled lightyellow (highest precedence,
+    /// over current and start), and the given transitions rendered red and bold
+    /// (`color=red, penwidth=2.0`, label preserved). A final state's double border is always kept.
     let dfaToDotWithHighlights
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)
