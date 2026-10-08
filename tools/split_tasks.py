@@ -156,12 +156,13 @@ def repair(lines: list[str]) -> tuple[list[str], dict[int, bool], list[tuple[int
     for k, (hidx, hnum) in enumerate(heads):
         content_col = len(str(hnum)) + 2
         end = heads[k + 1][0] if k + 1 < len(heads) else len(lines)
-        # A top-level thematic break is a list separator: it ends the region
-        # and is never shifted (shifting it would nest it inside the item).
-        for hr in hrs:
-            if hidx < hr < end:
-                end = hr
-                break
+        # A top-level thematic break is a list separator: the earliest one
+        # after the head ends the region and is never shifted (shifting it
+        # would nest it inside the item). `hrs` is a set — iterate its minimum,
+        # not its first element in hash order.
+        region_hrs = [hr for hr in hrs if hidx < hr < end]
+        if region_hrs:
+            end = min(region_hrs)
         i = hidx + 1
         while i < end:
             line = lines[i]
