@@ -29,6 +29,12 @@ pip install -e tools/mdformat_tasklog
 - `mdformat-frontmatter` — keeps YAML frontmatter intact (SKILL.md files).
 - `tools/mdformat_tasklog` — local plugin: ordered lists keep consecutive numbering without zero-padding (explicit list numbers such as task entries survive formatting), and GFM tables are parsed and rendered correctly (mdformat's default preset has no table support and would destroy them).
 
+`flpq_data/export.py` additionally requires Python ≥ 3.11 and the pinned data package (use a venv when the system Python is older):
+
+```bash
+pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.dev15"
+```
+
 ## Tools
 
 | Script | Purpose |
@@ -37,6 +43,7 @@ pip install -e tools/mdformat_tasklog
 | `quality_check.py` | Inter-subtask check: markdown format + format + build |
 | `hard_gate.py` | Full gate: markdown format + format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
 | `split_tasks.py` | Task log formatter/splitter: repairs and mdformat-normalizes `tasks/tasks.md` and `tasks/tasks<N>.md`, verifies structure preservation, and archives the oldest 100 entries to the next `tasks/tasks<N>.md` when the active log exceeds 100 entries. Run after every task-log change. |
+| `flpq_data/export.py` | Materializes CFPQ reference data (graphs with `_r` reverse edges, materialized grammars, reference results, pair counts) from the pinned `flpq-data==6.0.0.dev15` package into the gitignored `data/cfpq/`. One-shot data materializer: prints a summary to stdout instead of writing `tmp/<tool>.txt`. |
 
 ## Usage
 
@@ -45,6 +52,7 @@ python3 tools/detect_changes.py
 python3 tools/quality_check.py
 python3 tools/hard_gate.py
 python3 tools/split_tasks.py
+python3 tools/flpq_data/export.py
 ```
 
 After each run, read and analyze the corresponding `tmp/<script>.txt` file:

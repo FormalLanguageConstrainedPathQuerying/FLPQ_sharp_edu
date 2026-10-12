@@ -61,6 +61,9 @@ nunit-*.xml
 #Examples
 viz_output/*
 
+# Materialized flpq-data reference data (regenerate with tools/flpq_data/export.py)
+data/cfpq/
+
 #tmp for agent
 tmp/*
 

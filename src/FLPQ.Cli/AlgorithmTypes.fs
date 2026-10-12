@@ -16,13 +16,16 @@ module AlgorithmTypes =
         | RNGLR
         | ArroyueloRPQ
         | BelyaninRPQ
+        | AzimovCFPQ
 
-    /// RPQ semantics for Belyanin RPQ: reachability (Boolean BFS — the classical RPQ
-    /// answer, complete on cyclic graphs) or simplePath (path-semiring trace, reachable only
-    /// via an accepting simple path).
-    type RpqSemantics =
+    /// Path-query semantics: reachability (Boolean — the classical answer, complete on cyclic
+    /// graphs), simplePath (path-semiring trace; RPQ: reachable only via an accepting simple
+    /// path; CFPQ: one extracted derivation per reachable pair), or allPaths (AzimovCFPQ only:
+    /// the matrix records every split vertex, and enumeration yields exactly all simple paths).
+    type PathQuerySemantics =
         | Reachability
         | SimplePath
+        | AllPaths
 
     let displayName (algo: Algorithm) : string =
         match algo with
@@ -37,6 +40,7 @@ module AlgorithmTypes =
         | RNGLR -> "RNGLR"
         | ArroyueloRPQ -> "Arroyuelo RPQ"
         | BelyaninRPQ -> "Belyanin RPQ"
+        | AzimovCFPQ -> "Azimov CFPQ"
 
     type Arguments =
         | [<AltCommandLine("-a")>] Algorithm of Algorithm
@@ -45,7 +49,7 @@ module AlgorithmTypes =
         | [<AltCommandLine("-o")>] Output of string
         | [<AltCommandLine("-k")>] Lookahead of int
         | [<AltCommandLine("-s")>] Summary
-        | [<AltCommandLine("-semantics")>] Semantics of RpqSemantics
+        | [<AltCommandLine("-semantics")>] Semantics of PathQuerySemantics
         | [<AltCommandLine("--use-dot")>] UseDot
         | [<AltCommandLine("--no-sppf-table")>] NoSppfTable
 
@@ -53,13 +57,13 @@ module AlgorithmTypes =
             member this.Usage =
                 match this with
                 | Algorithm _ ->
-                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, or BelyaninRPQ"
+                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, BelyaninRPQ, or AzimovCFPQ"
                 | Semantics _ ->
-                    "RPQ semantics for ArroyueloRPQ/BelyaninRPQ: reachability (Boolean, classical, default) or simplePath (path-semiring trace)"
+                    "Path-query semantics: reachability (Boolean, classical, default), simplePath (path-semiring trace; ArroyueloRPQ/BelyaninRPQ/AzimovCFPQ), or allPaths (AzimovCFPQ only)"
                 | Query _ ->
-                    "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms"
+                    "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms, or grammar (.cnf) for AzimovCFPQ"
                 | Input _ ->
-                    "Path to the input file: input string for parsing algorithms, graph (start vertices line + 'from label to' edges) for RPQ algorithms"
+                    "Path to the input: input string for parsing algorithms, graph file (start vertices line + 'from label to' edges) for RPQ algorithms, or graph directory (one MatrixMarket file per edge label) for AzimovCFPQ"
                 | Output _ -> "Output directory for step-by-step visualization"
                 | Lookahead _ -> "Lookahead k for LL parser (default: 1)"
                 | Summary -> "Generate merged TeX summary file"

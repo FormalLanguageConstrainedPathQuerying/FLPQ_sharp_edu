@@ -5,6 +5,7 @@
     <Project Path="src/FLPQ.GraphAnalysis/FLPQ.GraphAnalysis.fsproj" />
     <Project Path="src/FLPQ.Printers/FLPQ.Printers.fsproj" />
     <Project Path="src/FLPQ.RPQ/FLPQ.RPQ.fsproj" />
+    <Project Path="src/FLPQ.CFPQ/FLPQ.CFPQ.fsproj" />
     <Project Path="src/FLPQ.Cli/FLPQ.Cli.fsproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -14,6 +15,7 @@
     <Project Path="tests/FLPQ.GraphAnalysis.Tests/FLPQ.GraphAnalysis.Tests.fsproj" />
     <Project Path="tests/FLPQ.Printers.Tests/FLPQ.Printers.Tests.fsproj" />
     <Project Path="tests/FLPQ.RPQ.Tests/FLPQ.RPQ.Tests.fsproj" />
+    <Project Path="tests/FLPQ.CFPQ.Tests/FLPQ.CFPQ.Tests.fsproj" />
     <Project Path="tests/FLPQ.TestUtilities/FLPQ.TestUtilities.fsproj" />
   </Folder>
 </Solution>

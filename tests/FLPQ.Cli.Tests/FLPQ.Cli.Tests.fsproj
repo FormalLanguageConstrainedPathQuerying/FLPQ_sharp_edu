@@ -23,6 +23,7 @@
     <Compile Include="ArroyueloReachabilityRunnerTests.fs" />
     <Compile Include="BelyaninSimplePathRunnerTests.fs" />
     <Compile Include="BelyaninReachabilityRunnerTests.fs" />
+    <Compile Include="AzimovCfpqCliTests.fs" />
     <Compile Include="ProgramDispatchTests.fs" />
   </ItemGroup>
 
@@ -35,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FLPQ.CFPQ\FLPQ.CFPQ.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Cli\FLPQ.Cli.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
@@ -69,6 +71,10 @@
     </Content>
     <Content Include="..\..\data\example_regexp_demo.txt">
       <Link>example_regexp_demo.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\cfpq_example\**\*">
+      <Link>cfpq_example\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="xunit.runner.json">

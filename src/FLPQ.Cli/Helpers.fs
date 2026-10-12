@@ -3,6 +3,7 @@ namespace FLPQ.Cli
 open System
 open System.IO
 open System.Text.RegularExpressions
+open FLPQ.CFPQ
 open FLPQ.Languages
 open FLPQ.Printers
 
@@ -176,6 +177,52 @@ module Helpers =
                 (AutomatonTikz.dfaToTikz string (fun idx _ -> sprintf "$q_%d$" idx) "circle" dfa)
 
             writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+
+    /// Shared Azimov CFPQ root artifacts: the original grammar, the CNF passed to the
+    /// algorithm, and the input graph — DOT source or inline TikZ depending on useDot.
+    let writeCfpqRootArtifacts
+        (outputDir: string)
+        (useDot: bool)
+        (grammar: Grammar<string, string>)
+        (cnf: Grammar<string, string>)
+        (graph: CfpqInput.CfpqGraph<string>)
+        : unit =
+        writeOutputFile
+            (Path.Combine(outputDir, "grammar_original.tex"))
+            (GrammarTeX.grammarToTeXWithNumbers string string grammar)
+
+        writeOutputFile
+            (Path.Combine(outputDir, "grammar_cnf.tex"))
+            (GrammarTeX.grammarToTeXWithNumbers string string cnf)
+
+        // The graph has no sources: all vertex pairs are queried.
+        let graphDot, graphTikz =
+            RpqGraphViz.renderGraph id (CfpqInput.toNfa graph) Set.empty Set.empty Set.empty Set.empty Set.empty
+
+        if useDot then
+            writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
+        else
+            writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+
+    /// The name of a string nonterminal (its bare symbol).
+    let ntName (nt: Nonterminal<string>) : string =
+        match nt with
+        | Nonterminal s -> s
+
+    /// One directory per productive fixed-point iteration (step_<iteration>): the
+    /// per-nonterminal matrices of that iteration with the newly changed cells highlighted.
+    let writeCfpqSteps
+        (outputDir: string)
+        (result: AzimovCfpq.CfpqResult<'nt, 'elem>)
+        (ntName: Nonterminal<'nt> -> string)
+        (elementPrinter: 'elem -> string)
+        : unit =
+        for step in result.Steps do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
+
+            writeOutputFile
+                (Path.Combine(stepDir, "table.tex"))
+                (CfpqMatrixTeX.stepToTeX ntName elementPrinter step.Matrices step.ChangedCells)
 
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")

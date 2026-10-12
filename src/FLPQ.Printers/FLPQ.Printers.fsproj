@@ -45,6 +45,7 @@
     <Compile Include="ArroyueloReachabilityStepVisualizer.fs" />
     <Compile Include="BelyaninSimplePathStepVisualizer.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizer.fs" />
+    <Compile Include="CfpqMatrixTeX.fs" />
     <Compile Include="CykTeX.fs" />
     <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />
@@ -58,6 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FLPQ.CFPQ\FLPQ.CFPQ.fsproj" />
     <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\FLPQ.RPQ\FLPQ.RPQ.fsproj" />

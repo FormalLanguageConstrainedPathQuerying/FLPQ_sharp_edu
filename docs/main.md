@@ -3,7 +3,7 @@
 **Tags:** hub, entry-point, navigation
 **Kind:** hub
 
-> **Abstract:** Root entry point for all project documentation. Links to project architecture, developer guides (coding conventions, design guides, quality standards, documentation conventions, reusing principles, tools), project hubs (FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages, FLPQ.RPQ, FLPQ.Printers, FLPQ.Cli), module index (all algorithm, data structure, utility, and visualization docs), and user documentation (CLI usage). Every documentation page in the project is reachable from here.
+> **Abstract:** Root entry point for all project documentation. Links to project architecture, developer guides (coding conventions, design guides, quality standards, documentation conventions, reusing principles, tools), project hubs (FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages, FLPQ.RPQ, FLPQ.CFPQ, FLPQ.Printers, FLPQ.Cli), module index (all algorithm, data structure, utility, and visualization docs), and user documentation (CLI usage). Every documentation page in the project is reachable from here.
 
 ## Contents
 
@@ -17,6 +17,10 @@ How the project is organized, where each part is located, and why.
 
 - [Project architecture](project/architecture.md) — solution structure, project organization, dependency graph
 - [Third-party libraries](project/technologies.md) — external dependencies and their roles
+
+### Data Dependencies
+
+- `data/cfpq/` — CFPQ reference data (graphs with `_r` reverse edges, materialized grammars, reference results, reachable-pair counts). Gitignored; materialized from the pinned `flpq-data==6.0.0.dev15` package by [`tools/flpq_data/export.py`](../../tools/README.md) and regenerated on every CI run. Required by the FLPQ.CFPQ reference tests (`CfpqReferenceTests`).
 
 ## Developer Documentation
 
@@ -39,6 +43,7 @@ What our standards and principles are, and why we chose them.
 - [FLPQ.GraphAnalysis](developer/FLPQ.GraphAnalysis.md) — MS-BFS and semiring operations
 - [FLPQ.Languages](developer/FLPQ.Languages.md) — grammar, parsing, automata, visualization
 - [FLPQ.RPQ](developer/FLPQ.RPQ.md) — regular path querying algorithms
+- [FLPQ.CFPQ](developer/FLPQ.CFPQ.md) — context-free path querying (Azimov's matrix-based algorithm)
 - [FLPQ.Printers](developer/FLPQ.Printers.md) — TeX and Dot printers/visualizers
 - [FLPQ.Cli](developer/FLPQ.Cli.md) — CLI console application
 
@@ -69,6 +74,9 @@ What our standards and principles are, and why we chose them.
 - [Kronecker RPQ module](developer/kronecker-rpq.md)
 - [RpqInput module](developer/rpq-input.md)
 - [PathSemiring module](developer/path-semiring.md)
+- [CfpqInput module](developer/cfpq-input.md)
+- [CfpqSemiring module](developer/cfpq-semiring.md)
+- [AzimovCfpq module](developer/azimov-cfpq.md)
 - [DerivationTree module](developer/derivation-tree.md)
 - [LL parser module](developer/ll-parser.md)
 - [LR parser module](developer/lr-parser.md)
@@ -81,6 +89,7 @@ What our standards and principles are, and why we chose them.
 - [BasicSPPF visualization: Dot and Tikz](developer/basic-sppf-viz.md)
 - [SummaryTeX module](developer/summary-tex.md)
 - [PathSemiringTeX module](developer/path-semiring-tex.md)
+- [CfpqMatrixTeX module](developer/cfpq-matrix-tex.md)
 - [Step TeX helpers](developer/step-tex.md)
 - [RPQ regexp visualization](developer/rpq-regexp-viz.md)
 - [Regexp tree DOT](developer/regexp-tree-dot.md)
@@ -95,6 +104,7 @@ What our standards and principles are, and why we chose them.
 - [Belyanin simple-path step visualization](developer/belyanin-step-viz.md)
 - [Belyanin reachability step visualization](developer/belyanin-reachability-step-viz.md)
 - [GLL step visualization](developer/gll-step-visualizer.md)
+- [Azimov CFPQ runners](developer/azimov-cfpq-runners.md)
 - [ExternalTools module](developer/external-tools.md)
 
 ## User Documentation

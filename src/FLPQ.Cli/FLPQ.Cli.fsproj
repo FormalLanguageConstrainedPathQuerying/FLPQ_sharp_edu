@@ -18,11 +18,15 @@
     <Compile Include="ArroyueloReachabilityRunner.fs" />
     <Compile Include="BelyaninSimplePathRunner.fs" />
     <Compile Include="BelyaninReachabilityRunner.fs" />
+    <Compile Include="AzimovCfpqReachabilityRunner.fs" />
+    <Compile Include="AzimovCfpqSinglePathRunner.fs" />
+    <Compile Include="AzimovCfpqAllPathsRunner.fs" />
     <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FLPQ.CFPQ\FLPQ.CFPQ.fsproj" />
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\FLPQ.Printers\FLPQ.Printers.fsproj" />
     <ProjectReference Include="..\FLPQ.RPQ\FLPQ.RPQ.fsproj" />

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="CfpqTestHelpers.fs" />
+    <Compile Include="CfpqInputTests.fs" />
+    <Compile Include="CfpqSemiringTests.fs" />
+    <Compile Include="AzimovCfpqBookExampleTests.fs" />
+    <Compile Include="CfpqVsRpqPropertyTests.fs" />
+    <Compile Include="CfpqVsValiantPropertyTests.fs" />
+    <Compile Include="CfpqReferenceTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.3.3" />
+    <PackageReference Include="FSharpPlus" Version="1.9.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FLPQ.CFPQ\FLPQ.CFPQ.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.RPQ\FLPQ.RPQ.fsproj" />
+    <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\FLPQ.TestUtilities\FLPQ.TestUtilities.fsproj" />
+  </ItemGroup>
+
+</Project>

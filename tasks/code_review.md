@@ -1,5 +1,40 @@
 # Code Review Report
 
+## Task 293 Review (2026-10-12)
+
+Scope: full branch diff vs dev — new `FLPQ.CFPQ` project (`CfpqInput.fs`, `CfpqSemiring.fs`, `AzimovCfpq.fs`), three CLI runners + dispatch + summary support in `FLPQ.Cli`, `CfpqMatrixTeX.fs` in `FLPQ.Printers`, new test projects' additions (`FLPQ.CFPQ.Tests` with 7 files, `CfpqMatrixTexTests.fs` in `FLPQ.Printers.Tests`, `AzimovCfpqCliTests.fs` in `FLPQ.Cli.Tests`), the flpq-data export tool + CI integration, book-example data, and docs.
+
+**Findings resolved this review:**
+
+- Round 1 (commit 9b40fce): §4/§1 — FL0051 violations: edge tuples `(int * int * string)` replaced with the existing `Trans<string>` record; cell triples replaced with a named `CfpqCell` record (+ private `compareCells`); `parseMatrixMarketText/File` now return `Matrix<bool>` directly instead of a 3-tuple. FL0055: `let _ =` replaced with `|> ignore` (incl. mid-function `Assert.Throws` calls, which need explicit `|> ignore` under FS0020).
+- Round 2 (commit 83dd417): §13 — six test sites duplicated the fresh-name lambda `(fun k -> sprintf "N_%d" k)`; all now use `Grammar.freshStringNonterminal`, the single source of truth.
+- Round 3 (commit 514dc93, genericity user-approved): §7/§23 — the CFPQ core was hard-wired to string terminals/nonterminals while every other algorithm project is generic (`Valiant.parse` pattern). `CfpqGraph<'t>`, `WcnfRule<'t,'nt>`, `CfpqCell<'nt>`, `CfpqStep<'nt,'elem>`, `CfpqResult<'nt,'elem>`; `evaluate` takes a caller-supplied `freshNt: int -> 'nt`. §8/§23 — `Splits of int list` → `NonEmptyList<int>` (split lists are never empty by construction). Dead code removed (`pathIndexBottom`, private `ntName`). §19 — new `CfpqMatrixTexTests.fs` (7 facts) closes the only untested module.
+
+**Judged not findings (checked, acceptable):** per-runner private `vertexName` one-liner — established convention across all RPQ runners; runner recomputation of CNF rules from fixed-point data — documented design decision (pure functions of already-computed data); custom word generator in `CfpqVsValiantPropertyTests` — built on the shared LanguageRegistry, not a duplicated grammar.
+
+**Findings against the constraint sources:**
+
+- §1–§5 (naming/style/tuples/formatting) — automated checks clean: FSharpLint 0 warnings on all six touched projects, Fantomas clean.
+- §6 (doc comments) — all public API in the three new modules and the printer has `///` docs with book references.
+- §7 (genericity) — fixed in round 3; core is generic over `'t`/`'nt`, printers take printer parameters.
+- §8 (non-empty collections) — fixed in round 3 (`Splits`); no other runtime emptiness checks introduced.
+- §9/§10/§11 (separation, one algorithm per file, thin variants) — `AzimovCfpq.fs` holds the single algorithm core; the three runners are thin semiring+extraction layers over it; `CfpqMatrixTeX` renders data only.
+- §12 (compile-time safety) — `NonEmptyList` splits, `Map<Nonterminal<'nt>, _>` answers, `option` for absent paths.
+- §13 (no duplication) — fixed in rounds 2–3; shared `Helpers.ntName`, `Grammar.freshStringNonterminal`.
+- §14 (language registry) — property tests use the registry's grammars/words; the book-example grammar is a hardcoded `[<Fact>]` fixture (correct per §16).
+- §15/§16 (test fidelity, Fact vs Property) — book example and reference tests are `[<Fact>]` with pinned data; CFPQ==RPQ and Azimov==Valiant are `[<Property>]` with FsCheck-generated graphs.
+- §17 (shared generators) — no new shared generators needed; the one custom generator is registry-based.
+- §18 (equivalence) — both required equivalences present: CFPQ reachability == all-pairs RPQ, Azimov == Valiant on linear path graphs.
+- §19 (coverage) — every new `src/` module has a correspondent test project/module; the hard gate verifies thresholds.
+- §20 (documentation) — five new/updated module docs + hub + architecture entries, all mdformat-clean.
+- §21 (book traceability) — every algorithm function references the book's CFPQ chapter section/figure/listing in comments and docs.
+- §22 (clarity) — reference implementation, no optimizations; fixed-point loop mirrors the book's T0..T13 trace.
+- §23 (naming semantics) — fixed in round 3 (generic parameters, `NonEmptyList`).
+
+**Tooling note:** FSharpLint 0.27.0 (bundles FCS 43.9, .NET 9 era) is pathologically slow on this machine's net10.0 projects — 10–40+ min per large project before the first progress line (verified pre-existing: unchanged `FLPQ.RPQ.Tests` is equally slow). All six touched projects still lint at 0 warnings; budget hours, not minutes, for the hard gate's lint step.
+
+**No blocking findings.**
+
 ## Task 292 Review (2026-10-02)
 
 Scope: branch diff vs dev — `src/FLPQ.Printers/RpqGraphViz.fs` (private `merge` in `renderGraphWithDerived` now drops exact repeated label components), `tests/FLPQ.Printers.Tests/RpqGraphVizTests.fs` (two new `[<Fact>]` tests), and docs (`rpq-graph-viz.md`, `arroyuelo-reachability-step-viz.md`).

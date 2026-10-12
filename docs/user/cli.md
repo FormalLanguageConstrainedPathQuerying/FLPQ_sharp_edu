@@ -10,8 +10,8 @@ algorithm, and produces a final visualization PDF. This replaces the former
 
 ## Types
 
-- `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ | BelyaninRPQ`
-- `RpqSemantics` — DU: `Reachability | SimplePath` (Belyanin RPQ only)
+- `Algorithm` — DU: `CYK | Valiant | ValiantModified | LL | LR0 | SLR1 | CLR1 | GLL | RNGLR | ArroyueloRPQ | BelyaninRPQ | AzimovCFPQ`
+- `PathQuerySemantics` — DU: `Reachability | SimplePath | AllPaths` (`AllPaths` is Azimov CFPQ only)
 - `Arguments` — Argu argument type with `IArgParserTemplate`
 
 ## Command-line flags
@@ -19,12 +19,12 @@ algorithm, and produces a final visualization PDF. This replaces the former
 | Flag | Description | Default |
 | --- | --- | --- |
 | `-a` / `--algorithm` | Algorithm (all algorithms take the unified `-q`/`-i` query/input pair) | (required) |
-| `-q` / `--query` | Query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms | (required) |
-| `-i` / `--input` | Input file: input string for parsing algorithms, graph (start vertices line + `from label to` edges) for RPQ algorithms | (required) |
+| `-q` / `--query` | Query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms, `.cnf` context-free grammar for Azimov CFPQ | (required) |
+| `-i` / `--input` | Input file: input string for parsing algorithms, graph (start vertices line + `from label to` edges) for RPQ algorithms, graph directory (one `*.mtx` per edge label) for Azimov CFPQ | (required) |
 | `-o` / `--output` | Output directory | `output` |
 | `-k` / `--lookahead` | LL(k) lookahead | 1 |
 | `-s` / `--summary` | Build merged TeX summary document | off |
-| `--semantics` / `-semantics` | RPQ semantics for `-a ArroyueloRPQ` and `-a BelyaninRPQ`: `reachability` (Boolean, classical, complete on cyclic graphs) or `simplePath` (reachable only via an accepting simple path) | `reachability` |
+| `--semantics` / `-semantics` | Path-query semantics. For `-a ArroyueloRPQ` and `-a BelyaninRPQ`: `reachability` (Boolean, classical, complete on cyclic graphs) or `simplePath` (reachable only via an accepting simple path). For `-a AzimovCFPQ`: `reachability` (Boolean answer matrix), `simplePath` (one witness path per reachable pair), or `allPaths` (all simple paths per reachable pair; CFPQ-only — rejected for the RPQ algorithms) | `reachability` |
 | `--use-dot` | Use Graphviz dot for LR automaton and LL/LR per-step tree_and_stack rendering (default: Tikz) | off |
 | `--no-sppf-table` | Render CYK/Valiant table cells as sets of nonterminal names without SPPF split points and production indices | off |
 
@@ -42,6 +42,7 @@ Each algorithm writes step subdirectories (`step_0/`, `step_1/`, ...):
 | **LR** | `tree_and_stack.tikz.tex` (default) or `tree_and_stack.dot` (`--use-dot`), `input.tex` | Same format as LL — the picture includes LR state frames in the stack chain |
 | **Arroyuelo RPQ** | `matrices.tex`, `tree.tikz.tex` (default) or `tree.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) | One directory per **intermediate** regexp tree node in post-order (Alt/Seq/Star; leaves produce no step but appear in the tree). Two columns: left the vertical regexp tree with the current node highlighted (every node drawn), right the matrix equation line and, below it, the graph. With `--semantics reachability` (default) the matrices are Boolean (`\bullet`/`\cdot`) and the graph keeps the input edges while adding one red-bold edge per true `M(E)` cell, labeled with the handled node's subexpression (labels merge when a pair is also an input edge); no path/edge highlighting. With `--semantics simplePath` the matrices hold path tuples and the graph highlights the result-path vertices (yellow) and edges (light red) |
 | **Belyanin RPQ** | `frontier_start.tex`, `visited_start.tex`, `automaton_start.tikz.tex` (default) or `automaton_start.dot` (`--use-dot`), `graph_start.tikz.tex` (default) or `graph_start.dot` (`--use-dot`); per active label: `label_i_select.tex`, `label_i_extend.tex`, `label_i_automaton.tikz.tex`/`.dot`, `label_i_graph.tikz.tex`/`.dot`; for non-init steps additionally `frontier_end.tex`, `visited_end.tex`, `automaton_end.tikz.tex`/`.dot`, `graph_end.tikz.tex`/`.dot` | One directory per BFS iteration (plus `step_0` for the initialization): one line per substep — the start line shows F, V, the graph (green sources, lightblue frontier vertices), and the query DFA (highlighted frontier states) left to right; each active label gets two lines, the select product `(N^a)^T ⊗ F = [N^a^T] ⊗ [F] = [F^a]` (one horizontal line) with the DFA (used transitions red bold, target states lightyellow) and the extend product `F^a ⊗ G^a = [F^a] ⊗ [G^a] = [Extend]` (one horizontal line) with the graph (followed edges red bold, target vertices lightyellow); the end line (non-init steps) shows F, V, graph, and DFA. Boundary tiles render `F = [F]` / `V = [V]`, and every adjustbox is top-aligned (`valign=T`) except the start frontier F. With `--semantics reachability` (the default) the matrices are Boolean (`\bullet`/`\cdot`) and no light-red path edges are drawn (no path information is collected); the used automaton transitions and followed graph edges are still red bold, with lightblue current and lightyellow target states/vertices. With `--semantics simplePath` the matrices hold path tuples and path edges are shown light red. The reachability trace/visualization covers a single source (the first start vertex); `result.tex` and the status line report every source. |
+| **Azimov CFPQ** | `table.tex` | One directory per productive fixed-point iteration (`step_1`, `step_2`, ...): all nonterminal matrices of that iteration stacked vertically, a bold nonterminal name above each, with the cells changed in the iteration highlighted yellow. Cell content depends on `--semantics`: `\bullet` (reachability), `v_k^h` middle/height (simplePath), or split-vertex lists with `\bullet` for a direct derivation (allPaths) |
 
 Root-level artifacts per algorithm:
 
@@ -55,6 +56,7 @@ Root-level artifacts per algorithm:
 | **RNGLR** | `grammar_original.tex`, `grammar_ebnf.tex`, `input.tex`, `ext_rsm.tikz.tex` (default Tikz mode) or `ext_rsm.dot` (`--use-dot`), `lr_automaton.tikz.tex` (default) or `lr_automaton.dot` (`--use-dot`), `rnglr_table.tex`, `path_index.tex`, `sppf.dot` |
 | **Arroyuelo RPQ** | `regexp.tex` (query formula), `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`) — the query's DFA with `q_i` state labels, `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) — the input graph with its source vertices green, `result.tex` — with `--semantics simplePath` the final path semiring matrix plus one line per source listing its reachable vertices, with `--semantics reachability` (default) the final Boolean matrix plus the same per-source lines (computed from `ArroyueloRPQ.evaluate`) |
 | **Belyanin RPQ** | Same as Arroyuelo RPQ: `regexp.tex`, `dfa.tikz.tex` (default) or `dfa.dot` (`--use-dot`), `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`), `result.tex` — with `--semantics simplePath` the final path semiring matrix, with `--semantics reachability` (default) the final Boolean matrix for the first source; both add one line per source listing its reachable vertices (reachability computes these from `BelyaninRPQ.evaluate`) |
+| **Azimov CFPQ** | `grammar_original.tex`, `grammar_cnf.tex`, `graph.tikz.tex` (default) or `graph.dot` (`--use-dot`) — the input graph with no highlighted vertices or edges (all vertex pairs are queried), `result.tex` — with `--semantics reachability` (default) the Boolean answer matrix `T[Start]` plus the list of reachable pairs, with `--semantics simplePath` one extracted witness path per reachable pair, with `--semantics allPaths` all simple paths per reachable pair |
 
 DOT files are rendered via Graphviz (dashed edges for stack chain, green fill for start states, double circle for final states). TeX files use `pNiceMatrix` from the `nicematrix` package and must be placed in math mode (`\[...\]`) to compile.
 
@@ -99,6 +101,14 @@ dotnet run --project src/FLPQ.Cli -c Release -- \
 
 dotnet run --project src/FLPQ.Cli -c Release -- \
     -a BelyaninRPQ -q data/example_regexp.txt -i data/example_graph.txt -o ./viz_output -s
+
+# Azimov CFPQ: the query is a .cnf grammar and the input is a graph directory
+dotnet run --project src/FLPQ.Cli -c Release -- \
+    -a AzimovCFPQ -q data/cfpq_example/query.cnf -i data/cfpq_example/graph -o ./viz_output
+
+# All simple paths per reachable pair
+dotnet run --project src/FLPQ.Cli -c Release -- \
+    -a AzimovCFPQ -q data/cfpq_example/query.cnf -i data/cfpq_example/graph -o ./viz_output --semantics allPaths -s
 ```
 
 ## Requirements

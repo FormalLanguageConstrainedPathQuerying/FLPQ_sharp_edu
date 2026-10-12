@@ -31,3 +31,17 @@
 **Problem**: Task 284 changes the step rendering to label the frontier matrix F and the accumulated (visited) matrix V. The book's listing `algo:RPQ_BFS_semiring` (Chapter 11, 02_BFS.tex) uses M for the frontier and P for the accumulated result — and already uses F for the final-state row vector in the last lines of the algorithm.
 
 **Book reference**: Chapter 11, 02_BFS.tex — if the book adopts the rendering's notation (F = frontier, V = visited), the final-state row vector currently named F needs a different name to avoid the clash.
+
+## CFPQ Matrix-Based Example: Figure's b-edges Contradict the T₀…T₁₃ Matrices (Task 293)
+
+**Problem**: In Chapter 12, section `sec:CFPQ_MatrixBased` (02_MatrixBased.tex), the worked example's graph figure (`figures/edge_labelled_graph_a_3_loop_b_2_loop.tex`) shows b-edges 2→3 and 3→2, but the T₀…T₁₃ matrices are only consistent with b-edges 0↔3:
+
+- T₀ has {B} at [0,3] and [3,0] (with the figure's edges it would have {B} at [2,3] and [3,2]);
+- the text explaining T₁ states that S enters cell [2,3] via the path consisting of edges 2 →(a) 0 and 0 →(b) 3 — an edge 0→3 does not exist in the figure;
+- with the figure's b-edges, T₀×T₀ would produce no S at all (there is no k with {A} ⊆ T₀[2,k] and {B} ⊆ T₀[k,3]), so the entire T₁…T₁₃ sequence — including the "one new nonterminal per iteration" worst-case property the text highlights — would be different.
+
+The same figure and grammar are used by the CYK-based example in 01_Hellings.tex of the same chapter, whose initialization matrix has {B} at [2,3] and [3,2] — consistent with the figure. The figure also matches the canonical definition of G₁ in Chapter 3 (E = {(0,a,1), (1,a,2), (2,a,0), (2,b,3), (3,b,2)}) and the path examples in Chapter 10 (01_ProblemStatement.tex, 05_CFConstraints.tex). So the 02_MatrixBased matrices are the outlier.
+
+**Resolution in code**: The F# implementation of section `sec:CFPQ_MatrixBased` (FLPQ.CFPQ, task 293) follows the book's matrices: `data/cfpq_example/graph/b.mtx` contains edges 0→3 and 3→0, and the golden test (`AzimovCfpqBookExampleTests`) pins T₀…T₁₃ exactly as printed.
+
+**Book reference**: Chapter 12, 02_MatrixBased.tex — either change the figure's b-edges to 0↔3 (which would also require recomputing the 01_Hellings.tex example and the Chapter 10 path examples) or recompute the T₀…T₁₃ sequence for the figure's b-edges 2↔3 (which would also change the F# golden data).

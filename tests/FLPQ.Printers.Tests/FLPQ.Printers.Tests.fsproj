@@ -46,6 +46,7 @@
     <Compile Include="RpqGssIndependenceTests.fs" />
     <Compile Include="BelyaninStepVisualizationTests.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizationTests.fs" />
+    <Compile Include="CfpqMatrixTexTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -149,6 +150,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\FLPQ.CFPQ\FLPQ.CFPQ.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Printers\FLPQ.Printers.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.Languages\FLPQ.Languages.fsproj" />
     <ProjectReference Include="..\..\src\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />

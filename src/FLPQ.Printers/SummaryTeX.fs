@@ -15,6 +15,7 @@ module SummaryTeX =
         | RNGLR
         | ArroyueloRPQ
         | BelyaninRPQ
+        | AzimovCFPQ
 
         override this.ToString() =
             match this with
@@ -25,6 +26,7 @@ module SummaryTeX =
             | RNGLR -> "rnglr"
             | ArroyueloRPQ -> "arroyuelorpq"
             | BelyaninRPQ -> "belyaninrpq"
+            | AzimovCFPQ -> "azimovcfpq"
 
     /// Per-algorithm step templates (DOT and TikZ variants). Fields are empty strings for
     /// algorithms that do not use a step template. Belyanin uses four templates: the
@@ -311,6 +313,16 @@ module SummaryTeX =
 
             | SummaryKind.ArroyueloRPQ -> rpqHeaderSection vizDir (arroyueloColorLegend ()) useTikz
             | SummaryKind.BelyaninRPQ -> rpqHeaderSection vizDir (belyaninColorLegend ()) useTikz
+
+            // CFPQ: the original grammar, the CNF passed to the algorithm, and the input graph.
+            | SummaryKind.AzimovCFPQ ->
+                maybe "grammar_cnf.tex" "CNF Grammar (passed to algorithm)" wrapCenter
+                @ (if useTikz then
+                       maybe "graph.tikz.tex" "Input Graph" (fun t -> wrapTikzAdjustbox false t)
+                   else
+                       match readIfExists (Path.Combine(vizDir, "graph.dot")) with
+                       | Some _ -> [ section "Input Graph"; includePdf "dot_pdfs/graph.pdf"; "" ]
+                       | None -> [])
 
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
@@ -700,7 +712,11 @@ module SummaryTeX =
         let headerLines =
             headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmPdfs useTikz
 
-        let isTableBased = algoKind = SummaryKind.TablePerStep
+        // AzimovCFPQ steps reuse the generic table layout: one table.tex per productive
+        // iteration (the per-nonterminal matrices with the new cells highlighted).
+        let isTableBased =
+            algoKind = SummaryKind.TablePerStep || algoKind = SummaryKind.AzimovCFPQ
+
         let isGll = algoKind = SummaryKind.GLL
         let isRnglr = algoKind = SummaryKind.RNGLR
         let isArroyuelo = algoKind = SummaryKind.ArroyueloRPQ

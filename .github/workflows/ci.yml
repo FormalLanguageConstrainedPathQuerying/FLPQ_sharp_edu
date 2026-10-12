@@ -28,12 +28,17 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install markdown toolchain
         run: |
           pip install mdformat mdformat-frontmatter
           pip install -e tools/mdformat_tasklog
+
+      - name: Export CFPQ reference data
+        run: |
+          pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.dev15"
+          python3 tools/flpq_data/export.py
 
       - name: Markdown format check
         run: mdformat --check $(git ls-files '*.md')

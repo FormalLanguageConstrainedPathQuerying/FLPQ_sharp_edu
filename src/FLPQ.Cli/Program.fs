@@ -41,6 +41,13 @@ module Program =
 
             Helpers.cleanOutputDir output
 
+            // allPaths is CFPQ-only: the split-vertex semiring lives in Azimov's matrix core.
+            let rejectAllPaths (algo: AlgorithmTypes.Algorithm) (semantics: AlgorithmTypes.PathQuerySemantics) =
+                if semantics = AlgorithmTypes.PathQuerySemantics.AllPaths then
+                    failwithf
+                        "allPaths semantics is only supported for AzimovCFPQ, not %s"
+                        (AlgorithmTypes.displayName algo)
+
             match algorithm with
             // RPQ algorithms take the same unified query/input pair: the query is a
             // regexp file and the input is a graph file.
@@ -49,25 +56,55 @@ module Program =
                 let inputFile = results.GetResult AlgorithmTypes.Input
 
                 let semantics =
-                    results.GetResult(AlgorithmTypes.Semantics, defaultValue = AlgorithmTypes.RpqSemantics.Reachability)
+                    results.GetResult(
+                        AlgorithmTypes.Semantics,
+                        defaultValue = AlgorithmTypes.PathQuerySemantics.Reachability
+                    )
+
+                rejectAllPaths algorithm semantics
 
                 match semantics with
-                | AlgorithmTypes.RpqSemantics.Reachability ->
+                | AlgorithmTypes.PathQuerySemantics.Reachability ->
                     ArroyueloReachabilityRunner.runArroyuelo queryFile inputFile output useDot
-                | AlgorithmTypes.RpqSemantics.SimplePath ->
+                | AlgorithmTypes.PathQuerySemantics.SimplePath ->
                     ArroyueloSimplePathRunner.runArroyuelo queryFile inputFile output useDot
+                | _ -> failwithf "Unexpected semantics in ArroyueloRPQ dispatch: %A" semantics
             | AlgorithmTypes.BelyaninRPQ ->
                 let queryFile = results.GetResult AlgorithmTypes.Query
                 let inputFile = results.GetResult AlgorithmTypes.Input
 
                 let semantics =
-                    results.GetResult(AlgorithmTypes.Semantics, defaultValue = AlgorithmTypes.RpqSemantics.Reachability)
+                    results.GetResult(
+                        AlgorithmTypes.Semantics,
+                        defaultValue = AlgorithmTypes.PathQuerySemantics.Reachability
+                    )
+
+                rejectAllPaths algorithm semantics
 
                 match semantics with
-                | AlgorithmTypes.RpqSemantics.Reachability ->
+                | AlgorithmTypes.PathQuerySemantics.Reachability ->
                     BelyaninReachabilityRunner.runBelyanin queryFile inputFile output useDot
-                | AlgorithmTypes.RpqSemantics.SimplePath ->
+                | AlgorithmTypes.PathQuerySemantics.SimplePath ->
                     BelyaninSimplePathRunner.runBelyanin queryFile inputFile output useDot
+                | _ -> failwithf "Unexpected semantics in BelyaninRPQ dispatch: %A" semantics
+            // Azimov CFPQ takes the .cnf grammar file and the graph directory.
+            | AlgorithmTypes.AzimovCFPQ ->
+                let queryFile = results.GetResult AlgorithmTypes.Query
+                let inputDir = results.GetResult AlgorithmTypes.Input
+
+                let semantics =
+                    results.GetResult(
+                        AlgorithmTypes.Semantics,
+                        defaultValue = AlgorithmTypes.PathQuerySemantics.Reachability
+                    )
+
+                match semantics with
+                | AlgorithmTypes.PathQuerySemantics.Reachability ->
+                    AzimovCfpqReachabilityRunner.runAzimov queryFile inputDir output useDot
+                | AlgorithmTypes.PathQuerySemantics.SimplePath ->
+                    AzimovCfpqSinglePathRunner.runAzimov queryFile inputDir output useDot
+                | AlgorithmTypes.PathQuerySemantics.AllPaths ->
+                    AzimovCfpqAllPathsRunner.runAzimov queryFile inputDir output useDot
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then

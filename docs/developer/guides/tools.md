@@ -3,7 +3,7 @@
 **Tags:** guide, tools, python, quality, ci, detect-changes, format, build, test, coverage, lint, mdformat, split-tasks
 **Kind:** guide
 
-> **Abstract:** Documents auxiliary Python scripts for project quality control in `tools/`: `detect_changes.py` (detect modified projects), `quality_check.py` (inter-subtask markdown format + format + build gate), `hard_gate.py` (full markdown format → format → build → tests + coverage → lint gate), `split_tasks.py` (task log repair, mdformat normalization, and 100-entry archiving). For execution procedures, see the `quality-gates` and `dotnet-tooling` skills. For output conventions, see `tools/README.md`.
+> **Abstract:** Documents auxiliary Python scripts in `tools/`: `detect_changes.py` (detect modified projects), `quality_check.py` (inter-subtask markdown format + format + build gate), `hard_gate.py` (full markdown format → format → build → tests + coverage → lint gate), `split_tasks.py` (task log repair, mdformat normalization, and 100-entry archiving), `flpq_data/export.py` (materialize CFPQ reference data from the pinned flpq-data package). For execution procedures, see the `quality-gates` and `dotnet-tooling` skills. For output conventions, see `tools/README.md`.
 
 ## Contents
 
@@ -86,6 +86,7 @@ Full quality gate for task verification: markdown format → format → build �
    - Both metrics are gated: per-project and total thresholds are defined in `hard_gate.py` (`PER_PROJECT_THRESHOLD`, `TOTAL_THRESHOLD`) — the tool is the source of truth for the numbers
    - Filters to FLPQ source packages only (excludes `*.Tests` and `FLPQ.TestUtilities`)
 6. Lint: `dotnet-fsharplint lint` on each project with modified `.fs` files (detected via `detect_changes.py` logic). Uses `DOTNET_ROOT` from environment or `/usr/lib/dotnet`. If no `.fs` files changed, lint is skipped (not counted as a step).
+   - **Timing warning:** FSharpLint 0.27.0 bundles FCS 43.9 (.NET 9 era) and is pathologically slow on this machine's net10.0 projects — 10–40+ minutes per large project before the first `Linting <file>` progress line appears (verified pre-existing on unchanged projects, e.g. `FLPQ.RPQ.Tests`). The process burns CPU and grows RSS while working; it is not hung. Budget hours, not minutes, for the lint step when several projects changed, and never kill a run that has not yet printed its first progress line.
 
 **Test project discovery:** `find_test_packages()` in `common.py` dynamically discovers test projects by scanning `*.fsproj` files ending with `.Tests` (excluding `FLPQ.TestUtilities`). No project names are hardcoded.
 
@@ -239,6 +240,34 @@ Task log formatter and splitter. Keeps `tasks/tasks.md` (active log, at most 100
 - 1 — BLOCKED (a verification stage found a violation; nothing is written)
 
 `--dry-run` performs the full pipeline without writing files.
+
+### `flpq_data/export.py`
+
+Materializes CFPQ reference data from the pinned `flpq-data==6.0.0.dev15` package (test.pypi.org, Python ≥ 3.11) into the gitignored `data/cfpq/` directory. For each of the five pinned graphs (generations, travel, skos, sampleproject, univ) it writes:
+
+- `data/cfpq/<graph>/graph/*.mtx` — the effective query graph: the stored edge labels plus the reverse edges with the `_r` label suffix that the package's CFPQ queries run over (`flpq_data.add_reverse_edges`), one 0-based pattern matrix per label;
+- `data/cfpq/<graph>/queries/<q>/<q>.cnf` — the grammar template materialized over the graph (indexed symbols expanded to concrete edge labels);
+- `data/cfpq/<graph>/queries/<q>/results.mtx` — the package's reference reachability matrix for that graph × grammar;
+- `data/cfpq/<graph>/reference.json` — `{grammar: num_reachable_pairs}` from the package's `reachable_pairs.csv` (query_class == cfpq);
+- `data/cfpq/manifest.json` — `{version, graphs: {name: {vertex_count, grammars}}}`.
+
+The F# reference tests (`CfpqReferenceTests` in FLPQ.CFPQ.Tests) read the manifest and assert that Azimov's reachability answer equals each `results.mtx` exactly and that the true-cell count equals `num_reachable_pairs`. CI materializes the data before running tests; locally run the tool once after installing the pinned package.
+
+**Setup:**
+
+```bash
+pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.dev15"
+python3 tools/flpq_data/export.py
+```
+
+**Output:** summary on stdout (per-graph vertex count, grammar count, reachable-pair total) — unlike the quality tools, this is a one-shot data materializer and writes no `tmp/<tool>.txt`.
+
+**Exit codes:**
+
+- 0 — export complete
+- 1 — installed flpq-data version differs from the pinned one (the message shows the install command)
+
+**Invariants:** idempotent — re-running regenerates byte-identical files; the output directory is wiped and rebuilt per graph.
 
 ## Skill Integration
 

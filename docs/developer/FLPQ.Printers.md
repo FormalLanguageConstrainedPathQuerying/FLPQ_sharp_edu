@@ -3,7 +3,7 @@
 **Tags:** visualization, tex, dot, tikz, rendering, matrix, grammar, automaton, derivation-tree, ll, lr, cyk, valiant, summary
 **Kind:** hub
 **Source:** `src/FLPQ.Printers/`
-**Depends on:** FLPQ.LinearAlgebra, FLPQ.Languages
+**Depends on:** FLPQ.LinearAlgebra, FLPQ.Languages, FLPQ.RPQ, FLPQ.CFPQ
 **Used by:** FLPQ.Cli
 **Book reference:** _(rendering — no direct book reference)_
 
@@ -20,7 +20,7 @@
 
 - **Type**: F# class library (`net10.0`)
 - **Path**: `src/FLPQ.Printers/`
-- **Dependencies**: `FLPQ.LinearAlgebra`, `FLPQ.Languages`
+- **Dependencies**: `FLPQ.LinearAlgebra`, `FLPQ.Languages`, `FLPQ.RPQ`, `FLPQ.CFPQ`
 
 ## Modules
 
@@ -40,6 +40,7 @@
 | [CykTeX](cyk-tex.md) | TeX rendering for CYK algorithm tables |
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
 | [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of RPQ working matrices: path semiring matrices (vertex-path cells) and boolean N^a/G^a matrices |
+| [CfpqMatrixTeX](cfpq-matrix-tex.md) | TeX rendering of Azimov's per-nonterminal CFPQ matrices (semiring-generic), step tables with changed-cell highlights, and extracted path text |
 | [StepTeX](step-tex.md) | Generic RPQ step TeX helpers: shrink-only adjustbox and one-line formula wrapping |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
 | [RpqGraphDot](rpq-graph-dot.md) / [RpqGraphTikz](rpq-graph-tikz.md) | RPQ-dedicated DOT/TikZ rendering of the input graph with highlight tiers (independent of GSS) |

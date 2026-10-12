@@ -20,6 +20,7 @@ module Summary =
         | AlgorithmTypes.RNGLR -> SummaryTeX.SummaryKind.RNGLR
         | AlgorithmTypes.ArroyueloRPQ -> SummaryTeX.SummaryKind.ArroyueloRPQ
         | AlgorithmTypes.BelyaninRPQ -> SummaryTeX.SummaryKind.BelyaninRPQ
+        | AlgorithmTypes.AzimovCFPQ -> SummaryTeX.SummaryKind.AzimovCFPQ
 
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 

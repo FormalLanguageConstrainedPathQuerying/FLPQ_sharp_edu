@@ -64,18 +64,36 @@ let ``invalid algorithm name throws`` () =
     Assert.Throws<ArguParseException>(fun () -> parser.Parse(args) |> ignore)
 
 [<Fact>]
+let ``displayName of AzimovCFPQ`` () =
+    Assert.Equal("Azimov CFPQ", displayName AzimovCFPQ)
+
+[<Fact>]
+let ``parse algorithm AzimovCFPQ from CLI args`` () =
+    let args = [| "-a"; "AzimovCFPQ" |]
+    let parser = ArgumentParser.Create<Arguments>()
+    let results = parser.Parse(args)
+    Assert.Equal(AzimovCFPQ, results.GetResult Algorithm)
+
+[<Fact>]
 let ``parse --semantics simplePath`` () =
     let args = [| "-a"; "BelyaninRPQ"; "--semantics"; "simplePath" |]
     let parser = ArgumentParser.Create<Arguments>()
     let results = parser.Parse(args)
-    Assert.Equal(RpqSemantics.SimplePath, results.GetResult Semantics)
+    Assert.Equal(PathQuerySemantics.SimplePath, results.GetResult Semantics)
 
 [<Fact>]
 let ``parse -semantics reachability (single dash)`` () =
     let args = [| "-a"; "BelyaninRPQ"; "-semantics"; "reachability" |]
     let parser = ArgumentParser.Create<Arguments>()
     let results = parser.Parse(args)
-    Assert.Equal(RpqSemantics.Reachability, results.GetResult Semantics)
+    Assert.Equal(PathQuerySemantics.Reachability, results.GetResult Semantics)
+
+[<Fact>]
+let ``parse --semantics allPaths`` () =
+    let args = [| "-a"; "AzimovCFPQ"; "--semantics"; "allPaths" |]
+    let parser = ArgumentParser.Create<Arguments>()
+    let results = parser.Parse(args)
+    Assert.Equal(PathQuerySemantics.AllPaths, results.GetResult Semantics)
 
 [<Fact>]
 let ``semantics is absent by default and defaults to reachability`` () =
@@ -84,7 +102,10 @@ let ``semantics is absent by default and defaults to reachability`` () =
     let results = parser.Parse(args)
     Assert.False(results.Contains Semantics)
 
-    Assert.Equal(RpqSemantics.Reachability, results.GetResult(Semantics, defaultValue = RpqSemantics.Reachability))
+    Assert.Equal(
+        PathQuerySemantics.Reachability,
+        results.GetResult(Semantics, defaultValue = PathQuerySemantics.Reachability)
+    )
 
 [<Fact>]
 let ``summary flag is parsed`` () =
