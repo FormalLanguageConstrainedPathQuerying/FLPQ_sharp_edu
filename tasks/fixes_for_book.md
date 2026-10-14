@@ -45,3 +45,11 @@ The same figure and grammar are used by the CYK-based example in 01_Hellings.tex
 **Resolution in code**: The F# implementation of section `sec:CFPQ_MatrixBased` (FLPQ.CFPQ, task 293) follows the book's matrices: `data/cfpq_example/graph/b.mtx` contains edges 0→3 and 3→0, and the golden test (`AzimovCfpqBookExampleTests`) pins T₀…T₁₃ exactly as printed.
 
 **Book reference**: Chapter 12, 02_MatrixBased.tex — either change the figure's b-edges to 0↔3 (which would also require recomputing the 01_Hellings.tex example and the Chapter 10 path examples) or recompute the T₀…T₁₃ sequence for the figure's b-edges 2↔3 (which would also change the F# golden data).
+
+## pNiceMatrix color-inside Option Removed (Task 295)
+
+**Problem**: The generated TeX emitted `\begin{pNiceMatrix}[color-inside,...]` whenever a matrix had highlighted cells. nicematrix 7 (TeX Live 2025, shipped by Ubuntu 26.04 and the future ubuntu-latest runner) deleted the `color-inside`/`colortbl-like` keys as a fatal error with no replacement, so every highlighted-matrix document failed to compile: `! Fatal Package nicematrix Error: Deleted key.`
+
+**Fix**: `MatrixTeX.toTeXStyled` no longer emits the option. Cell coloring (`\cellcolor`/`\rowcolor`) is native in nicematrix 7 — no key needed. On nicematrix 6 the documents still compile (highlight colors simply not applied). Affected golden data regenerated; the only diff was the option removal.
+
+**Book reference**: Any book example showing `\begin{pNiceMatrix}[color-inside,...]` should drop the `color-inside` option for nicematrix 7 compatibility; cell coloring works without it in nicematrix 7.

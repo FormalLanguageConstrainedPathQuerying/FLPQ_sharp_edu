@@ -29,9 +29,6 @@ module MatrixTeX =
         : string =
         let pniceOptions = ResizeArray<string>()
 
-        if not (List.isEmpty highlights) then
-            pniceOptions.Add("color-inside")
-
         let hasRowHdr = showRowNumbers || rowLabelPrinter.IsSome
         let hasColHdr = showColNumbers || colLabelPrinter.IsSome
 

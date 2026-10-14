@@ -135,6 +135,7 @@ Extended TeX printing with cell highlighting and submatrix block borders using n
 | 1-based numbering in TeX output | Standard matrix notation (row 1, column 1 is the top-left element) |
 | Cell printer as function parameter | Maximum flexibility: caller controls how any element type renders in TeX |
 | `\Block` uses `{rows-cols}` dimension syntax | Compatible with nicematrix v6+ (2024+) |
+| No `color-inside` pNiceMatrix option emitted | Cell coloring (`\cellcolor`/`\rowcolor`) is native in nicematrix 7; the key was deleted as a fatal error in nicematrix 7 (TeX Live 2025). Output compiles on both nicematrix 6 and 7 (task 293) |
 
 ## See Also
 
