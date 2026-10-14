@@ -18,6 +18,18 @@ For detailed per-tool documentation (steps, thresholds, output format examples),
 
 ## Setup
 
+The .NET tools (fantomas, fsharplint, dotnet-coverage) are pinned in
+`dotnet-tools.json` — the single source of truth for tool versions. Install or
+refresh them per environment:
+
+```bash
+dotnet tool restore
+```
+
+They are then invoked as `dotnet fantomas`, `dotnet fsharplint`, and
+`dotnet dotnet-coverage`. Do not install these tools globally or unpinned —
+local development and CI must run the same versions.
+
 The markdown toolchain requires a one-time install per environment:
 
 ```bash

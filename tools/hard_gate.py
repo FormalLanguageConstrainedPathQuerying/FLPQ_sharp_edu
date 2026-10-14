@@ -7,7 +7,7 @@ Sequence:
   3. Build: dotnet build FLPQ.slnx -c Debug
   4. Tests: dotnet test per project with per-project coverage collection, then merge
   5. Coverage gate: per-project >= 90% line and branch, total >= 95% line and branch
-  6. Lint: dotnet-fsharplint lint on changed projects only
+  6. Lint: dotnet fsharplint lint on changed projects only
 
 Writes results to tmp/hard-gate.txt.
 No console output. No timeout on subprocess calls.

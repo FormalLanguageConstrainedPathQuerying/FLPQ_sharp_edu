@@ -10,23 +10,25 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore
 
-      - name: Install tools
-        run: |
-          dotnet tool install -g dotnet-fantomas
-          dotnet tool install -g dotnet-fsharplint
+      # Pinned tool versions from the dotnet-tools.json manifest (single source
+      # of truth, same versions as local development). On .NET 10 SDKs this
+      # makes `dotnet fantomas` / `dotnet fsharplint` resolvable without any
+      # PATH changes.
+      - name: Restore .NET tools (pinned manifest)
+        run: dotnet tool restore
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -35,6 +37,9 @@ jobs:
           pip install mdformat mdformat-frontmatter
           pip install -e tools/mdformat_tasklog
 
+      # CFPQ reference tests (FLPQ.CFPQ.Tests) read the gitignored data/cfpq/
+      # directory; materialize it from the pinned flpq-data package before
+      # running the test suite.
       - name: Export CFPQ reference data
         run: |
           pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.dev15"
@@ -47,7 +52,7 @@ jobs:
         run: dotnet fantomas . --check
 
       - name: Lint
-        run: dotnet-fsharplint lint FLPQ.slnx
+        run: dotnet fsharplint lint FLPQ.slnx
 
       - name: Build
         run: dotnet build FLPQ.slnx -c Debug --no-restore

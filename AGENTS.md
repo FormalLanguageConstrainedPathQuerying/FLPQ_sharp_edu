@@ -87,9 +87,9 @@ See the `git-workflow` skill for the full procedure.
 
 ## CI
 
-Pipeline (`.github/workflows/ci.yml`): restore → install tools → markdown format check → format check → lint → build → test.
+Pipeline (`.github/workflows/ci.yml`): restore → tool restore (pinned `dotnet-tools.json` manifest) → CFPQ reference data export → markdown format check → format check → lint → build → test.
 
-Lint configuration: see the `quality-gates` skill.
+Tool versions: pinned in `dotnet-tools.json`, installed via `dotnet tool restore` (setup: `tools/README.md`). Lint configuration: see the `quality-gates` skill.
 
 ## Skills
 

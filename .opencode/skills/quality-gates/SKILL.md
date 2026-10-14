@@ -69,7 +69,7 @@ The fixed output file is the single source of truth — never read a redirect wh
 
 ## Raw CLI Tool Output Capture
 
-For raw CLI tools (`dotnet build`, `dotnet test`, `dotnet-fsharplint lint`, `dotnet dotnet-coverage`), redirect all output (stdout + stderr) to a file in `tmp/`.
+For raw CLI tools (`dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage`), redirect all output (stdout + stderr) to a file in `tmp/`.
 
 **NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on tool output. Write raw output to `tmp/` first, then use the Grep or Read tools to analyze the captured file.
 
@@ -235,12 +235,12 @@ The hard gate runs: markdown format → format → build → tests with coverage
 
 ### Lint Verification
 
-The hard gate's Step 6 runs `dotnet-fsharplint lint` on each project with modified `.fs` files (detected by `tools/detect_changes.py`). Output appears in `tmp/hard-gate.txt`.
+The hard gate's Step 6 runs `dotnet fsharplint lint` on each project with modified `.fs` files (detected by `tools/detect_changes.py`). Output appears in `tmp/hard-gate.txt`.
 
 To run lint manually on a specific project:
 
 ```bash
-DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint <project.fsproj> > tmp/fsharplint-output.txt 2>&1
+dotnet fsharplint lint <project.fsproj> > tmp/fsharplint-output.txt 2>&1
 ```
 
 Zero warnings policy: any warning in a modified project is a blocker, including pre-existing warnings.
@@ -257,10 +257,10 @@ A single `BLOCKED` means go back and fix. Continue only when every line says `PA
 **Pre-merge full-solution lint** (run once before merging to `dev`):
 
 ```bash
-DOTNET_ROOT=/usr/lib/dotnet dotnet fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
+dotnet fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
 ```
 
-Timeout: 1800000 (30 min). Must show `Summary: 0 warnings`.
+Timeout: 7200000 (2 h; the full-solution lint takes ~26 min locally, ~40–60 min in CI — see Timing above). Must show `Summary: 0 warnings`.
 
 ## Hard Gate
 
@@ -272,7 +272,19 @@ If you encounter a problem you cannot resolve to 100% correctness, STOP. Do not 
 
 The project uses a custom `fsharplint.json` at the repository root.
 
-**Critical**: FSharpLint 0.27.0 does **not** support partial configs — the file must contain the **full** default configuration with only the desired rules changed. The reference default config lives at:
+**Version**: pinned in `dotnet-tools.json` (single source of truth) — currently the
+`0.27.1--date20260902-0344.git-d2607f5` pre-release, invoked as `dotnet fsharplint`.
+Install/refresh with `dotnet tool restore` (see `tools/README.md`). Do not install
+FSharpLint globally or unpinned — local and CI must run the same version.
+
+**Timing**: lint is slow by design of FCS — every file is re-type-checked against the
+full contents of the referenced F# assemblies (FSharpPlus ~11 MB dominates): ~24 s/file
+on `tests/FLPQ.Printers.Tests` (~17 min for 42 files), ~26 min for the full solution
+(205 files) on an 8-core machine — expect ~40–60 min on a 4-core CI runner. This is
+environmental, not a hang — see issue #1. Never run two lints in parallel (CPU
+contention makes them 2–3× slower).
+
+**Critical**: FSharpLint does **not** support partial configs — the file must contain the **full** default configuration with only the desired rules changed. The reference default config lives at:
 
 ```
 https://raw.githubusercontent.com/fsprojects/FSharpLint/master/src/FSharpLint.Core/fsharplint.json
@@ -285,17 +297,18 @@ The following rules were changed from FSharpLint defaults to match the project c
 | Rule | Setting | Default | Reason |
 | --- | --- | --- | --- |
 | `genericTypesNames` (FL0069) | `naming: CamelCase` | PascalCase | Project uses `'t`, `'nt`, `'a`, `'s`, `'v` |
-| `nestedFunctionNames` (FL0085) | `enabled: true`, `naming: CamelCase` | disabled, PascalCase | Project uses camelCase for `let rec loop`/`derive` etc. |
+| `nestedFunctionNames` (FL0081) | `enabled: true`, `naming: CamelCase` | disabled, PascalCase | Project uses camelCase for `let rec loop`/`derive` etc. |
 | `recordFieldNames` (FL0039) | `naming: PascalCase` | PascalCase | Per AGENTS.md "PascalCase for record fields and union case fields" |
 
-### FL0085 Dual Behavior
+Rule IDs verified against the pinned version's source (`src/FSharpLint.Core/Rules/Identifiers.fs`): FL0067 = `privateValuesNames`, FL0069 = `genericTypesNames`, FL0081 = `nestedFunctionNames`, FL0085 = `ensureTailCallDiagnosticsInRecursiveFunctions`.
 
-When `nestedFunctionNames` is enabled, FL0085 reports **two** categories of warnings:
+### Nested Function Naming (FL0081) and Tail-Call Diagnostics (FL0085)
 
-1. **Naming**: local function names not matching the configured convention (`CamelCase`). Resolved — project already uses camelCase.
-2. **Tail-call diagnostics**: any `let rec` function (local or top-level) missing `[<TailCall>]` attribute. This is from the `ensureTailCallDiagnosticsInRecursiveFunctions` rule.
+Enabling `nestedFunctionNames` makes **FL0081** report local function names not matching the configured convention (`CamelCase`). A separate rule, `ensureTailCallDiagnosticsInRecursiveFunctions` (**FL0085**), reports any `let rec` function (local or top-level) missing the `[<TailCall>]` attribute. Both fire on the same code, which is why enabling the naming rule initially looked like "dual behavior". The project keeps FL0081 active and sets `ensureTailCallDiagnosticsInRecursiveFunctions` to `false` to suppress only the tail-call diagnostics.
 
-To suppress only the tail-call diagnostics while keeping naming checks, set `ensureTailCallDiagnosticsInRecursiveFunctions` to `false` in the config.
+### FL0069 Quirk
+
+`genericTypesNames` (FL0069) only checks generic parameters written with a quote (`type Foo<'t>`); unquoted parameters (`type Foo<t>`) are not checked. Verified identical on 0.27.0 and the pinned pre-release — not a regression.
 
 ## Debugging Test Hangs
 

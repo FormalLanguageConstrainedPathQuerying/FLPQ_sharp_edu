@@ -9,6 +9,13 @@
       ],
       "rollForward": false
     },
+    "dotnet-fsharplint": {
+      "version": "0.27.1--date20260902-0344.git-d2607f5",
+      "commands": [
+        "dotnet-fsharplint"
+      ],
+      "rollForward": false
+    },
     "fantomas": {
       "version": "7.0.5",
       "commands": [

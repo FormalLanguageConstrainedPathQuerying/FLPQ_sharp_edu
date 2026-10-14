@@ -16,5 +16,5 @@
 | Category | Example | When Required |
 | --- | --- | --- |
 | NuGet packages | Argu, FSharpPlus, FsCheck, xUnit | Always (compile and test) |
-| .NET local tools | `dotnet-fsharplint`, `dotnet-coverage`, `dotnet fantomas` | Quality gates only |
+| .NET tools (pinned in `dotnet-tools.json`) | `dotnet fsharplint`, `dotnet dotnet-coverage`, `dotnet fantomas` | Quality gates and CI only |
 | External executables | `dot` (Graphviz), `lualatex` | Visualization tests and `--summary` CLI flag only |

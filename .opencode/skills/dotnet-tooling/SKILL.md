@@ -64,19 +64,16 @@ dotnet fantomas . --check   # Check formatting without modifying files
 
 ```bash
 # Per-project (use for subtask commits):
-DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint <project-path>
+dotnet fsharplint lint <project-path>
 
 # Full solution (use before merge to dev):
-DOTNET_ROOT=/usr/lib/dotnet dotnet-fsharplint lint FLPQ.slnx
+dotnet fsharplint lint FLPQ.slnx
 ```
 
 Lint configuration: see the `quality-gates` skill.
 
-Install linter locally:
-
-```bash
-dotnet tool install -g dotnet-fsharplint
-```
+The linter version is pinned in `dotnet-tools.json`; install/refresh all .NET
+tools with `dotnet tool restore` (do not install tools globally or unpinned).
 
 ## Tests
 
@@ -92,11 +89,8 @@ dotnet test --filter <test identifier>      # Run specific test
 
 ### Installation
 
-```bash
-dotnet tool install dotnet-coverage
-```
-
-Invoked as `dotnet dotnet-coverage`.
+Pinned in `dotnet-tools.json`; installed by `dotnet tool restore`. Invoked as
+`dotnet dotnet-coverage`.
 
 ### Collecting Coverage
 
