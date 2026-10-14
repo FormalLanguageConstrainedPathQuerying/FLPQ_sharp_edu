@@ -1,5 +1,63 @@
 # Code Review Report
 
+## Task 296 Review (2026-10-14)
+
+Scope: full diff vs origin/dev — `tools/split_tasks.py` (S1: `DONE_HEAD_RE` region boundary in `repair()`, complementing the existing `min(region_hrs)` fix), `docs/developer/guides/tools.md` (pipeline step 2 exception), `tasks/detailed_plan.md` (plan + verification results). No `.fs`, test, or data changes.
+
+**Findings resolved this review:** None — zero findings on the first pass.
+
+**Verified:** scenarios recorded in `detailed_plan.md`: (a) old tool (origin/dev `d082242`) shifts a synthetic `[done]` paragraph + USER GUIDANCE line by 2 blocks (corruption reproduced; the corrupted state is a fixed point), fixed tool shifts 0 with byte-identical output; (b) a legitimate escaped paragraph after a visible head is still shifted +5 by the fixed tool; (c) `tasks.md` + both archives under the fixed tool: STATUS: PASS, 0 shifts, format unchanged, all files byte-identical (re-verified after the log-repair commit).
+
+**Findings against the constraint sources:**
+
+- §13 (no duplication) — the boundary check mirrors the existing thematic-break (`hrs`) region-ending pattern in the same loop but is not copied logic (different condition: regex match vs set membership; different action: `break` vs `end = min(...)`).
+- §20 (documentation) — the exception is documented exactly once in the module docstring (canonical) and summarized in `tools.md` pipeline step 2; both wordings match the implementation. The documented invariants (idempotence, byte-identical moved blocks, number partitioning) are unaffected — split/verify logic unchanged.
+- §22 (code clarity) — a 3-line local check with an explanatory comment; no optimization introduced.
+- Regex edge cases: leading `\s*` also treats an indented `[done] N. ` line as a boundary (safe — the mdformat stage normalizes paragraph indentation); the trailing `\s` after the dot mirrors `HEAD_RE`'s own requirement, and bare `[done] N.` lines without a description do not occur in the log.
+- No other category applies: no `.fs`, test, or data changes in this diff; the F# codebase is unchanged since the zero-findings reviews of tasks 294/295.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+## Task 294 Review (2026-10-13)
+
+Scope: full diff vs origin/dev — `.github/workflows/ci.yml` (manifest-based pinned tools, corrected lint invocation, action major bumps; the integrated file also keeps the upstream CFPQ reference-data export step and Python 3.12), `dotnet-tools.json` (FSharpLint pin; dotnet-coverage stays at 18.8.0 until task 295), `.gitignore` (`.dotnet/`), docs (`AGENTS.md`, `tools/README.md`, `docs/developer/guides/tools.md`, `docs/project/technologies.md`), skills (`quality-gates`, `dotnet-tooling`), `tools/hard_gate.py` (docstring only).
+
+**Findings resolved this review:** None — zero findings on the first pass.
+
+**Verified:** hard gate `STATUS: PASS` on stock tooling (markdown, Fantomas, build, all six test projects 0 failed / 0 skipped, coverage TOTAL line 98.6% / branch 97.0%; lint step skipped — no `.fs` changes) — run on the pre-integration tree (`backup/local-dev-pre-integration`), whose code is identical to this commit's apart from `ci.yml`'s upstream CFPQ export step; re-confirmed on the integrated tree before push. All three bumped action majors exist and are current: `actions/checkout@v7` (v7.0.1, 2026-07-20), `actions/setup-dotnet@v6` (v6.0.0, 2026-07-16), `actions/setup-python@v7` (v7.0.0, 2026-07-20) — checked against the GitHub releases API; none of our inputs are affected by v7 breaking changes (no `pip-install` input used; no `pull_request_target`). The `fsharplint.json` tuned rules match the skill's documented table (`nestedFunctionNames` enabled/CamelCase, `ensureTailCallDiagnosticsInRecursiveFunctions` disabled).
+
+**Findings against the constraint sources:**
+
+- §20 (documentation) — every doc/skill reference to tool installation now points at the manifest + `dotnet tool restore`; no stale `dotnet tool install -g` instructions remain (grep verified); the CI pipeline description in `AGENTS.md` matches `ci.yml` step-for-step.
+- §21 (book traceability) — no algorithm code touched; not applicable.
+- §22 (code clarity) — `hard_gate.py` change is docstring-only; the workflow change is a straight substitution of the tool-install step.
+- No other category applies: no `.fs`, test, or data changes in this diff.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
+## Task 295 Review (2026-10-13)
+
+Scope: full diff vs origin/dev — `dotnet-tools.json` (S1: dotnet-coverage 18.8.0 → 18.12.0), `src/FLPQ.Printers/MatrixTeX.fs` (S2: `color-inside` pNiceMatrix option emission removed), three regenerated golden TeX files, docs (`docs/developer/matrix.md`, `docs/developer/guides/test-categories.md`), book-impact log (`tasks/fixes_for_book.md`).
+
+**Findings resolved this review:** None — zero findings on the first pass.
+
+**Verified:** hard gate `STATUS: PASS` (markdown, Fantomas, build, all six test projects 0 failed / 0 skipped, coverage per-project ≥ 90% and TOTAL line 98.6% / branch 97.0%, FSharpLint 0 warnings on FLPQ.Printers) — run on the pre-integration tree (`backup/local-dev-pre-integration`), whose code is identical to this commit's; re-confirmed on the integrated tree before push. Golden-file delta is exactly the `color-inside` option removal (8 lines across three files, no other content change); no `color-inside`/`colortbl-like` reference remains in `src/` or `tests/`.
+
+**Findings against the constraint sources:**
+
+- §1–§5 (auto: naming, style hints, tabs, tuples ≤ 2, formatting) — FSharpLint 0 warnings on the only changed project; Fantomas clean; via the hard gate.
+- §6 (doc comments) — no new public API; the removed lines were internal to `toTeXStyled`; the module doc remains accurate.
+- §7 (genericity) — no type changes.
+- §9 (separation) — printer-only change; no algorithm or I/O touched.
+- §13 (no duplication) — removal only, no new duplication. Pre-existing observation, outside this diff's scope: the 10-color block palette list is duplicated inside `MatrixTeX.fs` (`blockFillColor` and the nested `blockColor`); a candidate for a future cleanup task.
+- §15/§16 (test fidelity / Fact vs Property) — no test code changed; goldens regenerated via the documented auto-generation mechanism; assertions unchanged and still meaningful.
+- §19 (test coverage) — full `FLPQ.Printers.Tests` green (457 passed, 0 skipped); gate coverage FLPQ.Printers line 99.0% / branch 99.6%.
+- §20 (documentation) — the nicematrix compatibility fact is documented exactly once (`matrix.md` design-decision row); external-tool version constraints exactly once (`test-categories.md` "Environment requirements"); book impact recorded in `fixes_for_book.md`.
+- §21 (book traceability) — no new code; the TeX-output change's book impact is recorded in `fixes_for_book.md`.
+- §22 (code clarity) — three-line removal; no optimization introduced.
+
+**No blocking findings.** A second pass over the changed surface found no additional problems.
+
 ## Task 293 Review (2026-10-12)
 
 Scope: full branch diff vs dev — new `FLPQ.CFPQ` project (`CfpqInput.fs`, `CfpqSemiring.fs`, `AzimovCfpq.fs`), three CLI runners + dispatch + summary support in `FLPQ.Cli`, `CfpqMatrixTeX.fs` in `FLPQ.Printers`, new test projects' additions (`FLPQ.CFPQ.Tests` with 7 files, `CfpqMatrixTexTests.fs` in `FLPQ.Printers.Tests`, `AzimovCfpqCliTests.fs` in `FLPQ.Cli.Tests`), the flpq-data export tool + CI integration, book-example data, and docs.

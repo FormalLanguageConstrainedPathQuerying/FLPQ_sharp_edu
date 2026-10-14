@@ -224,7 +224,7 @@ Task log formatter and splitter. Keeps `tasks/tasks.md` (active log, at most 100
 **Pipeline (per file):**
 
 1. Parse entry heads — numbered lines (`N. `), strictly increasing; lines inside fenced or indented code blocks are skipped.
-2. Repair indentation (leading whitespace only, entry text never touched): dedent heads not at column 0; shift sub-blocks that escape their entry item back inside it (a line escapes when, after a blank line, its indent is below the entry's content column `C(N) = len(str(N)) + 2`); split ordered lists at number gaps with a thematic break (`---`), because the AST stores only a list's start number and any renderer would renumber across a gap.
+2. Repair indentation (leading whitespace only, entry text never touched): dedent heads not at column 0; shift sub-blocks that escape their entry item back inside it (a line escapes when, after a blank line, its indent is below the entry's content column `C(N) = len(str(N)) + 2`); a `[done] N. ` line (completed-entry paragraph form) is never shifted — it starts a new top-level entry and ends the preceding head's region; split ordered lists at number gaps with a thematic break (`---`), because the AST stores only a list's start number and any renderer would renumber across a gap.
 3. Normalize with mdformat (all installed parser extensions: tasklog, frontmatter).
 4. Verify structure preservation; abort on any violation:
    - repair stage: changed lines differ only in leading whitespace; added lines are exactly the gap separators;

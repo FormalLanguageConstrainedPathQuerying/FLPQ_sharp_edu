@@ -15,10 +15,11 @@ files `tasks/tasks<N>.md` well-formed Markdown:
       the ordered list. Fenced blocks and indented code blocks move as
       atomic units; an escaped indented code block shifts by exactly `C(N)`
       (not `C(N) - indent`) so it stays a code block inside the item with
-      byte-identical content — a line at column `C(N)` after a blank line is
-      paragraph text, and in-item code strips `C(N)+4` while top-level code
-      strips 4;
-   - split ordered lists at number gaps with a thematic break (`---`),
+       byte-identical content — a line at column `C(N)` after a blank line is
+       paragraph text, and in-item code strips `C(N)+4` while top-level code
+       strips 4. A `[done] N. ` line (completed-entry paragraph form) is never
+       shifted: it starts a new top-level entry and ends the region;
+    - split ordered lists at number gaps with a thematic break (`---`),
      because the AST stores only a list's start number and any renderer
      would renumber across a gap.
 3. Normalize with mdformat (all installed parser extensions: tasklog,
@@ -69,6 +70,10 @@ ACTIVE_LOG = TASKS_DIR / "tasks.md"
 
 MD = MarkdownIt().enable("table")
 HEAD_RE = re.compile(r"^(\s*)(\d+)\.\s")
+# Completed entries use the `[done] N. ` paragraph form (not a list item, so
+# HEAD_RE does not match them). They are new top-level entries, never content
+# of the preceding item — repair must treat them as region boundaries.
+DONE_HEAD_RE = re.compile(r"^\s*\[done\]\s+\d+\.\s")
 ARCHIVE_REF_RE = re.compile(r"^[-*+] .*tasks\d+\.md")
 ARCHIVE_NAME_RE = re.compile(r"^tasks(\d+)\.md$")
 
@@ -197,6 +202,11 @@ def repair(lines: list[str]) -> tuple[list[str], dict[int, bool], list[tuple[int
                         block_shifts.append((i, cend, content_col))
                     i = cend + 1
                     continue
+            if DONE_HEAD_RE.match(line):
+                # A `[done] N. ` line starts a new top-level entry (a
+                # paragraph, not a list item): it ends this head's region and
+                # is never shifted into the preceding item.
+                break
             if ind >= content_col:
                 i += 1
                 continue
