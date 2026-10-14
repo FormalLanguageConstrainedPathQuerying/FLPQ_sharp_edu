@@ -56,13 +56,39 @@ FSharpLint pin), 295 (tool/system dependency migration), 296 (`split_tasks.py`
   (`/tmp/opencode/venv-cfpq`) — the package requires `<3.14`, system Python is
   3.14; CI uses Python 3.12 via `setup-python`.
 
+## CI Test-Step Fix (first push, run 38558343273)
+
+The first integrated push failed at the Test step: the runner image has
+neither `dot` (Graphviz) nor `lualatex` (TeX Live), and task 293's CI rewrite
+had dropped the historical category filter — so all tool-dependent tests ran
+and failed (148 failures: 77 TeX, 39 Graphviz, 28 Summary, 4 untagged). No
+CI run had ever reached the Test step since July (every earlier run died at
+tool install), so this was latent.
+
+Fix (committed on dev as integration follow-up):
+
+- Main job Test step: `--filter "Category!=Graphviz&Category!=TeX&Category!=Summary"`
+  — the documented selective-execution filter
+  (`docs/developer/guides/test-categories.md`).
+- Restored the historical `graphviz-tests` job (apt Graphviz, runs only
+  `Category=Graphviz`); TeX/Summary tests stay local (hard gate).
+- Added missing category traits to 6 untagged tool-dependent tests:
+  `GssDotTests` stored-pop fill (Graphviz), `RsmTikzTests` epsilon label
+  (TeX), 4× `SummaryTests.buildSummary ... PDF when *.dot exists` (Graphviz).
+- `test-categories.md`: "Affected tests" column updated to the actual file
+  lists (was stale); Summary row now includes `AzimovCfpqCliTests`.
+
+Verified locally: main filter 1404 tests / 0 failed; Graphviz filter
+48 tests / 0 failed.
+
 ## Remaining Work
 
 1. Push `dev` to origin and watch GitHub Actions CI until all steps pass —
    the first fully working run (manifest tool restore, CFPQ reference-data
-   export on Python 3.12, markdown/format/lint/build/test).
-2. Deliver the prepared FSharpLint upstream issue text as plain text (no `gh`
-   auth in this environment).
+   export on Python 3.12, markdown/format/lint/build/test + graphviz-tests).
+2. Deliver the FSharpLint upstream issue text (issue #1's ≤5-min acceptance
+   is unmet — 17m01s vs ~22m baseline on `FLPQ.Printers.Tests`; per the
+   issue's own step 5, file upstream at `fsprojects/FSharpLint`).
 
 ## Notes
 

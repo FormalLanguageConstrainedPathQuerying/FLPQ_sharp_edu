@@ -154,6 +154,7 @@ let ``RSM tikz emits one edge line per transition symbol`` () =
         Assert.Equal(transitionSymbolCount rsm, edgePattern.Matches(tikz).Count)
 
 [<Fact>]
+[<Trait("Category", "TeX")>]
 let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
     // EBNF-derived RSMs encode epsilon as "start state is final" (no AEpsilon edges),
     // so build a minimal RSM with an explicit epsilon transition to cover the

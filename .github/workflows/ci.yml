@@ -57,5 +57,38 @@ jobs:
       - name: Build
         run: dotnet build FLPQ.slnx -c Debug --no-restore
 
-      - name: Test
-        run: dotnet test --no-build -c Debug
+      # The runner image has neither Graphviz (`dot`) nor TeX Live
+      # (`lualatex`): tool-dependent categories are excluded here (see
+      # docs/developer/guides/test-categories.md). They run in the
+      # graphviz-tests job below and locally via the hard gate.
+      - name: Test (excluding Graphviz, TeX, Summary)
+        run: dotnet test --no-build -c Debug --filter "Category!=Graphviz&Category!=TeX&Category!=Summary"
+
+  graphviz-tests:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Restore .NET tools (pinned manifest)
+        run: dotnet tool restore
+
+      - name: Build
+        run: dotnet build FLPQ.slnx -c Debug --no-restore
+
+      # DOT-compilation tests only; TeX compilation stays local (no TeX Live
+      # on the runner, and installing it is impractical).
+      - name: Test (Graphviz only)
+        run: dotnet test --no-build -c Debug --filter "Category=Graphviz"

@@ -23,9 +23,9 @@ Tests in this project use xUnit `[<Trait("Category", "...")>]` attributes to gro
 
 | Category | Required tool | Affected tests | Purpose |
 | --- | --- | --- | --- |
-| `Graphviz` | `dot` (Graphviz) | `AutomatonVisualizationTests`, `DerivationTreeVisualizationTests`, `LLVisualizerTests`, `LRVisualizerTests`, `ExternalToolsTests`, `TexCompilationTests` | Compile generated DOT graphs to verify structural correctness (`-Tplain` parsing) and produce PDFs |
-| `TeX` | `lualatex` | `AutomatonVisualizationTests`, `DerivationTreeTikzTests`, `ExternalToolsTests`, `TexCompilationTests` | Compile generated TeX/Tikz fragments in a standalone document to verify correctness and strict error detection |
-| `Summary` | `lualatex` | `CliSummaryTests` | End-to-end CLI `--summary` producing merged TeX documents, compiled to PDF |
+| `Graphviz` | `dot` (Graphviz) | `AutomatonVisualizationTests`, `BasicSppfDotTests`, `DerivationTreeVisualizationTests`, `ExternalToolsTests`, `GllRunnerTests`, `GssDotTests`, `GssDotVisualizationTests`, `InputGraphDotTests`, `LLVisualizerTests`, `LRVisualizerTests`, `RnglrStepVisualizationTests`, `SummaryTests`, `TexCompilationTests` | Compile generated DOT graphs to verify structural correctness (`-Tplain` parsing) and produce PDFs |
+| `TeX` | `lualatex` | `ArroyueloReachabilityStepVisualizationTests`, `ArroyueloSimplePathStepVisualizationTests`, `AutomatonVisualizationTests`, `BasicSppfDotTests`, `BelyaninReachabilityStepVisualizationTests`, `BelyaninStepVisualizationTests`, `DerivationTreeTikzTests`, `ExternalToolsTests`, `InputGraphTikzTests`, `PathIndexTeXTests`, `PathSemiringTexTests`, `RegexpTexTests`, `RnglrAutomatonTikzTests`, `RnglrStepVisualizationTests`, `RnglrTableTexTests`, `RsmTikzTests`, `TexCompilationTests` | Compile generated TeX/Tikz fragments in a standalone document to verify correctness and strict error detection |
+| `Summary` | `lualatex` | `AzimovCfpqCliTests`, `CliSummaryTests` | End-to-end CLI `--summary` producing merged TeX documents, compiled to PDF |
 
 ## Environment requirements
 

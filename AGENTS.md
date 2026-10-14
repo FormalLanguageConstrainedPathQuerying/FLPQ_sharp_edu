@@ -87,7 +87,7 @@ See the `git-workflow` skill for the full procedure.
 
 ## CI
 
-Pipeline (`.github/workflows/ci.yml`): restore → tool restore (pinned `dotnet-tools.json` manifest) → CFPQ reference data export → markdown format check → format check → lint → build → test.
+Pipeline (`.github/workflows/ci.yml`): restore → tool restore (pinned `dotnet-tools.json` manifest) → CFPQ reference data export → markdown format check → format check → lint → build → test (excluding the Graphviz/TeX categories — the runner has no `dot`/`lualatex`), plus a separate `graphviz-tests` job that installs Graphviz and runs only `Category=Graphviz`.
 
 Tool versions: pinned in `dotnet-tools.json`, installed via `dotnet tool restore` (setup: `tools/README.md`). Lint configuration: see the `quality-gates` skill.
 

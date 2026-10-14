@@ -129,6 +129,7 @@ let ``buildSummary returns false when a step dot file is malformed`` () =
         Assert.False(ok))
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``buildSummary for SLR1 includes the LR automaton PDF when lr_automaton.dot exists`` () =
     withTempDirs (fun (vizDir, resultDir) ->
         File.WriteAllText(Path.Combine(vizDir, "lr_automaton.dot"), "digraph G { a -> b }")
@@ -155,6 +156,7 @@ let ``buildSummary for SLR1 without automaton files omits the automaton section`
         Assert.DoesNotContain("LR Automaton", text))
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``buildSummary for GLL includes the extended RSM PDF when ext_rsm.dot exists`` () =
     withTempDirs (fun (vizDir, resultDir) ->
         File.WriteAllText(Path.Combine(vizDir, "ext_rsm.dot"), "digraph G { a -> b }")
@@ -169,6 +171,7 @@ let ``buildSummary for GLL includes the extended RSM PDF when ext_rsm.dot exists
         Assert.Contains("Extended RSM", text))
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``buildSummary for RNGLR includes the extended RSM PDF when ext_rsm.dot exists`` () =
     withTempDirs (fun (vizDir, resultDir) ->
         File.WriteAllText(Path.Combine(vizDir, "ext_rsm.dot"), "digraph G { a -> b }")
@@ -183,6 +186,7 @@ let ``buildSummary for RNGLR includes the extended RSM PDF when ext_rsm.dot exis
         Assert.Contains("Extended RSM", text))
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``buildSummary for RNGLR includes the LR automaton PDF when lr_automaton.dot exists`` () =
     withTempDirs (fun (vizDir, resultDir) ->
         File.WriteAllText(Path.Combine(vizDir, "lr_automaton.dot"), "digraph G { a -> b }")

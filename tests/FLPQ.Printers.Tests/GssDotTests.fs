@@ -105,6 +105,7 @@ let ``GSS current vertex gets lightblue fill`` () =
     Assert.Equal(2, info.EdgeCount)
 
 [<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``toDotFromSets stored-pop vertex gets orange fill`` () =
     let dot =
         GssDot.toDotFromSets
