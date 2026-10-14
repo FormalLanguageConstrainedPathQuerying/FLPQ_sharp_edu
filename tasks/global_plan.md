@@ -81,14 +81,16 @@ Fix (committed on dev as integration follow-up):
 Verified locally: main filter 1404 tests / 0 failed; Graphviz filter
 48 tests / 0 failed.
 
-## Remaining Work
+## Outcome
 
-1. Push `dev` to origin and watch GitHub Actions CI until all steps pass —
-   the first fully working run (manifest tool restore, CFPQ reference-data
-   export on Python 3.12, markdown/format/lint/build/test + graphviz-tests).
-2. Deliver the FSharpLint upstream issue text (issue #1's ≤5-min acceptance
-   is unmet — 17m01s vs ~22m baseline on `FLPQ.Printers.Tests`; per the
-   issue's own step 5, file upstream at `fsprojects/FSharpLint`).
+- `dev` pushed (`32f1ee0`, then CI fix `33f2cf2`); GitHub Actions run
+  [38582570009](https://github.com/FormalLanguageConstrainedPathQuerying/FLPQ_sharp_edu/actions/runs/38582570009)
+  is the first fully green CI run: `build-and-test` success (manifest tool
+  restore, CFPQ reference-data export on Python 3.12, markdown/format/lint/
+  build, filtered test) + `graphviz-tests` success.
+- Open item: file the FSharpLint upstream issue (issue #1's ≤5-min
+  acceptance is unmet — 17m01s vs ~22m baseline on `FLPQ.Printers.Tests`;
+  per the issue's own step 5, report upstream at `fsprojects/FSharpLint`).
 
 ## Notes
 
