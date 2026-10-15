@@ -1,5 +1,10 @@
 # CLI Console Application
 
+**Tags:** cl, cli, user
+**Kind:** guide
+
+> **Abstract:** User documentation for the `FLPQ.Cli` console application: how to run parsing, RPQ, and CFPQ algorithms from the command line, the available flags (including `--summary` and `--semantics`), the output artifacts each algorithm produces, and example invocations.
+
 ## Overview
 
 Command-line interface for running parsing algorithms with visualization output.

@@ -1,5 +1,10 @@
 # Third-Party Libraries and Tools
 
+**Tags:** dependencies, libraries, tools
+**Kind:** guide
+
+> **Abstract:** Catalog of the third-party libraries and tools this project depends on (Argu, FSharpPlus, FsCheck, xUnit, fantomas, nicematrix, Graphviz, lualatex), each with its role in the solution and the rationale for the choice.
+
 | Dependency | Role | Rationale |
 | --- | --- | --- |
 | [Argu](https://fsprojects.github.io/Argu/) | CLI argument parsing | First-class F# DU-based argument declarations with built-in help generation — matches the project's type-first design philosophy |

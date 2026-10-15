@@ -23,27 +23,7 @@ Run these five questions **before** writing new code or documentation. Answer ea
 
 ### 0. Search by metadata tags
 
-All developer docs in `docs/developer/` have a metadata block with **Tags**, **Kind**, and other fields. Use metadata to narrow the search before reading full docs. The metadata format is defined in `docs/developer/guides/documentation-conventions.md` (the canonical source for documentation requirements).
-
-```bash
-# Find all algorithm docs
-grep "\*\*Kind:\*\* algorithm" docs/developer/*.md
-
-# Find parsing-related docs
-grep "\*\*Tags:\*\*.*parsing" docs/developer/*.md
-
-# Find docs about a specific algorithm or concept
-grep "\*\*Tags:\*\*.*cyk" docs/developer/*.md
-
-# Find docs using a specific approach
-grep "\*\*Tags:\*\*.*dynamic-programming" docs/developer/*.md
-
-# Find docs that depend on a specific module
-grep "\*\*Depends on:\*\*.*Matrix" docs/developer/*.md
-
-# Find which docs a module is used by
-grep "\*\*Used by:\*\*.*PathIndex" docs/developer/*.md
-```
+All developer docs in `docs/developer/` have a metadata block with **Tags**, **Kind**, and other fields. Use metadata to narrow the search before reading full docs. The metadata format is defined in `docs/developer/guides/documentation-conventions.md` (the canonical source for documentation requirements); ready-made grep patterns for every field are in its "Searching by Metadata" section.
 
 After filtering by metadata, read the **abstract** (blockquote after metadata) of matching docs to determine which are relevant. Only then open and read the full doc.
 

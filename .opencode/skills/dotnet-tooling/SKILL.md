@@ -70,10 +70,9 @@ dotnet fsharplint lint <project-path>
 dotnet fsharplint lint FLPQ.slnx
 ```
 
-Lint configuration: see the `quality-gates` skill.
+Lint configuration and tuned rules: see `docs/developer/guides/lint.md`.
 
-The linter version is pinned in `dotnet-tools.json`; install/refresh all .NET
-tools with `dotnet tool restore` (do not install tools globally or unpinned).
+Tool versions are pinned in `dotnet-tools.json`; setup: see `tools/README.md`.
 
 ## Tests
 
@@ -89,8 +88,7 @@ dotnet test --filter <test identifier>      # Run specific test
 
 ### Installation
 
-Pinned in `dotnet-tools.json`; installed by `dotnet tool restore`. Invoked as
-`dotnet dotnet-coverage`.
+Setup: see `tools/README.md`. Invoked as `dotnet dotnet-coverage`.
 
 ### Collecting Coverage
 
@@ -117,4 +115,4 @@ dotnet fsi Script.fsx
 
 ## Output capture
 
-All dotnet commands that produce significant output (build, test, format check, lint, coverage) MUST capture output to `tmp/`. See the `quality-gates` skill for the full output capture protocol.
+All dotnet commands that produce significant output (build, test, format check, lint, coverage) MUST capture output to `tmp/`. See `tools/README.md` for the output capture conventions (file naming, no-pipes rule, re-running rules).

@@ -5,7 +5,7 @@ description: "Use when performing code review: detect and fix architecture probl
 
 # Code Review
 
-Performed at task completion — after all subtasks are committed, BEFORE the hard gate (AGENTS.md working loop: step 6 review, then step 7 gate), and before closing the task (the merge commit carries `Closes #<N>` — see the `git-workflow` skill). Covers the **entire repo** (`src/` and `tests/`).
+Performed at task completion — after all subtasks are committed, BEFORE the hard gate (`workflow-management` working loop: step 6 review, then step 7 gate), and before closing the task (the merge commit carries `Closes #<N>` — see the `git-workflow` skill). Covers the **entire repo** (`src/` and `tests/`).
 
 ## Core Loop
 
@@ -38,15 +38,15 @@ Before reviewing, read each canonical source. For categories marked **Auto**, th
 | 11 | Variants as thin layers over shared infrastructure | `docs/developer/guides/design-guides.md` § Variants as thin layers | Manual |
 | 12 | Compile-time safety — types make illegal states unrepresentable | `docs/developer/guides/design-guides.md` § Compile-time safety over runtime checks | Manual |
 | 13 | No code duplication — if >3 non-trivial lines copied, extract shared function | `docs/developer/guides/design-guides.md` § Avoid code duplication + `docs/developer/guides/reusing.md` § No Duplicates | Manual |
-| 14 | Language registry — single source of truth for grammars, RSMs, accept/reject strings, generators | `docs/developer/guides/language-registry.md` + `.opencode/skills/tests-writer/SKILL.md` § Using the Language Registry, § Do NOT | Manual |
-| 15 | No stubbed tests — no `Assert(true)`, empty bodies `()`, commented-out checks, `Skip` without explanation, or tautological assertions | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
-| 16 | Property vs Fact — `[<Property>]` tests use FsCheck-generated inputs; `()` + hardcoded data → `[<Fact>]` | `.opencode/skills/tests-writer/SKILL.md` § Test Requirements | Manual |
-| 17 | FsCheck generators in shared `Generators.fs`, not duplicated across test projects | `.opencode/skills/tests-writer/SKILL.md` § Shared generators | Manual |
+| 14 | Language registry — single source of truth for grammars, RSMs, accept/reject strings, generators | `docs/developer/guides/language-registry.md` § How to Use (incl. Do NOT) | Manual |
+| 15 | No stubbed tests — no `Assert(true)`, empty bodies `()`, commented-out checks, `Skip` without explanation, or tautological assertions | `docs/developer/guides/testing.md` § Test Requirements | Manual |
+| 16 | Property vs Fact — `[<Property>]` tests use FsCheck-generated inputs; `()` + hardcoded data → `[<Fact>]` | `docs/developer/guides/testing.md` § Test Requirements | Manual |
+| 17 | FsCheck generators in shared `Generators.fs`, not duplicated across test projects | `docs/developer/guides/testing.md` § Test Requirements (shared generators) | Manual |
 | 18 | Equivalence tests for every algorithm variant | `docs/developer/guides/quality-standards.md` § Equivalence tests for all variants | Manual |
 | 19 | Test coverage — every `src/` module has at least one correspondent in `tests/` | This section | Manual |
 | 20 | Documentation completeness — module docs, hub docs, architecture docs, navigation links | `docs/developer/guides/documentation-conventions.md` § Documentation Mapping Table, § Documentation Completeness | Manual |
-| 21 | Book traceability — every implementation references specific book section/figure/listing | `AGENTS.md` § Code must be clear + `docs/developer/guides/coding-conventions.md` § Documentation | Manual |
-| 22 | Code clarity — no nontrivial optimizations; clear reference implementations | `AGENTS.md` § Code must be clear | Manual |
+| 21 | Book traceability — every implementation references specific book section/figure/listing | `docs/developer/guides/coding-conventions.md` § Why conventions matter + § Documentation | Manual |
+| 22 | Code clarity — no nontrivial optimizations; clear reference implementations | `docs/developer/guides/coding-conventions.md` § Why conventions matter | Manual |
 | 23 | Naming semantics — misleading names, type-level inconsistencies (e.g., `list` where `NonEmptyList` is correct) | `docs/developer/guides/coding-conventions.md` § Non-empty collections + § Maximal genericity | Manual |
 
 ### Scope of Automated Checks
@@ -93,7 +93,7 @@ Before running code review:
 1. All subtasks committed
 2. No uncommitted changes in the working tree
 
-The hard gate runs AFTER code review (AGENTS.md working loop: step 6 review, then step 7 gate) — review fixes are included in the final gate run. See the `quality-gates` skill for the gate procedure.
+The hard gate runs AFTER code review (`workflow-management` working loop: step 6 review, then step 7 gate) — review fixes are included in the final gate run. See the `quality-gates` skill for the gate procedure.
 
 ## Completion
 

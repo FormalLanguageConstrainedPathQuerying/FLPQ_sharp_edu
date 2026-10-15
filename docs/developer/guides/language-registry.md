@@ -27,13 +27,17 @@
 ## How to Use
 
 1. **Find a language** whose grammars are compatible with the algorithm you are testing.
+
 2. **Check grammar properties** against the algorithm's known restrictions.
+
    - **LL(k)**: requires `HasDirectLeftRecursion = false`; may require `IsAmbiguous = false`
    - **LR(k)**: requires no shift-reduce/reduce-reduce conflicts; `IsAmbiguous = false` for deterministic
    - **CYK**: requires grammar in CNF, or a CNF conversion step
    - **Valiant**: requires CNF (internally converted)
    - **GLL/RNGLR**: no restrictions
+
 3. **Use the registry in test code**:
+
    ```fsharp
    open FLPQ.TestUtilities
 
@@ -43,8 +47,45 @@
        // RSM-based parsers (GLL, RNGLR): use g.Rsm
        // test with lang.AcceptStrings, lang.RejectStrings
    ```
-4. **For property-based tests**, use `lang.GenString` to generate random strings.
-5. **For cross-algorithm equivalence**, pick a language with multiple grammars (e.g., Dyck1 has 3, APlus has 6).
+
+4. **Iterate accept/reject strings** using helpers from `TestHelpers`:
+
+   ```fsharp
+   [<Fact>]
+   let ``MyParser accepts Dyck1 strings`` () =
+       let failures =
+           TestHelpers.collectAcceptFailures
+               (fun g input -> MyParser.parse g input)
+               LanguageRegistry.Dyck1
+       Assert.Empty(failures)
+   ```
+
+5. **For property-based tests**, refer to the language's generator type in `Generators.fs` (the `Arbitrary` types correspond to the `Gen<string>` values in the registry, e.g. `lang.GenString`):
+
+   ```fsharp
+   [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+   module Dyck1Properties =
+       [<Property>]
+       let ``MyParser and CYK agree`` (s: string) = ...
+   ```
+
+6. **For cross-algorithm equivalence**, pick a language with multiple grammars (e.g., Dyck1 has 3, APlus has 6):
+
+   ```fsharp
+   [<Property>]
+   let ``ParserA and ParserB agree on Dyck1`` (s: string) =
+       let g1 = LanguageRegistry.Dyck1.Grammars[0]
+       let g2 = LanguageRegistry.Dyck1.Grammars[1]
+       ParserA.parse g1.Grammar input = ParserB.parse g2.Grammar input
+       // For GLL/RNGLR parsers, use g1.Rsm instead of g1.Grammar
+   ```
+
+### Do NOT
+
+- Hardcode grammar definitions inline — use `LanguageRegistry.<Language>.Grammars[n]`
+- Call `TestHelpers.grammarToRsm` or `RsmBuilder.buildRSMFromText` in tests — use `g.Rsm`
+- Hardcode accept/reject strings — use `LanguageRegistry.<Language>.AcceptStrings` / `RejectStrings`
+- Define duplicate string generators — use the `Arbitrary` types registered in `Generators.fs`, which correspond to the `Gen<string>` values in the language registry
 
 ## Language Entries
 

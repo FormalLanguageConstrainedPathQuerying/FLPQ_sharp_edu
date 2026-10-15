@@ -1,30 +1,36 @@
 # FLPQ_sharp_edu
 
-Supplementary materials for the book on formal language constrained path querying (FLPQ).
+[![CI](https://github.com/FormalLanguageConstrainedPathQuerying/FLPQ_sharp_edu/actions/workflows/ci.yml/badge.svg)](https://github.com/FormalLanguageConstrainedPathQuerying/FLPQ_sharp_edu/actions/workflows/ci.yml)
 
-Reference implementations of algorithms in F# (.NET 10.0).
+Supplementary materials for the book on formal language constrained path querying
+(FLPQ): reference implementations of the book's algorithms in F# (.NET 10.0).
 
-## Building
+## Quickstart
 
 ```sh
 dotnet tool restore
 dotnet build
 ```
 
-## Running Tests
+Run the test suite:
 
 ```sh
 dotnet test
 ```
 
-## Code Formatting
+Format the code (check-only variant: `dotnet fantomas . --check`):
 
 ```sh
 dotnet fantomas .
 ```
 
-To check formatting without modifying files:
+## Documentation
 
-```sh
-dotnet fantomas . --check
-```
+The documentation is the map for navigating the project. Start at
+[docs/main.md](docs/main.md), or jump directly to a page:
+
+- [Project architecture](docs/project/architecture.md)
+- [Coding conventions](docs/developer/guides/coding-conventions.md)
+- [Quality standards](docs/developer/guides/quality-standards.md)
+- [Documentation conventions](docs/developer/guides/documentation-conventions.md)
+- [CLI usage](docs/user/cli.md)

@@ -21,7 +21,7 @@ For every source change, determine which doc files are affected using the mappin
 - For changed public APIs: update the existing module doc to reflect the change
 - For new CLI features: update `docs/user/cli.md`
 - For new files: update `docs/developer/FLPQ.<Project>.md` and `docs/project/architecture.md`
-- For new doc pages: update `docs/main.md` with navigation links
+- For new doc pages: add the metadata block (Tags, Kind, Abstract) and run `python3 tools/generate_doc_map.py` — the map in `docs/main.md` is generated from metadata; CI fails on drift
 - For book errors: record in `tasks/fixes_for_book.md`
 - After editing any `.md` file, run `mdformat <file>` on it — all tracked `.md` files must be mdformat-clean (the quality gates check every one; setup: `tools/README.md`)
 
@@ -31,5 +31,5 @@ After writing, verify against the documentation completeness criteria in the con
 
 - Every new `.fs` file has a corresponding `docs/developer/` entry
 - Every new module appears in its project hub doc
-- Every new page is linked from `docs/main.md`
+- Every new page carries a metadata block and appears in the generated map (`python3 tools/generate_doc_map.py --check` passes)
 - Every new CLI feature is documented in `docs/user/cli.md`

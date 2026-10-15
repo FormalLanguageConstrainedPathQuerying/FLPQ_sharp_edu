@@ -120,7 +120,7 @@ gh api -X PATCH "repos/$REPO/issues/comments/$CID" \
   --input <(jq -Rs '{body: .}' /tmp/plan_comment.md)
 ```
 
-The local file is the single source of truth while working; the comment is a pure mirror. This command is the single source of truth for plan syncing — the AGENTS.md working loop and the `planning` skill reference it. If GitHub is unreachable, defer the sync and perform it as soon as connectivity returns.
+The local file is the single source of truth while working; the comment is a pure mirror. This command is the single source of truth for plan syncing — the `workflow-management` skill (working loop) and the `planning` skill reference it. If GitHub is unreachable, defer the sync and perform it as soon as connectivity returns.
 
 If at any point in steps 1–7 you hit an unresolvable problem that prevents 100% completion, **STOP the cycle immediately** and follow the Blocked Work Protocol below. Do NOT attempt to "complete" the subtask with partial results, reverted work, or known limitations. Do NOT proceed to the next subtask.
 

@@ -1,6 +1,6 @@
 ---
 name: quality-gates
-description: "Use when running quality checks: format check, lint, build, test (with coverage), coverage verification — either per-subtask or pre-merge. Covers tool output capture rules, the full gates sequence, verification commands, and re-running logic."
+description: "Use when running quality checks: format check, lint, build, test (with coverage), coverage verification — either per-subtask or pre-merge. Covers gate invocation (async hard gate), commit gate and task verification procedures, polling, and re-running logic. Tool facts live in tools/README.md and docs/developer/guides/tools.md; lint configuration lives in docs/developer/guides/lint.md."
 ---
 
 # Quality Gates
@@ -44,7 +44,10 @@ Every quality gate MUST pass before a commit or merge. A single failing test, li
 
 The following Python scripts in `tools/` automate quality gate execution. **Always prefer these tools over manual shell commands.**
 
-See `tools/README.md` for the full tool list and output conventions. See `docs/developer/guides/tools.md` for per-tool details (steps, thresholds, output format examples).
+See `tools/README.md` for the full tool list, output conventions (including raw CLI
+output capture: file naming, no-pipes rule, re-running rules), and setup. See
+`docs/developer/guides/tools.md` for per-tool details (steps, thresholds, output
+format examples).
 
 ## Gate Types
 
@@ -63,47 +66,9 @@ to prevent confusion. Confusing the two means skipping tests, coverage, and lint
 | Kind | Examples | How to read output |
 | --- | --- | --- |
 | **Python tool scripts** | `tools/quality_check.py`, `tools/hard_gate.py` | Scripts write to a **fixed output file** (e.g., `tmp/quality-check.txt`, `tmp/hard-gate.txt`). For `hard_gate.py`, redirect stdout/stderr to `tmp/hard-gate-stderr.txt` — the main log is in the fixed file, not stdout. Read the fixed file directly with the Read or Grep tools. |
-| **Raw CLI tools** | `dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage` | These write to stdout/stderr. **Redirect all output** to a file in `tmp/` before reading. |
+| **Raw CLI tools** | `dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage` | These write to stdout/stderr. **Redirect all output** to a file in `tmp/` before reading (naming and re-running rules: `tools/README.md`). |
 
 The fixed output file is the single source of truth — never read a redirect when the script writes to its own file.
-
-## Raw CLI Tool Output Capture
-
-For raw CLI tools (`dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage`), redirect all output (stdout + stderr) to a file in `tmp/`.
-
-**NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on tool output. Write raw output to `tmp/` first, then use the Grep or Read tools to analyze the captured file.
-
-Command pattern:
-
-```bash
-dotnet test > tmp/test-output.txt 2>&1
-```
-
-After capturing, analyze the output file with the Grep or Read tools — do NOT re-run the tool with a different grep/filter.
-
-### File naming convention
-
-| Command | Output file |
-| --- | --- |
-| `dotnet build` | `tmp/build-output.txt` |
-| `dotnet test` | `tmp/test-output.txt` |
-| `dotnet fantomas .` | (in-place, no captured output) |
-| `dotnet fsharplint lint` | `tmp/fsharplint-output.txt` |
-| `dotnet dotnet-coverage` | `tmp/coverage-output.txt` |
-
-Coverage data file: `tmp/coverage.cobertura`
-
-### Re-running rules
-
-Before running any expensive CLI tool, you MUST:
-
-1. Check if the corresponding `tmp/<output-file>` already exists: `ls -la tmp/<file>`
-2. If it exists and source files haven't changed since capture, read the existing file — NEVER re-run
-3. Only re-run if the output file is missing, empty/truncated, or source files have changed since the last capture
-
-**Sub-agent output is output.** Data returned by the Task tool (sub-agents) is equivalent to a captured output file. If a sub-agent already ran a tool and returned its results, do not re-run that tool.
-
-**Timed-out output is valid.** Even if a tool times out or produces partial output, check the output file first. Do NOT re-run with a longer timeout unless source files changed AND the captured content is insufficient for decision-making.
 
 ## Commit Gate
 
@@ -145,7 +110,7 @@ Times are baseline estimates for the current codebase and will grow as the proje
 | 3. Build | `dotnet build FLPQ.slnx` | Builds all projects |
 | 4. Tests | Per-project `dotnet test` with coverage | Printers.Tests is the slowest (TeX compilation) |
 | 5. Coverage | Per-project + total line and branch threshold check | Negligible |
-| 6. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects |
+| 6. Lint | `fsharplint lint` on changed projects | The slowest step; time proportional to number of changed projects (timing: `docs/developer/guides/lint.md`) |
 
 ### File Structure of `tmp/hard-gate.txt`
 
@@ -243,7 +208,9 @@ To run lint manually on a specific project:
 dotnet fsharplint lint <project.fsproj> > tmp/fsharplint-output.txt 2>&1
 ```
 
-Zero warnings policy: any warning in a modified project is a blocker, including pre-existing warnings.
+Zero warnings policy (any warning in a modified project is a blocker, including
+pre-existing ones): see `docs/developer/guides/quality-standards.md`. Lint
+configuration, tuned rules, and timing: see `docs/developer/guides/lint.md`.
 
 Report format for each affected project:
 
@@ -260,56 +227,15 @@ A single `BLOCKED` means go back and fix. Continue only when every line says `PA
 dotnet fsharplint lint FLPQ.slnx > tmp/fsharplint-output.txt 2>&1
 ```
 
-Timeout: 7200000 (2 h; the full-solution lint takes ~26 min locally, ~40–60 min in CI — see Timing above). Must show `Summary: 0 warnings`.
+Timeout: 7200000 (2 h; timing characteristics: see `docs/developer/guides/lint.md`). Must show `Summary: 0 warnings`.
 
 ## Hard Gate
 
 A subtask is committed ONLY when the commit gate passes. A task is complete ONLY when task verification passes. A single build failure, test failure, lint warning, or coverage drop is a blocker.
 
-If you encounter a problem you cannot resolve to 100% correctness, STOP. Do not commit. Do not merge. Do not comment out or weaken failing tests. See the blocked work protocol in AGENTS.md.
-
-## FSharpLint Configuration
-
-The project uses a custom `fsharplint.json` at the repository root.
-
-**Version**: pinned in `dotnet-tools.json` (single source of truth) — currently the
-`0.27.1--date20260902-0344.git-d2607f5` pre-release, invoked as `dotnet fsharplint`.
-Install/refresh with `dotnet tool restore` (see `tools/README.md`). Do not install
-FSharpLint globally or unpinned — local and CI must run the same version.
-
-**Timing**: lint is slow by design of FCS — every file is re-type-checked against the
-full contents of the referenced F# assemblies (FSharpPlus ~11 MB dominates): ~24 s/file
-on `tests/FLPQ.Printers.Tests` (~17 min for 42 files), ~26 min for the full solution
-(205 files) on an 8-core machine — expect ~40–60 min on a 4-core CI runner. This is
-environmental, not a hang — see issue #1. Never run two lints in parallel (CPU
-contention makes them 2–3× slower).
-
-**Critical**: FSharpLint does **not** support partial configs — the file must contain the **full** default configuration with only the desired rules changed. The reference default config lives at:
-
-```
-https://raw.githubusercontent.com/fsprojects/FSharpLint/master/src/FSharpLint.Core/fsharplint.json
-```
-
-### Tuned Rules
-
-The following rules were changed from FSharpLint defaults to match the project code style (as documented in `AGENTS.md`):
-
-| Rule | Setting | Default | Reason |
-| --- | --- | --- | --- |
-| `genericTypesNames` (FL0069) | `naming: CamelCase` | PascalCase | Project uses `'t`, `'nt`, `'a`, `'s`, `'v` |
-| `nestedFunctionNames` (FL0081) | `enabled: true`, `naming: CamelCase` | disabled, PascalCase | Project uses camelCase for `let rec loop`/`derive` etc. |
-| `recordFieldNames` (FL0039) | `naming: PascalCase` | PascalCase | Per AGENTS.md "PascalCase for record fields and union case fields" |
-
-Rule IDs verified against the pinned version's source (`src/FSharpLint.Core/Rules/Identifiers.fs`): FL0067 = `privateValuesNames`, FL0069 = `genericTypesNames`, FL0081 = `nestedFunctionNames`, FL0085 = `ensureTailCallDiagnosticsInRecursiveFunctions`.
-
-### Nested Function Naming (FL0081) and Tail-Call Diagnostics (FL0085)
-
-Enabling `nestedFunctionNames` makes **FL0081** report local function names not matching the configured convention (`CamelCase`). A separate rule, `ensureTailCallDiagnosticsInRecursiveFunctions` (**FL0085**), reports any `let rec` function (local or top-level) missing the `[<TailCall>]` attribute. Both fire on the same code, which is why enabling the naming rule initially looked like "dual behavior". The project keeps FL0081 active and sets `ensureTailCallDiagnosticsInRecursiveFunctions` to `false` to suppress only the tail-call diagnostics.
-
-### FL0069 Quirk
-
-`genericTypesNames` (FL0069) only checks generic parameters written with a quote (`type Foo<'t>`); unquoted parameters (`type Foo<t>`) are not checked. Verified identical on 0.27.0 and the pinned pre-release — not a regression.
+If you encounter a problem you cannot resolve to 100% correctness, STOP. Do not commit. Do not merge. Do not comment out or weaken failing tests. See the Blocked Work Protocol in the `subtask-loop` skill.
 
 ## Debugging Test Hangs
 
-When a test hangs, times out, or produces wrong results, use the `debugging` skill for print-trace debugging.
+When a test hangs, times out, or produces wrong results, use the `debugging`
+skill (procedure: `docs/developer/guides/debugging.md`).

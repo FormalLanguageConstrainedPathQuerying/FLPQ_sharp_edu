@@ -40,7 +40,7 @@ After the global plan is created and mirrored to the hub, proceed with the norma
 
 **Prerequisite — open task issue:** before writing the detailed plan, verify the task is an open `task`-labeled issue (`gh issue view <N>`). If it is not (e.g. the task came from a chat request), create the issue first (`gh issue create --label task`, body = the user's text verbatim) — never plan a task that is not an issue.
 
-**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the task issue body verbatim (`gh issue view <N> --json body -q .body`). The issue body is user-authored and immutable — it is the durable record; the local plan file is a machine-local mirror (see the AGENTS.md Git Safety section).
+**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the task issue body verbatim (`gh issue view <N> --json body -q .body`). The issue body is user-authored and immutable — it is the durable record; the local plan file is a machine-local mirror (see the Git Safety section of the `workflow-management` skill).
 
 `tasks/detailed_plan.md` MUST decompose the task into atomic subtasks. Each subtask:
 
@@ -79,7 +79,7 @@ Example:
 **Tests:** New `SppfDotTests` section in an existing Printers test file or new
           test file; golden test comparing SPPF DOT output against reference
 **Docs:** New `docs/developer/sppf-dot.md`; update `docs/developer/FLPQ.Printers.md`;
-        update `docs/main.md`
+        run `python3 tools/generate_doc_map.py` (the map in docs/main.md is generated)
 
 **Spec:**
 - Terminal/nonterminal nodes: shape=oval...

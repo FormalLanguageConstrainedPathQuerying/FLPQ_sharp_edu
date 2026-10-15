@@ -16,6 +16,50 @@ Auxiliary tools for project work and code quality control.
 
 For detailed per-tool documentation (steps, thresholds, output format examples), see `docs/developer/guides/tools.md`.
 
+## Raw CLI Tool Output Capture
+
+The conventions above cover the Python tool scripts in `tools/`. Raw CLI tools
+(`dotnet build`, `dotnet test`, `dotnet fsharplint lint`, `dotnet dotnet-coverage`)
+write to stdout/stderr instead — capture them the same way:
+
+**NEVER use pipes** (`|`), `head`, `tail`, `grep`, `rg`, or any other shell filtering on
+tool output. Write raw output to a file in `tmp/` first, then analyze the captured file
+with the Grep or Read tools — do NOT re-run the tool with a different grep/filter.
+
+Command pattern:
+
+```bash
+dotnet test > tmp/test-output.txt 2>&1
+```
+
+### File naming convention
+
+| Command | Output file |
+| --- | --- |
+| `dotnet build` | `tmp/build-output.txt` |
+| `dotnet test` | `tmp/test-output.txt` |
+| `dotnet fantomas .` | (in-place, no captured output) |
+| `dotnet fsharplint lint` | `tmp/fsharplint-output.txt` |
+| `dotnet dotnet-coverage` | `tmp/coverage-output.txt` |
+
+Coverage data file: `tmp/coverage.cobertura`
+
+### Re-running rules
+
+Before running any expensive CLI tool, you MUST:
+
+1. Check if the corresponding `tmp/<output-file>` already exists: `ls -la tmp/<file>`
+2. If it exists and source files haven't changed since capture, read the existing file — NEVER re-run
+3. Only re-run if the output file is missing, empty/truncated, or source files have changed since the last capture
+
+**Sub-agent output is output.** Data returned by a sub-agent (Task tool) is equivalent to
+a captured output file. If a sub-agent already ran a tool and returned its results, do
+not re-run that tool.
+
+**Timed-out output is valid.** Even if a tool times out or produces partial output, check
+the output file first. Do NOT re-run with a longer timeout unless source files changed
+AND the captured content is insufficient for decision-making.
+
 ## Setup
 
 The .NET tools (fantomas, fsharplint, dotnet-coverage) are pinned in
@@ -55,6 +99,7 @@ pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.de
 | `quality_check.py` | Inter-subtask check: markdown format + format + build |
 | `hard_gate.py` | Full gate: markdown format + format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
 | `flpq_data/export.py` | Materializes CFPQ reference data (graphs with `_r` reverse edges, materialized grammars, reference results, pair counts) from the pinned `flpq-data==6.0.0.dev15` package into the gitignored `data/cfpq/`. One-shot data materializer: prints a summary to stdout instead of writing `tmp/<tool>.txt`. |
+| `generate_doc_map.py` | Regenerates the documentation navigation map in `docs/main.md` from per-page metadata (Tags, Kind, Abstract); `--check` mode verifies the map is up to date and exits non-zero on drift or missing metadata (CI). Writes `docs/main.md` instead of `tmp/<tool>.txt`; prints a summary to stdout. |
 
 ## Usage
 
@@ -63,6 +108,7 @@ python3 tools/detect_changes.py
 python3 tools/quality_check.py
 python3 tools/hard_gate.py
 python3 tools/flpq_data/export.py
+python3 tools/generate_doc_map.py
 ```
 
 After each run, read and analyze the corresponding `tmp/<script>.txt` file:

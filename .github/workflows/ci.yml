@@ -48,6 +48,11 @@ jobs:
       - name: Markdown format check
         run: mdformat --check $(git ls-files '*.md')
 
+      # The documentation map in docs/main.md is generated from per-page
+      # metadata (Tags/Kind/Abstract); fail on drift or missing metadata.
+      - name: Docs map check
+        run: python3 tools/generate_doc_map.py --check
+
       - name: Format check
         run: dotnet fantomas . --check
 

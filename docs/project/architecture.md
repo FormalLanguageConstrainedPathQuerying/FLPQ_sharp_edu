@@ -1,5 +1,10 @@
 # Project Architecture
 
+**Tags:** architecture, navigation, solution
+**Kind:** hub
+
+> **Abstract:** Solution structure of `FLPQ.slnx`: per-project file trees with one-line file descriptions, the project list with dependencies, third-party library roles, and the mapping from projects to their hub documentation. Includes a "where to look for X" table — the starting point for navigating where each part of the solution lives.
+
 ## Solution Structure
 
 ```
@@ -210,3 +215,20 @@ Each project has a hub documentation file grouping its modules. Design and logic
 See [main.md](../main.md) for the full documentation index including the flat module listing.
 
 When adding a new module, create a corresponding `docs/developer/<module>.md` file and update the respective project hub.
+
+## Where to Look for X
+
+| Question | Where to look |
+| --- | --- |
+| How is the solution organized? | This page (Solution Structure) |
+| Which project owns a module? | Project hubs (`docs/developer/FLPQ.*.md`) |
+| Design of a specific algorithm or module | Module doc in `docs/developer/` via the map in [docs/main.md](../main.md) |
+| How to run the CLI and what outputs look like | [CLI user docs](../user/cli.md) |
+| Test languages, grammars, strings, generators | [Language Registry](../developer/guides/language-registry.md) |
+| Quality tools and gate procedures | [`tools/README.md`](../../tools/README.md), [Tools guide](../developer/guides/tools.md) |
+| Lint configuration and quirks | [Lint guide](../developer/guides/lint.md), `fsharplint.json` |
+| F# language and library quirks | [F# Coding Patterns and Quirks](../developer/guides/fsharp-quirks.md) |
+| Writing tests (FsCheck, golden) | [Testing guide](../developer/guides/testing.md) |
+| TeX/Tikz conventions | [TeX and Tikz Conventions](../developer/guides/tex-conventions.md) |
+| Debugging hangs and wrong results | [Debugging guide](../developer/guides/debugging.md) |
+| CI pipeline steps | `.github/workflows/ci.yml` (source of truth) |
