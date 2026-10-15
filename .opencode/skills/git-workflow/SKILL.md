@@ -9,7 +9,7 @@ description: "Use when doing git operations: branching, committing, merging, reb
 
 - Stable development branch: `dev`
 - Protected main branch: `main`
-- Feature branches: `feature/XXX-short-description` where `XXX` is the task ID from the task log (`tasks/tasks*.md`)
+- Feature branches: `feature/XXX-short-description` where `XXX` is the task ID (the GitHub issue number)
 - One task per branch — never combine multiple task IDs in a single branch
 
 ## Commits
@@ -24,7 +24,7 @@ fix(XXX-SN): description
 docs(XXX-SN): description
 ```
 
-- `XXX` — task ID from `tasks.md`
+- `XXX` — task ID (the GitHub issue number)
 - `SN` — a **single** atomic subtask identifier from `tasks/detailed_plan.md` (e.g., `S1`, `S4`). Ranges (`S1-S6`), lists (`S1,S3`), or commas are forbidden
 - One commit per completed atomic subtask — never combine subtasks in one commit
 
@@ -33,12 +33,11 @@ docs(XXX-SN): description
 ### Pre-commit checklist
 
 1. Run commit gate (format + build). See `quality-gates` skill.
-2. **Verify no task-log file is staged:**
+2. **Verify no machine-local file is staged:** nothing from the gitignored `tasks/` directory may be committed (it holds local mirrors of issue comments and history archives — the durable record lives in GitHub issues):
    ```bash
-   git diff --cached --name-only | grep -qE 'tasks/tasks(\.md|[0-9]+\.md)'
+   git diff --cached --name-only | grep -q '^tasks/'
    ```
    If it matches, unstage it: `git reset HEAD <file>`
-   Task-log files (`tasks/tasks.md`, `tasks/tasks<N>.md`) must never be committed from a feature branch. Task-log commits — adding an entry at task start, marking `[done]` at task end — happen directly on `dev`, so entries are durable and do not depend on working-tree lifetime. Exception: a task whose deliverable is the task log itself (like 268) commits the restructured files on the feature branch — every change there is script-generated and content-preservation verified.
 
 ### Commit scope
 
@@ -49,13 +48,13 @@ docs(XXX-SN): description
 
 ### Pre-merge checks
 
-**Task-log check (first):** verify the task entry exists in a task-log file (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`):
+**Issue check (first):** verify the task issue exists and is open:
 
 ```bash
-grep -qE '^[[:space:]]*NNN\.' tasks/tasks*.md   # NNN = task ID
+gh issue view NNN --json state,labels -q '.state + " " + (.labels | map(.name) | join(","))'   # NNN = task ID
 ```
 
-If it is missing, **STOP — do not merge.** Restore the entry verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` and commit it on `dev` first. A merged task without a log entry is a lost task.
+If the issue is missing or already closed, **STOP — do not merge.** A merged task without an open issue loses its tracking record.
 
 The hard gate MUST pass before merging. **This is absolute — no exceptions, no self-assessment.**
 
@@ -75,10 +74,11 @@ See the `quality-gates` skill for the full async polling procedure. The gate wri
 - Use **Squash and Rebase** from feature branch to `dev`
 - History of `dev` must be linear
 - Merge commit message on `dev` must include the full detailed body from the feature branch commit(s) — a bare subject line is insufficient
+- The merge commit message must carry `Closes #<N>` (the task's issue number) as a **standalone line** — the issue closes when the commit reaches `main`. Until then the issue stays open; "integrated" means the subtask commits are on `dev` (`git log dev --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0)
 
 ## Rules
 
 - No emergency fixes
 - All work is local, no `push`-es
 - If a test cannot pass, use `[<Fact(Skip="explanation")>]` with a clear reason — never an empty body `()`, tautological assertions, or commented-out asserts
-- Never run `git checkout` or `git restore` on any `tasks/tasks*.md` file — the working-tree version is authoritative and may contain uncommitted user-authored content
+- Never commit anything from the gitignored `tasks/` directory (local mirrors of issue comments + history archives); never edit issue bodies — they are user-authored and immutable

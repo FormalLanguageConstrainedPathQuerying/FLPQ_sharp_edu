@@ -103,21 +103,24 @@ This runs format check + build without timeout. Read and deeply analyze `tmp/qua
 - [ ] Exactly ONE subtask's worth of changes is being committed. If multiple subtasks have been completed since the last commit, STOP. Unstage all files. Commit each subtask individually, one at a time.
 - [ ] The commit message uses a single subtask identifier: `feat(XXX-SN): ...`, not ranges like `S1-S6`.
 
-Commit with message `feat(XXX-SN): description` where `XXX` is the task ID and `SN` is the **single** subtask identifier.
-
-**Before commit:**
-
-- Verify no task-log file is staged (`tasks/tasks.md`, `tasks/tasks<N>.md`):
-  ```bash
-  git diff --cached --name-only | grep -qE 'tasks/tasks(\.md|[0-9]+\.md)'
-  ```
-  If it matches, unstage it: `git reset HEAD <file>` (exception: a task whose deliverable is the task log itself — see the `git-workflow` skill)
+Commit with message `feat(XXX-SN): description` where `XXX` is the task ID (issue number) and `SN` is the **single** subtask identifier.
 
 See the `git-workflow` skill for the full git workflow.
 
 ### 7. Mark Completed
 
-Mark the subtask as completed in `tasks/detailed_plan.md`.
+Mark the subtask as completed in `tasks/detailed_plan.md`, then mirror the file onto the plan comment of the task issue: find the comment by its `<!-- detailed-plan -->` first line and PATCH its body to the current file content:
+
+```bash
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+CID=$(gh api "repos/$REPO/issues/<N>/comments" \
+  --jq '[.[] | select(.body | startswith("<!-- detailed-plan -->"))] | last.id')
+{ echo '<!-- detailed-plan -->'; cat tasks/detailed_plan.md; } > /tmp/plan_comment.md
+gh api -X PATCH "repos/$REPO/issues/comments/$CID" \
+  --input <(jq -Rs '{body: .}' /tmp/plan_comment.md)
+```
+
+The local file is the single source of truth while working; the comment is a pure mirror. This command is the single source of truth for plan syncing — the AGENTS.md working loop and the `planning` skill reference it. If GitHub is unreachable, defer the sync and perform it as soon as connectivity returns.
 
 If at any point in steps 1–7 you hit an unresolvable problem that prevents 100% completion, **STOP the cycle immediately** and follow the Blocked Work Protocol below. Do NOT attempt to "complete" the subtask with partial results, reverted work, or known limitations. Do NOT proceed to the next subtask.
 
@@ -134,7 +137,7 @@ Never silently skip a subtask. If a subtask was attempted, reverted, and its pla
 
 ### Requirement Cross-Check
 
-Before marking a subtask complete, re-read the task specification in the task-log file containing the entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). Verify each clause against what was actually implemented:
+Before marking a subtask complete, re-read the task specification in the **task issue body** (`gh issue view <N> --json body -q .body`). Verify each clause against what was actually implemented:
 
 - [ ] Every clause in the task description is traceable to code that was committed
 - [ ] No requirement was silently skipped or deferred without user approval
@@ -180,9 +183,9 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
 
 3. Ask the user for guidance: additional subtasks, algorithmic hints, descoping, or splitting the task
 
-4. **Transfer user guidance to the task** per the `user-guidance-transfer` skill — append `**[USER GUIDANCE]**` annotation to the task in the task-log file containing its entry
+4. **Transfer user guidance to the task** per the `user-guidance-transfer` skill — post it verbatim as a comment on the task issue
 
-5. Append a `## Design Notes` section to `tasks/detailed_plan.md`. See the `planning` skill for the full template. Minimum required content:
+5. Append a `## Design Notes` section to `tasks/detailed_plan.md`, then mirror the file to the issue comment (step 7 sync procedure) so the block is visible in the task record. See the `planning` skill for the full template. Minimum required content:
 
    - **Correct Design**: algorithmic design as confirmed by the user — coordinate spaces, invariants, decomposition schema. Quote the user's design guidance verbatim where available.
    - **Blocked Subtasks**: which subtasks are blocked and why
@@ -191,18 +194,25 @@ If you encounter an algorithmic problem that you cannot resolve to 100% correctn
    - **Remaining Work**: concrete, actionable items (e.g., "Track origin final RSM state through BFS queue by adding a third field to the BFS node tuple") — not vague goals
    - **Skipped Tests**: list any tests skipped with `[<Fact(Skip="...")>]` and the reason
 
-   Commit this summary so the plan serves as a persistent design record for future task refinement.
+   The mirrored comment serves as the persistent design record for future task refinement (the local plan file is machine-local).
 
 ## Task Completion Verification
 
-After ALL subtasks are committed, **load the `quality-gates` skill** and follow its hard gate procedure.
-Never run `hard_gate.py` synchronously — it will hang. The gate writes to `tmp/hard-gate.txt`;
-poll that file every 5 minutes: `grep "STATUS:" tmp/hard-gate.txt`. Only `PASS` and `BLOCKED`
-are terminal states. If `BLOCKED` or non-zero exit code — for ANY reason — STOP. Do not merge.
-Do not mark the task as done. Fix every failure and re-run until `STATUS: PASS`, then proceed to merge.
+This section is the **single source of truth** for what "done" means. After ALL subtasks are committed, **load the `quality-gates` skill** and follow its hard gate procedure. Never run `hard_gate.py` synchronously — it will hang. The gate writes to `tmp/hard-gate.txt`; poll that file every 5 minutes: `grep "STATUS:" tmp/hard-gate.txt`. Only `PASS` and `BLOCKED` are terminal states. If `BLOCKED` or non-zero exit code — for ANY reason — STOP. Do not merge. Fix every failure and re-run until `STATUS: PASS`, then proceed to merge.
+
+Before the task is considered done, verify:
+
+- [ ] Every clause in the task description (issue body) is traceable to implemented and committed code
+- [ ] No subtask was reverted without resolution
+- [ ] No requirement was silently skipped or deferred
+- [ ] All tests pass (0 failures, 0 skipped)
+- [ ] All quality gates pass (see the `quality-gates` skill)
+- [ ] If any of the above fails, the task is NOT done — it is blocked. Follow the Blocked Work Protocol. Do NOT merge with known unresolved limitations
+
+Partial completion is not completion. "All passing tests are for the parts I did" does not mean the task is done if other parts were reverted.
 
 ## Marking Complete
 
-Mark the task as completed in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`) — **only prepend `[done] ` to the existing task line. Never rewrite the task description.** The task text is user-authored and immutable.
+A task is complete when it is merged to `dev` and the merge commit message carries `Closes #<N>` (the task's own issue number) as a standalone line. The closing keyword takes effect when the commit reaches `main`: until then the issue stays open, and "integrated" is determined by the subtask commits being on `dev` (`git log dev --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0). Never edit the issue body — it is user-authored and immutable.
 
-The `[done]` tag means COMPLETE: every requirement met, every test passing, every edge case handled. Never mark a task as `[done]` with known failures or unresolved limitations.
+Complete means COMPLETE: every requirement met, every test passing, every edge case handled. Never merge a task with known failures or unresolved limitations.

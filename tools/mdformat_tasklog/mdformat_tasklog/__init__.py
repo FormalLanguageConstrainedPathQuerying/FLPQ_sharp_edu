@@ -3,7 +3,7 @@
 mdformat's default ``ordered_list`` renderer writes the list's start number
 on the first item only and renders every following item as a zero-padded
 ``1`` (e.g. ``101.`` / ``001.`` / ``001.``). That destroys ordered lists
-whose numbers are data, such as task entries in ``tasks/tasks*.md``.
+whose numbers are data, such as explicitly numbered step or entry lists.
 
 This plugin overrides the ``ordered_list`` renderer with consecutive
 numbering from the list's start number and no zero padding. The logic

@@ -74,3 +74,6 @@ tmp/*
 tools/__pycache__/*
 **/__pycache__/
 *.egg-info/
+
+# tasks — machine-local mirrors of GitHub issues (see AGENTS.md)
+tasks/

@@ -31,7 +31,7 @@ Supplementary materials for the book on formal language constrained path queryin
 | `tests/` | Tests — mirror `src/` folder structure |
 | `data/` | Test and example data |
 | `.opencode/skills/` | Skills — operational "How" procedures for tools and workflows |
-| `tasks/` | Task planning: `tasks.md` (active log, at most 100 entries), `tasks<N>.md` (archives — `tasks1.md` = 1-100, `tasks2.md` = 101-200, ...; numbering is continuous across files), `detailed_plan.md` (current task plan), `global_plan.md` (multi-task planning), `fixes_for_book.md` (book errors) |
+| `tasks/` | Machine-local (gitignored) working space — mirrors of GitHub issues for offline work: `detailed_plan.md` (current task plan, mirror of the task issue's `<!-- detailed-plan -->` comment), `global_plan.md` (multi-task planning, mirror of the hub issue's `<!-- global-plan -->` comment), `tasks<N>.md` (immutable history archive of completed tasks — `tasks1.md` = 1-100, `tasks2.md` = 101-200, `tasks3.md` = 201-300), `code_review.md` (review log), `fixes_for_book.md` (book errors). Task tracking itself lives in GitHub issues (label `task`; task ID = issue number) |
 
 ## Workflow
 
@@ -44,13 +44,11 @@ Supplementary materials for the book on formal language constrained path queryin
 
 ### Working Loop
 
-0. If the user requests multiple tasks at once, first create a global plan in `tasks/global_plan.md` (see `planning` skill) before proceeding
+0. If the user requests multiple related tasks at once, first set up the batch (see `planning` skill): create a **hub** issue (`gh issue create --label hub`) that tracks the batch and is never chosen as a task, one issue per task (`gh issue create --label task`, body = the user's text verbatim), attach each task issue to the hub as a GitHub **sub-issue** via the REST API, write the global plan in `tasks/global_plan.md` naming the hub and listing each task with its issue number, and mirror the file to the hub as a comment whose first line is `<!-- global-plan -->`
 1. Ensure user-defined tasks, the global plan, and project architecture are aligned
-2. Choose exactly ONE task that is not yet done
-   2a. Verify the chosen task has an entry in the task log (grep by task number across all `tasks/tasks*.md`). If it does not (e.g. the task came from a chat request), add the entry verbatim to `tasks/tasks.md` and commit on `dev` (`docs(tasks): add task NNN`) before creating the branch. No work starts without a logged entry — an entry that lives only in the uncommitted working tree can be lost
-   2b. After ANY task-log change (add entry, mark `[done]`, append USER GUIDANCE), run `python3 tools/split_tasks.py` and commit the resulting file changes on `dev` together with the log change — it repairs/normalizes the log and archives the oldest 100 entries to the next `tasks/tasks<N>.md` when the active log exceeds 100
-3. Create a feature branch from `dev` for this single task
-4. Generate a detailed plan in `tasks/detailed_plan.md`, decomposing the task into atomic subtasks
+2. Choose exactly ONE open task: `gh issue list --label task --state open`. The task ID is the issue number. A task is integrated (done) when its subtask commits are on `dev`: `git log dev --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0. Hubs carry `hub`, not `task`, so this list never returns them
+3. Create a feature branch from `dev` for this single task (`feature/<N>-short-description`)
+4. Generate a detailed plan in `tasks/detailed_plan.md` (local mirror), decomposing the task into atomic subtasks, then mirror it to the task issue as a comment whose first line is `<!-- detailed-plan -->`. If the local file is missing (fresh machine), restore it from the issue comment first
 5. Load the `subtask-loop` skill, then execute each subtask using its cycle.
    5a. Verify all subtasks are complete and unblocked. Check `tasks/detailed_plan.md`:
    - If any subtask is marked `[blocked]` or `[deferred]`, STOP immediately.
@@ -66,22 +64,19 @@ Supplementary materials for the book on formal language constrained path queryin
      `git diff --stat HEAD..dev` shows what was modified
    - Report status to the user: "S1-S3 committed, S4 pending, ..."
 6. After all subtasks are done, perform code review on the entire repo (see `code-review` skill). Iteratively detect and fix problems until zero findings
-7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill). Verify `git branch --show-current` is `dev`
-8. Mark the task `[done]` in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). Before marking, verify the entry exists (grep by task number across all `tasks/tasks*.md`); if it is missing, restore it verbatim from the "Task description (verbatim)" section of `tasks/detailed_plan.md` first. The `[done]` tag means COMPLETE:
-   every subtask committed, every requirement met, every test passing, zero
-   known failures or unresolved limitations. Never mark a task `[done]` if
-   any subtask was skipped, reverted, or blocked.
-9. Before marking the task `[done]`, re-read the task description. For each clause, verify the implementation satisfies it. Partial completion is not completion.
+7. **Load the `quality-gates` skill.** Then run the hard gate per its async invocation procedure. The gate must show `STATUS: PASS`. `STATUS: BLOCKED` is absolute: do not assess whether failures are pre-existing or unrelated to your changes; fix every failure and re-run until `STATUS: PASS`. Then merge the feature branch to `dev` (see `git-workflow` skill); the merge commit message carries `Closes #<N>` as a standalone line, so the issue closes when the commit reaches `main`. Verify `git branch --show-current` is `dev`
+8. For a batch: mark the integrated task `[done #<N>]` in `tasks/global_plan.md`, then re-mirror the file to the hub's `<!-- global-plan -->` comment (same mirror procedure as the detailed plan, substituting the hub number and marker)
+9. Before considering the task done, re-read the task description (the issue body). For each clause, verify the implementation satisfies it — see the Task Completion Verification in the `subtask-loop` skill (single source of truth for what "done" means). Partial completion is not completion.
    9a. If any clause was skipped, reverted, deferred, or left unresolved — the task is NOT done. Follow the Blocked Work Protocol in the `subtask-loop` skill.
    9b. Return to step 2
 
 ### Git Safety
 
-Never revert any `tasks/tasks*.md` file or `tasks/fixes_for_book.md` — the user may have added uncommitted content interactively. The working-tree version is authoritative.
+Issue bodies are user-authored and immutable — never edit them. All updates (plans, guidance, block reports) go into issue comments.
 
-Task-log entries must be durable: a new task entry is committed on `dev` at creation time (before the feature branch exists), and the `[done]` mark is committed on `dev` after merge. Never commit a task-log file from a feature branch — an entry that lives only in the working tree can be lost by any reset of the file. Exception: a task whose deliverable is the task log itself (like 268) commits the restructured files on the feature branch — every change there is script-generated and content-preservation verified.
+`tasks/` is machine-local (gitignored): local mirrors of the issue comments for offline work. The issue comment is the durable shared record — restore a local file from its issue comment when missing. Never delete or rewrite the history archives `tasks/tasks<N>.md`.
 
-All `.md` files must be mdformat-clean; the gates check every tracked `.md` file. After modifying any `.md` file, run `mdformat <file>` before committing (setup: see `tools/README.md`).
+All `.md` files must be mdformat-clean; the gates check every tracked `.md` file. After modifying any tracked `.md` file, run `mdformat <file>` before committing (setup: see `tools/README.md`).
 
 See the `git-workflow` skill for the full procedure.
 
@@ -109,7 +104,7 @@ Operational procedures are in standalone skills. Load the relevant skill for eac
 | Writing tests (FsCheck, golden, property-based) | `tests-writer` |
 | Generating TeX/LaTeX/Tikz output | `tex-writer` |
 | Code review (detect + fix architecture, duplication, test gaps) | `code-review` |
-| Persist user guidance from blocked tasks back into task descriptions | `user-guidance-transfer` |
+| Persist user guidance from blocked tasks as issue comments | `user-guidance-transfer` |
 | Debugging (print traces, test hangs, seq laziness) | `debugging` |
 | Reusing (no duplicates, one source of truth, reuse checklist) | `reusing` |
 

@@ -3,7 +3,7 @@
 **Tags:** guide, tools, python, quality, ci, detect-changes, format, build, test, coverage, lint, mdformat, split-tasks
 **Kind:** guide
 
-> **Abstract:** Documents auxiliary Python scripts in `tools/`: `detect_changes.py` (detect modified projects), `quality_check.py` (inter-subtask markdown format + format + build gate), `hard_gate.py` (full markdown format → format → build → tests + coverage → lint gate), `split_tasks.py` (task log repair, mdformat normalization, and 100-entry archiving), `flpq_data/export.py` (materialize CFPQ reference data from the pinned flpq-data package). For execution procedures, see the `quality-gates` and `dotnet-tooling` skills. For output conventions, see `tools/README.md`.
+> **Abstract:** Documents auxiliary Python scripts in `tools/`: `detect_changes.py` (detect modified projects), `quality_check.py` (inter-subtask markdown format + format + build gate), `hard_gate.py` (full markdown format → format → build → tests + coverage → lint gate), `flpq_data/export.py` (materialize CFPQ reference data from the pinned flpq-data package). For execution procedures, see the `quality-gates` and `dotnet-tooling` skills. For output conventions, see `tools/README.md`.
 
 ## Contents
 
@@ -214,32 +214,6 @@ HARD GATE FAILED. Exit code 1. DO NOT MERGE. Resolve ALL failures and re-run.
 ```
 
 If a step fails early (e.g., build failure), subsequent steps are not executed and `STATUS: BLOCKED` is written immediately.
-
-### `split_tasks.py`
-
-Task log formatter and splitter. Keeps `tasks/tasks.md` (active log, at most 100 entries) and the archive files `tasks/tasks<N>.md` well-formed Markdown; numbering is continuous across files (`tasks1.md` = 1-100, `tasks2.md` = 101-200, ...). Run it after every task-log change (add entry, mark `[done]`, append USER GUIDANCE) and commit the result.
-
-**Output:** `tmp/split-tasks.txt`
-
-**Pipeline (per file):**
-
-1. Parse entry heads — numbered lines (`N. `), strictly increasing; lines inside fenced or indented code blocks are skipped.
-2. Repair indentation (leading whitespace only, entry text never touched): dedent heads not at column 0; shift sub-blocks that escape their entry item back inside it (a line escapes when, after a blank line, its indent is below the entry's content column `C(N) = len(str(N)) + 2`); a `[done] N. ` line (completed-entry paragraph form) is never shifted — it starts a new top-level entry and ends the preceding head's region; split ordered lists at number gaps with a thematic break (`---`), because the AST stores only a list's start number and any renderer would renumber across a gap.
-3. Normalize with mdformat (all installed parser extensions: tasklog, frontmatter).
-4. Verify structure preservation; abort on any violation:
-   - repair stage: changed lines differ only in leading whitespace; added lines are exactly the gap separators;
-   - format stage: markdown-it-py AST deep equality modulo style (token types/sequence, block text with whitespace collapsed, ordered-list start numbers, fence and code-span bytes compared byte-exact); one canonical rewrite is accepted — mdformat converts indented code blocks to fenced ones with byte-identical content;
-   - structure: every head is a direct item of a top-level ordered list and each such list's numbers are consecutive from its start.
-5. Split: if `tasks.md` has more than 100 entries, move the oldest 100 to the next `tasks/tasks<N>.md` (provenance header) and update the archive-reference line in `tasks.md`.
-
-**Invariants:** idempotent — on an already-clean state the script makes zero changes; moved blocks are byte-identical to the formatted source; entry numbers partition correctly across files.
-
-**Exit codes:**
-
-- 0 — PASS (including "no changes needed")
-- 1 — BLOCKED (a verification stage found a violation; nothing is written)
-
-`--dry-run` performs the full pipeline without writing files.
 
 ### `flpq_data/export.py`
 

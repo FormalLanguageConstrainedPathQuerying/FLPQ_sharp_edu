@@ -7,11 +7,24 @@ description: "Use when planning tasks: creating global plans across multiple tas
 
 ## Multi-task Planning
 
-When the user asks to work on a **set of tasks** (several task IDs), do NOT jump directly into implementation. First create a high-level global plan in `tasks/global_plan.md`.
+When the user asks to work on a **set of related tasks**, do NOT jump directly into implementation. First set up the batch, then plan it:
+
+1. Create a **hub** issue (`gh issue create --label hub`) for the batch and one issue per task (`gh issue create --label task`, body = the user's text verbatim), then attach each task issue to the hub as a GitHub **sub-issue** via the REST API (a link in the hub body is not a sub-issue):
+
+   ```bash
+   REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+   CHILD_ID=$(gh api "repos/$REPO/issues/<N>" --jq .id)
+   gh api -X POST "repos/$REPO/issues/<HUB>/sub_issues" -F sub_issue_id="$CHILD_ID"
+   ```
+
+   Verify the parent: `gh api "repos/$REPO/issues/<N>/parent" --jq .number` must print the hub number.
+
+2. Create the high-level global plan in `tasks/global_plan.md` (local mirror), naming the hub and listing each task with its issue number, then mirror it to the hub as a comment whose first line is `<!-- global-plan -->`.
 
 The global plan must:
 
-- List all tasks to be done with their IDs and brief descriptions
+- Name the **hub** issue it belongs to
+- List all tasks to be done with their issue numbers (`#N`) and brief descriptions, with a Status column (`[done #N]` once the task is integrated)
 - Identify dependencies between tasks (which must be done before which)
 - Identify potential conflicts or overlapping changes (e.g., two tasks modifying the same file)
 - Identify shared infrastructure (types, helpers, utilities) that multiple tasks need. Create shared modules to avoid duplication across tasks
@@ -21,13 +34,13 @@ The global plan must:
 - Propose an execution order that minimizes rework and avoids conflicts
 - Align tasks with the project architecture
 
-After the global plan is created, proceed with the normal working loop: one task at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md` for each.
+After the global plan is created and mirrored to the hub, proceed with the normal working loop: one task at a time, feature branch per task, detailed plan in `tasks/detailed_plan.md` for each. After each task integrates, mark it `[done #N]` in `tasks/global_plan.md` and re-mirror the file to the hub's `<!-- global-plan -->` comment. The local file is the single source of truth while working; the hub comment is a pure mirror (see the `subtask-loop` skill for the sync command).
 
 ## Detailed Plan (Atomic Subtasks)
 
-**Prerequisite — logged task:** before writing the detailed plan, verify the task has an entry in the task log (grep by task number across all `tasks/tasks*.md`). If it does not, create the entry verbatim in `tasks/tasks.md` and commit it on `dev` first (see the AGENTS.md working loop). Never plan a task that is not logged.
+**Prerequisite — open task issue:** before writing the detailed plan, verify the task is an open `task`-labeled issue (`gh issue view <N>`). If it is not (e.g. the task came from a chat request), create the issue first (`gh issue create --label task`, body = the user's text verbatim) — never plan a task that is not an issue.
 
-**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the entry from the task-log file containing it (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`) verbatim. This section is the recovery source of truth if the entry is ever lost from the task log.
+**Verbatim description:** `tasks/detailed_plan.md` MUST begin with a `## Task description (verbatim)` section quoting the task issue body verbatim (`gh issue view <N> --json body -q .body`). The issue body is user-authored and immutable — it is the durable record; the local plan file is a machine-local mirror (see the AGENTS.md Git Safety section).
 
 `tasks/detailed_plan.md` MUST decompose the task into atomic subtasks. Each subtask:
 
@@ -112,19 +125,11 @@ Requirements:
 
 ## Task Completeness Verification
 
-Before marking a task `[done]` in the task-log file containing its entry, verify completeness:
-
-- [ ] Every clause in the task description is traceable to implemented and committed code
-- [ ] No subtask was reverted without resolution
-- [ ] No requirement was silently skipped or deferred
-- [ ] All tests pass (0 failures, 0 skipped)
-- [ ] If any of the above fails, the task is NOT done — it is blocked. Follow the Blocked Work Protocol in the `subtask-loop` skill. Do NOT mark it `[done]` with known unresolved limitations.
-
-Partial completion is not completion. "All passing tests are for the parts I did" does not mean the task is done if other parts were reverted.
+See the `subtask-loop` skill — it is the single source of truth for verifying task completion before the task is closed (merge commit carries `Closes #<N>`).
 
 ## Task Authoring Guidelines
 
-When writing a new task for `tasks/tasks.md`, follow these rules:
+When creating a new task issue (`gh issue create`, label `task`), follow these rules (they apply to the issue body):
 
 - **Specify output format upfront**. If the task involves TeX or dot visualization, include the exact column layout, math mode conventions, and formatting rules in the task description
 - **Keep tasks single-responsibility**. A task should do one thing. If it requires more than 5 sub-items or spans multiple unrelated concerns, split it into multiple tasks

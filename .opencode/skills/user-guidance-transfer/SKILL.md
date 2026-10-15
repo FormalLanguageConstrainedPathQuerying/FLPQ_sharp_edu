@@ -1,6 +1,6 @@
 ---
 name: user-guidance-transfer
-description: Use when the Blocked Work Protocol fires and user provides guidance, or when a task is found ambiguous/underspecified during planning. Persists user guidance back into the task description so future executions do not hit the same ambiguity.
+description: Use when the Blocked Work Protocol fires and user provides guidance, or when a task is found ambiguous/underspecified during planning. Persists user guidance as a comment on the task issue so future executions do not hit the same ambiguity.
 ---
 
 # User Guidance Transfer
@@ -31,30 +31,26 @@ User responds. The guidance is authoritative — it resolves the ambiguity.
 
 ### 4. Transfer to Task
 
-Append guidance to the task in the task-log file containing its entry (`tasks/tasks.md` or an archive `tasks/tasks<N>.md`). The annotation goes after the task's **full formulation** (including all sub-items), before the next task number:
+Post the guidance verbatim as a comment on the task issue:
 
-```
-XXX. Task description line 1
-     1.   Sub-item 1
-     2.   Sub-item 2
-     **[USER GUIDANCE]**: Concise clarification text. 1-2 lines.
+```bash
+gh issue comment <N> --body "**[USER GUIDANCE]**: Concise clarification text. 1-2 lines."
 ```
 
 Rules:
 
-- **Additive only** — never modify, delete, or rewrite the original task text
+- **Additive only** — never modify, delete, or rewrite the original task text (the issue body is user-authored and immutable)
 - **Concise** — capture the clarification in 1-2 lines, not full design rationale
-- **Chronological stack** — if multiple guidance annotations are added over time, stack them in chronological order (oldest first, newest last), each on its own indented line
-- **Persist permanently** — guidance annotations remain even after `[done]`, as a record of decisions made
-- **Blank line separator** — keep the existing inter-task blank line after the guidance annotation(s), before the next task
+- **Chronological stack** — if multiple guidance comments are added over time, they stack chronologically in the issue's comment thread (oldest first, newest last); never edit an earlier comment
+- **Persist permanently** — guidance comments remain even after the task is closed, as a record of decisions made
 
 ### 5. Record in Detailed Plan
 
-Also record the guidance in `tasks/detailed_plan.md` under `## Design Notes` (existing Blocked Work Protocol). The detailed plan captures full algorithmic rationale; the task annotation captures the concise clarification for fast re-reading.
+Also record the guidance in `tasks/detailed_plan.md` under `## Design Notes` (existing Blocked Work Protocol). The detailed plan captures full algorithmic rationale; the issue comment captures the concise clarification for fast re-reading.
 
 ### 6. Resume Execution
 
-Proceed with the task using the clarified understanding. The guidance annotation ensures that if the task is interrupted and resumed, the clarification is immediately visible.
+Proceed with the task using the clarified understanding. The guidance comment ensures that if the task is interrupted and resumed, the clarification is immediately visible in the issue thread.
 
 ## When NOT to Use
 
@@ -67,4 +63,4 @@ Proceed with the task using the clarified understanding. The guidance annotation
 | Skill | Integration |
 | --- | --- |
 | `subtask-loop` | Blocked Work Protocol references this skill for step "transfer user guidance to task" |
-| `planning` | Ambiguities found during detailed plan creation → ask user → annotate task before decomposition |
+| `planning` | Ambiguities found during detailed plan creation → ask user → post the guidance as an issue comment before decomposition |

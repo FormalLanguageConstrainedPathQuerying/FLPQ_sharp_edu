@@ -54,7 +54,6 @@ pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.de
 | `detect_changes.py` | Detect projects with modified `.fs` files relative to `dev` |
 | `quality_check.py` | Inter-subtask check: markdown format + format + build |
 | `hard_gate.py` | Full gate: markdown format + format + build + tests per project with coverage + lint on changed projects. Each step shows `<N>/<M>` progress counter. Tests run per-project with coverage merged at the end. |
-| `split_tasks.py` | Task log formatter/splitter: repairs and mdformat-normalizes `tasks/tasks.md` and `tasks/tasks<N>.md`, verifies structure preservation, and archives the oldest 100 entries to the next `tasks/tasks<N>.md` when the active log exceeds 100 entries. Run after every task-log change. |
 | `flpq_data/export.py` | Materializes CFPQ reference data (graphs with `_r` reverse edges, materialized grammars, reference results, pair counts) from the pinned `flpq-data==6.0.0.dev15` package into the gitignored `data/cfpq/`. One-shot data materializer: prints a summary to stdout instead of writing `tmp/<tool>.txt`. |
 
 ## Usage
@@ -63,7 +62,6 @@ pip install --extra-index-url https://test.pypi.org/simple/ "flpq-data==6.0.0.de
 python3 tools/detect_changes.py
 python3 tools/quality_check.py
 python3 tools/hard_gate.py
-python3 tools/split_tasks.py
 python3 tools/flpq_data/export.py
 ```
 

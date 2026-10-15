@@ -5,7 +5,7 @@ description: "Use when performing code review: detect and fix architecture probl
 
 # Code Review
 
-Performed at task completion — after all subtasks are committed, BEFORE the hard gate (AGENTS.md working loop: step 6 review, then step 7 gate), and before marking `[done]`. Covers the **entire repo** (`src/` and `tests/`).
+Performed at task completion — after all subtasks are committed, BEFORE the hard gate (AGENTS.md working loop: step 6 review, then step 7 gate), and before closing the task (the merge commit carries `Closes #<N>` — see the `git-workflow` skill). Covers the **entire repo** (`src/` and `tests/`).
 
 ## Core Loop
 
@@ -102,4 +102,4 @@ Code review is complete when:
 - A full-repo review pass finds zero problems
 - All fixes are committed
 - `tasks/code_review.md` is updated
-- The task can proceed to `[done]` in the task-log file containing its entry
+- The task can be closed: the merge commit carries `Closes #<N>` (see the `git-workflow` skill)
