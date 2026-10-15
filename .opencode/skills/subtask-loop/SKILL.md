@@ -213,6 +213,6 @@ Partial completion is not completion. "All passing tests are for the parts I did
 
 ## Marking Complete
 
-A task is complete when it is merged to `dev` and the merge commit message carries `Closes #<N>` (the task's own issue number) as a standalone line. The closing keyword takes effect when the commit reaches `main`: until then the issue stays open, and "integrated" is determined by the subtask commits being on `dev` (`git log dev --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0). Never edit the issue body — it is user-authored and immutable.
+A task is complete when it is merged to `dev` and the merge commit message carries `Closes #<N>` (the task's own issue number) as a standalone line. The closing keyword takes effect when the commit reaches `main`: until then the issue stays open, and "integrated" is determined by the task's merge commit being on `dev` (`git log dev --format=%s | grep -cE '^[a-z]+\(<N>\):'` > 0 — squash-merge convention, one `feat(N):` commit per task). Never edit the issue body — it is user-authored and immutable.
 
 Complete means COMPLETE: every requirement met, every test passing, every edge case handled. Never merge a task with known failures or unresolved limitations.

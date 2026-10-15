@@ -74,7 +74,7 @@ See the `quality-gates` skill for the full async polling procedure. The gate wri
 - Use **Squash and Rebase** from feature branch to `dev`
 - History of `dev` must be linear
 - Merge commit message on `dev` must include the full detailed body from the feature branch commit(s) — a bare subject line is insufficient
-- The merge commit message must carry `Closes #<N>` (the task's issue number) as a **standalone line** — the issue closes when the commit reaches `main`. Until then the issue stays open; "integrated" means the subtask commits are on `dev` (`git log dev --format=%s | grep -cE '\(<N>-S[0-9]+\):'` > 0)
+- The merge commit message must carry `Closes #<N>` (the task's issue number) as a **standalone line** — the issue closes when the commit reaches `main`. Until then the issue stays open; "integrated" means the task's merge commit is on `dev` (`git log dev --format=%s | grep -cE '^[a-z]+\(<N>\):'` > 0 — squash-merge convention, one `feat(N):` commit per task)
 
 ## Rules
 
