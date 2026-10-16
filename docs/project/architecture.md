@@ -45,30 +45,52 @@ FLPQ.slnx
 │   ├── FLPQ.Printers/          # Printers library (depends on FLPQ.LinearAlgebra, FLPQ.Languages, FLPQ.RPQ, FLPQ.CFPQ)
 │   │   ├── MatrixTeX.fs            # TeX rendering for matrices using nicematrix
 │   │   ├── TeXRenderer.fs          # Shared TeX rendering for parser stacks/input
+│   │   ├── SymbolTeX.fs            # Unified TeX rendering for grammar symbols (content only)
+│   │   ├── GrammarTeX.fs           # TeX rendering for grammar rules
+│   │   ├── RegexpTeX.fs            # TeX rendering of regular expressions in math mode (RPQ query display)
+│   │   ├── ParsingTableTeX.fs      # Common TeX helpers for parsing tables (CYK, Valiant)
+│   │   ├── StepTeX.fs              # Generic RPQ step TeX helpers (adjustbox, formula)
+│   │   ├── PathSemiringTeX.fs      # TeX rendering of path semiring matrices (cells hold vertex paths)
+│   │   ├── PathIndexTeX.fs         # TeX rendering for path index matrices
 │   │   ├── DerivationTreeDot.fs    # Dot rendering for derivation trees
 │   │   ├── InputGraphDot.fs        # Dot rendering for input graph
 │   │   ├── BasicSppfDot.fs         # DOT rendering for basic (Rekers-style) SPPF
-│   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
+│   │   ├── SppfDot.fs              # Graphviz DOT rendering for SPPF
 │   │   ├── AutomatonDot.fs         # Dot rendering for finite automata
 │   │   ├── RegexpTreeDot.fs        # DOT rendering of the RPQ regexp AST tree (vertical)
-│   │   ├── RegexpTreeTikz.fs       # TikZ rendering of the RPQ regexp AST tree (vertical)
 │   │   ├── RpqGraphDot.fs          # RPQ-dedicated DOT rendering of the input graph
+│   │   ├── GssDot.fs               # Graphviz DOT visualization for the Graph-Structured Stack (GSS)
+│   │   ├── RsmDot.fs               # Graphviz DOT visualization for Recursive State Machines (RSM)
+│   │   ├── DerivationTreeTikz.fs   # TikZ rendering for derivation trees (graphdrawing, layered layout)
+│   │   ├── InputGraphTikz.fs       # TikZ rendering for the input graph (terminal path)
+│   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
+│   │   ├── SppfTikz.fs             # TikZ rendering for SPPF
+│   │   ├── AutomatonTikz.fs        # TikZ rendering for finite automata (graphdrawing, layered layout)
+│   │   ├── RegexpTreeTikz.fs       # TikZ rendering of the RPQ regexp AST tree (vertical)
 │   │   ├── RpqGraphTikz.fs         # RPQ-dedicated TikZ rendering of the input graph
 │   │   ├── RpqGraphViz.fs          # Shared RPQ input-graph rendering with path highlights
-│   │   ├── StepTeX.fs              # Generic RPQ step TeX helpers (adjustbox, formula)
+│   │   ├── GssTikz.fs              # TikZ visualization for the Graph-Structured Stack (GSS)
+│   │   ├── RsmTikz.fs              # TikZ visualization for Recursive State Machines (RSM)
+│   │   ├── LRAutomatonTikz.fs      # TikZ rendering for LR automata (rectangle nodes, aligned items)
+│   │   ├── RnglrAutomatonTikz.fs   # TikZ rendering for the RNGLR LR automaton
+│   │   ├── CfpqMatrixTeX.fs        # TeX rendering of Azimov's per-nonterminal CFPQ matrices
+│   │   ├── CykTeX.fs               # TeX rendering for CYK tables
+│   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps
+│   │   ├── LLTableTeX.fs           # TeX rendering for LL parsing tables
+│   │   ├── LRTableTeX.fs           # TeX rendering for LR parsing tables
+│   │   ├── RnglrTableTeX.fs        # TeX rendering for RNGLR parsing tables
+│   │   ├── VisualizationTypes.fs   # Shared visualization step type for LL/LR parser visualizers
+│   │   ├── LLStepVisualizer.fs     # LL parser step-by-step visualization
+│   │   ├── LRStepVisualizer.fs     # LR parser step-by-step visualization
+│   │   ├── GllStepVisualizer.fs    # GLL parser step-by-step visualization
+│   │   ├── RnglrStepVisualizer.fs  # RNGLR parsing step-by-step visualization
 │   │   ├── ArroyueloStepCommon.fs  # Shared Arroyuelo step record, tree model, pipeline
 │   │   ├── ArroyueloSimplePathStepVisualizer.fs  # Arroyuelo simple-path step visualization
 │   │   ├── ArroyueloReachabilityStepVisualizer.fs  # Arroyuelo Boolean reachability step visualization
 │   │   ├── BelyaninStepCommon.fs   # Shared Belyanin step record types and helpers
 │   │   ├── BelyaninSimplePathStepVisualizer.fs  # Belyanin simple-path step visualization
 │   │   ├── BelyaninReachabilityStepVisualizer.fs  # Belyanin Boolean reachability step visualization
-│   │   ├── CfpqMatrixTeX.fs        # TeX rendering of Azimov's per-nonterminal CFPQ matrices
-│   │   ├── CykTeX.fs               # TeX rendering for CYK tables
-│   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps
-│   │   ├── LLTableTeX.fs           # TeX rendering for LL parsing tables
-│   │   ├── LRTableTeX.fs           # TeX rendering for LR parsing tables
-│   │   ├── LLStepVisualizer.fs     # LL parser step-by-step visualization
-│   │   ├── LRStepVisualizer.fs     # LR parser step-by-step visualization
+│   │   ├── SummaryTeX.fs           # Merged TeX summary document generation (--summary)
 │   │   └── ExternalTools.fs        # Graphviz and lualatex wrappers (shared by CLI and tests)
 │   └── FLPQ.RPQ/               # RPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages)
  │       ├── GraphReader.fs          # Graph file reading, returns graph as NFA
