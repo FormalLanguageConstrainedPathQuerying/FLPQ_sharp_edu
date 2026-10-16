@@ -21,6 +21,7 @@
     <Compile Include="AzimovCfpqReachabilityRunner.fs" />
     <Compile Include="AzimovCfpqSinglePathRunner.fs" />
     <Compile Include="AzimovCfpqAllPathsRunner.fs" />
+    <Compile Include="KroneckerCfpqRunner.fs" />
     <Compile Include="Summary.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

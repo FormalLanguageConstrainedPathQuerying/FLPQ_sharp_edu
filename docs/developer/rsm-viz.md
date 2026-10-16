@@ -5,7 +5,7 @@
 **Module:** RsmDot, RsmTikz
 **Source:** `src/FLPQ.Printers/RsmDot.fs`, `src/FLPQ.Printers/RsmTikz.fs`
 **Depends on:** RSM (FLPQ.Languages), AutomatonTikz, DerivationTreeDot (label escaping)
-**Used by:** GllRunner, RnglrRunner, GllStepVisualizer
+**Used by:** GllRunner, RnglrRunner, GllStepVisualizer, KroneckerCfpqRunner
 
 > **Abstract:** Renders Recursive State Machines (RSM) and extended RSMs (augmented with the fresh start block S′). `RsmDot` emits Graphviz DOT; `RsmTikz` emits a TikZ `tikzpicture` in which each block is one connected component stacked top-to-bottom (S′ on top) while the layout inside every block grows left-to-right. Book reference: sec:CFPQ_GLL, sec:CFPQ_RNGLR.
 
@@ -49,10 +49,14 @@ A single `tikzpicture` with one flat `\graph`:
 ## Function Signatures
 
 - `RsmDot.toDot: (terminalPrinter: 't -> string) -> (nonterminalPrinter: 'nt -> string) -> RSM<'t, 'nt> -> string`
+- `RsmTikz.rsmToTikz: (terminalPrinter: 't -> string) -> (nonterminalPrinter: 'nt -> string) -> RSM<'t, 'nt> -> string`
 - `RsmDot.extendedRsmToDot: (terminalPrinter: 't -> string) -> (nonterminalPrinter: 'nt -> string) -> ExtendedRSM<'t, 'nt> -> highlightedState: int option -> string`
 - `RsmTikz.extendedRsmToTikz: (terminalPrinter: 't -> string) -> (nonterminalPrinter: 'nt -> string) -> ExtendedRSM<'t, 'nt> -> highlightedState: int option -> string`
 
-Printers convert symbol values to display strings; the highlighted-state argument marks the current RSM state in per-step GLL visualizations.
+Printers convert symbol values to display strings. The plain `toDot` / `rsmToTikz` render an RSM
+as-is (blocks in global-state appearance order, no fresh start block); the `extended*` variants
+take the augmented RSM and a highlighted-state argument that marks the current state in per-step
+GLL/RNGLR visualizations.
 
 ## Design Decisions
 

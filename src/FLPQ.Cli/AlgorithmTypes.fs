@@ -17,6 +17,7 @@ module AlgorithmTypes =
         | ArroyueloRPQ
         | BelyaninRPQ
         | AzimovCFPQ
+        | KroneckerCFPQ
 
     /// Path-query semantics: reachability (Boolean — the classical answer, complete on cyclic
     /// graphs), simplePath (path-semiring trace; RPQ: reachable only via an accepting simple
@@ -41,6 +42,7 @@ module AlgorithmTypes =
         | ArroyueloRPQ -> "Arroyuelo RPQ"
         | BelyaninRPQ -> "Belyanin RPQ"
         | AzimovCFPQ -> "Azimov CFPQ"
+        | KroneckerCFPQ -> "Kronecker CFPQ"
 
     type Arguments =
         | [<AltCommandLine("-a")>] Algorithm of Algorithm
@@ -57,13 +59,13 @@ module AlgorithmTypes =
             member this.Usage =
                 match this with
                 | Algorithm _ ->
-                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, BelyaninRPQ, or AzimovCFPQ"
+                    "Algorithm: CYK, Valiant, ValiantModified, LL, LR0, SLR1, CLR1, GLL, RNGLR, ArroyueloRPQ, BelyaninRPQ, AzimovCFPQ, or KroneckerCFPQ"
                 | Semantics _ ->
                     "Path-query semantics: reachability (Boolean, classical, default), simplePath (path-semiring trace; ArroyueloRPQ/BelyaninRPQ/AzimovCFPQ), or allPaths (AzimovCFPQ only)"
                 | Query _ ->
-                    "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms, or grammar (.cnf) for AzimovCFPQ"
+                    "Path to the query file: grammar (.bnf) for parsing algorithms, regexp (EBNF; the first rule's RHS is the query) for RPQ algorithms, grammar (.cnf) for AzimovCFPQ, or EBNF (the first rule defines the start block) for KroneckerCFPQ"
                 | Input _ ->
-                    "Path to the input: input string for parsing algorithms, graph file (start vertices line + 'from label to' edges) for RPQ algorithms, or graph directory (one MatrixMarket file per edge label) for AzimovCFPQ"
+                    "Path to the input: input string for parsing algorithms, graph file (start vertices line + 'from label to' edges) for RPQ algorithms, or graph directory (one MatrixMarket file per edge label) for AzimovCFPQ/KroneckerCFPQ"
                 | Output _ -> "Output directory for step-by-step visualization"
                 | Lookahead _ -> "Lookahead k for LL parser (default: 1)"
                 | Summary -> "Generate merged TeX summary file"

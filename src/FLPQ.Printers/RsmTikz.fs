@@ -17,24 +17,21 @@ open FLPQ.Languages
 /// Book reference: sec:CFPQ_GLL (06_GLL_Based.tex).
 module RsmTikz =
 
-    /// Renders an extended RSM as a TikZ tikzpicture using global state numbering.
-    /// State content is the bare global index; nonterminal edges are labeled with
-    /// the bare nonterminal name (no "call" prefix).
-    /// Blocks are stacked top-to-bottom (S' on top); intra-block layout is layered, left-to-right.
-    /// Every final state gets `double, double distance=1.5pt` (a highlighted final
-    /// state keeps the double circle); block start states get a plain nonterminal
-    /// label to the left and `label=above:Start`.
-    /// Fill priority: highlighted state fill=lightblue!20, else block start
+    /// Shared body: render a flat RSM graph (global state numbering) for the given block order
+    /// and optional highlighted state. State content is the bare global index; nonterminal edges
+    /// are labeled with the bare nonterminal name (no "call" prefix). Blocks are stacked
+    /// top-to-bottom in `blockOrder`; intra-block layout is layered, left-to-right. Every final
+    /// state gets `double, double distance=1.5pt` (a highlighted final state keeps the double
+    /// circle); block start states get a plain nonterminal label to the left and
+    /// `label=above:Start`. Fill priority: highlighted state fill=lightblue!20, else block start
     /// fill=green!30, else final state fill=red!30.
-    let extendedRsmToTikz
+    let private renderRsm
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
-        (ersm: ExtendedRSM<'t, 'nt>)
+        (rsm: RSM<'t, 'nt>)
+        (blockOrder: Nonterminal<'nt> list)
         (highlightedState: int option)
         : string =
-        let rsm = ersm.ExtendedRsm
-        let freshStart = ersm.FreshStart
-
         let sb = StringBuilder()
 
         // Blocks are the graph's connected components; pgf-gd packs them top-to-bottom
@@ -47,13 +44,6 @@ module RsmTikz =
 
         let stateInfo = rsm.StateInfo
         let stateCount = rsm.StateCount
-
-        // Block declaration order drives pgf-gd `component order`
-        // (default: by first specified node): S' block on top,
-        // remaining blocks in global-state appearance order.
-        let blockOrder =
-            [ freshStart ]
-            @ (RSM.nonterminals rsm |> List.filter (fun nt -> nt <> freshStart))
 
         // Global state indices of a block: start state first, then the rest in local-index order.
         let blockStates (nt: Nonterminal<'nt>) : int list =
@@ -137,3 +127,26 @@ module RsmTikz =
 
         AutomatonTikz.tikzFooter sb
         sb.ToString()
+
+    /// Renders an extended RSM as a TikZ tikzpicture using global state numbering: the fresh
+    /// start block S' is declared first (packed on top), the remaining blocks follow in
+    /// global-state appearance order.
+    let extendedRsmToTikz
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (ersm: ExtendedRSM<'t, 'nt>)
+        (highlightedState: int option)
+        : string =
+        let rsm = ersm.ExtendedRsm
+        let freshStart = ersm.FreshStart
+
+        let blockOrder =
+            [ freshStart ]
+            @ (RSM.nonterminals rsm |> List.filter (fun nt -> nt <> freshStart))
+
+        renderRsm terminalPrinter nonterminalPrinter rsm blockOrder highlightedState
+
+    /// Renders a plain RSM as a TikZ tikzpicture using global state numbering: blocks in
+    /// global-state appearance order, no highlighted state.
+    let rsmToTikz (terminalPrinter: 't -> string) (nonterminalPrinter: 'nt -> string) (rsm: RSM<'t, 'nt>) : string =
+        renderRsm terminalPrinter nonterminalPrinter rsm (RSM.nonterminals rsm) None

@@ -59,7 +59,7 @@ module AzimovCfpqAllPathsRunner =
             AzimovCfpq.evaluate CfpqSemiring.AllPathsSemiring Grammar.freshStringNonterminal grammar graph
 
         Helpers.writeCfpqRootArtifacts outputDir useDot grammar cnf graph
-        Helpers.writeCfpqSteps outputDir result Helpers.ntName elementToTeX
+        Helpers.writeCfpqSteps outputDir result.Steps Helpers.ntName elementToTeX
 
         let lines = allPathsPerPair rules graph result.Matrices cnf.Start
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (String.concat "\n" lines)

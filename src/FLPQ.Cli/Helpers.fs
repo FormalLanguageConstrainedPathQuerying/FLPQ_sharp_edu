@@ -5,6 +5,7 @@ open System.IO
 open System.Text.RegularExpressions
 open FLPQ.CFPQ
 open FLPQ.Languages
+open FLPQ.LinearAlgebra
 open FLPQ.Printers
 
 module Helpers =
@@ -178,6 +179,18 @@ module Helpers =
 
             writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
 
+    /// The CFPQ input-graph artifact: all vertex pairs are queried, so there are no sources to
+    /// highlight. Written as graph.tikz.tex (default) or graph.dot (--use-dot). Shared by the
+    /// Azimov and Kronecker root-artifact writers.
+    let private writeCfpqGraphArtifact (outputDir: string) (useDot: bool) (graph: CfpqInput.CfpqGraph<string>) : unit =
+        let graphDot, graphTikz =
+            RpqGraphViz.renderGraph id (CfpqInput.toNfa graph) Set.empty Set.empty Set.empty Set.empty Set.empty
+
+        if useDot then
+            writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
+        else
+            writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+
     /// Shared Azimov CFPQ root artifacts: the original grammar, the CNF passed to the
     /// algorithm, and the input graph — DOT source or inline TikZ depending on useDot.
     let writeCfpqRootArtifacts
@@ -195,29 +208,61 @@ module Helpers =
             (Path.Combine(outputDir, "grammar_cnf.tex"))
             (GrammarTeX.grammarToTeXWithNumbers string string cnf)
 
-        // The graph has no sources: all vertex pairs are queried.
-        let graphDot, graphTikz =
-            RpqGraphViz.renderGraph id (CfpqInput.toNfa graph) Set.empty Set.empty Set.empty Set.empty Set.empty
+        writeCfpqGraphArtifact outputDir useDot graph
 
+    /// Shared Kronecker CFPQ root artifacts: the query RSM figure and the input graph — DOT
+    /// source or inline TikZ depending on useDot. The RSM is rendered in global-state appearance
+    /// order (no fresh start block, no highlighted state).
+    let writeKroneckerCfpqRootArtifacts
+        (outputDir: string)
+        (useDot: bool)
+        (rsm: RSM<string, string>)
+        (graph: CfpqInput.CfpqGraph<string>)
+        : unit =
         if useDot then
-            writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
+            writeOutputFile (Path.Combine(outputDir, "rsm.dot")) (RsmDot.toDot string string rsm)
         else
-            writeOutputFile (Path.Combine(outputDir, "graph.tikz.tex")) graphTikz
+            writeOutputFile (Path.Combine(outputDir, "rsm.tikz.tex")) (RsmTikz.rsmToTikz string string rsm)
+
+        writeCfpqGraphArtifact outputDir useDot graph
 
     /// The name of a string nonterminal (its bare symbol).
     let ntName (nt: Nonterminal<string>) : string =
         match nt with
         | Nonterminal s -> s
 
+    /// The name of a graph vertex in result output.
+    let vertexName (i: int) : string = sprintf "v_%d" i
+
+    /// The reachable pairs of the answer matrix, in row-major order.
+    let reachablePairs (answer: Matrix<bool>) : (int * int) list =
+        [ for i in 0 .. Matrix.rows answer - 1 do
+              for j in 0 .. Matrix.cols answer - 1 do
+                  if answer.[i, j] then
+                      (i, j) ]
+
+    /// The result file: the answer matrix as a Boolean matrix plus the list of reachable pairs.
+    let renderResult (answer: Matrix<bool>) : string =
+        let matrixTex = PathSemiringTeX.boolMatrixToTeX vertexName vertexName answer
+        let pairs = reachablePairs answer
+
+        let pairLines =
+            pairs
+            |> List.map (fun (i, j) -> sprintf "(%s, %s)" (vertexName i) (vertexName j))
+
+        matrixTex
+        + "\n\n"
+        + sprintf "Reachable pairs: %d\n%s" (List.length pairs) (String.concat ", " pairLines)
+
     /// One directory per productive fixed-point iteration (step_<iteration>): the
     /// per-nonterminal matrices of that iteration with the newly changed cells highlighted.
     let writeCfpqSteps
         (outputDir: string)
-        (result: AzimovCfpq.CfpqResult<'nt, 'elem>)
+        (steps: AzimovCfpq.CfpqStep<'nt, 'elem> list)
         (ntName: Nonterminal<'nt> -> string)
         (elementPrinter: 'elem -> string)
         : unit =
-        for step in result.Steps do
+        for step in steps do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
 
             writeOutputFile

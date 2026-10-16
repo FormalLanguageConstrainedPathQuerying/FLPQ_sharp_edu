@@ -77,10 +77,11 @@ FLPQ.slnx
   │       ├── BelyaninRPQ.fs          # Belyanin's LARPQ algorithm (BFS-based RPQ)
   │       ├── ArroyueloRPQ.fs         # Arroyuelo's matrix-based RPQ algorithm
   │       └── KroneckerRPQ.fs         # Kronecker product-based RPQ with MS-BFS filtering
-  │   ├── FLPQ.CFPQ/              # CFPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.Languages)
-  │   │   ├── CfpqInput.fs            # MatrixMarket graph, .cnf grammar, and results.mtx parsing
-  │   │   ├── CfpqSemiring.fs         # Reachability, singlePath, and allPaths semirings
-  │   │   └── AzimovCfpq.fs           # Azimov's matrix-based CFPQ (generic fixed point, path extraction)
+   │   ├── FLPQ.CFPQ/              # CFPQ algorithms (depends on FLPQ.LinearAlgebra, FLPQ.GraphAnalysis, FLPQ.Languages)
+   │   │   ├── CfpqInput.fs            # MatrixMarket graph, .cnf grammar, and results.mtx parsing
+   │   │   ├── CfpqSemiring.fs         # Reachability, singlePath, and allPaths semirings
+   │   │   ├── AzimovCfpq.fs           # Azimov's matrix-based CFPQ (generic fixed point, path extraction)
+   │   │   └── KroneckerCfpq.fs        # Kronecker product-based CFPQ over RSMs with MS-BFS
   │   └── FLPQ.Cli/                   # Console application (depends on FLPQ.Languages, FLPQ.Printers, FLPQ.RPQ, FLPQ.CFPQ)
  │       ├── Program.fs              # Entry point and algorithm dispatch
  │       ├── AlgorithmTypes.fs       # Algorithm DU and Argu argument type
@@ -97,8 +98,9 @@ FLPQ.slnx
    │       ├── BelyaninReachabilityRunner.fs # Belyanin RPQ reachability-semantics CLI runner (default)
    │       ├── AzimovCfpqReachabilityRunner.fs # Azimov CFPQ reachability-semantics CLI runner (default)
    │       ├── AzimovCfpqSinglePathRunner.fs # Azimov CFPQ simplePath-semantics CLI runner
-   │       ├── AzimovCfpqAllPathsRunner.fs # Azimov CFPQ allPaths-semantics CLI runner
-   │       └── Summary.fs              # Merged TeX summary generation (--summary)
+    │       ├── AzimovCfpqAllPathsRunner.fs # Azimov CFPQ allPaths-semantics CLI runner
+    │       ├── KroneckerCfpqRunner.fs      # Kronecker CFPQ reachability CLI runner (EBNF query → RSM)
+    │       └── Summary.fs              # Merged TeX summary generation (--summary)
  └── tests/
     ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
     │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
@@ -179,7 +181,7 @@ FLPQ.slnx
 - **FLPQ.GraphAnalysis** — F# class library (net10.0). Generic graph type, MS-BFS, and Boolean/Mask semiring operations for graph traversal. Depends on `FLPQ.LinearAlgebra`.
 - **FLPQ.Languages** — F# class library (net10.0). Grammar types, CNF transformation, parsing algorithms (CYK, Valiant, LL, LR), and finite automata. Depends on `FLPQ.LinearAlgebra` and `FLPQ.GraphAnalysis`.
 - **FLPQ.RPQ** — F# class library (net10.0). Regular Path Querying algorithms (Belyanin, Arroyuelo, Kronecker) and graph reader. All accept graph as NFA. Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
-- **FLPQ.CFPQ** — F# class library (net10.0). Context-Free Path Querying: Azimov's matrix-based algorithm as a generic semiring-parametrized core (reachability, singlePath, allPaths), plus parsing of the flpq-data input formats (MatrixMarket graph directories, `.cnf` grammars, reference results). Depends on `FLPQ.LinearAlgebra` and `FLPQ.Languages`.
+- **FLPQ.CFPQ** — F# class library (net10.0). Context-Free Path Querying: Azimov's matrix-based algorithm as a generic semiring-parametrized core (reachability, singlePath, allPaths), the Kronecker product-based algorithm over RSMs (Boolean reachability, MS-BFS instead of the book's transitive closure), plus parsing of the flpq-data input formats (MatrixMarket graph directories, `.cnf` grammars, reference results). Depends on `FLPQ.LinearAlgebra`, `FLPQ.GraphAnalysis`, and `FLPQ.Languages`.
 - **FLPQ.Printers** — F# class library (net10.0). TeX and Dot printing/visualization for matrices, automata, parsing tables, and algorithm steps. Also wraps Graphviz `dot` and `lualatex` invocations via `ExternalTools`. Depends on `FLPQ.LinearAlgebra`, `FLPQ.Languages`, `FLPQ.RPQ`, and `FLPQ.CFPQ`.
 - **FLPQ.Cli** — F# console application (net10.0). Command-line interface for running parsing algorithms, RPQ algorithms (Arroyuelo, Belyanin), and CFPQ (Azimov) with optional summary PDF generation (`--summary`). The path-query algorithms select their semantics with `--semantics`: Arroyuelo/Belyanin RPQ take `reachability` (default) or `simplePath`; Azimov CFPQ takes `reachability` (default), `simplePath`, or `allPaths` (CFPQ-only). Depends on `FLPQ.Languages`, `FLPQ.Printers`, `FLPQ.RPQ`, and `FLPQ.CFPQ`.
 - **FLPQ.LinearAlgebra.Tests** — xUnit test project for linear algebra. Uses FsCheck for property-based testing.

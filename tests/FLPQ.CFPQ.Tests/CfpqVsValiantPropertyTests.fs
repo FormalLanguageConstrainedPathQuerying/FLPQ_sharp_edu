@@ -1,109 +1,12 @@
 module CfpqVsValiantPropertyTests
 
-open FSharpPlus.Data
-open FsCheck
 open FsCheck.Xunit
 open FLPQ.CFPQ
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
-/// A registry grammar with toCnf precomputed once (outside the property body). The comparison
-/// runs over the CNF grammar's nonterminals: toCnf may drop original nonterminals (useless-symbol
-/// elimination, e.g. all-epsilon grammars collapse to a single fresh start), and both algorithms
-/// run on the same CNF conversion, so every CNF nonterminal is present on both sides.
-type GrammarCase =
-    { Name: string
-      Grammar: Grammar<string, string>
-      Cnf: Grammar<string, string>
-      CnfNts: Nonterminal<string> list
-      CnfNullable: Set<Nonterminal<string>>
-      Alphabet: string list }
-
-/// Terminal alphabet of a grammar (sorted, deduplicated).
-let private terminalAlphabet (g: Grammar<string, string>) : string list =
-    g.Rules
-    |> List.collect (fun r ->
-        match r.Rhs with
-        | Rhs.EpsilonRhs -> []
-        | Rhs.Symbols nel ->
-            NonEmptyList.toList nel
-            |> List.choose (function
-                | Symbol.T(Terminal t) -> Some t
-                | _ -> None))
-    |> List.distinct
-    |> List.sort
-
-/// Nullable nonterminals (those deriving epsilon) by the standard fixed point.
-let private nullableNts (g: Grammar<string, string>) : Set<Nonterminal<string>> =
-    let rec step (acc: Set<Nonterminal<string>>) : Set<Nonterminal<string>> =
-        let added =
-            g.Rules
-            |> List.filter (fun r ->
-                match r.Rhs with
-                | Rhs.EpsilonRhs -> true
-                | Rhs.Symbols nel ->
-                    NonEmptyList.toList nel
-                    |> List.forall (function
-                        | Symbol.N nt -> Set.contains nt acc
-                        | _ -> false))
-            |> List.map (fun r -> r.Lhs)
-            |> Set.ofList
-            |> Set.filter (fun nt -> not (Set.contains nt acc))
-
-        if Set.isEmpty added then
-            acc
-        else
-            step (Set.union acc added)
-
-    step Set.empty
-
-/// All registry grammars with toCnf precomputed once per grammar.
-let private cases: GrammarCase list =
-    LanguageRegistry.allGrammars
-    |> List.map (fun ag ->
-        let g = ag.Grammar
-        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
-
-        { Name = ag.Name
-          Grammar = g
-          Cnf = cnf
-          // The same nonterminal set AzimovCfpq.evaluate initializes matrices for.
-          CnfNts = Set.toList (Set.union (Grammar.nonterminalsOf cnf) (Set.singleton cnf.Start))
-          CnfNullable = nullableNts cnf
-          Alphabet = terminalAlphabet g })
-
-/// Linear path graph for a word: |s|+1 vertices, edge i -> i+1 labeled s[i].
-let private linearPathGraph (word: string list) : CfpqInput.CfpqGraph<string> =
-    let n = List.length word
-
-    { VertexCount = n + 1
-      Labels =
-        word
-        |> List.mapi (fun i t -> t, (i, i + 1))
-        |> List.groupBy fst
-        |> List.map (fun (t, cells) ->
-            t, Matrix.create (n + 1) (n + 1) (fun i j -> cells |> List.exists (fun (_, (a, b)) -> (a, b) = (i, j))))
-        |> Map.ofList }
-
-let private genCase: Gen<GrammarCase * Terminal<string> list> =
-    MyGen.elements cases
-    |> MyGen.bind (fun c ->
-        if List.isEmpty c.Alphabet then
-            MyGen.constant (c, [])
-        else
-            MyGen.choose (0, 5)
-            |> MyGen.bind (fun len ->
-                MyGen.listOfLength len (MyGen.elements c.Alphabet)
-                |> MyGen.map (fun ts -> c, List.map Terminal ts)))
-
-type CfpqVsValiantGenerators =
-    static member Case() : Arbitrary<GrammarCase * Terminal<string> list> = MyArb.fromGen genCase
-
-[<Properties(Arbitrary = [| typeof<CfpqVsValiantGenerators> |])>]
+[<Properties(Arbitrary = [| typeof<CfpqTestHelpers.CfpqGrammarWordGenerators> |])>]
 module CfpqVsValiantProperty =
 
     // A linear input is a partial case of a graph and Valiant's table contains results for all
@@ -112,11 +15,11 @@ module CfpqVsValiantProperty =
     // derivations are not in the table, so diagonal cells are checked against nullability.
     [<Property>]
     let ``Azimov on a linear path graph equals Valiant's full parsing table``
-        (c: GrammarCase)
+        (c: CfpqTestHelpers.GrammarCase)
         (word: Terminal<string> list)
         =
         let n = List.length word
-        let graph = linearPathGraph (List.map (fun (Terminal t) -> t) word)
+        let graph = CfpqTestHelpers.linearPathGraph (List.map (fun (Terminal t) -> t) word)
 
         let result =
             AzimovCfpq.evaluate CfpqSemiring.ReachabilitySemiring Grammar.freshStringNonterminal c.Grammar graph

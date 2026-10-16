@@ -10,8 +10,12 @@
     <Compile Include="CfpqInputTests.fs" />
     <Compile Include="CfpqSemiringTests.fs" />
     <Compile Include="AzimovCfpqBookExampleTests.fs" />
+    <Compile Include="KroneckerCfpqTests.fs" />
     <Compile Include="CfpqVsRpqPropertyTests.fs" />
     <Compile Include="CfpqVsValiantPropertyTests.fs" />
+    <Compile Include="KroneckerCfpqVsRpqPropertyTests.fs" />
+    <Compile Include="KroneckerCfpqVsValiantPropertyTests.fs" />
+    <Compile Include="KroneckerCfpqVsAzimovPropertyTests.fs" />
     <Compile Include="CfpqReferenceTests.fs" />
   </ItemGroup>
 

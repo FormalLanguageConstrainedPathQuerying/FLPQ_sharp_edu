@@ -105,6 +105,21 @@ module Program =
                     AzimovCfpqSinglePathRunner.runAzimov queryFile inputDir output useDot
                 | AlgorithmTypes.PathQuerySemantics.AllPaths ->
                     AzimovCfpqAllPathsRunner.runAzimov queryFile inputDir output useDot
+            // Kronecker CFPQ takes the EBNF query file and the graph directory; reachability only.
+            | AlgorithmTypes.KroneckerCFPQ ->
+                let queryFile = results.GetResult AlgorithmTypes.Query
+                let inputDir = results.GetResult AlgorithmTypes.Input
+
+                let semantics =
+                    results.GetResult(
+                        AlgorithmTypes.Semantics,
+                        defaultValue = AlgorithmTypes.PathQuerySemantics.Reachability
+                    )
+
+                match semantics with
+                | AlgorithmTypes.PathQuerySemantics.Reachability ->
+                    KroneckerCfpqRunner.runKronecker queryFile inputDir output useDot
+                | _ -> failwithf "KroneckerCFPQ supports only reachability semantics, not %A" semantics
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then

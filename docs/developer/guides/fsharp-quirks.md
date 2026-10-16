@@ -3,7 +3,7 @@
 **Tags:** guide, fsharp, fscheck, fsharpplus, argu, patterns, cli
 **Kind:** guide
 
-> **Abstract:** Catalog of F# language-specific patterns, idioms, and gotchas encountered in this project: FsCheck API quirks (Gen shadowing, compile-time vs CLR names, overload ambiguity), closure capture patterns, record type ambiguity, the FSharpPlus `NonEmptySet` API, FS0691/FS0718 parser traps, pattern annotation syntax, Argu no-payload flags, testable CLI entry points, and code search tips.
+> **Abstract:** Catalog of F# language-specific patterns, idioms, and gotchas encountered in this project: FsCheck API quirks (Gen shadowing, compile-time vs CLR names, overload ambiguity), closure capture patterns, record type ambiguity, the FSharpPlus `NonEmptySet` API, the two-argument `Map.map` folder, FS0691/FS0718 parser traps, pattern annotation syntax, Argu no-payload flags, testable CLI entry points, and code search tips.
 
 ## Contents
 
@@ -11,6 +11,7 @@
 - [Closure Capture Patterns](#closure-capture-patterns)
 - [Record Type Ambiguity in Module with Shadowed Name](#record-type-ambiguity-in-module-with-shadowed-name)
 - [FSharpPlus 1.9.1 `NonEmptySet` API](#fsharpplus-191-nonemptyset-api)
+- [`Map.map` Takes a Two-Argument Folder (Key and Value)](#mapmap-takes-a-two-argument-folder-key-and-value)
 - [`ident = expr` in Argument Position Parses as a Named Argument (FS0691)](#ident--expr-in-argument-position-parses-as-a-named-argument-fs0691)
 - [Module-Level Optional Parameters — Not Allowed (FS0718)](#module-level-optional-parameters--not-allowed-fs0718)
 - [Pattern Type Annotation Syntax](#pattern-type-annotation-syntax)
@@ -141,6 +142,31 @@ directly (throws on empty). Always check for emptiness before calling.
 | `NonEmptySet.toSet` | `NonEmptySet<'a> -> Set<'a>` | Convert to plain Set |
 | `NonEmptySet.toSeq` | `NonEmptySet<'a> -> seq<'a>` | Enumerate elements |
 | `NonEmptySet.ofSet` | `Set<'a> -> NonEmptySet<'a>` | Convert from Set. Throws if empty |
+
+## `Map.map` Takes a Two-Argument Folder (Key and Value)
+
+**Problem**: In this project's F# toolchain (.NET 10), `Microsoft.FSharp.Collections.Map.map`
+takes a folder of **two** arguments — the key *and* the value — not just the value. The
+classic one-argument form `Map.map (fun v -> f v) m` fails to compile:
+
+```
+error FS0001: Type mismatch. Expecting a 'Map<string,'a>' but given a 'Map<string,int>'
+The type 'int' does not match the type 'string'
+```
+
+The compiler unifies the folder's first parameter with the map's **key** type, so a
+value-only lambda is misread as a key transformer.
+
+**Solution**: Always pass both arguments, discarding the key when unused:
+
+```fsharp
+m |> Map.map (fun _k v -> f v)   // correct
+Map.map (fun _ v -> f v) m       // correct (see Graph.fs)
+```
+
+This matches the existing codebase convention (e.g. `Graph.fs`:
+`graph.VertexMap |> Map.map (fun _ v -> f v)`). Verified via reflection: the CLR signature
+is `Map(FSharpFunc<TKey, FSharpFunc<T, TResult>>, FSharpMap<TKey, T>) : FSharpMap<TKey, TResult>`.
 
 ## `ident = expr` in Argument Position Parses as a Named Argument (FS0691)
 

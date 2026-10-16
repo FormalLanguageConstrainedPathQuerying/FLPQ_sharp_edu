@@ -1,35 +1,11 @@
 module CfpqVsRpqPropertyTests
 
-open FSharpPlus.Data
 open FsCheck.Xunit
 open FLPQ.CFPQ
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.RPQ
 open FLPQ.TestUtilities
-
-/// Build a CfpqGraph from an NFA: one Boolean adjacency matrix per terminal label.
-let private nfaToCfpqGraph (nfa: NFA<string, int>) : CfpqInput.CfpqGraph<string> =
-    let v = List.length nfa.States
-
-    let cells =
-        [ for i in 0 .. v - 1 do
-              for j in 0 .. v - 1 do
-                  match nfa.Transitions.[i, j] with
-                  | Some nes ->
-                      for label in NonEmptySet.toSeq nes do
-                          match label with
-                          | ATerm t -> (t, (i, j))
-                          | AEpsilon -> ()
-                  | None -> () ]
-
-    { VertexCount = v
-      Labels =
-        cells
-        |> List.groupBy (fun (t, _) -> t)
-        |> List.map (fun (t, ts) ->
-            t, Matrix.create v v (fun i j -> List.exists (fun (_, (a, b)) -> (a, b) = (i, j)) ts))
-        |> Map.ofList }
 
 [<Properties(Arbitrary = [| typeof<IntersectionGenerators>; typeof<RegexGenerators> |])>]
 module CfpqVsRpqProperty =
@@ -46,7 +22,7 @@ module CfpqVsRpqProperty =
         else
             // CFPQ side: graph from the NFA's transitions; grammar for the regexp via a
             // single-block RSM (the block is the regexp's DFA).
-            let cfpqGraph = nfaToCfpqGraph nfa
+            let cfpqGraph = CfpqTestHelpers.nfaToCfpqGraph nfa
 
             let rsm =
                 RsmBuilder.buildRSMWithStart (Map.ofList [ Nonterminal "S", regexp ]) (Nonterminal "S")

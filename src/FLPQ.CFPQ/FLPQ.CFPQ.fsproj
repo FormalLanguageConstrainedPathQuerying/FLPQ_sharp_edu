@@ -10,10 +10,12 @@
     <Compile Include="CfpqInput.fs" />
     <Compile Include="CfpqSemiring.fs" />
     <Compile Include="AzimovCfpq.fs" />
+    <Compile Include="KroneckerCfpq.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FLPQ.LinearAlgebra\FLPQ.LinearAlgebra.fsproj" />
+    <ProjectReference Include="..\FLPQ.GraphAnalysis\FLPQ.GraphAnalysis.fsproj" />
     <ProjectReference Include="..\FLPQ.Languages\FLPQ.Languages.fsproj" />
   </ItemGroup>
 

@@ -16,6 +16,7 @@ module SummaryTeX =
         | ArroyueloRPQ
         | BelyaninRPQ
         | AzimovCFPQ
+        | KroneckerCFPQ
 
         override this.ToString() =
             match this with
@@ -27,6 +28,7 @@ module SummaryTeX =
             | ArroyueloRPQ -> "arroyuelorpq"
             | BelyaninRPQ -> "belyaninrpq"
             | AzimovCFPQ -> "azimovcfpq"
+            | KroneckerCFPQ -> "kroneckercfpq"
 
     /// Per-algorithm step templates (DOT and TikZ variants). Fields are empty strings for
     /// algorithms that do not use a step template. Belyanin uses four templates: the
@@ -275,6 +277,17 @@ module SummaryTeX =
             else
                 []
 
+        // The CFPQ input-graph section: the graph figure (TikZ or DOT-compiled PDF), with no
+        // highlighted vertices or edges (all vertex pairs are queried). Shared by the Azimov and
+        // Kronecker CFPQ headers.
+        let cfpqGraphSection =
+            if useTikz then
+                maybe "graph.tikz.tex" "Input Graph" (fun t -> wrapTikzAdjustbox false t)
+            else
+                match readIfExists (Path.Combine(vizDir, "graph.dot")) with
+                | Some _ -> [ section "Input Graph"; includePdf "dot_pdfs/graph.pdf"; "" ]
+                | None -> []
+
         let algoLines =
             match algoKind with
             | SummaryKind.TablePerStep ->
@@ -316,13 +329,19 @@ module SummaryTeX =
 
             // CFPQ: the original grammar, the CNF passed to the algorithm, and the input graph.
             | SummaryKind.AzimovCFPQ ->
-                maybe "grammar_cnf.tex" "CNF Grammar (passed to algorithm)" wrapCenter
-                @ (if useTikz then
-                       maybe "graph.tikz.tex" "Input Graph" (fun t -> wrapTikzAdjustbox false t)
-                   else
-                       match readIfExists (Path.Combine(vizDir, "graph.dot")) with
-                       | Some _ -> [ section "Input Graph"; includePdf "dot_pdfs/graph.pdf"; "" ]
-                       | None -> [])
+                maybe "grammar_cnf.tex" "CNF Grammar (passed to the algorithm)" wrapCenter
+                @ cfpqGraphSection
+
+            // Kronecker CFPQ: the query RSM figure and the input graph. No grammar files — the
+            // input is an RSM, not a grammar (the RSM figure replaces the CNF grammar section).
+            | SummaryKind.KroneckerCFPQ ->
+                (if useTikz then
+                     maybe "rsm.tikz.tex" "Query RSM" (fun t -> wrapTikzAdjustbox false t)
+                 else
+                     match readIfExists (Path.Combine(vizDir, "rsm.dot")) with
+                     | Some _ -> [ section "Query RSM"; includePdf "dot_pdfs/rsm.pdf"; "" ]
+                     | None -> [])
+                @ cfpqGraphSection
 
             | SummaryKind.RNGLR ->
                 let colorLegend = [ section "Color Legend"; rnglrColorLegend (); "" ]
@@ -712,10 +731,12 @@ module SummaryTeX =
         let headerLines =
             headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmPdfs useTikz
 
-        // AzimovCFPQ steps reuse the generic table layout: one table.tex per productive
-        // iteration (the per-nonterminal matrices with the new cells highlighted).
+        // AzimovCFPQ and KroneckerCFPQ steps reuse the generic table layout: one table.tex per
+        // productive iteration (the per-nonterminal matrices with the new cells highlighted).
         let isTableBased =
-            algoKind = SummaryKind.TablePerStep || algoKind = SummaryKind.AzimovCFPQ
+            algoKind = SummaryKind.TablePerStep
+            || algoKind = SummaryKind.AzimovCFPQ
+            || algoKind = SummaryKind.KroneckerCFPQ
 
         let isGll = algoKind = SummaryKind.GLL
         let isRnglr = algoKind = SummaryKind.RNGLR
