@@ -151,14 +151,7 @@ module PropertyTests =
                 true
             else
                 let bnf =
-                    Grammar.parseGrammar
-                        "
-E -> T op_plus E
-E -> T
-T -> F op_mul T
-T -> F
-F -> x
-"
+                    (LanguageRegistry.findGrammar LanguageRegistry.OpExpr "rightAssoc").Grammar
 
                 let rsm =
                     RsmBuilder.buildRSMFromText

@@ -482,18 +482,17 @@ module ConflictBehaviorTests =
         Assert.NotEmpty(clr1.Conflicts)
 
     [<Fact>]
-    let ``LR(0) table for grammar7 has shift-reduce on epsilon`` () =
+    let ``LR(0) table for grammar7 has shift-reduce conflicts on mult`` () =
         let table = LRParser.buildLR0Table augGrammar7 Grammar.eoiSymbol
 
-        let hasEpsilonReduce =
+        let hasMultShiftReduce =
             table.Conflicts
             |> List.exists (fun c ->
                 match c with
-                | LRConflict.ShiftReduce(state = _; symbol = Symbol.Epsilon) -> true
-                | LRConflict.ReduceReduce(state = _; symbol = Symbol.Epsilon) -> true
+                | LRConflict.ShiftReduce(symbol = Symbol.T(Terminal "mult")) -> true
                 | _ -> false)
 
-        Assert.True(hasEpsilonReduce || table.Conflicts.Length > 0)
+        Assert.True(hasMultShiftReduce)
 
     [<Fact>]
     let ``Conflict states reference valid state indices`` () =

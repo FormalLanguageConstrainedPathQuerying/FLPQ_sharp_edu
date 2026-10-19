@@ -250,7 +250,7 @@ module PropertyGraphTests =
             let g2 = Graph.mapEdges not g
             Graph.vertexCount g2 = n
 
-    [<Property>]
+    [<Fact>]
     let ``fromEdges produces correct dimensions`` () =
         let states = [ "A"; "B"; "C"; "D" ]
         let m = Matrix.init 4 4 false

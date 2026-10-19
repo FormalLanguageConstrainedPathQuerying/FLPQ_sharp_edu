@@ -10,6 +10,7 @@
     <Compile Include="CfpqInputTests.fs" />
     <Compile Include="CfpqSemiringTests.fs" />
     <Compile Include="AzimovCfpqBookExampleTests.fs" />
+    <Compile Include="CfpqEpsilonAcceptanceTests.fs" />
     <Compile Include="KroneckerCfpqTests.fs" />
     <Compile Include="CfpqVsRpqPropertyTests.fs" />
     <Compile Include="CfpqVsValiantPropertyTests.fs" />

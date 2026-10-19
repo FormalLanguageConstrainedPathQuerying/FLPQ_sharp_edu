@@ -120,19 +120,6 @@ module GrammarAcceptanceCases =
     let acceptInputsG4 = acceptInputsG1
     let rejectInputsG4 = rejectInputsG1
 
-/// Shared 159 tree yield test cases. Source: LanguageRegistry.Dyck1.
-module Grammar159Cases =
-
-    let grammar1Inputs =
-        LanguageRegistry.Dyck1.AcceptStrings
-        |> List.filter (fun s -> List.length s >= 5)
-
-    let grammarSaSb_epsInputs =
-        LanguageRegistry.Dyck1.AcceptStrings
-        |> List.filter (fun s -> List.length s >= 5 && List.length s <= 10)
-
-    let grammar2Inputs = grammarSaSb_epsInputs
-
 /// Shared epsilon grammar test cases.
 module EpsilonCases =
 

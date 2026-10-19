@@ -100,7 +100,11 @@ module FactTests =
 
 module PropertyTests =
 
-    let private enumerateDerivations (g: Grammar<string, string>) (maxDepth: int) : Set<Symbol<string, string> list> =
+    let private enumerateFrom
+        (g: Grammar<string, string>)
+        (start: Symbol<string, string> list)
+        (maxDepth: int)
+        : Set<Symbol<string, string> list> =
         let rec derive (current: Symbol<string, string> list) (depth: int) : Set<Symbol<string, string> list> =
             if depth <= 0 then
                 Set.singleton current
@@ -120,13 +124,7 @@ module PropertyTests =
                 else
                     expansionResults
 
-        derive [ Symbol.N g.Start ] maxDepth
-
-    let private prefixes (k: int) (sentences: Set<Symbol<string, string> list>) : Set<Symbol<string, string> list> =
-        sentences
-        |> Set.map (fun syms ->
-            let taken = List.truncate k syms
-            if List.isEmpty taken then [ Symbol.Epsilon ] else taken)
+        derive start maxDepth
 
     [<Fact>]
     let ``firstK matches brute-force derivation`` () =
@@ -143,25 +141,27 @@ module PropertyTests =
 
             let computed = FirstFollow.firstK g k
 
-            let allDerivable = enumerateDerivations g 5
-
             let nonterminals = Grammar.nonterminalsOf g
 
             nonterminals
             |> Set.forall (fun nt ->
                 let computedFirst = Map.tryFind nt computed |> Option.defaultValue Set.empty
 
+                // Brute-force FIRST: first symbol of every fully terminal string
+                // derivable from nt ([Epsilon] when nt derives the empty string).
                 let derived =
-                    allDerivable
+                    enumerateFrom g [ Symbol.N nt ] 5
                     |> Set.filter (fun syms ->
-                        match syms with
-                        | Symbol.N nt' :: _ when nt' = nt -> true
-                        | _ -> false)
-                    |> prefixes k
+                        List.forall
+                            (function
+                            | Symbol.T _ -> true
+                            | _ -> false)
+                            syms)
+                    |> Set.map (function
+                        | [] -> [ Symbol.Epsilon ]
+                        | s :: _ -> [ s ])
 
-                not (Set.isEmpty computedFirst)
-                || Set.isEmpty derived
-                   && (Set.isEmpty derived || Set.isSubset derived computedFirst)))
+                Set.isSubset derived computedFirst))
 
 
 module FirstFollowEdgeTests =

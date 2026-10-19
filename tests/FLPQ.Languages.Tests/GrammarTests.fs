@@ -276,6 +276,61 @@ module CnfTests =
         Assert.True(isCnf cnf)
 
     [<Fact>]
+    let ``isEpsilonAccepted is true for a directly nullable start`` () =
+        let g = (LanguageRegistry.findGrammar LanguageRegistry.Dyck1 "ambiguousEps").Grammar
+        Assert.True(Grammar.isEpsilonAccepted g)
+
+    [<Fact>]
+    let ``isEpsilonAccepted is true for a transitively nullable start`` () =
+        let variantA =
+            (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+
+        let ebnfConcat =
+            (LanguageRegistry.findGrammar LanguageRegistry.DualDyck "ebnfConcat").Grammar
+
+        Assert.True(Grammar.isEpsilonAccepted variantA)
+        Assert.True(Grammar.isEpsilonAccepted ebnfConcat)
+
+    [<Fact>]
+    let ``isEpsilonAccepted is false for a non-nullable start`` () =
+        let g =
+            (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
+
+        Assert.False(Grammar.isEpsilonAccepted g)
+
+    [<Fact>]
+    let ``nullableNonterminals computes transitive nullability`` () =
+        let variantA =
+            (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+
+        let nullable = Grammar.nullableNonterminals variantA
+
+        Assert.Equal<Set<Nonterminal<string>>>(
+            Set.ofList [ Nonterminal "S"; Nonterminal "S1"; Nonterminal "S2" ],
+            nullable
+        )
+
+    [<Fact>]
+    let ``nullableNonterminals is empty for a non-nullable grammar`` () =
+        let g =
+            (LanguageRegistry.findGrammar LanguageRegistry.APlus "rightRecursive").Grammar
+
+        Assert.True(Set.isEmpty (Grammar.nullableNonterminals g))
+
+    [<Fact>]
+    let ``toCnf introduces a fresh epsilon start for a transitively nullable start`` () =
+        let g =
+            (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+
+        let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
+
+        Assert.True(isCnf cnf)
+        Assert.NotEqual(g.Start, cnf.Start)
+        Assert.True(Grammar.isEpsilonAccepted cnf)
+        Assert.True(Grammar.allNonterminalsReachable cnf)
+        Assert.True(Grammar.allNonterminalsGenerating cnf)
+
+    [<Fact>]
     let ``toCnf result has no unreachable or non-generating nonterminals`` () =
         let g = LanguageRegistry.APlus.Grammars.[5].Grammar
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal g
@@ -320,7 +375,10 @@ module PropertyCnfTests =
               (LanguageRegistry.findGrammar LanguageRegistry.FourTerm "singleRule").Grammar
               (LanguageRegistry.findGrammar LanguageRegistry.MixedPairs "mixedRule").Grammar
               LanguageRegistry.EpsilonOnly.Grammars.[0].Grammar
-              LanguageRegistry.APlus.Grammars.[1].Grammar ]
+              LanguageRegistry.APlus.Grammars.[1].Grammar
+              // Transitively nullable starts: the empty word must be accepted on both sides.
+              (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+              (LanguageRegistry.findGrammar LanguageRegistry.DualDyck "ebnfConcat").Grammar ]
 
         let testStrings =
             [ ""
@@ -475,7 +533,9 @@ module NumberingTests =
 
     [<Fact>]
     let ``productionNumberMap lookups match CNF renderer numbering`` () =
-        let grammar = Grammar.parseGrammar "S -> a | S S | S S S"
+        let grammar =
+            (LanguageRegistry.findGrammar LanguageRegistry.APlus "ambiguousWithSingleRule").Grammar
+
         let cnf = Grammar.toCnf Grammar.freshStringNonterminal grammar
         let map = Grammar.productionNumberMap cnf
 

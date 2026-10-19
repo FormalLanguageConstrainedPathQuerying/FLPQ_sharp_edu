@@ -5,7 +5,7 @@
 **Module:** Grammar
 **Source:** `src/FLPQ.Languages/Grammar.fs`
 **Depends on:** _(none)_
-**Used by:** Cyk, Valiant, LLParser, LRParser, FirstFollow, Tokenizer
+**Used by:** Cyk, Valiant, LLParser, LRParser, FirstFollow, Tokenizer, AzimovCfpq
 **Book reference:** Chapters 5, 7
 
 > **Abstract:** Provides generic types for representing context-free grammars (`Terminal<'t>`, `Nonterminal<'nt>`, `Symbol<'t,'nt>`, `Rule<'t,'nt>`, `Grammar<'t,'nt>`) and a parser for `.bnf` grammar files. Implements Chomsky Normal Form (CNF) transformation: epsilon elimination, unit production elimination, terminal replacement, and binarization. Also provides `ExtendedGrammar` wrapper for grammar augmentation.
@@ -37,13 +37,15 @@ Transforms a context-free grammar into Chomsky Normal Form. In CNF all productio
 
 **Transformation steps:**
 
-1. **Epsilon elimination**: Computes nullable nonterminals (transitive closure), generates all combinations of RHS with nullable symbols optionally removed, adds a fresh start symbol if the language contains ε.
+1. **Binarization**: For each rule with |RHS| > 2, introduces fresh nonterminals to chain binary productions. `A → X₁ X₂ … Xₙ` becomes `A → X₁ N₁, N₁ → X₂ N₂, …, N_{n-2} → X_{n-1} Xₙ`. Applied first to reduce the number of combinations generated during epsilon elimination for long rules with nullable nonterminals.
 
-2. **Unit production elimination**: Computes unit pairs (transitive closure of A → B relations), adds new rules bypassing unit chains, removes all single-nonterminal RHS rules.
+2. **Epsilon elimination**: Computes nullable nonterminals (transitive closure), generates all combinations of RHS with nullable symbols optionally removed, and — when the start symbol is nullable, directly or transitively — adds a fresh start symbol `S' → S | ε` so the CNF's language equals the original language, ε included.
 
-3. **Terminal replacement**: For each terminal appearing in a RHS with length > 1, creates a fresh nonterminal `T_a → a` and replaces the terminal occurrence with the fresh nonterminal.
+3. **Unit production elimination**: Computes unit pairs (transitive closure of A → B relations), adds new rules bypassing unit chains, removes all single-nonterminal RHS rules.
 
-4. **Binarization**: For each rule with |RHS| > 2, introduces fresh nonterminals to chain binary productions. `A → X₁ X₂ … Xₙ` becomes `A → X₁ N₁, N₁ → X₂ N₂, …, N_{n-2} → X_{n-1} Xₙ`.
+4. **Terminal replacement**: For each terminal appearing in a RHS with length > 1, creates a fresh nonterminal `T_a → a` and replaces the terminal occurrence with the fresh nonterminal.
+
+5. **Useless-symbol removal**: Removes non-generating and unreachable nonterminals.
 
 **Postcondition**: All rules in the result satisfy CNF constraints.
 
@@ -126,6 +128,22 @@ val toCnf: g:Grammar<string, string> -> Grammar<string, string>
 
 Transform a CFG into Chomsky Normal Form (described above).
 
+### `nullableNonterminals`
+
+```fsharp
+val nullableNonterminals: g:Grammar<'t, 'nt> -> Set<Nonterminal<'nt>>
+```
+
+The nullable set: nonterminals that can derive ε. The least fixed point seeded with the left-hand sides of direct epsilon productions, then closed under rules whose right-hand side consists only of already-nullable nonterminals (an explicit `Symbol.Epsilon` counts as nullable).
+
+### `isEpsilonAccepted`
+
+```fsharp
+val isEpsilonAccepted: g:Grammar<'t, 'nt> -> bool
+```
+
+Whether the start symbol can derive ε — transitive nullability of the start, so a start that is nullable only through other nonterminals (no direct epsilon production) is reported as epsilon-accepting. Used by CYK and Valiant for empty-input acceptance.
+
 ### `numberedRules`
 
 ```fsharp
@@ -189,7 +207,7 @@ An augmented grammar with fresh start `S'`. The extended grammar has `S' -> S` a
 | `start` inferred from first rule | Standard BNF convention; no explicit start symbol marker needed |
 | Fresh nonterminal names prefixed `N_CNF_` | Prevents name collisions with user-defined nonterminals |
 | Fixed-point computation for nullable/unit pairs | Standard Hopcroft-Ullman approach; guaranteed termination on finite grammars |
-| New start symbol always introduced in CNF | Simplifies epsilon handling; ensures start doesn't appear on any RHS |
+| Fresh start introduced in CNF exactly when the language contains ε (start nullable, directly or transitively) | Preserves epsilon acceptance through CNF conversion; ensures the start doesn't appear on any RHS |
 | `ExtendedGrammar` as wrapper type | Preserves original-extended relationship; eliminates need for parallel variables in runners |
 | Canonical 1-based production numbering | `numberedRules`/`productionNumberMap` keep the production number used by rendering, table cells, and SPPF consistent (start rules first, 1-based) |
 

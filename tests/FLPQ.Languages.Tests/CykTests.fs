@@ -285,6 +285,21 @@ module CykSppfTests =
         Assert.True(acceptedEps)
 
     [<Fact>]
+    let ``CYK accepts the empty word for a transitively nullable start`` () =
+        // variantA: S -> S1 | S2 with S1/S2 nullable — no direct S -> eps rule (issue 8).
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar9 [])
+
+        let ebnfConcat =
+            (LanguageRegistry.findGrammar LanguageRegistry.DualDyck "ebnfConcat").Grammar
+
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal ebnfConcat [])
+
+    [<Fact>]
+    let ``CYK accepts the empty word for a directly nullable start`` () =
+        // variantB carries a direct S -> eps rule.
+        Assert.True(Cyk.parse Grammar.freshStringNonterminal grammar10 [])
+
+    [<Fact>]
     let ``fromParsingTable builds SPPF with correct root`` () =
         let table =
             Cyk.parseWithSppfInfo Grammar.freshStringNonterminal grammar1 [ Terminal "a"; Terminal "b" ]

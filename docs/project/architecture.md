@@ -30,10 +30,11 @@ FLPQ.slnx
 │   │   ├── EbnfParser.fs           # EBNF parser and RSM construction via Brzozowski derivatives
 │   │   ├── RsmToGrammar.fs         # RSM to BNF grammar conversion
 │   │   ├── DerivationTree.fs       # Derivation tree type and operations
-│   │   ├── VisualizationTypes.fs   # Shared visualization types
+│   │   ├── ParsingTable.fs         # Common parsing table type for CYK/Valiant
 │   │   ├── GllTypes.fs             # GLL types (SPPF, GSS, path index entries)
 │   │   ├── PathIndex.fs            # Path index (K×K matrix) for GLL/RNGLR recognized ranges
 │   │   ├── Sppf.fs                 # SPPF construction from path index
+│   │   ├── BasicSppf.fs            # Basic (Rekers-style) SPPF from numbered BNF productions
 │   │   ├── Gll.fs                  # GLL parsing algorithm for CFPQ on RSMs
 │   │   ├── RnglrTypes.fs           # RNGLR types (GSS, LR table, items)
 │   │   ├── RnglrLR.fs              # RNGLR LR(0) table construction from RSM
@@ -124,49 +125,98 @@ FLPQ.slnx
     │       ├── KroneckerCfpqRunner.fs      # Kronecker CFPQ reachability CLI runner (EBNF query → RSM)
     │       └── Summary.fs              # Merged TeX summary generation (--summary)
  └── tests/
-    ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
-    │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
-    │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
-    │   └── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
-    ├── FLPQ.GraphAnalysis.Tests/  # Tests for graph analysis
-    │   ├── RandomGraphGenerators.fs      # Random graph generators
-    │   ├── GraphTests.fs                 # Tests for Graph module
-    │   └── MsBfsTests.fs                 # MS-BFS and Boolean/Mask semiring tests
-    ├── FLPQ.Languages.Tests/      # Tests for languages
-    │   ├── TestUtils.fs                  # Shared test utilities (dot/TeX compilation)
-    │   ├── TestGrammars.fs               # Shared pre-parsed grammars and generators
-    │   ├── GrammarTests.fs               # Unit tests for Grammar and CNF
-    │   ├── CykTests.fs                   # Unit tests for CYK algorithm
-    │   ├── ValiantTests.fs               # Unit and property tests for Valiant
-    │   ├── FirstFollowTests.fs           # Tests for FirstFollow
-    │   ├── AutomatonTests.fs             # Tests for Automaton
-    │   ├── RSMTests.fs                   # Tests for RSM type
-     │   ├── EbnfParserTests.fs            # Tests for EBNF parser
-     │   ├── RegexpToDfaTests.fs           # Tests for Regexp.toDfa (derivative DFA construction)
-     │   ├── RsmToGrammarTests.fs          # Tests for RSM to grammar conversion
-    │   ├── LLParserTests.fs              # Tests for LL parser
-    │   └── LRParserTests.fs              # Tests for LR parser
-     ├── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
-         ├── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
-         ├── RpqInputTests.fs              # Tests for RPQ query regexp parsing
-         └── PathSemiringTests.fs          # Tests for the path semiring
-     ├── FLPQ.CFPQ.Tests/           # Tests for CFPQ algorithms
-         ├── AzimovCfpqBookExampleTests.fs # Golden test of the book's worked example (T0..T13)
-         ├── CfpqInputTests.fs             # Tests for graph/.cnf/results parsing
-         ├── CfpqSemiringTests.fs          # Semiring unit tests
-         ├── CfpqVsRpqPropertyTests.fs     # CFPQ reachability equals all-pairs RPQ
-         ├── CfpqVsValiantPropertyTests.fs # Azimov equals Valiant's full parsing table
-         ├── CfpqReferenceTests.fs         # Reference tests against the flpq-data export
-         └── CfpqTestHelpers.fs            # Shared test helpers
+     ├── FLPQ.LinearAlgebra.Tests/  # Tests for linear algebra
+     │   ├── MatrixTests.fs                # Property-based and unit tests for Matrix
+     │   ├── LinearAlgebraTests.fs         # Property-based and unit tests for LinearAlgebra
+     │   ├── BooleanDecompositionTests.fs  # Unit and property tests for BooleanDecomposition
+     │   └── StressTests.fs                # Stress tests on large matrices (mxm, kron, map2)
+     ├── FLPQ.GraphAnalysis.Tests/  # Tests for graph analysis
+     │   ├── GraphTests.fs                 # Tests for Graph module
+     │   └── MsBfsTests.fs                 # MS-BFS and Boolean/Mask semiring tests
+     ├── FLPQ.Languages.Tests/      # Tests for languages
+     │   ├── TokenizerTests.fs               # Tests for the shared tokenizer
+     │   ├── GrammarTests.fs                 # Unit tests for Grammar and CNF
+     │   ├── CykTests.fs                     # Unit tests for CYK algorithm
+     │   ├── ValiantTests.fs                 # Unit and property tests for Valiant
+     │   ├── FirstFollowTests.fs             # Tests for FirstFollow
+     │   ├── AutomatonTests.fs               # Tests for Automaton
+     │   ├── RSMTests.fs                     # Tests for RSM type
+     │   ├── EbnfParserTests.fs              # Tests for EBNF parser
+     │   ├── RegexpToDfaTests.fs             # Tests for Regexp.toDfa (derivative DFA construction)
+     │   ├── RsmToGrammarTests.fs            # Tests for RSM to grammar conversion
+     │   ├── LLParserTests.fs                # Tests for LL parser
+     │   ├── LRParserTests.fs                # Tests for LR parser
+     │   ├── StressTests.fs                  # Stress tests on large inputs (CYK/Valiant)
+     │   ├── CrossParserEquivalenceTests.fs  # GLL/RNGLR equivalence with CYK/Valiant on registry languages
+     │   ├── GllTests.fs                     # Tests for GLL parsing on RSMs
+     │   ├── RnglrTests.fs                   # Tests for RNGLR parsing on RSMs
+     │   ├── BasicSppfTests.fs               # Tests for basic (Rekers-style) SPPF construction
+     │   ├── SppfPropertyTests.fs            # Property tests for SPPF table equivalence
+     │   ├── SppfValidatorTests.fs           # Tests for the SPPF validator coverage invariants
+     │   └── PathIndexInvariantTests.fs      # Tests for path index add/get invariants
+      ├── FLPQ.RPQ.Tests/            # Tests for RPQ algorithms
+          ├── RPQTests.fs                   # Tests for RPQ algorithms (Belyanin, Arroyuelo, Kronecker)
+          ├── BelyaninTraceTests.fs         # Golden tests of Belyanin simple-path trace steps
+          ├── ArroyueloBooleanTraceTests.fs # Golden tests of Arroyuelo Boolean reachability trace
+          ├── BelyaninReachabilityTraceTests.fs # Golden tests of Belyanin reachability trace steps
+          ├── RpqInputTests.fs              # Tests for RPQ query regexp parsing
+          ├── PathSemiringTests.fs          # Tests for the path semiring
+          └── StressTests.fs                # Belyanin/Kronecker agreement on large graphs
+      ├── FLPQ.CFPQ.Tests/           # Tests for CFPQ algorithms
+          ├── CfpqTestHelpers.fs                  # Shared test helpers (book graphs, RSM/CNF cases, oracles)
+          ├── CfpqInputTests.fs                   # Tests for graph/.cnf/results parsing
+          ├── CfpqSemiringTests.fs                # Semiring unit tests
+          ├── AzimovCfpqBookExampleTests.fs       # Golden test of the book's worked example (T0..T13)
+          ├── CfpqEpsilonAcceptanceTests.fs       # Empty-path (epsilon) acceptance for Azimov and Kronecker
+          ├── KroneckerCfpqTests.fs               # Golden test of the book's TensorProduct.tex iteration trace
+          ├── CfpqVsRpqPropertyTests.fs           # CFPQ reachability equals all-pairs RPQ
+          ├── CfpqVsValiantPropertyTests.fs       # Azimov equals Valiant's full parsing table
+          ├── KroneckerCfpqVsRpqPropertyTests.fs  # Kronecker CFPQ reachability equals all-pairs RPQ
+          ├── KroneckerCfpqVsValiantPropertyTests.fs # Kronecker CFPQ equals Valiant's full parsing table
+          ├── KroneckerCfpqVsAzimovPropertyTests.fs # Kronecker CFPQ equals Azimov CFPQ
+          └── CfpqReferenceTests.fs               # Reference tests against the flpq-data export
     ├── FLPQ.Printers.Tests/       # Tests for printers
-        ├── ExternalToolsTests.fs        # Tests for Graphviz/lualatex wrappers
-        ├── MatrixTeXTests.fs             # Tests for matrix TeX rendering
-        ├── AutomatonVisualizationTests.fs # Tests for automata dot rendering
+        ├── GoldenHelpers.fs                    # Shared golden-test helpers (shared via FLPQ.TestUtilities)
+        ├── ExternalToolsTests.fs               # Tests for Graphviz/lualatex wrappers
+        ├── MatrixTeXTests.fs                   # Tests for matrix TeX rendering
+        ├── RpqGraphVizTests.fs                 # Tests for the shared RPQ input-graph rendering with path highlights
+        ├── RpqGraphRendererTests.fs            # Tests for the RPQ-dedicated DOT/TikZ input-graph renderers
+        ├── AutomatonVisualizationTests.fs      # Tests for automata dot rendering
+        ├── RnglrAutomatonTikzTests.fs          # Tests for the RNGLR LR-automaton TikZ rendering
         ├── DerivationTreeVisualizationTests.fs # Tests for tree dot rendering
-        ├── LLVisualizerTests.fs          # Tests for LL step visualization
-        ├── LRVisualizerTests.fs          # Tests for LR step visualization
-        ├── TexCompilationTests.fs        # TeX compilation tests for all printers
-        └── CliSummaryTests.fs            # End-to-end tests for CLI summary generation
+        ├── DerivationTreeTikzTests.fs          # Tests for derivation-tree TikZ rendering
+        ├── LLVisualizerTests.fs                # Tests for LL step visualization
+        ├── LRVisualizerTests.fs                # Tests for LR step visualization
+        ├── GrammarTeXGoldenTests.fs            # Golden tests for grammar TeX rendering (BNF/CNF, numbered/plain)
+        ├── LRTableTeXGoldenTests.fs            # Golden tests for LR table TeX rendering
+        ├── RnglrTableTexTests.fs               # Tests for RNGLR table TeX rendering
+        ├── ParsingTableTexTests.fs             # Tests for the common parsing-table TeX helpers
+        ├── TeXRendererTests.fs                 # Tests for the shared parser stack/input TeX rendering
+        ├── CykSummaryGoldenTests.fs            # Golden tests for CYK summary sections
+        ├── LLStepsGoldenTests.fs               # Golden tests for LL step DOT output
+        ├── LRStepsGoldenTests.fs               # Golden tests for LR step DOT output
+        ├── LLTableTeXGoldenTests.fs            # Golden tests for LL table TeX rendering
+        ├── ValiantTraceGoldenTests.fs          # Golden tests for Valiant trace TeX rendering
+        ├── PathIndexTeXTests.fs                # Golden tests for path-index TeX rendering (GLL/RNGLR)
+        ├── TexCompilationTests.fs              # TeX compilation tests for all printers
+        ├── SummaryTexSectionTests.fs           # Tests for the merged summary TeX sections
+        ├── GssDotTests.fs                      # Tests for GSS DOT rendering
+        ├── GssDotVisualizationTests.fs         # Structural-invariant tests for GSS DOT output
+        ├── InputGraphDotTests.fs               # Tests for input-graph DOT rendering
+        ├── InputGraphTikzTests.fs              # Tests for input-graph TikZ rendering
+        ├── RsmTikzTests.fs                     # Tests for RSM TikZ rendering
+        ├── RsmDotTests.fs                      # Tests for RSM DOT rendering
+        ├── RnglrStepVisualizationTests.fs      # Golden tests for RNGLR step visualization
+        ├── BasicSppfDotTests.fs                # Tests for basic (Rekers-style) SPPF DOT rendering
+        ├── SppfTikzTests.fs                    # Tests for SPPF TikZ rendering
+        ├── PathSemiringTexTests.fs             # Tests for path-semiring matrix TeX rendering
+        ├── RegexpTexTests.fs                   # Tests for regexp TeX rendering
+        ├── ArroyueloSimplePathStepVisualizationTests.fs  # Golden tests for Arroyuelo simple-path steps
+        ├── ArroyueloReachabilityStepVisualizationTests.fs # Golden tests for Arroyuelo reachability steps
+        ├── RpqGssIndependenceTests.fs          # RPQ printers must not reference the GSS stack renderers
+        ├── BelyaninStepVisualizationTests.fs   # Golden tests for Belyanin simple-path step visualization
+        ├── BelyaninReachabilityStepVisualizationTests.fs # Golden tests for Belyanin reachability steps
+        └── CfpqMatrixTexTests.fs               # Tests for Azimov CFPQ matrix TeX rendering
      ├── FLPQ.Cli.Tests/            # Tests for the CLI runners and dispatch
          ├── AlgorithmTypesTests.fs          # Algorithm/semantics DU and Argu parsing
          ├── CykRunnerTests.fs               # CYK runner tests
@@ -179,8 +229,9 @@ FLPQ.slnx
          ├── ArroyueloReachabilityRunnerTests.fs # Arroyuelo RPQ reachability runner tests
          ├── BelyaninSimplePathRunnerTests.fs  # Belyanin RPQ simplePath runner tests
          ├── BelyaninReachabilityRunnerTests.fs # Belyanin RPQ reachability runner tests
-         ├── AzimovCfpqCliTests.fs           # Azimov CFPQ runner tests (all three semantics)
-         ├── ProgramDispatchTests.fs         # Program dispatch tests
+          ├── AzimovCfpqCliTests.fs           # Azimov CFPQ runner tests (all three semantics)
+          ├── KroneckerCfpqRunnerTests.fs     # Kronecker CFPQ runner tests
+          ├── ProgramDispatchTests.fs         # Program dispatch tests
          ├── SummaryTests.fs                 # Merged summary generation tests
          ├── CliSummaryTests.fs              # End-to-end CLI summary tests
          ├── ErrorPathTests.fs               # Error-path tests

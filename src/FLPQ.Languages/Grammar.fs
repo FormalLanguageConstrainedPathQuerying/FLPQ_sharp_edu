@@ -138,24 +138,13 @@ module Grammar =
                 | _ -> None))
         |> Set.ofList
 
-    /// Check whether the start symbol of a CNF grammar can produce epsilon.
-    let isEpsilonAccepted (cnf: Grammar<'t, 'nt>) : bool =
-        cnf.Rules |> List.exists (fun r -> r.Lhs = cnf.Start && Rhs.isEpsilon r.Rhs)
+    /// Nonterminals that can derive epsilon (the nullable set): the least fixed point seeded with
+    /// the left-hand sides of direct epsilon productions, then closed under rules whose right-hand
+    /// side consists only of already-nullable nonterminals (an explicit `Symbol.Epsilon` counts as
+    /// nullable).
+    let nullableNonterminals (g: Grammar<'t, 'nt>) : Set<Nonterminal<'nt>> =
+        let rules = g.Rules
 
-    /// Return the grammar's productions with canonical 1-based production numbers.
-    /// Rules of the start nonterminal come first, followed by the remaining rules in
-    /// their original order. This is the single source of truth for production numbers
-    /// used by CNF rendering (GrammarTeX), CYK/Valiant table cells, and Basic SPPF construction.
-    let numberedRules (g: Grammar<'t, 'nt>) : (int * Rule<'t, 'nt>) list =
-        let startRules, otherRules = g.Rules |> List.partition (fun r -> r.Lhs = g.Start)
-
-        startRules @ otherRules |> List.mapi (fun i rule -> (i + 1, rule))
-
-    /// Map from a 1-based production number (as produced by `numberedRules`)
-    /// to the corresponding production rule. Built once and reused for O(1) lookup.
-    let productionNumberMap (g: Grammar<'t, 'nt>) : Map<int, Rule<'t, 'nt>> = numberedRules g |> Map.ofList
-
-    let private computeNullable (rules: Rule<'t, 'nt> list) : Set<Nonterminal<'nt>> =
         let rec loop (current: Set<Nonterminal<'nt>>) =
             let newNullable =
                 rules
@@ -180,6 +169,25 @@ module Grammar =
         |> List.map (fun r -> r.Lhs)
         |> Set.ofList
         |> loop
+
+    /// Check whether the start symbol can derive epsilon: transitive nullability of the start, so
+    /// a start that is nullable only through other nonterminals (no direct epsilon production) is
+    /// reported as epsilon-accepting.
+    let isEpsilonAccepted (g: Grammar<'t, 'nt>) : bool =
+        nullableNonterminals g |> Set.contains g.Start
+
+    /// Return the grammar's productions with canonical 1-based production numbers.
+    /// Rules of the start nonterminal come first, followed by the remaining rules in
+    /// their original order. This is the single source of truth for production numbers
+    /// used by CNF rendering (GrammarTeX), CYK/Valiant table cells, and Basic SPPF construction.
+    let numberedRules (g: Grammar<'t, 'nt>) : (int * Rule<'t, 'nt>) list =
+        let startRules, otherRules = g.Rules |> List.partition (fun r -> r.Lhs = g.Start)
+
+        startRules @ otherRules |> List.mapi (fun i rule -> (i + 1, rule))
+
+    /// Map from a 1-based production number (as produced by `numberedRules`)
+    /// to the corresponding production rule. Built once and reused for O(1) lookup.
+    let productionNumberMap (g: Grammar<'t, 'nt>) : Map<int, Rule<'t, 'nt>> = numberedRules g |> Map.ofList
 
     let private computeUnitPairs (rules: Rule<'t, 'nt> list) (nts: Set<Nonterminal<'nt>>) : Set<BinaryPair<'nt>> =
         let initial = nts |> Set.map (fun a -> { Left = a; Right = a })
@@ -229,19 +237,20 @@ module Grammar =
         loop indices
 
     let private eliminateEpsilon (fresh: unit -> 'nt) (g: Grammar<'t, 'nt>) : Grammar<'t, 'nt> =
-        let nullable = computeNullable g.Rules
+        let nullable = nullableNonterminals g
 
-        let hasEps =
-            g.Rules |> List.exists (fun r -> r.Lhs = g.Start && Rhs.isEpsilon r.Rhs)
+        // A fresh start with an epsilon rule is introduced whenever the original start is nullable
+        // — directly or transitively — so epsilon acceptance is preserved through CNF conversion.
+        let startNullable = Set.contains g.Start nullable
 
-        let newStart = if hasEps then Nonterminal(fresh ()) else g.Start
+        let newStart = if startNullable then Nonterminal(fresh ()) else g.Start
 
         let startRule =
             { Lhs = newStart
               Rhs = NonEmptyList.create (Symbol.N g.Start) [] |> Symbols }
 
         let startEpsRule =
-            if hasEps then
+            if startNullable then
                 [ { Lhs = newStart; Rhs = EpsilonRhs } ]
             else
                 []
@@ -522,7 +531,9 @@ module Grammar =
     /// Transform a grammar into Chomsky Normal Form.
     /// Resulting grammar has only rules of the form:
     /// A -> BC (two nonterminals), A -> a (one terminal), or S -> eps (only start).
-    /// Binarization is applied first to reduce the number of combinations
+    /// If the original start symbol is nullable (directly or transitively), a fresh start
+    /// S' -> S | eps is introduced, so the CNF's language equals the original language, epsilon
+    /// included. Binarization is applied first to reduce the number of combinations
     /// generated during epsilon elimination for long rules with nullable nonterminals.
     /// As a final step, non-generating and unreachable nonterminals are removed.
     /// `freshNonterminal` produces a fresh nonterminal from an integer index.

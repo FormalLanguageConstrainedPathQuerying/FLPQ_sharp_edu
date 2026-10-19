@@ -71,20 +71,12 @@ module KroneckerCfpqVsValiantProperty =
                     if (Map.find a result.Matrices).[i, j] then
                         ok <- false
 
-        // Acceptance: the start nonterminal derives the whole word. For a non-empty word Valiant's
-        // table-based acceptance is reliable; for the empty word it falls back to
-        // Grammar.isEpsilonAccepted, which only sees a direct Start -> epsilon rule and misses a
-        // transitively nullable start (a toCnf/isEpsilonAccepted limitation), so reference the
-        // RSM's own nullability there instead.
+        // Acceptance: the start nonterminal derives the whole word. For the empty word Valiant's
+        // acceptance is Grammar.isEpsilonAccepted on the CNF — transitive nullability of the start,
+        // equal to the RSM start block's nullability since the RSM is built from the same grammar.
         let kronAccepted = (KroneckerCfpq.answer result c.Rsm).[0, n]
 
-        let expectedAccepted =
-            if n = 0 then
-                Set.contains c.Rsm.StartBlock rsmNull
-            else
-                valiantAccepted
-
-        if kronAccepted <> expectedAccepted then
+        if kronAccepted <> valiantAccepted then
             ok <- false
 
         ok

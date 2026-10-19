@@ -686,7 +686,7 @@ module DotParseabilityPropertyTests =
             Assert.Contains("{", dot)
             Assert.Contains("}", dot)
             let info = ExternalTools.compileDotStringToInfo dot
-            info.NodeCount >= 0 && info.EdgeCount >= 0
+            Assert.Equal(List.length nfa.States, info.NodeCount)
 
         [<Property(MaxTest = 50)>]
         [<Trait("Category", "Graphviz")>]

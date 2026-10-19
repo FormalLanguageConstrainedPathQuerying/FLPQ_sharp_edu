@@ -184,11 +184,15 @@ module ModifiedValiantTests =
 
         Assert.NotEmpty(trace)
 
-        let lastStep = trace |> List.last
+        // The first step is the initial forward layer over the size-1 blocks.
+        match trace.Head with
+        | Valiant.LayerForward(_, _, submatrices) -> Assert.Equal(List.length input, submatrices.Length)
+        | _ -> Assert.Fail("first step must be a LayerForward")
 
-        match lastStep with
-        | Valiant.LayerForward(_, _, submatrices) -> Assert.True(submatrices.Length >= 1 || submatrices.Length = 0)
-        | Valiant.LayerBackward(_, _, submatrices, _) -> Assert.True(submatrices.Length >= 1 || submatrices.Length = 0)
+        // The last step is a backward layer with non-empty submatrices.
+        match List.last trace with
+        | Valiant.LayerBackward(_, _, submatrices, _) -> Assert.NotEmpty(submatrices)
+        | _ -> Assert.Fail("last step must be a LayerBackward")
 
     [<Fact>]
     let ``Modified Valiant trace submatrices are disjoint within each layer`` () =
@@ -252,6 +256,29 @@ module ModifiedValiantTests =
     let ``Standard Valiant empty input with non-epsilon grammar returns rejected`` () =
         let result = Valiant.parse Grammar.freshStringNonterminal grammar3 []
         Assert.False(result)
+
+    [<Fact>]
+    let ``Standard Valiant accepts the empty word for a transitively nullable start`` () =
+        // variantA: S -> S1 | S2 with S1/S2 nullable — no direct S -> eps rule (issue 8).
+        let variantA =
+            (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+
+        let ebnfConcat =
+            (LanguageRegistry.findGrammar LanguageRegistry.DualDyck "ebnfConcat").Grammar
+
+        Assert.True(Valiant.parse Grammar.freshStringNonterminal variantA [])
+        Assert.True(Valiant.parse Grammar.freshStringNonterminal ebnfConcat [])
+
+    [<Fact>]
+    let ``Modified Valiant accepts the empty word for a transitively nullable start`` () =
+        let variantA =
+            (LanguageRegistry.findGrammar LanguageRegistry.TwoTrackDyck "variantA").Grammar
+
+        let ebnfConcat =
+            (LanguageRegistry.findGrammar LanguageRegistry.DualDyck "ebnfConcat").Grammar
+
+        Assert.True(Valiant.parseModified Grammar.freshStringNonterminal variantA [])
+        Assert.True(Valiant.parseModified Grammar.freshStringNonterminal ebnfConcat [])
 
 
 module PropertyTests =

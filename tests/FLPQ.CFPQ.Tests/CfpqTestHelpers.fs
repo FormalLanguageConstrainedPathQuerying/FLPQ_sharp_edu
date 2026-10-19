@@ -155,30 +155,6 @@ let private terminalAlphabet (g: Grammar<string, string>) : string list =
     |> List.distinct
     |> List.sort
 
-/// Nullable nonterminals (those deriving epsilon) by the standard fixed point.
-let private nullableNts (g: Grammar<string, string>) : Set<Nonterminal<string>> =
-    let rec step (acc: Set<Nonterminal<string>>) : Set<Nonterminal<string>> =
-        let added =
-            g.Rules
-            |> List.filter (fun r ->
-                match r.Rhs with
-                | Rhs.EpsilonRhs -> true
-                | Rhs.Symbols nel ->
-                    NonEmptyList.toList nel
-                    |> List.forall (function
-                        | Symbol.N nt -> Set.contains nt acc
-                        | _ -> false))
-            |> List.map (fun r -> r.Lhs)
-            |> Set.ofList
-            |> Set.filter (fun nt -> not (Set.contains nt acc))
-
-        if Set.isEmpty added then
-            acc
-        else
-            step (Set.union acc added)
-
-    step Set.empty
-
 /// Nonterminals deriving epsilon in the RSM. A block A derives epsilon iff its start state can
 /// reach one of its final states along a path whose every label is a nonterminal that itself
 /// derives epsilon: terminal labels never contribute to an epsilon derivation and RsmBuilder
@@ -186,9 +162,10 @@ let private nullableNts (g: Grammar<string, string>) : Set<Nonterminal<string>> 
 /// This is a least fixed point over the blocks (a block becomes nullable once its start reaches a
 /// final through already-nullable blocks). It is the correct reference for the empty-path
 /// (diagonal) cells and for deciding which per-nonterminal cells toCnf may have altered: toCnf
-/// strips epsilon from nullable non-start symbols, so L_WCNF(A) = L_RSM(A) \ {epsilon} for those
-/// A and only their diagonal can differ from the RSM's matrix. CNF-based nullability
-/// (nullableNts cnf) does not match the RSM's language for exactly those symbols.
+/// allows epsilon only at its own (possibly fresh) start, so for a nullable non-start A
+/// L_WCNF(A) = L_RSM(A) \ {epsilon} and only that diagonal can differ from the RSM's matrix.
+/// CNF-based nullability (Grammar.nullableNonterminals cnf) does not match the RSM's language
+/// for exactly those symbols.
 let rsmNullable (rsm: RSM<string, string>) : Set<Nonterminal<string>> =
     let nts = RSM.nonterminals rsm
     let finals = RSM.blockFinalsMap rsm
@@ -256,7 +233,7 @@ let grammarCases: GrammarCase list =
           Cnf = cnf
           // The same nonterminal set AzimovCfpq.evaluate initializes matrices for.
           CnfNts = Set.toList (Set.union (Grammar.nonterminalsOf cnf) (Set.singleton cnf.Start))
-          CnfNullable = nullableNts cnf
+          CnfNullable = Grammar.nullableNonterminals cnf
           Alphabet = terminalAlphabet g })
 
 /// Linear path graph for a word: |s|+1 vertices, edge i -> i+1 labeled s[i].
@@ -294,16 +271,16 @@ type CfpqGrammarWordGenerators =
         MyArb.fromGen (MyGen.elements grammarCases)
 
 /// Compare a Kronecker result with an Azimov result computed on the same graph and language:
-/// the start answer matrices must be equal, and for every nonterminal present in both
-/// RSM.nonterminals rsm and the CNF's nonterminal set the n x n matrices must be equal.
+/// the start answer matrices must be equal on every cell, and for every nonterminal present in
+/// both RSM.nonterminals rsm and the CNF's nonterminal set the n x n matrices must be equal.
 /// Nonterminals dropped by toCnf have no counterpart and are skipped; the start-answer check
 /// keeps the property non-vacuous when the start itself is replaced by a fresh one.
 ///
-/// toCnf strips epsilon from nullable symbols that lack a direct Start -> epsilon rule, so for an
-/// RSM-nullable A the CNF matrix is L_RSM(A) \ {epsilon}: only its diagonal (the empty path) can
-/// differ from the RSM's, while every off-diagonal cell is preserved. Those diagonal cells are
-/// therefore excluded from both the start-answer and the per-nonterminal comparisons; all
-/// off-diagonal cells (non-empty strings) are still checked on both sides.
+/// The start answer is compared on all cells: toCnf introduces a fresh start S' -> S | eps
+/// whenever the original start is nullable, so L_CNF(S') = L_RSM(start) including epsilon. For a
+/// nullable non-start A, however, the CNF matrix is L_RSM(A) \ {epsilon} (CNF allows epsilon only
+/// at its own start), so only that diagonal (the empty path) can differ from the RSM's; those
+/// per-nonterminal diagonal cells are excluded and every other cell is checked on both sides.
 let compareKronVsAzimov
     (rsm: RSM<string, string>)
     (cnf: Grammar<string, string>)
@@ -313,7 +290,7 @@ let compareKronVsAzimov
     let kronAnswer = KroneckerCfpq.answer kronResult rsm
     let n = Matrix.rows kronAnswer
 
-    // Start answer matrix equality.
+    // Start answer matrix equality (all cells, including the empty-path diagonal).
     let azimovAnswer = AzimovCfpq.answer azimovResult cnf.Start
 
     let nullable = rsmNullable rsm
@@ -321,11 +298,7 @@ let compareKronVsAzimov
 
     for i in 0 .. n - 1 do
         for j in 0 .. n - 1 do
-            // Skip the empty-path diagonal of a RSM-nullable start: toCnf has stripped its epsilon.
-            if
-                not (Set.contains rsm.StartBlock nullable && i = j)
-                && kronAnswer.[i, j] <> azimovAnswer.[i, j]
-            then
+            if kronAnswer.[i, j] <> azimovAnswer.[i, j] then
                 ok <- false
 
     // Per-nonterminal matrix equality over the shared nonterminals.
@@ -341,7 +314,8 @@ let compareKronVsAzimov
 
         for i in 0 .. n - 1 do
             for j in 0 .. n - 1 do
-                // Skip the empty-path diagonal of RSM-nullable A: toCnf has stripped its epsilon.
+                // Skip the empty-path diagonal of RSM-nullable A: CNF allows epsilon only at its
+                // own (possibly fresh) start, so L_CNF(A) = L_RSM(A) \ {epsilon} for such A.
                 if
                     not (Set.contains a nullable && i = j)
                     && kronM.[i, j] <> Option.isSome azimovM.[i, j]
