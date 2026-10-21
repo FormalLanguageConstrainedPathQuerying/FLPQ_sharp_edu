@@ -65,19 +65,19 @@ module RnglrTreeYield =
     [<Fact>]
     let ``S -> a S b S | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar1Inputs do
-            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
+            let desc = TestHelpers.terminalsToString input
             Assert.True(accepts dyck1.Grammars[0].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammarSaSb_epsInputs do
-            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
+            let desc = TestHelpers.terminalsToString input
             Assert.True(accepts dyck1.Grammars[2].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
     let ``S -> S S | a S b | eps tree yield matches inputs`` () =
         for input in ParsingTestCases.TreeYieldCases.grammar2Inputs do
-            let desc = (input |> List.map (fun (Terminal x) -> x) |> String.concat " ")
+            let desc = TestHelpers.terminalsToString input
             Assert.True(accepts dyck1.Grammars[1].Rsm input, $"tree yield: {desc}")
 
     [<Fact>]
@@ -119,7 +119,7 @@ module RnglrRightNullable =
 module RnglrReductionCascade =
     [<Fact>]
     let ``Epsilon reductions cascade at layer 0`` () =
-        let g = epsilonOnly.Grammars |> List.find (fun g -> g.Name = "viaCascade")
+        let g = LanguageRegistry.findGrammar epsilonOnly "viaCascade"
         Assert.True(accepts g.Rsm [], "Should accept and produce tree")
 
 module RnglrPropertyTreeYield =

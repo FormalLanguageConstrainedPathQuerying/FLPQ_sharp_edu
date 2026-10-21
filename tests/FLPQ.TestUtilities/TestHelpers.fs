@@ -118,20 +118,25 @@ module TestHelpers =
     let stringToTerminals (s: string) : Terminal<string> list =
         s |> Seq.map (string >> Terminal) |> Seq.toList
 
+    /// Inverse of [stringToTerminals]: join terminal labels with a space.
+    let terminalsToString (terminals: Terminal<string> list) : string =
+        terminals |> List.map (fun (Terminal x) -> x) |> String.concat " "
+
+    /// All strings of length 0..maxLen over the given alphabet, each as a list of symbols.
+    /// Used by exhaustive DFA/regex correctness checks.
+    let allStringsUpTo (alphabet: string list) (maxLen: int) : string list list =
+        let rec stringsOfLen (len: int) : string list list =
+            if len = 0 then
+                [ [] ]
+            else
+                alphabet
+                |> List.collect (fun s -> stringsOfLen (len - 1) |> List.map (fun xs -> s :: xs))
+
+        [ for len in 0..maxLen do
+              yield! stringsOfLen len ]
+
     let terminalsToGraph (terminals: Terminal<string> list) : Graph<int, Option<string>> =
         GLL.stringToGraph (terminals |> List.map (fun (Terminal s) -> s))
-
-    let blockOffset (rsm: RSM<'t, 'nt>) (target: Nonterminal<'nt>) : int =
-        RSM.blocks rsm
-        |> List.takeWhile (fun block -> block.Nonterminal <> target)
-        |> List.sumBy (fun block -> Dfa.stateCount block.Dfa)
-
-    let globalStartState (rsm: RSM<'t, 'nt>) (nt: Nonterminal<'nt>) : int =
-        let offset = blockOffset rsm nt
-
-        match RSM.blockOf nt rsm with
-        | Some block -> offset + block.Dfa.StartState
-        | None -> -1
 
     /// Nonterminals that label at least one transition in the RSM (call edges).
     let callLabeledNonterminals (rsm: RSM<'t, 'nt>) : Nonterminal<'nt> list =
@@ -554,3 +559,27 @@ module TestHelpers =
             match BasicSppf.validateProductionSplitConsistency modSppf with
             | Error errors -> failwithf "Modified Valiant validateProductionSplitConsistency: %A" errors
             | Ok() -> ()
+
+    /// Single-character tokenizer: strip spaces, then one terminal per character.
+    let singleCharTokenize (s: string) : Terminal<string> list = s.Replace(" ", "") |> stringToTerminals
+
+    /// Multi-character tokenizer: whitespace-separated tokens.
+    let multiCharTokenize (s: string) : Terminal<string> list = Tokenizer.tokenizeTerminals s
+
+    /// Run a per-grammar check over every grammar of the given languages on FsCheck-generated strings.
+    let checkLanguages
+        (langs: Language list)
+        (arbType: System.Type)
+        (tokenize: string -> Terminal<string> list)
+        (check: Language -> AnnotatedGrammar -> Terminal<string> list -> unit)
+        : unit =
+        let config = Config.QuickThrowOnFailure.WithMaxTest(100).WithArbitrary([ arbType ])
+
+        Check.One(
+            config,
+            fun (s: string) ->
+                let input = tokenize s
+
+                langs
+                |> List.iter (fun lang -> lang.Grammars |> List.iter (fun g -> check lang g input))
+        )

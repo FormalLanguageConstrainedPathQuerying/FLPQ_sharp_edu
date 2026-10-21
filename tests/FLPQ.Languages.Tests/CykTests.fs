@@ -9,24 +9,27 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) =
-    lang.Grammars |> List.find (fun g -> g.Name = name)
-
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 let private twoTrack = LanguageRegistry.TwoTrackDyck
 
-let private grammar1 = (g dyck1 "ambiguousEps").Grammar
-let private grammar2 = (g dyck1 "ambiguousWithConcat").Grammar
-let private grammar3 = (g aplus "rightRecursive").Grammar
-let private grammar4 = (g aplus "leftRecursive").Grammar
-let private grammar5 = (g aplus "ambiguousBinaryTernary").Grammar
-let private grammar6 = (g expr "ambiguous").Grammar
-let private grammar7 = (g expr "leftAssoc").Grammar
-let private grammar8 = (g expr "rightAssoc").Grammar
-let private grammar9 = (g twoTrack "variantA").Grammar
-let private grammar10 = (g twoTrack "variantB").Grammar
+let private grammar1 = (LanguageRegistry.findGrammar dyck1 "ambiguousEps").Grammar
+
+let private grammar2 =
+    (LanguageRegistry.findGrammar dyck1 "ambiguousWithConcat").Grammar
+
+let private grammar3 = (LanguageRegistry.findGrammar aplus "rightRecursive").Grammar
+let private grammar4 = (LanguageRegistry.findGrammar aplus "leftRecursive").Grammar
+
+let private grammar5 =
+    (LanguageRegistry.findGrammar aplus "ambiguousBinaryTernary").Grammar
+
+let private grammar6 = (LanguageRegistry.findGrammar expr "ambiguous").Grammar
+let private grammar7 = (LanguageRegistry.findGrammar expr "leftAssoc").Grammar
+let private grammar8 = (LanguageRegistry.findGrammar expr "rightAssoc").Grammar
+let private grammar9 = (LanguageRegistry.findGrammar twoTrack "variantA").Grammar
+let private grammar10 = (LanguageRegistry.findGrammar twoTrack "variantB").Grammar
 
 module Grammar1Tests =
 
@@ -130,10 +133,7 @@ module FactTests =
         let g = (LanguageRegistry.AStar.Grammars[1]).Grammar
 
         for s in LanguageRegistry.AStar.AcceptStrings do
-            Assert.True(
-                Cyk.parse Grammar.freshStringNonterminal g s,
-                $"""{String.concat " " (s |> List.map (fun (Terminal x) -> x))}"""
-            )
+            Assert.True(Cyk.parse Grammar.freshStringNonterminal g s, $"""{TestHelpers.terminalsToString s}""")
 
 
 module Grammar6Tests =

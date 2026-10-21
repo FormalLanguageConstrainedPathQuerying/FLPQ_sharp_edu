@@ -51,25 +51,24 @@ let private transitionSymbolCount (rsm: RSM<string, string>) : int =
 /// Minimal single-block RSM (start 0, final stateCount-1) over the given terminal transitions;
 /// used by the reciprocal-edge rendering tests.
 let private singleBlockRsm (edges: Trans<char> list) (stateCount: int) : RSM<string, string> =
-    let transitions = Matrix.init stateCount stateCount None
+    let s = Nonterminal "S"
 
-    for edge in edges do
-        transitions.[edge.From, edge.To] <-
-            Some(NonEmptySet.singleton (AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal(string edge.Label)))))
+    let labeledEdges =
+        edges
+        |> List.map (fun e ->
+            { From = e.From
+              Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal(string e.Label)))
+              To = e.To })
 
-    let blockStart = System.Collections.Generic.Dictionary<Nonterminal<string>, int>()
-    blockStart.[Nonterminal "S"] <- 0
-
-    { Transitions = transitions
-      StateCount = stateCount
-      StateInfo =
+    RsmFixtures.mkRsm
         [| for i in 0 .. stateCount - 1 do
-               { BlockNonterminal = Nonterminal "S"
+               { BlockNonterminal = s
                  LocalState = i
                  IsFinal = i = stateCount - 1 } |]
-      BlockStart = blockStart
-      FinalStates = set [ stateCount - 1 ]
-      StartBlock = Nonterminal "S" }
+        labeledEdges
+        [ (s, 0) ]
+        [ stateCount - 1 ]
+        s
 
 [<Fact>]
 let ``RSM tikz uses top-to-bottom component packing in a single graph`` () =

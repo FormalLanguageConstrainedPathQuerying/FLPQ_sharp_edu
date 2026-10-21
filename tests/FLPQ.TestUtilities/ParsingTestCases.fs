@@ -53,10 +53,6 @@ module AcceptanceCases =
 
                 acceptCases @ rejectCases))
 
-    /// Filter acceptance cases by language name prefix.
-    let forLanguage (name: string) (acceptFn: AcceptFn) (rejectFn: RejectFn) =
-        allCases |> List.filter (fun c -> c.LanguageName = name)
-
 /// Shared 159 tree yield test cases. Source: LanguageRegistry.Dyck1.
 module TreeYieldCases =
 
@@ -80,46 +76,6 @@ module RegexEquivalenceCases =
     let aOrBStar_aOrCStar =
         ("( a | b ) * ( a | c ) *", fun (c: string) -> c = "a" || c = "b" || c = "c")
 
-/// Shared accept/reject test cases for grammars 11-14.
-/// Source: LanguageRegistry.APlus and LanguageRegistry.AStar.
-module GrammarAcceptanceCases =
-
-    let private aplus = LanguageRegistry.APlus
-
-    let acceptInputsG1 =
-        aplus.AcceptStrings
-        |> List.map (fun s -> (s, String.concat "" (s |> List.map (fun (Terminal x) -> x))))
-
-    let rejectInputsG1 =
-        aplus.RejectStrings
-        |> List.map (fun s ->
-            let desc =
-                if List.isEmpty s then
-                    "empty"
-                else
-                    String.concat "" (s |> List.map (fun (Terminal x) -> x))
-
-            (s, desc))
-
-    let acceptInputsG2 = acceptInputsG1
-    let rejectInputsG2 = rejectInputsG1
-
-    let acceptInputsG3 =
-        LanguageRegistry.AStar.AcceptStrings
-        |> List.map (fun s ->
-            (s,
-             if List.isEmpty s then
-                 "empty"
-             else
-                 String.concat "" (s |> List.map (fun (Terminal x) -> x))))
-
-    let rejectInputsG3 =
-        LanguageRegistry.AStar.RejectStrings
-        |> List.map (fun s -> (s, String.concat "" (s |> List.map (fun (Terminal x) -> x))))
-
-    let acceptInputsG4 = acceptInputsG1
-    let rejectInputsG4 = rejectInputsG1
-
 /// Shared epsilon grammar test cases.
 module EpsilonCases =
 
@@ -139,7 +95,10 @@ module Runners =
             for input in EpsilonCases.rejectInputs do
                 Assert.True(rejects grammar input, $"Epsilon rejects {input}: {desc}")
 
-    let runRegexEquivalenceTests (accepts: AcceptFn) (filterFn: string -> bool) (regexText: string) (s: string) : bool =
+    /// Check that the parser's acceptance of the filtered input matches the DFA built from
+    /// the regex. `case` is a (regexText, filterFn) pair from [RegexEquivalenceCases].
+    let runRegexEquivalenceTests (accepts: AcceptFn) (case: string * (string -> bool)) (s: string) : bool =
+        let (regexText, filterFn) = case
 
         let rsm = TestHelpers.buildRegexRsm regexText
         let dfa = TestHelpers.dfaFromRegexRsm rsm

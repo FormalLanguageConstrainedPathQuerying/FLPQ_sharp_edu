@@ -9,8 +9,11 @@ open FLPQ.TestUtilities
 
 let private dyck1 = LanguageRegistry.Dyck1
 
-let private grammar1 =
-    dyck1.Grammars |> List.find (fun g -> g.Name = "ambiguousEps")
+let private grammar1 = LanguageRegistry.findGrammar dyck1 "ambiguousEps"
+let private grammarEbnfStar = LanguageRegistry.findGrammar dyck1 "ebnfStar"
+
+let private opExprRightAssoc =
+    LanguageRegistry.findGrammar LanguageRegistry.OpExpr "rightAssoc"
 
 let private grammar1Grammar = grammar1.Grammar
 let private grammar1Accept = dyck1.AcceptStrings
@@ -33,7 +36,9 @@ module ConversionTests =
 
     [<Fact>]
     let ``RSM to grammar for S -> eps`` () =
-        let rsm = RsmBuilder.buildRSMFromText "S -> eps"
+        let rsm =
+            (LanguageRegistry.findGrammar LanguageRegistry.EpsilonOnly "singleRule").Rsm
+
         let g = RsmToGrammar.convert rsm
 
         Assert.Equal(1, List.length g.Rules)
@@ -48,21 +53,21 @@ module ConversionTests =
 
     [<Fact>]
     let ``RSM to grammar for S -> a b`` () =
-        let rsm = RsmBuilder.buildRSMFromText "S -> a b"
+        let rsm = (LanguageRegistry.findGrammar LanguageRegistry.SingleAB "singleRule").Rsm
         let g = RsmToGrammar.convert rsm
 
         checkAll g LanguageRegistry.SingleAB
 
     [<Fact>]
     let ``RSM to grammar for Dyck language`` () =
-        let rsm = RsmBuilder.buildRSMFromText "S -> ( a S b )*"
+        let rsm = grammarEbnfStar.Rsm
         let g = RsmToGrammar.convert rsm
 
         checkAll g LanguageRegistry.Dyck1
 
     [<Fact>]
     let ``RSM to grammar for S -> a S b S | eps`` () =
-        let rsm = RsmBuilder.buildRSMFromText "S -> a S b S | eps"
+        let rsm = grammar1.Rsm
         let g = RsmToGrammar.convert rsm
 
         checkAll g LanguageRegistry.Dyck1
@@ -85,8 +90,7 @@ module ConversionTests =
 
     [<Fact>]
     let ``Round-trip: EBNF Dyck matches BNF Dyck`` () =
-        let dyckEbnf = dyck1.Grammars |> List.find (fun g -> g.Name = "ebnfStar")
-        let roundtrip = RsmToGrammar.convert dyckEbnf.Rsm
+        let roundtrip = RsmToGrammar.convert grammarEbnfStar.Rsm
 
         for s in grammar1Accept do
             Assert.Equal(
@@ -97,12 +101,11 @@ module ConversionTests =
     [<Fact>]
     let ``Round-trip for expression grammar`` () =
         let opExpr = LanguageRegistry.OpExpr
-        let g = LanguageRegistry.findGrammar opExpr "rightAssoc"
-        let roundtrip = RsmToGrammar.convert g.Rsm
+        let roundtrip = RsmToGrammar.convert opExprRightAssoc.Rsm
 
         for s in opExpr.AcceptStrings @ opExpr.RejectStrings do
             Assert.Equal(
-                Cyk.parse Grammar.freshStringNonterminal g.Grammar s,
+                Cyk.parse Grammar.freshStringNonterminal opExprRightAssoc.Grammar s,
                 Cyk.parse Grammar.freshStringNonterminal roundtrip s
             )
 
@@ -123,8 +126,7 @@ module PropertyTests =
         [<Property>]
         let ``EBNF -> RSM -> BNF matches original BNF grammar1`` (s: string) =
             let bnf = grammar1Grammar
-            let rsm = RsmBuilder.buildRSMFromText "S -> a S b S | eps"
-            let roundtrip = RsmToGrammar.convert rsm
+            let roundtrip = RsmToGrammar.convert grammar1.Rsm
 
             Cyk.parse Grammar.freshStringNonterminal bnf (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
@@ -134,8 +136,7 @@ module PropertyTests =
         [<Property>]
         let ``EBNF Dyck -> RSM -> BNF matches BNF grammar1`` (s: string) =
             let bnf = grammar1Grammar
-            let rsm = RsmBuilder.buildRSMFromText "S -> ( a S b )*"
-            let roundtrip = RsmToGrammar.convert rsm
+            let roundtrip = RsmToGrammar.convert grammarEbnfStar.Rsm
 
             Cyk.parse Grammar.freshStringNonterminal bnf (Tokenizer.tokenizeTerminals s) = Cyk.parse
                 Grammar.freshStringNonterminal
@@ -150,18 +151,8 @@ module PropertyTests =
             if s.Contains("(") || s.Contains(")") then
                 true
             else
-                let bnf =
-                    (LanguageRegistry.findGrammar LanguageRegistry.OpExpr "rightAssoc").Grammar
-
-                let rsm =
-                    RsmBuilder.buildRSMFromText
-                        "
-E -> T op_plus E | T
-T -> F op_mul T | F
-F -> x
-"
-
-                let roundtrip = RsmToGrammar.convert rsm
+                let bnf = opExprRightAssoc.Grammar
+                let roundtrip = RsmToGrammar.convert opExprRightAssoc.Rsm
 
                 let sWithOps = s.Replace("+", "op_plus").Replace("*", "op_mul")
 

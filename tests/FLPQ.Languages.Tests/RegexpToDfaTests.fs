@@ -3,6 +3,8 @@ module RegexpToDfaTests
 open Xunit
 open FLPQ.Languages
 
+open FLPQ.TestUtilities
+
 /// Local regexp-language matcher used to verify the language of generated DFAs.
 let rec private matches (r: Regexp<string, string>) (input: string list) : bool =
     match r with
@@ -25,17 +27,6 @@ let rec private matches (r: Regexp<string, string>) (input: string list) : bool 
                       true ]
             |> List.exists id
 
-let private allStringsUpTo (alphabet: string list) (maxLen: int) : string list list =
-    let rec stringsOfLen (len: int) : string list list =
-        if len = 0 then
-            [ [] ]
-        else
-            alphabet
-            |> List.collect (fun s -> stringsOfLen (len - 1) |> List.map (fun xs -> s :: xs))
-
-    [ for len in 0..maxLen do
-          yield! stringsOfLen len ]
-
 let private terminalsOf (r: Regexp<string, string>) : string list =
     Regexp.symbols r
     |> List.choose (function
@@ -50,7 +41,7 @@ let private verifyDfaLanguage (regexp: Regexp<string, string>) () =
     Assert.Equal<Set<string>>(Set.ofList alphabet, Dfa.alphabet dfa)
 
     let mismatches =
-        allStringsUpTo alphabet 4
+        TestHelpers.allStringsUpTo alphabet 4
         |> List.filter (fun s -> Dfa.accept dfa (List.map Terminal s) <> matches regexp s)
 
     Assert.Empty mismatches

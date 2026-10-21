@@ -65,82 +65,88 @@ module VsCyk =
 
 module GllVsRnglr =
 
-    module private Helpers =
-        let private gllAccepts =
-            TestHelpers.acceptsWithScc GLL.buildPathIndex PathIndex.isAccepted
+    let private gllAccepts =
+        TestHelpers.acceptsWithScc GLL.buildPathIndex PathIndex.isAccepted
 
-        let private rnglrAccepts =
-            TestHelpers.acceptsWithScc Rnglr.buildPathIndex PathIndex.isAccepted
+    let private rnglrAccepts =
+        TestHelpers.acceptsWithScc Rnglr.buildPathIndex PathIndex.isAccepted
 
-        let checkLanguages (langs: Language list) (arbType: System.Type) =
-            let config = Config.QuickThrowOnFailure.WithMaxTest(100).WithArbitrary([ arbType ])
+    let private checkGllVsRnglr (lang: Language) (g: AnnotatedGrammar) (input: Terminal<string> list) : unit =
+        let gllOk, gllScc = gllAccepts g.Rsm input
+        let rnglrOk, rnglrScc = rnglrAccepts g.Rsm input
 
-            Check.One(
-                config,
-                fun (s: string) ->
-                    let rawInput = s.Replace(" ", "")
-                    let input = TestHelpers.stringToTerminals rawInput
-
-                    langs
-                    |> List.iter (fun lang ->
-                        lang.Grammars
-                        |> List.iter (fun g ->
-                            let gllOk, gllScc = gllAccepts g.Rsm input
-                            let rnglrOk, rnglrScc = rnglrAccepts g.Rsm input
-
-                            if gllOk <> rnglrOk || gllScc <> rnglrScc then
-                                failwithf
-                                    "GLL=%b(%d) RNGLR=%b(%d) for %s/%s input='%s'"
-                                    gllOk
-                                    gllScc
-                                    rnglrOk
-                                    rnglrScc
-                                    lang.Name
-                                    g.Name
-                                    rawInput))
-            )
+        if gllOk <> rnglrOk || gllScc <> rnglrScc then
+            failwithf
+                "GLL=%b(%d) RNGLR=%b(%d) for %s/%s input='%s'"
+                gllOk
+                gllScc
+                rnglrOk
+                rnglrScc
+                lang.Name
+                g.Name
+                (TestHelpers.terminalsToString input)
 
     [<Fact>]
     let ``GLL and RNGLR agree on AB-string languages (Dyck1, AltAB, ANB, ANBN, AStarBStar)`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.Dyck1
               LanguageRegistry.AltAB
               LanguageRegistry.ANB
               LanguageRegistry.ANBN
               LanguageRegistry.AStarBStar ]
             typeof<GenToArbitrary.AbString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on A-string languages (APlus, AStar)`` () =
-        Helpers.checkLanguages [ LanguageRegistry.APlus; LanguageRegistry.AStar ] typeof<GenToArbitrary.AString>
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.APlus; LanguageRegistry.AStar ]
+            typeof<GenToArbitrary.AString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on expression language (ArithExpr)`` () =
-        Helpers.checkLanguages [ LanguageRegistry.ArithExpr ] typeof<GenToArbitrary.ExprString>
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.ArithExpr ]
+            typeof<GenToArbitrary.ExprString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on OpExpr language`` () =
-        Helpers.checkLanguages [ LanguageRegistry.OpExpr ] typeof<GenToArbitrary.OpExprString>
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.OpExpr ]
+            typeof<GenToArbitrary.OpExprString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on multi-symbol languages (TwoTrackDyck, DualDyck)`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.TwoTrackDyck; LanguageRegistry.DualDyck ]
             typeof<GenToArbitrary.AbcdxyString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on PolyAlphabet languages (LL2Test, LL3Test)`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.LL2Test; LanguageRegistry.LL3Test ]
             typeof<GenToArbitrary.PolyAlphabetString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
     [<Fact>]
     let ``GLL and RNGLR agree on constrained languages (SingleA, SingleAB, EpsilonOnly)`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.SingleA
               LanguageRegistry.SingleAB
               LanguageRegistry.EpsilonOnly ]
             typeof<GenToArbitrary.AbString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
 
 module VsDfa =
 
@@ -150,32 +156,28 @@ module VsDfa =
         let ``S -> a* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a")
-                "a *"
+                ParsingTestCases.RegexEquivalenceCases.aStar
                 s
 
         [<Property(MaxTest = 50)>]
         let ``S -> a* a* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a")
-                "a * a *"
+                ParsingTestCases.RegexEquivalenceCases.aStarAStar
                 s
 
         [<Property(MaxTest = 50)>]
         let ``S -> (a | b)* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a" || c = "b")
-                "( a | b ) *"
+                ParsingTestCases.RegexEquivalenceCases.aOrBStar
                 s
 
         [<Property(MaxTest = 50)>]
         let ``S -> (a | b)* (a | c)* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts GLL.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a" || c = "b" || c = "c")
-                "( a | b ) * ( a | c ) *"
+                ParsingTestCases.RegexEquivalenceCases.aOrBStar_aOrCStar
                 s
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AString> |])>]
@@ -184,16 +186,14 @@ module VsDfa =
         let ``S -> a* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a")
-                "a *"
+                ParsingTestCases.RegexEquivalenceCases.aStar
                 s
 
         [<Property(MaxTest = 50)>]
         let ``S -> a* a* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a")
-                "a * a *"
+                ParsingTestCases.RegexEquivalenceCases.aStarAStar
                 s
 
     [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
@@ -202,43 +202,24 @@ module VsDfa =
         let ``S -> (a | b)* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a" || c = "b")
-                "( a | b ) *"
+                ParsingTestCases.RegexEquivalenceCases.aOrBStar
                 s
 
         [<Property(MaxTest = 50)>]
         let ``S -> (a | b)* (a | c)* matches DFA`` (s: string) =
             ParsingTestCases.Runners.runRegexEquivalenceTests
                 (TestHelpers.accepts Rnglr.buildPathIndex PathIndex.isAccepted)
-                (fun c -> c = "a" || c = "b" || c = "c")
-                "( a | b ) * ( a | c ) *"
+                ParsingTestCases.RegexEquivalenceCases.aOrBStar_aOrCStar
                 s
 
 module CykVsValiantVsModifiedValiant =
 
-    module private Helpers =
-        let checkLanguages (langs: Language list) (arbType: System.Type) (tokenize: string -> Terminal<string> list) =
-            let config = Config.QuickThrowOnFailure.WithMaxTest(100).WithArbitrary([ arbType ])
-
-            Check.One(
-                config,
-                fun (s: string) ->
-                    let input = tokenize s
-
-                    langs
-                    |> List.iter (fun lang ->
-                        lang.Grammars
-                        |> List.iter (fun g -> TestHelpers.checkCykValiantEquivalence g.Grammar input))
-            )
-
-        let singleCharTokenize (s: string) =
-            s.Replace(" ", "") |> TestHelpers.stringToTerminals
-
-        let multiCharTokenize (s: string) = Tokenizer.tokenizeTerminals s
+    let private checkCykValiant (_lang: Language) (g: AnnotatedGrammar) (input: Terminal<string> list) : unit =
+        TestHelpers.checkCykValiantEquivalence g.Grammar input
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on AB-string languages`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.Dyck1
               LanguageRegistry.AltAB
               LanguageRegistry.ANB
@@ -248,43 +229,52 @@ module CykVsValiantVsModifiedValiant =
               LanguageRegistry.SingleAB
               LanguageRegistry.EpsilonOnly ]
             typeof<GenToArbitrary.AbString>
-            Helpers.singleCharTokenize
+            TestHelpers.singleCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on A-string languages`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.APlus; LanguageRegistry.AStar ]
             typeof<GenToArbitrary.AString>
-            Helpers.singleCharTokenize
+            TestHelpers.singleCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on expression language`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.ArithExpr ]
             typeof<GenToArbitrary.ExprString>
-            Helpers.multiCharTokenize
+            TestHelpers.multiCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on operator expression language`` () =
-        Helpers.checkLanguages [ LanguageRegistry.OpExpr ] typeof<GenToArbitrary.OpExprString> Helpers.multiCharTokenize
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.OpExpr ]
+            typeof<GenToArbitrary.OpExprString>
+            TestHelpers.multiCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on multi-symbol languages`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.TwoTrackDyck; LanguageRegistry.DualDyck ]
             typeof<GenToArbitrary.AbcdxyString>
-            Helpers.singleCharTokenize
+            TestHelpers.singleCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on PolyAlphabet languages`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.LL2Test; LanguageRegistry.LL3Test ]
             typeof<GenToArbitrary.PolyAlphabetString>
-            Helpers.singleCharTokenize
+            TestHelpers.singleCharTokenize
+            checkCykValiant
 
     [<Fact>]
     let ``CYK, Valiant, and Modified Valiant agree on constrained languages`` () =
-        Helpers.checkLanguages
+        TestHelpers.checkLanguages
             [ LanguageRegistry.DoubleA
               LanguageRegistry.AOrEps
               LanguageRegistry.ABPlus
@@ -294,4 +284,5 @@ module CykVsValiantVsModifiedValiant =
               LanguageRegistry.SingleB
               LanguageRegistry.TestInfraGrammars ]
             typeof<GenToArbitrary.AbString>
-            Helpers.singleCharTokenize
+            TestHelpers.singleCharTokenize
+            checkCykValiant

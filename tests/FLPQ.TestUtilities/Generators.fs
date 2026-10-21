@@ -6,8 +6,23 @@ open FLPQ.Languages
 open FLPQ.RPQ
 open FLPQ.GraphAnalysis
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
+/// Re-exports of the FsCheck F# API used by the shared generators. Real modules (not
+/// `module M = X.Y` abbreviations) because F# module abbreviations are not visible across
+/// files — see docs/developer/guides/fsharp-quirks.md. Add new functions here when needed;
+/// do not reintroduce per-file aliases.
+module MyGen =
+    let bind = FsCheck.FSharp.Gen.bind
+    let choose = FsCheck.FSharp.Gen.choose
+    let constant = FsCheck.FSharp.Gen.constant
+    let elements = FsCheck.FSharp.Gen.elements
+    let frequency = FsCheck.FSharp.Gen.frequency
+    let listOf = FsCheck.FSharp.Gen.listOf
+    let listOfLength = FsCheck.FSharp.Gen.listOfLength
+    let map = FsCheck.FSharp.Gen.map
+    let map2 = FsCheck.FSharp.Gen.map2
+
+module MyArb =
+    let fromGen = FsCheck.FSharp.Arb.fromGen
 
 type MatrixGenerators =
 

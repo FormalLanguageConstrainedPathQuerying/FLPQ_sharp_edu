@@ -249,9 +249,6 @@ let linearPathGraph (word: string list) : CfpqInput.CfpqGraph<string> =
             t, Matrix.create (n + 1) (n + 1) (fun i j -> cells |> List.exists (fun (_, (a, b)) -> (a, b) = (i, j))))
         |> Map.ofList }
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
 /// A registry grammar case paired with a random word over its terminal alphabet.
 let genCase: Gen<GrammarCase * Terminal<string> list> =
     MyGen.elements grammarCases

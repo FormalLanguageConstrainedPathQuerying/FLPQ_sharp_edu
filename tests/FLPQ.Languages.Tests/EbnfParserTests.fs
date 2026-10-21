@@ -310,18 +310,6 @@ module RegexpDerivativeTests =
         | RAlt(l, r2) -> matches l input || matches r2 input
         | RStar p -> star p input
 
-    let rec private allStrings (len: int) : string list list =
-        if len = 0 then
-            [ [] ]
-        else
-            [ for s in allStrings (len - 1) do
-                  yield s @ [ "a" ]
-                  yield s @ [ "b" ] ]
-
-    let private shortAlphabetStrings () : string list list =
-        [ for len in 0..5 do
-              yield! allStrings len ]
-
     [<Fact>]
     let ``buildDfaFromRegex terminates and is correct on previously unbounded shapes`` () =
         for name, r in blowupShapes do
@@ -333,7 +321,7 @@ module RegexpDerivativeTests =
             Assert.True(Dfa.isDeterministic dfa, sprintf "%s: DFA is not deterministic" name)
             Assert.True(Dfa.stateCount dfa < 20, sprintf "%s: DFA has %d states" name (Dfa.stateCount dfa))
 
-            for s in shortAlphabetStrings () do
+            for s in TestHelpers.allStringsUpTo [ "a"; "b" ] 5 do
                 let expected = matches r s
                 let actual = Dfa.accept dfa (List.map Terminal s)
                 let ok = expected = actual

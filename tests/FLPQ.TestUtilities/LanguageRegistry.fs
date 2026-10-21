@@ -5,9 +5,6 @@ open FSharpPlus.Data
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
 
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
 /// Manually-verified grammar properties.
 /// These are assertions about the grammar, not automatically detected.
 [<Struct>]

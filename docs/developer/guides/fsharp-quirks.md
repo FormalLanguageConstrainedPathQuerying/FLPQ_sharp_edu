@@ -35,14 +35,20 @@ functions inaccessible.
 Gen.Choose(1, 5)  // ERROR: 'Gen' refers to the type, not the module
 ```
 
-**Solution**: Create a module alias with a different name:
+**Solution**: Use the shared `MyGen`/`MyArb` modules. The canonical re-export modules live
+in `tests/FLPQ.TestUtilities/Generators.fs` (namespace `FLPQ.TestUtilities`); reference them
+via `open FLPQ.TestUtilities` rather than creating new copies:
 
 ```fsharp
-module MyGen = FsCheck.FSharp.Gen
-module MyArb = FsCheck.FSharp.Arb
-
 MyGen.choose(1, 5)   // Works
 ```
+
+**Why real modules, not abbreviations**: the obvious fix — `module MyGen = FsCheck.FSharp.Gen`
+in one shared file — does not work: F# **module abbreviations are not visible across files**
+in the same project (verified with a minimal clean-build repro; fully-qualified access fails
+too). The shared modules therefore re-export the needed functions as real `let` bindings
+(`let choose = FsCheck.FSharp.Gen.choose`, …). When a new FsCheck function is needed in tests,
+add it to the re-export module — do not reintroduce per-file aliases.
 
 ### F# Compile-Time vs Runtime Names
 

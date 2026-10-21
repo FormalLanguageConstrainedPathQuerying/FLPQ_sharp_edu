@@ -8,29 +8,38 @@ open FLPQ.LinearAlgebra
 
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) =
-    lang.Grammars |> List.find (fun g -> g.Name = name)
-
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 let private twoTrack = LanguageRegistry.TwoTrackDyck
 
-let private grammar1 = (g dyck1 "ambiguousEps").Grammar
-let private augGrammar1 = (g dyck1 "ambiguousEps").AugmentedGrammar
+let private grammar1 = (LanguageRegistry.findGrammar dyck1 "ambiguousEps").Grammar
+
+let private augGrammar1 =
+    (LanguageRegistry.findGrammar dyck1 "ambiguousEps").AugmentedGrammar
+
 let private grammar1Accept = dyck1.AcceptStrings
 let private grammar1Reject = dyck1.RejectStrings
 
-let private augGrammar2 = (g dyck1 "ambiguousWithConcat").AugmentedGrammar
+let private augGrammar2 =
+    (LanguageRegistry.findGrammar dyck1 "ambiguousWithConcat").AugmentedGrammar
 
-let private grammar3 = (g aplus "rightRecursive").Grammar
-let private augGrammar3 = (g aplus "rightRecursive").AugmentedGrammar
+let private grammar3 = (LanguageRegistry.findGrammar aplus "rightRecursive").Grammar
+
+let private augGrammar3 =
+    (LanguageRegistry.findGrammar aplus "rightRecursive").AugmentedGrammar
+
 let private grammar3Accept = aplus.AcceptStrings
 let private grammar3Reject = aplus.RejectStrings
 
-let private augGrammar6 = (g expr "ambiguous").AugmentedGrammar
-let private augGrammar7 = (g expr "leftAssoc").AugmentedGrammar
-let private augGrammar8 = (g expr "rightAssoc").AugmentedGrammar
+let private augGrammar6 =
+    (LanguageRegistry.findGrammar expr "ambiguous").AugmentedGrammar
+
+let private augGrammar7 =
+    (LanguageRegistry.findGrammar expr "leftAssoc").AugmentedGrammar
+
+let private augGrammar8 =
+    (LanguageRegistry.findGrammar expr "rightAssoc").AugmentedGrammar
 
 let private exprAccept = expr.AcceptStrings
 let private exprReject = expr.RejectStrings
@@ -53,7 +62,7 @@ module FactTests =
             match LRParser.parse augGrammar table s with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                let inputStr = s |> List.map (fun (Terminal x) -> x) |> String.concat " "
+                let inputStr = TestHelpers.terminalsToString s
                 Assert.Equal(inputStr, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 

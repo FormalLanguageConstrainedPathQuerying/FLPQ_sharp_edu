@@ -8,9 +8,6 @@ open FLPQ.LinearAlgebra
 
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) =
-    lang.Grammars |> List.find (fun g -> g.Name = name)
-
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
@@ -18,24 +15,27 @@ let private twoTrack = LanguageRegistry.TwoTrackDyck
 let private ll2Test = LanguageRegistry.LL2Test
 let private ll3Test = LanguageRegistry.LL3Test
 
-let private grammar1 = (g dyck1 "ambiguousEps").Grammar
-let private augGrammar1 = (g dyck1 "ambiguousEps").AugmentedGrammar
+let private grammar1 = (LanguageRegistry.findGrammar dyck1 "ambiguousEps").Grammar
+
+let private augGrammar1 =
+    (LanguageRegistry.findGrammar dyck1 "ambiguousEps").AugmentedGrammar
+
 let private grammar1Accept = dyck1.AcceptStrings
 let private grammar1Reject = dyck1.RejectStrings
 
-let private grammar3 = (g aplus "rightRecursive").Grammar
-let private grammar8 = (g expr "rightAssoc").Grammar
+let private grammar3 = (LanguageRegistry.findGrammar aplus "rightRecursive").Grammar
+let private grammar8 = (LanguageRegistry.findGrammar expr "rightAssoc").Grammar
 
-let private grammar9 = (g twoTrack "variantA").Grammar
+let private grammar9 = (LanguageRegistry.findGrammar twoTrack "variantA").Grammar
 let private grammar9Accept = twoTrack.AcceptStrings
 let private grammar9Reject = twoTrack.RejectStrings
 
-let private grammar10 = (g twoTrack "variantB").Grammar
+let private grammar10 = (LanguageRegistry.findGrammar twoTrack "variantB").Grammar
 let private grammar10Accept = grammar9Accept
 let private grammar10Reject = grammar9Reject
 
-let private ll2Grammar = (g ll2Test "k2").Grammar
-let private ll3Grammar = (g ll3Test "k3").Grammar
+let private ll2Grammar = (LanguageRegistry.findGrammar ll2Test "k2").Grammar
+let private ll3Grammar = (LanguageRegistry.findGrammar ll3Test "k3").Grammar
 
 
 module FactTests =
@@ -73,7 +73,7 @@ module FactTests =
             match LLParser.parse grammar1 table 1 (s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                let inputStr = s |> List.map (fun (Terminal x) -> x) |> String.concat " "
+                let inputStr = TestHelpers.terminalsToString s
                 Assert.Equal(inputStr, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 
@@ -271,7 +271,7 @@ module LLHigherKTests =
             match LLParser.parse ll2Grammar table 2 (s) with
             | Some tree ->
                 let leafTokens = DerivationTree.leaves tree |> String.concat " "
-                let inputStr = s |> List.map (fun (Terminal x) -> x) |> String.concat " "
+                let inputStr = TestHelpers.terminalsToString s
                 Assert.Equal(inputStr, leafTokens)
             | None -> Assert.Fail($"Failed to parse: {s}")
 

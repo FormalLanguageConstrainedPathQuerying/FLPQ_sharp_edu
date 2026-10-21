@@ -7,19 +7,19 @@ open FLPQ.Languages
 open FLPQ.LinearAlgebra
 open FLPQ.TestUtilities
 
-let private g (lang: Language) (name: string) =
-    lang.Grammars |> List.find (fun g -> g.Name = name)
-
 let private dyck1 = LanguageRegistry.Dyck1
 let private aplus = LanguageRegistry.APlus
 let private expr = LanguageRegistry.ArithExpr
 
-let private grammar1 = (g dyck1 "ambiguousEps").Grammar
-let private grammar2 = (g dyck1 "ambiguousWithConcat").Grammar
-let private grammar3 = (g aplus "rightRecursive").Grammar
-let private grammar6 = (g expr "ambiguous").Grammar
-let private grammar7 = (g expr "leftAssoc").Grammar
-let private grammar8 = (g expr "rightAssoc").Grammar
+let private grammar1 = (LanguageRegistry.findGrammar dyck1 "ambiguousEps").Grammar
+
+let private grammar2 =
+    (LanguageRegistry.findGrammar dyck1 "ambiguousWithConcat").Grammar
+
+let private grammar3 = (LanguageRegistry.findGrammar aplus "rightRecursive").Grammar
+let private grammar6 = (LanguageRegistry.findGrammar expr "ambiguous").Grammar
+let private grammar7 = (LanguageRegistry.findGrammar expr "leftAssoc").Grammar
+let private grammar8 = (LanguageRegistry.findGrammar expr "rightAssoc").Grammar
 
 let private dyckAB = LanguageRegistry.Dyck1.AcceptStrings[1]
 let private aplusAA = LanguageRegistry.APlus.AcceptStrings[1]
