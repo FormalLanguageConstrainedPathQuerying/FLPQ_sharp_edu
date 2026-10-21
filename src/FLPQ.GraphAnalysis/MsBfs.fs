@@ -27,10 +27,11 @@ module MsBfs =
     /// Check if a boolean matrix has any true cell.
     let private anyTrue (m: Matrix<bool>) : bool = Matrix.fold (||) false m
 
-    /// Multiple-source BFS (MS-BFS).
-    /// Performs independent BFS traversals from k starting vertices simultaneously.
-    /// The front is a k×|V| boolean matrix where row i is the BFS front for source K[i].
-    /// Algorithm (Chapter 3, 05_BFS.tex, algo:MS-BFS_linal):
+    /// Multiple-source BFS (MS-BFS) with a front trace.
+    /// Performs independent BFS traversals from k starting vertices simultaneously, returning
+    /// the per-round fronts and the final visited matrix. The front is a k×|V| boolean matrix
+    /// where row i is the BFS front for source K[i]. Algorithm (Chapter 3, 05_BFS.tex,
+    /// algo:MS-BFS_linal):
     ///   current_front ← 0^{k×n}
     ///   visited ← 0^{k×n}
     ///   For i ∈ [0..|K|-1]: current_front[i, K[i]] ← 1
@@ -39,7 +40,13 @@ module MsBfs =
     ///     new_front ← current_front ⊗_B M
     ///     current_front ← new_front ⊕_M visited
     ///   return visited
-    let msBfs (sources: int[]) (adjacencyMatrix: Matrix<bool>) : Matrix<bool> =
+    /// The trace is the list of (front, visited) pairs, one per loop round; the first pair's
+    /// front is the seeded initial front (a 1 at each source) and its visited is still 0. An
+    /// empty source list yields an empty trace and a 0×n visited matrix.
+    let msBfsWithTrace
+        (sources: int[])
+        (adjacencyMatrix: Matrix<bool>)
+        : (Matrix<bool> * Matrix<bool>) list * Matrix<bool> =
         let k = sources.Length
         let n = Matrix.rows adjacencyMatrix
 
@@ -49,9 +56,18 @@ module MsBfs =
         for i in 0 .. k - 1 do
             currentFront.[i, sources.[i]] <- true
 
+        let mutable trace: (Matrix<bool> * Matrix<bool>) list = []
+
         while anyTrue currentFront do
             visited <- boolAdd visited currentFront
+            trace <- (currentFront, visited) :: trace
             let newFront = boolMul currentFront adjacencyMatrix
             currentFront <- maskFilter newFront visited
 
-        visited
+        (List.rev trace, visited)
+
+    /// Multiple-source BFS (MS-BFS). Performs independent BFS traversals from k starting
+    /// vertices simultaneously and returns the accumulated visited matrix (the final reachability
+    /// from every source). Delegates to `msBfsWithTrace`, discarding the front trace.
+    let msBfs (sources: int[]) (adjacencyMatrix: Matrix<bool>) : Matrix<bool> =
+        msBfsWithTrace sources adjacencyMatrix |> snd

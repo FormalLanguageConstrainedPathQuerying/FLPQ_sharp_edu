@@ -55,24 +55,37 @@ no-change iteration.
 
 ## Type Definitions
 
-### `CfpqKronStep<'nt>`
+### `CfpqKronStep<'nt, 't>`
 
-Type alias for `AzimovCfpq.CfpqStep<'nt, bool>`: a productive fixed-point iteration with
-the cells that changed in it and the per-nonterminal matrix state after the iteration
-(`Matrix<bool option>` with `Some true` for reachable cells). Reusing the Azimov step/cell
-shape lets `CfpqMatrixTeX.stepToTeX` render Kronecker steps unchanged.
+A productive fixed-point iteration. The first three fields mirror `AzimovCfpq.CfpqStep`
+(the changed cells and the per-nonterminal matrix state after the iteration,
+`Matrix<bool option>` with `Some true` for reachable cells); the rest carry the
+per-iteration data for step-by-step visualization (see
+[KroneckerStepViz](kronecker-step-viz.md)):
 
-### `CfpqKronResult<'nt>`
+```fsharp
+{ Iteration: int
+  ChangedCells: AzimovCfpq.CfpqCell<'nt> list
+  Matrices: Map<Nonterminal<'nt>, Matrix<bool option>>
+  M1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t,'nt>>>>>   // RSM transitions (constant)
+  M2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t,'nt>>>>>   // edge-label matrix this iteration
+  K: Matrix<bool>                                                       // Kronecker result mask (qn x qn)
+  InitialFront: Matrix<bool>                                            // MS-BFS seed front (k x qn)
+  FinalFront: Matrix<bool>                                              // MS-BFS visited (k x qn)
+  FinalStateCols: Set<int> }                                            // (final f, vertex v) columns
+```
+
+### `CfpqKronResult<'nt, 't>`
 
 ```fsharp
 { Matrices: Map<Nonterminal<'nt>, Matrix<bool>>   // final T_A per nonterminal
-  Steps: CfpqKronStep<'nt> list                   // productive iterations only
+  Steps: CfpqKronStep<'nt, 't> list               // productive iterations only
   Iterations: int }                               // incl. the final no-change one
 ```
 
 ## Function Signatures
 
-### `evaluate: RSM<'t, 'nt> -> CfpqGraph<'t> -> CfpqKronResult<'nt>`
+### `evaluate: RSM<'t, 'nt> -> CfpqGraph<'t> -> CfpqKronResult<'nt, 't>`
 
 Runs the Kronecker CFPQ fixed point described above.
 
@@ -84,7 +97,7 @@ Runs the Kronecker CFPQ fixed point described above.
   one no-change iteration, empty steps, and empty (or absent) matrices, consistent with
   `AzimovCfpq` behavior.
 
-### `answer: CfpqKronResult<'nt> -> RSM<'t, 'nt> -> Matrix<bool>`
+### `answer: CfpqKronResult<'nt, 't> -> RSM<'t, 'nt> -> Matrix<bool>`
 
 The reachability answer: the start block's matrix (`Map.find rsm.StartBlock result.Matrices`).
 
@@ -97,6 +110,9 @@ The reachability answer: the start block's matrix (`Map.find rsm.StartBlock resu
 | Accumulation step `prod ← prod ∨ k` | Monotone no-op in this straightforward version (`m2` only grows, so `k` only grows and `prod = k` after the first iteration). Kept for the loop shape described in the task and as the hook for a future incremental variant à la LAGraph PR #10. |
 | Reuse `AzimovCfpq.CfpqStep` / `CfpqCell` | Same step/cell shape as the Azimov algorithm, so per-step TeX rendering (`CfpqMatrixTeX.stepToTeX`) and test comparison helpers work for both algorithms without duplication. |
 | Per-nonterminal extraction from visited rows | `T_A[i,j] = ∃ f ∈ finals(A): visited[(start(A), i), (f, j)]` — one MS-BFS run yields every nonterminal's matrix at once; the delta against `m2` gives the productive cells. |
+| The step is its own record, not an Azimov alias | Kronecker captures per-iteration data (Kronecker operands/result, MS-BFS fronts) that Azimov does not produce; a separate `CfpqKronStep<'nt,'t>` keeps the Azimov `CfpqStep`/`CfpqCell` types untouched and self-contains each step for rendering. |
+| `FinalFront`/`InitialFront` from `MsBfs.msBfsWithTrace` | The MS-BFS loop is factored into `msBfsWithTrace` so the initial (seed) front and the final visited front are both available for the step visualization; `msBfs` projects out the trace. |
+| `FinalStateCols` computed once | The accept-reading columns `(final f, vertex v)` are independent of the nonterminal and of the iteration, so they are built once outside the loop and stored (by value) on each step. |
 
 ## Book Reference
 

@@ -47,6 +47,7 @@
     <Compile Include="BelyaninStepVisualizationTests.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizationTests.fs" />
     <Compile Include="CfpqMatrixTexTests.fs" />
+    <Compile Include="KroneckerStepVizTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -120,6 +121,14 @@
     </Content>
     <Content Include="..\..\data\tex_math_wrap_template.tex">
       <Link>tex_math_wrap_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Kronecker_step_template.tex">
+      <Link>Kronecker_step_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\Kronecker_step_tikz_template.tex">
+      <Link>Kronecker_step_tikz_template.tex</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\data\example_grammar.bnf">

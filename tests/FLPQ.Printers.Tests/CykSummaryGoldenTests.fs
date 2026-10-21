@@ -58,7 +58,9 @@ let private generateCykSummaryTex (grammarStr: string) (input: string) : string 
               BelyaninRowEnd = ""
               BelyaninRowEndTikz = ""
               BelyaninLabelRow = ""
-              BelyaninLabelRowTikz = "" }
+              BelyaninLabelRowTikz = ""
+              Kronecker = ""
+              KroneckerTikz = "" }
 
         let content =
             SummaryTeX.buildContent

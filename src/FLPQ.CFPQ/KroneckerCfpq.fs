@@ -16,16 +16,37 @@ open FLPQ.LinearAlgebra
 /// until an iteration adds no new edges.
 module KroneckerCfpq =
 
-    /// A productive fixed-point iteration of the Kronecker loop: the cells that changed in it and
-    /// the per-nonterminal matrix state after the iteration (for step-by-step visualization).
-    type CfpqKronStep<'nt when 'nt: comparison> = AzimovCfpq.CfpqStep<'nt, bool>
+    /// A productive fixed-point iteration of the Kronecker loop. Besides the cells that changed
+    /// and the per-nonterminal matrix state after the iteration (as in `AzimovCfpq.CfpqStep`), it
+    /// carries the per-iteration data for step-by-step visualization: the Kronecker product
+    /// operands and result, and the MS-BFS initial/final fronts.
+    type CfpqKronStep<'nt, 't when 'nt: comparison and 't: comparison> =
+        {
+            Iteration: int
+            ChangedCells: AzimovCfpq.CfpqCell<'nt> list
+            Matrices: Map<Nonterminal<'nt>, Matrix<bool option>>
+            /// The RSM transition matrix (constant across iterations) — Kronecker operand 1.
+            M1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>
+            /// The current edge-label matrix (terminals plus nonterminals derived so far) —
+            /// Kronecker operand 2; a fresh copy per step.
+            M2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>
+            /// The Kronecker product result: the Boolean product-graph adjacency mask (qn × qn).
+            K: Matrix<bool>
+            /// The MS-BFS initial (seed) front: a 1 at each (block start, vertex) source pair.
+            InitialFront: Matrix<bool>
+            /// The MS-BFS final front: the visited matrix (reachability from every source).
+            FinalFront: Matrix<bool>
+            /// The product-state columns that are (final state f, vertex v) pairs — highlighted in
+            /// the final front so the accept-reading of the MS-BFS result is visible.
+            FinalStateCols: Set<int>
+        }
 
     /// The result of the Kronecker CFPQ algorithm: the final reachability matrix per nonterminal,
     /// the productive steps in iteration order, and the total number of loop applications
     /// (including the final no-change one).
-    type CfpqKronResult<'nt when 'nt: comparison> =
+    type CfpqKronResult<'nt, 't when 'nt: comparison and 't: comparison> =
         { Matrices: Map<Nonterminal<'nt>, Matrix<bool>>
-          Steps: CfpqKronStep<'nt> list
+          Steps: CfpqKronStep<'nt, 't> list
           Iterations: int }
 
     /// Check whether a cell of the edge-label matrix carries the given label.
@@ -64,7 +85,7 @@ module KroneckerCfpq =
     /// Kronecker-product-based CFPQ (book Chapter 12, listing lst:algo1 with the transitive closure
     /// replaced by MS-BFS). Precondition: the RSM has no AEpsilon transitions (true for all
     /// RsmBuilder output); epsilon reachability falls out of the MS-BFS source initialization.
-    let evaluate (rsm: RSM<'t, 'nt>) (graph: CfpqGraph<'t>) : CfpqKronResult<'nt> =
+    let evaluate (rsm: RSM<'t, 'nt>) (graph: CfpqGraph<'t>) : CfpqKronResult<'nt, 't> =
         let n = graph.VertexCount
         let q = RSM.stateCount rsm
 
@@ -83,7 +104,32 @@ module KroneckerCfpq =
             [| for a in nts do
                    for v in 0 .. n - 1 -> idx rsm.BlockStart.[a] v |]
 
-        let mutable steps: CfpqKronStep<'nt> list = []
+        /// The (block, vertex) source pairs in `sources` order — the decoded row labels of the
+        /// MS-BFS fronts (row i of a front is the BFS for source pair i).
+        let sourcePairs =
+            [ for a in nts do
+                  for v in 0 .. n - 1 -> (a, v) ]
+
+        /// The MS-BFS initial (seed) front: a 1 at each source pair, 0 elsewhere. Constant across
+        /// iterations (the MS-BFS always starts from the same sources).
+        let initialFront =
+            Matrix.init sources.Length (q * n) false
+            |> (fun f ->
+                for i in 0 .. sources.Length - 1 do
+                    f.[i, sources.[i]] <- true
+
+                f)
+
+        /// The product-state columns that are (final state f, vertex v) pairs — the accept-reading
+        /// columns of the MS-BFS result; independent of the nonterminal, so computed once.
+        let finalStateCols =
+            nts
+            |> List.collect (fun a ->
+                [ for f in Set.toList (Map.find a finals) do
+                      for j in 0 .. n - 1 -> idx f j ])
+            |> Set.ofList
+
+        let mutable steps: CfpqKronStep<'nt, 't> list = []
         let mutable matrices: Map<Nonterminal<'nt>, Matrix<bool>> = Map.empty
         let mutable iteration = 0
         let mutable changedSomething = true
@@ -100,8 +146,13 @@ module KroneckerCfpq =
             // Accumulate into the previously accumulated product (monotone: m2 only grows).
             prod <- MsBfs.boolAdd prod k
 
-            // MS-BFS from every (block start, vertex) pair.
-            let visited = MsBfs.msBfs sources prod
+            // MS-BFS from every (block start, vertex) pair; the final visited matrix is the
+            // reachability front.
+            let visited = MsBfs.msBfsWithTrace sources prod |> snd
+
+            // A fresh copy of the current edge-label matrix for the step's trace (m2 keeps
+            // growing in later iterations; the trace must not change).
+            let m2Snapshot = Matrix.copy m2
 
             // Extract the newly derived nonterminal edges per nonterminal.
             let mutable stepCells: AzimovCfpq.CfpqCell<'nt> list = []
@@ -138,7 +189,13 @@ module KroneckerCfpq =
                 steps <-
                     { Iteration = iteration
                       ChangedCells = sorted
-                      Matrices = snapshot }
+                      Matrices = snapshot
+                      M1 = rsm.Transitions
+                      M2 = m2Snapshot
+                      K = k
+                      InitialFront = initialFront
+                      FinalFront = visited
+                      FinalStateCols = finalStateCols }
                     :: steps
 
         { Matrices = matrices
@@ -146,5 +203,5 @@ module KroneckerCfpq =
           Iterations = iteration }
 
     /// The reachability answer: the start block's matrix.
-    let answer (result: CfpqKronResult<'nt>) (rsm: RSM<'t, 'nt>) : Matrix<bool> =
+    let answer (result: CfpqKronResult<'nt, 't>) (rsm: RSM<'t, 'nt>) : Matrix<bool> =
         Map.find rsm.StartBlock result.Matrices

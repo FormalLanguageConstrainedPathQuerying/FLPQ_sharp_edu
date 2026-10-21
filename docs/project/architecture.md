@@ -75,6 +75,7 @@ FLPQ.slnx
 │   │   ├── LRAutomatonTikz.fs      # TikZ rendering for LR automata (rectangle nodes, aligned items)
 │   │   ├── RnglrAutomatonTikz.fs   # TikZ rendering for the RNGLR LR automaton
 │   │   ├── CfpqMatrixTeX.fs        # TeX rendering of Azimov's per-nonterminal CFPQ matrices
+│   │   ├── KroneckerStepViz.fs     # TeX rendering of one Kronecker CFPQ iteration (product + MS-BFS fronts)
 │   │   ├── CykTeX.fs               # TeX rendering for CYK tables
 │   │   ├── ValiantTeX.fs           # TeX rendering for Valiant trace steps
 │   │   ├── LLTableTeX.fs           # TeX rendering for LL parsing tables

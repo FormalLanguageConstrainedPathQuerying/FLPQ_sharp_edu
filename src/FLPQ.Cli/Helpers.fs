@@ -276,6 +276,53 @@ module Helpers =
                 (Path.Combine(stepDir, "table.tex"))
                 (CfpqMatrixTeX.stepToTeX ntName elementPrinter step.Matrices step.ChangedCells)
 
+    /// One directory per productive Kronecker iteration (step_<iteration>) with the two-line
+    /// step visualization: `kron.tex` (line 1 — the full Kronecker product), `fronts.tex`
+    /// (line 2 — the MS-BFS initial/final fronts), and the input graph with the newly added
+    /// nonterminal edges of this iteration highlighted red bold (`graph.dot` / `graph.tikz.tex`).
+    /// String-labeled (the graph figure needs `CfpqInput.toNfa`, which is string-only).
+    let writeKroneckerStepsVisualization
+        (outputDir: string)
+        (useDot: bool)
+        (steps: KroneckerCfpq.CfpqKronStep<string, string> list)
+        (terminal: string -> string)
+        (ntName: Nonterminal<string> -> string)
+        (rsm: RSM<string, string>)
+        (graph: CfpqInput.CfpqGraph<string>)
+        : unit =
+        let n = graph.VertexCount
+
+        let sourcePairs =
+            [ for a in RSM.nonterminals rsm do
+                  for v in 0 .. n - 1 -> (a, v) ]
+
+        for step in steps do
+            let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
+
+            let newNtEdges =
+                Set.ofList (step.ChangedCells |> List.map (fun c -> (c.Row, c.Col)))
+
+            let graphDot, graphTikz =
+                RpqGraphViz.renderGraph
+                    terminal
+                    (CfpqInput.toNfa graph)
+                    Set.empty
+                    Set.empty
+                    Set.empty
+                    newNtEdges
+                    Set.empty
+
+            let rendered =
+                KroneckerStepViz.renderStep terminal ntName n sourcePairs step graphDot graphTikz
+
+            writeOutputFile (Path.Combine(stepDir, "kron.tex")) rendered.Kron
+            writeOutputFile (Path.Combine(stepDir, "fronts.tex")) rendered.Fronts
+
+            if useDot then
+                writeOutputFile (Path.Combine(stepDir, "graph.dot")) rendered.GraphDot
+            else
+                writeOutputFile (Path.Combine(stepDir, "graph.tikz.tex")) rendered.GraphTikz
+
     /// Extracts the step number from a step directory name (step_N); returns 0 if not a step dir.
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
@@ -350,3 +397,11 @@ module Helpers =
     /// Path to the RNGLR step TikZ template.
     let findRnglrStepTikzTemplate () : string =
         findTemplateFile "RNGLR_step_tikz_template.tex"
+
+    /// Path to the Kronecker CFPQ step TeX template.
+    let findKroneckerStepTemplate () : string =
+        findTemplateFile "Kronecker_step_template.tex"
+
+    /// Path to the Kronecker CFPQ step TikZ template.
+    let findKroneckerStepTikzTemplate () : string =
+        findTemplateFile "Kronecker_step_tikz_template.tex"

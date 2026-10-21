@@ -47,7 +47,9 @@ module SummaryTeX =
           BelyaninRowEnd: string
           BelyaninRowEndTikz: string
           BelyaninLabelRow: string
-          BelyaninLabelRowTikz: string }
+          BelyaninLabelRowTikz: string
+          Kronecker: string
+          KroneckerTikz: string }
 
     /// Wraps TeX content in a centered display math environment.
     let wrapMath (tex: string) : string =
@@ -583,6 +585,51 @@ module SummaryTeX =
 
         [ header; filledTemplate; "" ]
 
+    /// Builds the content lines for a single Kronecker CFPQ step using the two-line layout:
+    /// line 1 is the full Kronecker product (kron.tex), line 2 is the MS-BFS initial/final
+    /// fronts (fronts.tex) beside the input graph with the newly added nonterminal edges
+    /// highlighted red. In TikZ mode the graph figure is inlined (wrapped in a top-aligned
+    /// shrink adjustbox via `wrapTikzAdjustboxColumnTop`); DOT mode includes the dot-compiled
+    /// graph PDF.
+    let kroneckerStepSection
+        (stepDir: string)
+        (stepNum: int)
+        (template: string)
+        (tikzTemplate: string)
+        (useTikz: bool)
+        : string list =
+        let header = section (sprintf "Step %d" stepNum)
+        let stepName = Path.GetFileName(stepDir)
+
+        let kron =
+            match readIfExists (Path.Combine(stepDir, "kron.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let fronts =
+            match readIfExists (Path.Combine(stepDir, "fronts.tex")) with
+            | Some tex -> tex
+            | None -> ""
+
+        let filledTemplate =
+            if useTikz then
+                let graphTikz =
+                    match readIfExists (Path.Combine(stepDir, "graph.tikz.tex")) with
+                    | Some tikz -> tikz
+                    | None -> ""
+
+                tikzTemplate
+                    .Replace("__KRON__", kron)
+                    .Replace("__FRONTS__", fronts)
+                    .Replace("__GRAPH_TIKZ__", wrapTikzAdjustboxColumnTop graphTikz)
+            else
+                template
+                    .Replace("__KRON__", kron)
+                    .Replace("__FRONTS__", fronts)
+                    .Replace("__GRAPH_PDF__", sprintf "dot_pdfs/%s_graph.pdf" stepName)
+
+        [ header; filledTemplate; "" ]
+
     /// Applies placeholder replacements to a template in order.
     let private fill (template: string) (replacements: (string * string) list) : string =
         replacements
@@ -731,17 +778,16 @@ module SummaryTeX =
         let headerLines =
             headerSection vizDir algoKind lrAutomatonPdf lrAutomatonTikz rsmPdfs useTikz
 
-        // AzimovCFPQ and KroneckerCFPQ steps reuse the generic table layout: one table.tex per
-        // productive iteration (the per-nonterminal matrices with the new cells highlighted).
+        // AzimovCFPQ steps reuse the generic table layout: one table.tex per productive
+        // iteration (the per-nonterminal matrices with the new cells highlighted).
         let isTableBased =
-            algoKind = SummaryKind.TablePerStep
-            || algoKind = SummaryKind.AzimovCFPQ
-            || algoKind = SummaryKind.KroneckerCFPQ
+            algoKind = SummaryKind.TablePerStep || algoKind = SummaryKind.AzimovCFPQ
 
         let isGll = algoKind = SummaryKind.GLL
         let isRnglr = algoKind = SummaryKind.RNGLR
         let isArroyuelo = algoKind = SummaryKind.ArroyueloRPQ
         let isBelyanin = algoKind = SummaryKind.BelyaninRPQ
+        let isKronecker = algoKind = SummaryKind.KroneckerCFPQ
 
         let stepLines =
             collectSteps vizDir
@@ -770,6 +816,9 @@ module SummaryTeX =
                     |> List.toArray
                 elif isBelyanin then
                     belyaninStepSection stepDir stepNum templates useTikz |> List.toArray
+                elif isKronecker then
+                    kroneckerStepSection stepDir stepNum templates.Kronecker templates.KroneckerTikz useTikz
+                    |> List.toArray
                 else
                     stackStepSection stepDir stepNum stepName useTikz |> List.toArray)
             |> Array.toList

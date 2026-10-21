@@ -41,6 +41,7 @@
 | [ValiantTeX](valiant-tex.md) | TeX rendering for Valiant trace steps |
 | [PathSemiringTeX](path-semiring-tex.md) | TeX rendering of RPQ working matrices: path semiring matrices (vertex-path cells) and boolean N^a/G^a matrices |
 | [CfpqMatrixTeX](cfpq-matrix-tex.md) | TeX rendering of Azimov's per-nonterminal CFPQ matrices (semiring-generic), step tables with changed-cell highlights, and extracted path text |
+| [KroneckerStepViz](kronecker-step-viz.md) | TeX rendering of one Kronecker CFPQ fixed-point iteration as two lines: the full Kronecker product (operands + result) and the MS-BFS initial/final fronts with decoded labels |
 | [StepTeX](step-tex.md) | Generic RPQ step TeX helpers: shrink-only adjustbox and one-line formula wrapping |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
 | [RpqGraphDot](rpq-graph-dot.md) / [RpqGraphTikz](rpq-graph-tikz.md) | RPQ-dedicated DOT/TikZ rendering of the input graph with highlight tiers (independent of GSS) |

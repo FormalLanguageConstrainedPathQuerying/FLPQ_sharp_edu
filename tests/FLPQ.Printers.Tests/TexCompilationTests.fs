@@ -626,7 +626,10 @@ let ``GLL merged summary TeX compiles with lualatex`` () =
               BelyaninRowEnd = ""
               BelyaninRowEndTikz = ""
               BelyaninLabelRow = ""
-              BelyaninLabelRowTikz = "" }
+              BelyaninLabelRowTikz = ""
+              Kronecker = ""
+              KroneckerTikz = "" }
+
 
         let content =
             SummaryTeX.buildContent
@@ -747,7 +750,10 @@ let ``RNGLR merged summary TeX compiles with lualatex`` () =
               BelyaninRowEnd = ""
               BelyaninRowEndTikz = ""
               BelyaninLabelRow = ""
-              BelyaninLabelRowTikz = "" }
+              BelyaninLabelRowTikz = ""
+              Kronecker = ""
+              KroneckerTikz = "" }
+
 
         let content =
             SummaryTeX.buildContent
@@ -947,7 +953,10 @@ let ``GLL merged summary TeX with tikz compiles with lualatex`` () =
               BelyaninRowEnd = ""
               BelyaninRowEndTikz = ""
               BelyaninLabelRow = ""
-              BelyaninLabelRowTikz = "" }
+              BelyaninLabelRowTikz = ""
+              Kronecker = ""
+              KroneckerTikz = "" }
+
 
         let content =
             SummaryTeX.buildContent
@@ -1061,7 +1070,10 @@ let ``RNGLR merged summary TeX with tikz compiles with lualatex`` () =
               BelyaninRowEnd = ""
               BelyaninRowEndTikz = ""
               BelyaninLabelRow = ""
-              BelyaninLabelRowTikz = "" }
+              BelyaninLabelRowTikz = ""
+              Kronecker = ""
+              KroneckerTikz = "" }
+
 
         let content =
             SummaryTeX.buildContent

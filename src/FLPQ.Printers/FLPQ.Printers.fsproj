@@ -46,6 +46,7 @@
     <Compile Include="BelyaninSimplePathStepVisualizer.fs" />
     <Compile Include="BelyaninReachabilityStepVisualizer.fs" />
     <Compile Include="CfpqMatrixTeX.fs" />
+    <Compile Include="KroneckerStepViz.fs" />
     <Compile Include="CykTeX.fs" />
     <Compile Include="GrammarTeX.fs" />
     <Compile Include="ValiantTeX.fs" />

@@ -20,7 +20,7 @@ module KroneckerCfpqRunner =
         let result = KroneckerCfpq.evaluate rsm graph
 
         Helpers.writeKroneckerCfpqRootArtifacts outputDir useDot rsm graph
-        Helpers.writeCfpqSteps outputDir result.Steps Helpers.ntName (fun _ -> @"\bullet")
+        Helpers.writeKroneckerStepsVisualization outputDir useDot result.Steps id Helpers.ntName rsm graph
 
         let answer = KroneckerCfpq.answer result rsm
         Helpers.writeOutputFile (Path.Combine(outputDir, "result.tex")) (Helpers.renderResult answer)

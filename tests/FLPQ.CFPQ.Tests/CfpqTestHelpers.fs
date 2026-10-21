@@ -281,7 +281,7 @@ type CfpqGrammarWordGenerators =
 let compareKronVsAzimov
     (rsm: RSM<string, string>)
     (cnf: Grammar<string, string>)
-    (kronResult: KroneckerCfpq.CfpqKronResult<string>)
+    (kronResult: KroneckerCfpq.CfpqKronResult<string, string>)
     (azimovResult: AzimovCfpq.CfpqResult<string, bool>)
     : bool =
     let kronAnswer = KroneckerCfpq.answer kronResult rsm

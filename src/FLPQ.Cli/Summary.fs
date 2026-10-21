@@ -164,9 +164,13 @@ module Summary =
             // TikZ form); the finders run only for Belyanin so other algorithms never touch
             // the files.
             let isBelyanin = algoKind = SummaryTeX.SummaryKind.BelyaninRPQ
+            let isKronecker = algoKind = SummaryTeX.SummaryKind.KroneckerCFPQ
 
             let loadBelyaninTemplate (find: unit -> string) : string =
                 if isBelyanin then File.ReadAllText(find ()) else ""
+
+            let loadKroneckerTemplate (find: unit -> string) : string =
+                if isKronecker then File.ReadAllText(find ()) else ""
 
             let templates: SummaryTeX.StepTemplates =
                 { Gll = gllStepTemplate
@@ -180,7 +184,9 @@ module Summary =
                   BelyaninRowEnd = loadBelyaninTemplate Helpers.findBelyaninRowEndTemplate
                   BelyaninRowEndTikz = loadBelyaninTemplate Helpers.findBelyaninRowEndTikzTemplate
                   BelyaninLabelRow = loadBelyaninTemplate Helpers.findBelyaninLabelRowTemplate
-                  BelyaninLabelRowTikz = loadBelyaninTemplate Helpers.findBelyaninLabelRowTikzTemplate }
+                  BelyaninLabelRowTikz = loadBelyaninTemplate Helpers.findBelyaninLabelRowTikzTemplate
+                  Kronecker = loadKroneckerTemplate Helpers.findKroneckerStepTemplate
+                  KroneckerTikz = loadKroneckerTemplate Helpers.findKroneckerStepTikzTemplate }
 
             let content =
                 SummaryTeX.buildContent

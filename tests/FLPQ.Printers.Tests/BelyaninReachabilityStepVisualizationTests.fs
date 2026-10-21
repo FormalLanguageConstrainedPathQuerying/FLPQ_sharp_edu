@@ -305,18 +305,23 @@ let private realTemplates: SummaryTeX.StepTemplates =
     let read (name: string) =
         File.ReadAllText(Path.Combine(System.AppContext.BaseDirectory, name))
 
-    { Gll = ""
-      GllTikz = ""
-      Rnglr = ""
-      RnglrTikz = ""
-      Arroyuelo = ""
-      ArroyueloTikz = ""
-      Belyanin = read "Belyanin_step_template.tex"
-      BelyaninTikz = read "Belyanin_step_tikz_template.tex"
-      BelyaninRowEnd = read "Belyanin_row_end_template.tex"
-      BelyaninRowEndTikz = read "Belyanin_row_end_tikz_template.tex"
-      BelyaninLabelRow = read "Belyanin_label_row_template.tex"
-      BelyaninLabelRowTikz = read "Belyanin_label_row_tikz_template.tex" }
+    let templates: SummaryTeX.StepTemplates =
+        { Gll = ""
+          GllTikz = ""
+          Rnglr = ""
+          RnglrTikz = ""
+          Arroyuelo = ""
+          ArroyueloTikz = ""
+          Belyanin = (read "Belyanin_step_template.tex")
+          BelyaninTikz = (read "Belyanin_step_tikz_template.tex")
+          BelyaninRowEnd = (read "Belyanin_row_end_template.tex")
+          BelyaninRowEndTikz = (read "Belyanin_row_end_tikz_template.tex")
+          BelyaninLabelRow = (read "Belyanin_label_row_template.tex")
+          BelyaninLabelRowTikz = (read "Belyanin_label_row_tikz_template.tex")
+          Kronecker = ""
+          KroneckerTikz = "" }
+
+    templates
 
 /// Writes one rendered step to a step dir exactly as the runner does (TikZ mode).
 let private writeStepDir (stepDir: string) (step: BelyaninStepCommon.BelyaninVisualizationStep) : unit =

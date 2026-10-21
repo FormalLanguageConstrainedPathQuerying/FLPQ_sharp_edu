@@ -44,21 +44,48 @@ let ``runKronecker reachability produces the root artifacts`` () =
     cleanup outDir
 
 [<Fact>]
-let ``runKronecker reachability writes one step dir per productive iteration with highlighted cells`` () =
+let ``runKronecker reachability writes the two-line step artifacts per productive iteration`` () =
     let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker false
 
     let stepDirs = Directory.GetDirectories(outDir, "step_*")
     Assert.True(stepDirs.Length >= 1, "Expected at least one productive iteration")
 
     for stepDir in stepDirs do
-        let tablePath = Path.Combine(stepDir, "table.tex")
-        Assert.True(File.Exists tablePath, sprintf "Missing: %s" tablePath)
+        // Line 1: the full Kronecker product (M1, M2 with set cells, and the result mask).
+        let kronPath = Path.Combine(stepDir, "kron.tex")
+        Assert.True(File.Exists kronPath, sprintf "Missing: %s" kronPath)
 
-        let content = File.ReadAllText(tablePath)
-        // Every productive iteration highlights its new cells.
-        Assert.Contains(@"\cellcolor{yellow}", content)
-        // One matrix for the single nonterminal S.
-        Assert.Contains(@"\textbf{S}", content)
+        let kron = File.ReadAllText(kronPath)
+        Assert.Contains(@"\otimes", kron)
+        Assert.Contains(@"\begin{pNiceMatrix}", kron)
+
+        // Line 2: the two MS-BFS fronts (initial above final), the final one highlighted.
+        let frontsPath = Path.Combine(stepDir, "fronts.tex")
+        Assert.True(File.Exists frontsPath, sprintf "Missing: %s" frontsPath)
+
+        let fronts = File.ReadAllText(frontsPath)
+        Assert.Contains(@"\begin{pNiceMatrix}", fronts)
+        Assert.Contains(@"\cellcolor{yellow}", fronts)
+
+        // The graph figure with the new nonterminal edges (TikZ mode).
+        let graphPath = Path.Combine(stepDir, "graph.tikz.tex")
+        Assert.True(File.Exists graphPath, sprintf "Missing: %s" graphPath)
+
+        // The old per-step table is no longer written.
+        Assert.False(File.Exists(Path.Combine(stepDir, "table.tex")))
+
+    cleanup outDir
+
+[<Fact>]
+let ``runKronecker dot mode writes graph.dot per step`` () =
+    let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker true
+
+    let stepDirs = Directory.GetDirectories(outDir, "step_*")
+    Assert.True(stepDirs.Length >= 1, "Expected at least one productive iteration")
+
+    for stepDir in stepDirs do
+        let graphPath = Path.Combine(stepDir, "graph.dot")
+        Assert.True(File.Exists graphPath, sprintf "Missing: %s" graphPath)
 
     cleanup outDir
 
@@ -178,6 +205,11 @@ let ``KroneckerCFPQ summary merged TeX compiles with lualatex`` () =
         Path.Combine(outDir, "results", "kroneckercfpq", "kroneckercfpq_merged.tex")
 
     Assert.True(File.Exists texPath, sprintf "Expected merged TeX not found: %s" texPath)
+
+    // The merged doc uses the new two-line layout: the Kronecker product row and the fronts.
+    let merged = File.ReadAllText texPath
+    Assert.Contains(@"\otimes", merged)
+    Assert.Contains("Kronecker product", merged)
 
     try
         Assert.True(

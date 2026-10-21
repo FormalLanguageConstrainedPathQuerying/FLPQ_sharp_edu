@@ -104,6 +104,7 @@ What our standards and principles are, and why we chose them.
 - [Kronecker CFPQ CLI Runner](developer/kronecker-cfpq-runner.md) — The CLI entry point for the Kronecker-product-based CFPQ algorithm
 - [Kronecker-based CFPQ Algorithm](developer/kronecker-cfpq.md) — Straightforward Kronecker-product-based Context-Free Path Querying over an RSM and a labeled graph
 - [Kronecker-based RPQ Algorithm](developer/kronecker-rpq.md) — Implements the Kronecker product-based Regular Path Querying algorithm with MS-BFS filtering
+- [Kronecker CFPQ Step Visualization](developer/kronecker-step-viz.md) — TeX rendering of one productive Kronecker CFPQ fixed-point iteration as two stacked lines
 - [LinearAlgebra Module](developer/linear-algebra.md) — Provides generic linear algebra operations over the `Matrix<'a>` type: matrix-matrix multiplication (`mxm`) and Kronecker product (`kron`)
 - [LL Parser Module](developer/ll-parser.md) — Implements LL(k) parsing: table construction (via first_k/follow_k fixed-point computation) and table-driven recursive descent with derivation tree building
 - [LR Parser Module](developer/lr-parser.md) — Implements LR(0), SLR(1), and CLR(1) parsing table construction and an LR parser interpreter with derivation tree building

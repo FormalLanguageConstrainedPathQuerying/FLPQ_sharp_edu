@@ -48,7 +48,7 @@ val section: string -> string
 ### Section Builders
 
 ```fsharp
-type StepTemplates = { Gll:string; GllTikz:string; Rnglr:string; RnglrTikz:string; Arroyuelo:string; ArroyueloTikz:string; Belyanin:string; BelyaninTikz:string; BelyaninRowEnd:string; BelyaninRowEndTikz:string; BelyaninLabelRow:string; BelyaninLabelRowTikz:string }
+type StepTemplates = { Gll:string; GllTikz:string; Rnglr:string; RnglrTikz:string; Arroyuelo:string; ArroyueloTikz:string; Belyanin:string; BelyaninTikz:string; BelyaninRowEnd:string; BelyaninRowEndTikz:string; BelyaninLabelRow:string; BelyaninLabelRowTikz:string; Kronecker:string; KroneckerTikz:string }
 
 val headerSection: vizDir:string -> algoKind:SummaryKind -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> rsmPdfs:(string*string) list -> useTikz:bool -> string list
 val tableStepSection: stepDir:string -> stepNum:int -> wrap:(string->string) -> string list
@@ -57,11 +57,12 @@ val gllStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemp
 val rnglrStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemplate:string -> useTikz:bool -> string list
 val arroyueloStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemplate:string -> useTikz:bool -> string list
 val belyaninStepSection: stepDir:string -> stepNum:int -> templates:StepTemplates -> useTikz:bool -> string list
+val kroneckerStepSection: stepDir:string -> stepNum:int -> template:string -> tikzTemplate:string -> useTikz:bool -> string list
 val sppfSection: vizDir:string -> useTikz:bool -> string list
 val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCount:int -> lrAutomatonPdf:string option -> lrAutomatonTikz:string option -> rsmPdfs:(string*string) list -> templates:StepTemplates -> useTikz:bool -> string list
 ```
 
-- `algoKind`: `TablePerStep` (CYK/Valiant), `LL`, `LR`, `GLL`, `RNGLR`, `ArroyueloRPQ`, `BelyaninRPQ`, or `AzimovCFPQ`
+- `algoKind`: `TablePerStep` (CYK/Valiant), `LL`, `LR`, `GLL`, `RNGLR`, `ArroyueloRPQ`, `BelyaninRPQ`, `AzimovCFPQ`, or `KroneckerCFPQ`
 - `StepTemplates` bundles the per-algorithm step templates (DOT and TikZ variants); fields are empty strings for algorithms that do not use a step template.
 - `buildContent` assembles the complete merged TeX for one algorithm
 - `wrapTikzAdjustbox limitHeight tikz`: wraps `tikz` in a centered adjustbox limited to at most `\textwidth`; when `limitHeight` is true it is additionally limited to at most `\textheight`. Shrink-only — small figures are never upscaled and node font metrics are preserved.
@@ -87,6 +88,7 @@ val buildContent: algo:string -> algoKind:SummaryKind -> vizDir:string -> stepCo
 | Azimov CFPQ head and table steps | The `AzimovCFPQ` header shows the CNF grammar passed to the algorithm (`grammar_cnf.tex`) and the input graph (TikZ adjustbox or dot-compiled PDF), and its steps reuse the generic `tableStepSection` layout — one `table.tex` per productive fixed-point iteration with all nonterminal matrices stacked and the changed cells highlighted (task 293) |
 | `arroyueloStepSection` two-column layout | Each Arroyuelo RPQ step fills `data/Arroyuelo_step_(tikz_)template.tex`: left minipage = vertical regexp tree figure, right minipage = the matrix equation line above the graph. Tree and graph figures are wrapped in a top-aligned, column-width adjustbox (`wrapTikzAdjustboxColumnTop`) in TikZ mode; DOT mode includes the dot-compiled PDFs. Only intermediate nodes are emitted as steps (task 280, task 291) |
 | `belyaninStepSection` line-per-substep layout | Each Belyanin RPQ step fills `data/Belyanin_step_(tikz_)template.tex` (start line: F, V, DFA with frontier states highlighted, graph with green sources and lightblue frontier vertices), then one `Belyanin_label_row_(tikz_)template.tex` per active label (scanned from the step dir's `label_i_select.tex` files in numeric order, each with the two explicit propagation products — one horizontal line each — and the used transitions / followed edges red bold), then — for non-init steps — `Belyanin_row_end_(tikz_)template.tex` (F/V + end figures). All figures are top-aligned (`valign=T`) adjustbox-wrapped in TikZ mode; DOT mode includes the dot-compiled PDFs. The filled template is not wrapped whole, so a step can span pages (task 285, task 286, task 287; the Arroyuelo section follows the same rule since task 291) |
+| `kroneckerStepSection` two-line layout | Each Kronecker CFPQ step fills `data/Kronecker_step_(tikz_)template.tex`: line 1 = the full Kronecker product (`kron.tex`, already a shrink-to-fit adjustbox), line 2 = the two stacked MS-BFS fronts (`fronts.tex`, initial above final with the accept columns highlighted) beside the input graph with the new nonterminal edges highlighted red. In TikZ mode the graph is inlined and top-aligned (`wrapTikzAdjustboxColumnTop`); DOT mode includes the dot-compiled `graph.pdf`. Kronecker is dispatched to this section rather than the generic table path (task 16) |
 | RPQ step figures wrap to the column width (`wrapTikzAdjustboxColumn`) | The step figures sit inside minipage columns (per-template widths in [Arroyuelo step visualization](arroyuelo-step-viz.md) and [Belyanin step visualization](belyanin-step-viz.md)), but a minipage does not change `\textwidth` — the old `wrapTikzAdjustbox` (max width=`\textwidth`) let an over-wide figure reach the full page width and overflow its column. `\linewidth` is the column width inside the minipage, so the column-width wrap confines the figure to its column. The DOT-mode templates' `\includegraphics` use `width=\linewidth` for the same reason (task 282, S3) |
 | Per-component step adjustboxes, no whole-step box | RPQ steps are not wrapped whole so a tall step can span pages; each figure keeps its own top-aligned, column-width adjustbox. Replaces the earlier Arroyuelo whole-step `max totalheight=0.9\textheight` box (removed in task 291), matching Belyanin (task 286) |
 

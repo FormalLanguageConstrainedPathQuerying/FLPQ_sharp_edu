@@ -18,7 +18,9 @@ let private emptyTemplates: SummaryTeX.StepTemplates =
       BelyaninRowEnd = ""
       BelyaninRowEndTikz = ""
       BelyaninLabelRow = ""
-      BelyaninLabelRowTikz = "" }
+      BelyaninLabelRowTikz = ""
+      Kronecker = ""
+      KroneckerTikz = "" }
 
 /// Step templates with the four Belyanin slots filled from the given template strings.
 let private belyaninTemplates (step: string) (rowEnd: string) (labelRow: string) : SummaryTeX.StepTemplates =
@@ -33,7 +35,9 @@ let private belyaninTemplates (step: string) (rowEnd: string) (labelRow: string)
       BelyaninRowEnd = rowEnd
       BelyaninRowEndTikz = rowEnd
       BelyaninLabelRow = labelRow
-      BelyaninLabelRowTikz = labelRow }
+      BelyaninLabelRowTikz = labelRow
+      Kronecker = ""
+      KroneckerTikz = "" }
 
 [<Fact>]
 let ``SummaryKind ToString renders each kind`` () =

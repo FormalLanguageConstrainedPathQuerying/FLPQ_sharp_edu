@@ -48,9 +48,19 @@ Mask operation (⊕\_M): element-wise `nf && not v`. Keeps values from the first
 
 Truth table: 0⊕0=0, 1⊕1=0, 0⊕1=0, 1⊕0=1.
 
+### `msBfsWithTrace: int[] -> Matrix<bool> -> (Matrix<bool> * Matrix<bool>) list * Matrix<bool>`
+
+Multiple-source BFS with a front trace. Same traversal as `msBfs`, but returns the list of
+per-round `(front, visited)` pairs and the final `visited` matrix. The first pair's `front`
+is the seeded initial front (a `1` at each source) with `visited` still `0`; each round
+accumulates `visited ← visited ⊕_B front` and propagates the front. An empty source list
+yields an empty trace and a `0 × n` visited matrix.
+
 ### `msBfs: int[] -> Matrix<bool> -> Matrix<bool>`
 
-Multiple-source BFS. Performs independent BFS traversals from k starting vertices simultaneously. Returns a k×|V| boolean matrix where row i is the BFS front for source K[i].
+Multiple-source BFS. Performs independent BFS traversals from k starting vertices
+simultaneously and returns the accumulated visited matrix (the final reachability from
+every source). Delegates to `msBfsWithTrace`, discarding the front trace.
 
 ## Design Decisions
 
@@ -59,6 +69,7 @@ Multiple-source BFS. Performs independent BFS traversals from k starting vertice
 | All operations via existing generic matrix operations (`map2`, `mxm`) | No ad-hoc loops; consistent functional style |
 | Boolean semiring operations as standalone functions | Reused by Belyanin, Arroyuelo, and Kronecker RPQ algorithms |
 | MS-BFS in `FLPQ.GraphAnalysis` | Grouped with graph-related operations alongside the `Graph` module |
+| `msBfs` delegates to `msBfsWithTrace` | The traced variant owns the BFS loop (initial front + per-round fronts + final visited); `msBfs` projects out the trace, so there is one source of truth for the traversal |
 | Private `anyTrue` helper | Clean termination condition check in the BFS loop |
 
 ## Book Reference

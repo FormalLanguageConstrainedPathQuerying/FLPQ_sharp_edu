@@ -34,7 +34,7 @@
 | `AzimovCfpqReachabilityRunner` | `AzimovCfpqReachabilityRunner.fs` | [Azimov CFPQ runners](azimov-cfpq-runners.md) — default reachability semantics: the Boolean answer matrix plus one line per reachable pair |
 | `AzimovCfpqSinglePathRunner` | `AzimovCfpqSinglePathRunner.fs` | [Azimov CFPQ runners](azimov-cfpq-runners.md) — simplePath semantics: one witness path per reachable pair extracted from the PathIndex matrices |
 | `AzimovCfpqAllPathsRunner` | `AzimovCfpqAllPathsRunner.fs` | [Azimov CFPQ runners](azimov-cfpq-runners.md) — allPaths semantics: all simple paths per reachable pair enumerated from the split-vertex matrices |
-| `KroneckerCfpqRunner` | `KroneckerCfpqRunner.fs` | [Kronecker CFPQ runner](kronecker-cfpq-runner.md) — reachability only: the Boolean answer matrix plus one line per reachable pair; the query is an EBNF file parsed to an RSM |
+| `KroneckerCfpqRunner` | `KroneckerCfpqRunner.fs` | [Kronecker CFPQ runner](kronecker-cfpq-runner.md) — reachability only: the Boolean answer matrix plus one line per reachable pair, and one two-line step per productive iteration (the Kronecker product, the MS-BFS fronts, and the graph with the new nonterminal edges); the query is an EBNF file parsed to an RSM |
 
 ## Role
 
