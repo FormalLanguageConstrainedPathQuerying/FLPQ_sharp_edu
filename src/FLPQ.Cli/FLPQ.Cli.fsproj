@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="AlgorithmTypes.fs" />
+    <Compile Include="Errors.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="CykRunner.fs" />
     <Compile Include="ValiantRunner.fs" />

@@ -44,9 +44,11 @@ module Program =
             // allPaths is CFPQ-only: the split-vertex semiring lives in Azimov's matrix core.
             let rejectAllPaths (algo: AlgorithmTypes.Algorithm) (semantics: AlgorithmTypes.PathQuerySemantics) =
                 if semantics = AlgorithmTypes.PathQuerySemantics.AllPaths then
-                    failwithf
-                        "allPaths semantics is only supported for AzimovCFPQ, not %s"
-                        (AlgorithmTypes.displayName algo)
+                    let name = AlgorithmTypes.displayName algo
+
+                    raise (
+                        CliErrorException(sprintf "allPaths semantics is only supported for AzimovCFPQ, not %s" name)
+                    )
 
             match algorithm with
             // RPQ algorithms take the same unified query/input pair: the query is a
@@ -119,7 +121,12 @@ module Program =
                 match semantics with
                 | AlgorithmTypes.PathQuerySemantics.Reachability ->
                     KroneckerCfpqRunner.runKronecker queryFile inputDir output useDot
-                | _ -> failwithf "KroneckerCFPQ supports only reachability semantics, not %A" semantics
+                | _ ->
+                    raise (
+                        CliErrorException(
+                            sprintf "KroneckerCFPQ supports only reachability semantics, not %A" semantics
+                        )
+                    )
             | _ -> runParsingAlgorithm results algorithm output useDot
 
             if summary then
@@ -132,7 +139,16 @@ module Program =
                     0
             else
                 0
-        with ex ->
+        with
+        | CliErrorException msg
+        | FLPQ.Languages.EbnfParseErrorException msg
+        | FLPQ.Languages.LlConflictErrorException msg
+        | FLPQ.RPQ.GraphParseErrorException msg
+        | FLPQ.RPQ.RpqInputErrorException msg
+        | FLPQ.Printers.ExternalToolErrorException msg ->
+            eprintfn "Error: %s" msg
+            1
+        | ex ->
             eprintfn "%s" ex.Message
             eprintfn "%s" (parser.PrintUsage())
             1

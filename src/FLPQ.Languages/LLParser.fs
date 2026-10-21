@@ -1,5 +1,8 @@
 namespace FLPQ.Languages
 
+/// LL(k) conflict: the grammar is not LL(k) — two rules share the same (nonterminal, lookahead) key.
+exception LlConflictErrorException of string
+
 /// Input state for LL/LR parser step visualization.
 [<Struct>]
 type StepInput<'t> =
@@ -55,13 +58,18 @@ module LLParser =
                     match Map.tryFind key table with
                     | Some existing ->
                         if existing <> ruleIdx then
-                            failwithf
-                                "LL(%d) conflict: %A with lookahead %A has rules %d and %d"
-                                k
-                                rule.Lhs
-                                w
-                                existing
-                                ruleIdx
+                            let lhs = rule.Lhs
+
+                            let msg =
+                                sprintf
+                                    "LL(%d) conflict: %A with lookahead %A has rules %d and %d"
+                                    k
+                                    lhs
+                                    w
+                                    existing
+                                    ruleIdx
+
+                            raise (LlConflictErrorException msg)
                     | None -> table <- Map.add key ruleIdx table
 
         table

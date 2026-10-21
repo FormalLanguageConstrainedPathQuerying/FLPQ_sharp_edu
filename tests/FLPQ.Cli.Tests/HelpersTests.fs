@@ -2,6 +2,7 @@ module HelpersTests
 
 open System.IO
 open Xunit
+open FLPQ.Cli
 open FLPQ.Cli.Helpers
 open FLPQ.Printers
 
@@ -15,7 +16,7 @@ let ``readFile reads existing file`` () =
 
 [<Fact>]
 let ``readFile throws for missing file`` () =
-    Assert.Throws<System.Exception>(fun () -> readFile "nonexistent_file_xyz.txt" |> ignore)
+    Assert.Throws<CliErrorException>(fun () -> readFile "nonexistent_file_xyz.txt" |> ignore)
 
 [<Fact>]
 let ``writeOutputFile creates directory and writes content`` () =
@@ -84,6 +85,6 @@ let ``findTikzTemplate returns existing file`` () =
 [<Fact>]
 let ``findTemplateFile fails with the tried paths when no candidate exists`` () =
     let ex =
-        Assert.Throws<System.Exception>(fun () -> findTemplateFile "no_such_template_xyz.tex" |> ignore)
+        Assert.Throws<CliErrorException>(fun () -> findTemplateFile "no_such_template_xyz.tex" |> ignore)
 
     Assert.Contains("no_such_template_xyz.tex", ex.Message)

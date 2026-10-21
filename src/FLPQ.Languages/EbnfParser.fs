@@ -4,6 +4,9 @@ open System
 open System.IO
 open FLPQ.LinearAlgebra
 
+/// EBNF parse error: malformed grammar input (unexpected character, invalid rule format, …).
+exception EbnfParseErrorException of string
+
 /// Regular expression AST for EBNF right-hand sides.
 type Regexp<'t, 'nt when 't: comparison and 'nt: comparison> =
     | REps
@@ -262,7 +265,9 @@ module EbnfParser =
 
                         i <- j
                     else
-                        failwithf "Unexpected character '%c' at position %d" trimmed.[i] i
+                        raise (
+                            EbnfParseErrorException(sprintf "Unexpected character '%c' at position %d" trimmed.[i] i)
+                        )
 
                 Some(tokens |> Seq.toList))
         |> Array.toList
@@ -276,7 +281,7 @@ module EbnfParser =
                 else
                     RTerm(Terminal s)
             | EbnfToken.Eps -> REps
-            | _ -> failwithf "Expected symbol, got %A" token
+            | _ -> raise (EbnfParseErrorException(sprintf "Expected symbol, got %A" token))
 
         let rec parsePostfix (tokens: EbnfToken list) : Regexp<string, string> * EbnfToken list =
             let atom, rest = parseAtom tokens
@@ -294,12 +299,17 @@ module EbnfParser =
 
                 match rest2 with
                 | EbnfToken.RParen :: rest3 -> inner, rest3
-                | _ -> failwith "Expected ')' after '('"
+                | _ -> raise (EbnfParseErrorException("Expected ')' after '('"))
             | EbnfToken.Eps :: rest -> REps, rest
             | EbnfToken.Ident s :: rest ->
                 let r = sym (EbnfToken.Ident s)
                 r, rest
-            | _ -> failwithf "Unexpected token %A in atom" (if tokens.IsEmpty then "EOF" else string tokens.Head)
+            | _ ->
+                raise (
+                    EbnfParseErrorException(
+                        sprintf "Unexpected token %A in atom" (if tokens.IsEmpty then "EOF" else string tokens.Head)
+                    )
+                )
 
         and parseSeq (tokens: EbnfToken list) : Regexp<string, string> * EbnfToken list =
             let first, rest = parsePostfix tokens
@@ -332,8 +342,8 @@ module EbnfParser =
 
                     match remaining with
                     | [] -> (Nonterminal lhs, rhs) :: parseRules restLines
-                    | tok :: _ -> failwithf "Unexpected token %A after rule" tok
-                | _ -> failwithf "Invalid rule format: %A" line
+                    | tok :: _ -> raise (EbnfParseErrorException(sprintf "Unexpected token %A after rule" tok))
+                | _ -> raise (EbnfParseErrorException(sprintf "Invalid rule format: %A" line))
 
         parseRules lines
 

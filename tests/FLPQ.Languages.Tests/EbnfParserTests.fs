@@ -79,6 +79,18 @@ F -> x
         let grouped = EbnfParser.groupRules rules
         Assert.Equal(3, Map.count grouped)
 
+    [<Fact>]
+    let ``parseEbnf with unexpected character throws EbnfParseErrorException`` () =
+        TestHelpers.assertThrows "Unexpected character" (fun () -> EbnfParser.parseEbnf "S -> a@b" |> ignore)
+
+    [<Fact>]
+    let ``parseEbnf with invalid rule format throws EbnfParseErrorException`` () =
+        TestHelpers.assertThrows "Invalid rule format" (fun () -> EbnfParser.parseEbnf "not a valid rule" |> ignore)
+
+    [<Fact>]
+    let ``parseEbnf with missing closing paren throws EbnfParseErrorException`` () =
+        TestHelpers.assertThrows "Expected ')'" (fun () -> EbnfParser.parseEbnf "S -> ( a | b" |> ignore)
+
 
 module EbnfParserWhitespaceTests =
 

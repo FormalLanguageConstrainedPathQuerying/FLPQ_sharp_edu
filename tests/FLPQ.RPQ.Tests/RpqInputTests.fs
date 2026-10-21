@@ -25,9 +25,9 @@ let ``eps in the query is preserved`` () =
     Assert.Equal(RSeq(REps, RTerm(Terminal "A")), r)
 
 [<Fact>]
-let ``empty text throws`` () =
-    Assert.Throws<System.Exception>(fun () -> RpqInput.parseRegexpText "" |> ignore)
+let ``empty text throws RpqInputErrorException`` () =
+    Assert.Throws<RpqInputErrorException>(fun () -> RpqInput.parseRegexpText "" |> ignore)
 
 [<Fact>]
-let ``whitespace-only text throws`` () =
-    Assert.Throws<System.Exception>(fun () -> RpqInput.parseRegexpText "   \n  " |> ignore)
+let ``whitespace-only text throws RpqInputErrorException`` () =
+    Assert.Throws<RpqInputErrorException>(fun () -> RpqInput.parseRegexpText "   \n  " |> ignore)

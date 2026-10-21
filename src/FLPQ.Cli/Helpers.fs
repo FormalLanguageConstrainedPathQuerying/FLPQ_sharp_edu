@@ -12,7 +12,7 @@ module Helpers =
 
     let readFile path =
         if not (File.Exists path) then
-            failwithf "File not found: %s" path
+            raise (CliErrorException(sprintf "File not found: %s" path))
 
         File.ReadAllText(path).Trim()
 
@@ -285,7 +285,7 @@ module Helpers =
 
         match candidates |> List.tryFind File.Exists with
         | Some p -> p
-        | None -> failwithf "Could not locate %s. Tried: %A" fileName candidates
+        | None -> raise (CliErrorException(sprintf "Could not locate %s. Tried: %A" fileName candidates))
 
     let findSummaryTemplate () : string =
         findTemplateFile "tex_summary_template.tex"

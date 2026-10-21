@@ -276,6 +276,56 @@ let ``BelyaninRPQ with reachability semantics runs successfully`` () =
     Assert.Equal(0, code)
 
 [<Fact>]
+let ``ArroyueloRPQ with allPaths semantics exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "ArroyueloRPQ"
+           "--semantics"
+           "allPaths"
+           "-q"
+           exampleRegexp
+           "-i"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
+
+[<Fact>]
+let ``KroneckerCFPQ with simplePath semantics exits non-zero`` () =
+    let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    let args =
+        [| "-a"
+           "KroneckerCFPQ"
+           "--semantics"
+           "simplePath"
+           "-q"
+           exampleRegexp
+           "-i"
+           exampleGraph
+           "-o"
+           outDir |]
+
+    let code = Program.runCli args
+
+    try
+        Directory.Delete(outDir, true)
+    with _ ->
+        ()
+
+    Assert.NotEqual(0, code)
+
+[<Fact>]
 let ``main delegates to runCli`` () =
     let outDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
 

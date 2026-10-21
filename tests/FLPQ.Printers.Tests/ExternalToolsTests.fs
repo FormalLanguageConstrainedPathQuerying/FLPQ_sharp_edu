@@ -91,6 +91,12 @@ let ``compileTexFileTwice produces non-empty PDF`` () =
 
 [<Fact>]
 [<Trait("Category", "Graphviz")>]
+let ``compileDotStringToInfo throws ExternalToolErrorException on invalid dot`` () =
+    TestHelpers.assertThrows "dot compilation failed" (fun () ->
+        ExternalTools.compileDotStringToInfo "this is not dot syntax !!!" |> ignore)
+
+[<Fact>]
+[<Trait("Category", "Graphviz")>]
 let ``compileDotStringToNodePositions throws on invalid dot`` () =
     TestHelpers.assertThrows "node-position extraction failed" (fun () ->
         ExternalTools.compileDotStringToNodePositions "this is not dot syntax !!!"

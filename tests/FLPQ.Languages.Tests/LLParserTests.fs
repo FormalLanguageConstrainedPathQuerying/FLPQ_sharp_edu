@@ -47,7 +47,7 @@ module FactTests =
 
     [<Fact>]
     let ``LL(1) table for grammar3 detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar3 1 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar3 1 |> ignore)
 
     [<Fact>]
     let ``LL(1) parser accepts grammar1 strings`` () =
@@ -105,15 +105,15 @@ module FactTests =
 
     [<Fact>]
     let ``LL(1) table for grammar8 expression grammar detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar8 1 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar8 1 |> ignore)
 
     [<Fact>]
     let ``LL(1) table for grammar9 detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar9 1 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar9 1 |> ignore)
 
     [<Fact>]
     let ``LL(2) table for grammar9 also detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar9 2 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar9 2 |> ignore)
 
     [<Fact>]
     let ``Valiant and CYK agree on grammar9 acceptance`` () =
@@ -146,11 +146,11 @@ module FactTests =
 
     [<Fact>]
     let ``LL(1) table for grammar10 detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar10 1 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar10 1 |> ignore)
 
     [<Fact>]
     let ``LL(2) table for grammar10 also detects conflict`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable grammar10 2 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable grammar10 2 |> ignore)
 
     [<Fact>]
     let ``Valiant and CYK agree on grammar10 acceptance`` () =
@@ -240,7 +240,7 @@ module LLHigherKTests =
 
     [<Fact>]
     let ``LL(k=1) detects conflict for grammar requiring k=2`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable ll2Grammar 1 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable ll2Grammar 1 |> ignore)
 
     [<Fact>]
     let ``LL(k=2) resolves conflict for grammar requiring k=2`` () =
@@ -279,7 +279,7 @@ module LLHigherKTests =
 
     [<Fact>]
     let ``LL(k=2) detects conflict for grammar requiring k=3`` () =
-        Assert.Throws<System.Exception>(fun () -> LLParser.buildTable ll3Grammar 2 |> ignore)
+        Assert.Throws<LlConflictErrorException>(fun () -> LLParser.buildTable ll3Grammar 2 |> ignore)
 
     [<Fact>]
     let ``LL(k=3) resolves conflict for grammar requiring k=3`` () =

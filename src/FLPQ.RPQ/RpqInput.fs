@@ -3,6 +3,9 @@ namespace FLPQ.RPQ
 open System.IO
 open FLPQ.Languages
 
+/// RPQ input error: the EBNF file contains no rules (empty or comment-only).
+exception RpqInputErrorException of string
+
 /// Parsing of RPQ query regular expressions from EBNF files.
 /// An RPQ query is a regular expression over graph edge labels: the first rule's
 /// right-hand side of the EBNF file is taken as the query, and every identifier in it
@@ -25,7 +28,7 @@ module RpqInput =
     let parseRegexpText (text: string) : Regexp<string, string> =
         match EbnfParser.parseEbnf text with
         | (_, rhs) :: _ -> mapNontermsToTerms rhs
-        | [] -> failwith "RPQ regexp file must contain at least one rule"
+        | [] -> raise (RpqInputErrorException("RPQ regexp file must contain at least one rule"))
 
     /// Parse an RPQ query regexp from a file.
     let parseRegexpFile (path: string) : Regexp<string, string> =

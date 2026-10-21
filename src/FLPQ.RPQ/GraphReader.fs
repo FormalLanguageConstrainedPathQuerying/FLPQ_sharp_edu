@@ -4,6 +4,9 @@ open System.IO
 open FLPQ.LinearAlgebra
 open FLPQ.Languages
 
+/// Graph file parse error: malformed line in the input graph file.
+exception GraphParseErrorException of string
+
 /// Graph file reading.
 /// Input format:
 /// - First line (optional): space-separated list of start vertex indices (0-based).
@@ -21,7 +24,7 @@ module GraphReader =
             let parts = trimmed.Split(' ', System.StringSplitOptions.RemoveEmptyEntries)
 
             if parts.Length <> 3 then
-                failwithf "Invalid graph line: '%s'" trimmed
+                raise (GraphParseErrorException(sprintf "Invalid graph line: '%s'" trimmed))
 
             let fromV = System.Int32.Parse parts.[0]
             let label = parts.[1]

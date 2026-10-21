@@ -6,6 +6,9 @@ open System.IO
 open System.Diagnostics
 open System.Text.Json
 
+/// External tool failure: `dot` (or another external tool) returned a non-zero exit code.
+exception ExternalToolErrorException of string
+
 /// External tool wrappers for compiling Dot and TeX artifacts.
 /// Reused by both the test suite and the CLI summary generator.
 module ExternalTools =
@@ -92,7 +95,7 @@ module ExternalTools =
             let r = runProcess "dot" ("-Tplain " + tempFile) None
 
             if r.ExitCode <> 0 then
-                failwithf "dot compilation failed (exit %d): %s" r.ExitCode r.Stderr
+                raise (ExternalToolErrorException(sprintf "dot compilation failed (exit %d): %s" r.ExitCode r.Stderr))
 
             let mutable nodeCount = 0
             let mutable edgeCount = 0
@@ -144,7 +147,11 @@ module ExternalTools =
             let r = runProcess "dot" ("-Tjson " + tempFile) None
 
             if r.ExitCode <> 0 then
-                failwithf "dot -Tjson node-position extraction failed (exit %d): %s" r.ExitCode r.Stderr
+                raise (
+                    ExternalToolErrorException(
+                        sprintf "dot -Tjson node-position extraction failed (exit %d): %s" r.ExitCode r.Stderr
+                    )
+                )
 
             let doc = JsonDocument.Parse(r.Stdout)
             let positions = ResizeArray<NodePosition>()
