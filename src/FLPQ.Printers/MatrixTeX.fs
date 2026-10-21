@@ -15,6 +15,7 @@ module MatrixTeX =
           RowCount: int
           ColCount: int }
 
+    /// Renders a matrix as a TeX table with optional styling (colors, highlights, row/col headers).
     let toTeXStyled
         (showRowNumbers: bool)
         (showColNumbers: bool)
@@ -224,5 +225,6 @@ module MatrixTeX =
 
         sb.ToString()
 
+    /// Renders a matrix as a plain TeX table (no styling).
     let toTeX (showRowNumbers: bool) (showColNumbers: bool) (cellPrinter: 'a -> string) (matrix: Matrix<'a>) : string =
         toTeXStyled showRowNumbers showColNumbers cellPrinter matrix [] [] None None false false

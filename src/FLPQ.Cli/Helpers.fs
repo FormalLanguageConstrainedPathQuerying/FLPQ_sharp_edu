@@ -10,12 +10,14 @@ open FLPQ.Printers
 
 module Helpers =
 
+    /// Reads a file, throwing CliErrorException if it does not exist. Returns the content trimmed.
     let readFile path =
         if not (File.Exists path) then
             raise (CliErrorException(sprintf "File not found: %s" path))
 
         File.ReadAllText(path).Trim()
 
+    /// Creates the parent directory if needed and writes the content to the file.
     let writeOutputFile (path: string) (content: string) =
         let dir = Path.GetDirectoryName path
 
@@ -24,6 +26,7 @@ module Helpers =
 
         File.WriteAllText(path, content)
 
+    /// Removes and recreates the output directory (ensuring it is empty before a run).
     let cleanOutputDir (dir: string) =
         if Directory.Exists dir then
             if Directory.GetFileSystemEntries(dir).Length > 0 then
@@ -32,6 +35,7 @@ module Helpers =
         else
             Directory.CreateDirectory dir |> ignore
 
+    /// Writes one directory per parsing step (step_<n>) with the tree/stack visualization and input.
     let writeStepsVisualization (outputDir: string) (useDot: bool) (steps: VisualizationStep list) =
         for idx in 0 .. steps.Length - 1 do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" idx)
@@ -43,6 +47,7 @@ module Helpers =
 
             writeOutputFile (Path.Combine(stepDir, "input.tex")) steps.[idx].Input
 
+    /// Writes one directory per GLL step (step_<n>) with queue, descriptor tables, path index, and GSS/RSM figures.
     let writeGllStepsVisualization
         (outputDir: string)
         (useDot: bool)
@@ -65,6 +70,7 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "input.tikz.tex")) steps.[idx].InputTikz
                 writeOutputFile (Path.Combine(stepDir, "rsm.tikz.tex")) steps.[idx].RsmTikz
 
+    /// Writes one directory per RNGLR step (step_<n>) with path index, LR table, and GSS/input figures.
     let writeRnglrStepsVisualization
         (outputDir: string)
         (useDot: bool)
@@ -83,6 +89,7 @@ module Helpers =
                 writeOutputFile (Path.Combine(stepDir, "gss.tikz.tex")) steps.[idx].GssTikz
                 writeOutputFile (Path.Combine(stepDir, "input.tikz.tex")) steps.[idx].InputTikz
 
+    /// Writes one directory per Arroyuelo RPQ step (step_<n>) with matrix and tree/graph figures.
     let writeArroyueloStepsVisualization
         (outputDir: string)
         (useDot: bool)
@@ -269,6 +276,7 @@ module Helpers =
                 (Path.Combine(stepDir, "table.tex"))
                 (CfpqMatrixTeX.stepToTeX ntName elementPrinter step.Matrices step.ChangedCells)
 
+    /// Extracts the step number from a step directory name (step_N); returns 0 if not a step dir.
     let naturalSortKey (dirName: string) : int =
         let m = Regex.Match(dirName, "step_(\d+)")
 
@@ -287,44 +295,58 @@ module Helpers =
         | Some p -> p
         | None -> raise (CliErrorException(sprintf "Could not locate %s. Tried: %A" fileName candidates))
 
+    /// Path to the merged-summary TeX template.
     let findSummaryTemplate () : string =
         findTemplateFile "tex_summary_template.tex"
 
+    /// Path to the TikZ document wrapper template.
     let findTikzTemplate () : string =
         findTemplateFile "tex_tikz_template.tex"
 
+    /// Path to the GLL step TeX template.
     let findGllStepTemplate () : string =
         findTemplateFile "GLL_step_template.tex"
 
+    /// Path to the RNGLR step TeX template.
     let findRnglrStepTemplate () : string =
         findTemplateFile "RNGLR_step_template.tex"
 
+    /// Path to the Arroyuelo step TeX template.
     let findArroyueloStepTemplate () : string =
         findTemplateFile "Arroyuelo_step_template.tex"
 
+    /// Path to the Arroyuelo step TikZ template.
     let findArroyueloStepTikzTemplate () : string =
         findTemplateFile "Arroyuelo_step_tikz_template.tex"
 
+    /// Path to the Belyanin step TeX template.
     let findBelyaninStepTemplate () : string =
         findTemplateFile "Belyanin_step_template.tex"
 
+    /// Path to the Belyanin step TikZ template.
     let findBelyaninStepTikzTemplate () : string =
         findTemplateFile "Belyanin_step_tikz_template.tex"
 
+    /// Path to the Belyanin row-end TeX template.
     let findBelyaninRowEndTemplate () : string =
         findTemplateFile "Belyanin_row_end_template.tex"
 
+    /// Path to the Belyanin row-end TikZ template.
     let findBelyaninRowEndTikzTemplate () : string =
         findTemplateFile "Belyanin_row_end_tikz_template.tex"
 
+    /// Path to the Belyanin label-row TeX template.
     let findBelyaninLabelRowTemplate () : string =
         findTemplateFile "Belyanin_label_row_template.tex"
 
+    /// Path to the Belyanin label-row TikZ template.
     let findBelyaninLabelRowTikzTemplate () : string =
         findTemplateFile "Belyanin_label_row_tikz_template.tex"
 
+    /// Path to the GLL step TikZ template.
     let findGllStepTikzTemplate () : string =
         findTemplateFile "GLL_step_tikz_template.tex"
 
+    /// Path to the RNGLR step TikZ template.
     let findRnglrStepTikzTemplate () : string =
         findTemplateFile "RNGLR_step_tikz_template.tex"

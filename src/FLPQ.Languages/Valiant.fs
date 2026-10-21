@@ -4,8 +4,10 @@ open FLPQ.LinearAlgebra
 
 module Valiant =
 
+    /// A submatrix window (row, col, size) within the parsing table.
     type Submatrix = { Row: int; Col: int; Size: int }
 
+    /// Data for a single Valiant algorithm trace step (table, target submatrix, multiplied pairs, changed cells).
     [<Struct>]
     type ValiantTraceStep<'nt when 'nt: comparison> =
         { Table: ParsingTable<'nt>
@@ -13,6 +15,7 @@ module Valiant =
           Multiplied: (Submatrix * Submatrix) list
           ChangedCells: (int * int) list }
 
+    /// Data for a single modified Valiant trace step (layer forward or backward).
     [<Struct>]
     type ModifiedValiantTraceStep<'nt when 'nt: comparison> =
         | LayerForward of table: ParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
@@ -22,6 +25,7 @@ module Valiant =
             submatrices: Submatrix list *
             ChangedCells: (int * int) list
 
+    /// Data for a single Valiant SPPF trace step (SPPF table, target submatrix, multiplied pairs, changed cells).
     [<Struct>]
     type ValiantSppfTraceStep<'nt when 'nt: comparison> =
         { Table: SppfParsingTable<'nt>
@@ -29,6 +33,7 @@ module Valiant =
           Multiplied: (Submatrix * Submatrix) list
           ChangedCells: (int * int) list }
 
+    /// Data for a single modified Valiant SPPF trace step (layer forward or backward).
     [<Struct>]
     type ModifiedValiantSppfTraceStep<'nt when 'nt: comparison> =
         | LayerForwardSppf of table: SppfParsingTable<'nt> * layerSize: int * submatrices: Submatrix list
@@ -642,9 +647,11 @@ module Valiant =
         | LayerBackwardSppf(table, layerSize, submatrices, changedCells) ->
             LayerBackward(sppfTableToNtTable table, layerSize, submatrices, changedCells)
 
+    /// Runs Valiant's algorithm, returning whether the input is accepted.
     let parse (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
         parseWithSppfTable freshNonterminal g terminals |> snd
 
+    /// Runs Valiant's algorithm, returning the parsing table and acceptance result.
     let parseWithTable
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
@@ -654,6 +661,7 @@ module Valiant =
         let ntTable = sppfTableToNtTable sppfTable
         (ntTable, accepted)
 
+    /// Runs Valiant's algorithm with trace, returning the list of trace steps.
     let parseWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
@@ -662,9 +670,11 @@ module Valiant =
         parseWithSppfTrace freshNonterminal g terminals
         |> List.map sppfTraceStepToNtTraceStep
 
+    /// Runs the modified Valiant algorithm, returning whether the input is accepted.
     let parseModified (freshNonterminal: int -> 'nt) (g: Grammar<'t, 'nt>) (terminals: Terminal<'t> list) : bool =
         parseModifiedWithSppfTable freshNonterminal g terminals |> snd
 
+    /// Runs the modified Valiant algorithm, returning the parsing table and acceptance result.
     let parseModifiedWithTable
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)
@@ -674,6 +684,7 @@ module Valiant =
         let ntTable = sppfTableToNtTable sppfTable
         (ntTable, accepted)
 
+    /// Runs the modified Valiant algorithm with trace, returning the list of trace steps.
     let parseModifiedWithTrace
         (freshNonterminal: int -> 'nt)
         (g: Grammar<'t, 'nt>)

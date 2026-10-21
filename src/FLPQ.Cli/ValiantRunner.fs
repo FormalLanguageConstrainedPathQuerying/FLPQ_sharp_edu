@@ -6,6 +6,7 @@ open FLPQ.Printers
 
 module ValiantRunner =
 
+    /// Runs Valiant's CYK variant on the given grammar and input, writing step visualizations to the output directory.
     let runValiant (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) (noSppfTable: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile
@@ -62,6 +63,7 @@ module ValiantRunner =
 
         printfn "Valiant trace: %d steps written to %s" trace.Length outputDir
 
+    /// Runs the modified Valiant algorithm on the given grammar and input, writing step visualizations to the output directory.
     let runValiantModified
         (grammarFile: string)
         (inputFile: string)

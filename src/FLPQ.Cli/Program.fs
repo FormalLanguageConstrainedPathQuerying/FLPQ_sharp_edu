@@ -29,6 +29,7 @@ module Program =
         | AlgorithmTypes.RNGLR -> RnglrRunner.runRnglr query input output useDot
         | _ -> failwithf "Unexpected algorithm in runParsingAlgorithm: %A" algorithm
 
+    /// Parses command-line arguments, dispatches to the selected algorithm, and writes output artifacts. Returns 0 on success, 1 on error.
     let runCli (argv: string[]) : int =
         let parser = ArgumentParser.Create<AlgorithmTypes.Arguments>(programName = "flpq")
 
@@ -154,4 +155,5 @@ module Program =
             1
 
     [<EntryPoint>]
+    /// CLI entry point.
     let main argv = runCli argv

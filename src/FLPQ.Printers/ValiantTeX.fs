@@ -5,6 +5,7 @@ open FLPQ.Languages
 
 module ValiantTeX =
 
+    /// Renders a Valiant SPPF trace step as a TeX table (with nonterminal names).
     let sppfStepToTeX (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantSppfTraceStep<'nt>) : string =
         let highlights =
             [ for (i, j) in step.ChangedCells do
@@ -134,12 +135,14 @@ module ValiantTeX =
 
         MatrixTeX.toTeXStyled false false cellPrinter table highlights blocks None None true true
 
+    /// Renders a modified Valiant SPPF trace step as a TeX table (with nonterminal names).
     let sppfModifiedStepToTeX
         (nonterminalPrinter: 'nt -> string)
         (step: Valiant.ModifiedValiantSppfTraceStep<'nt>)
         : string =
         sppfModifiedStepToTeXWith (ParsingTableTeX.sppfEntryCellToTeX nonterminalPrinter) step
 
+    /// Renders a Valiant SPPF trace step as a TeX table (with integer nonterminal indices).
     let sppfStepToTeXAsNt (nonterminalPrinter: 'nt -> string) (step: Valiant.ValiantSppfTraceStep<'nt>) : string =
         let highlights =
             [ for (i, j) in step.ChangedCells do
@@ -213,6 +216,7 @@ module ValiantTeX =
             true
             true
 
+    /// Renders a modified Valiant SPPF trace step as a TeX table (with integer nonterminal indices).
     let sppfModifiedStepToTeXAsNt
         (nonterminalPrinter: 'nt -> string)
         (step: Valiant.ModifiedValiantSppfTraceStep<'nt>)

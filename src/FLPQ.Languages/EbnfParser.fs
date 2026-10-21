@@ -19,6 +19,7 @@ type Regexp<'t, 'nt when 't: comparison and 'nt: comparison> =
 
 module Regexp =
 
+    /// True if the regexp can derive the empty string.
     let rec nullable (r: Regexp<'t, 'nt>) : bool =
         match r with
         | REps
@@ -53,6 +54,7 @@ module Regexp =
         | [ single ] -> single
         | first :: rest -> List.fold (fun acc a -> RAlt(acc, a)) first rest
 
+    /// Derivatives: the regexp for strings that follow sym in the language of r.
     let rec derive (r: Regexp<'t, 'nt>) (sym: RsmSymbol<'t, 'nt>) : Regexp<'t, 'nt> =
         match r with
         | REmpty -> REmpty
@@ -85,6 +87,7 @@ module Regexp =
             | REmpty -> REmpty
             | _ -> RSeq(dr, RStar rp)
 
+    /// All symbols (terminals and nonterminals) appearing in the regexp.
     let rec symbols (r: Regexp<'t, 'nt>) : RsmSymbol<'t, 'nt> list =
         match r with
         | REps
@@ -95,6 +98,7 @@ module Regexp =
         | RAlt(l, r)
         | RSeq(l, r) -> symbols l @ symbols r
 
+    /// Pretty-prints a regexp using the given terminal and nonterminal printers.
     let rec toString
         (termPrinter: Terminal<'t> -> string)
         (nontermPrinter: Nonterminal<'nt> -> string)
@@ -376,6 +380,7 @@ module RsmBuilder =
 
         { Nonterminal = nt; Dfa = dfa }
 
+    /// Builds an RSM from parsed EBNF rules, with an explicit start nonterminal.
     let buildRSMWithStart
         (grouped: Map<Nonterminal<string>, Regexp<string, string>>)
         (startNt: Nonterminal<string>)
@@ -427,9 +432,11 @@ module RsmBuilder =
           FinalStates = finalStates
           StartBlock = firstNt }
 
+    /// Builds an RSM from parsed EBNF rules, using the first rule's nonterminal as start.
     let buildRSM (grouped: Map<Nonterminal<string>, Regexp<string, string>>) : RSM<string, string> =
         buildRSMWithStart grouped (grouped |> Map.keys |> Seq.head)
 
+    /// Parses EBNF text and builds an RSM from it.
     let buildRSMFromText (text: string) : RSM<string, string> =
         let rules = EbnfParser.parseEbnf text
         let grouped = EbnfParser.groupRules rules
@@ -441,5 +448,6 @@ module RsmBuilder =
 
         buildRSMWithStart grouped startNt
 
+    /// Reads EBNF text from a file and builds an RSM from it.
     let buildRSMFromFile (path: string) : RSM<string, string> =
         File.ReadAllText path |> buildRSMFromText

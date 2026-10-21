@@ -6,6 +6,7 @@ open FLPQ.Printers
 
 module LLRunner =
 
+    /// Runs LL(k) top-down parsing on the given grammar and input, writing parse tree and table to the output directory.
     let runLL (grammarFile: string) (inputFile: string) (outputDir: string) (k: int) (useDot: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile

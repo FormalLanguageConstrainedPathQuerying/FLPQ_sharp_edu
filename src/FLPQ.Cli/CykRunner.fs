@@ -6,6 +6,7 @@ open FLPQ.Printers
 
 module CykRunner =
 
+    /// Runs CYK parsing on the given grammar and input, writing step visualizations to the output directory.
     let runCyk (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) (noSppfTable: bool) =
         let grammar = Grammar.parseGrammarFromFile grammarFile
         let inputTokens = Helpers.readFile inputFile

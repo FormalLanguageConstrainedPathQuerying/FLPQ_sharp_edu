@@ -11,6 +11,7 @@ module ArroyueloStepCommon =
     /// One rendered trace step: the regexp tree figure, the matrix equation for the step's
     /// operation, and the input graph with the step's result — each in DOT and TikZ form
     /// (the runner picks one).
+    /// One Arroyuelo RPQ visualization step (tree + graph figures).
     [<Struct>]
     type ArroyueloVisualizationStep =
         { TreeDot: string

@@ -26,6 +26,7 @@ module LRAutomatonTikz =
         let rhsParts = (beforeDot @ [ @"\cdot" ] @ afterDot) |> String.concat "\\ "
         sprintf "%s &\\to %s" lhs rhsParts
 
+    /// Renders an LR(0) state's items as TikZ-aligned content.
     let renderLR0StateContent
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
@@ -41,6 +42,7 @@ module LRAutomatonTikz =
 
         sb.ToString().TrimEnd('\n')
 
+    /// Renders an LR(1) state's items (with lookaheads) as TikZ-aligned content.
     let renderLR1StateContent
         (terminalPrinter: 't -> string)
         (nonterminalPrinter: 'nt -> string)
@@ -64,6 +66,7 @@ module LRAutomatonTikz =
 
         sb.ToString().TrimEnd('\n')
 
+    /// Wraps state content in a TikZ $aligned$ math environment.
     let stateContentToTikzAs (content: string) : string =
         sprintf "$\\begin{aligned}\n%s\n\\end{aligned}$" content
 

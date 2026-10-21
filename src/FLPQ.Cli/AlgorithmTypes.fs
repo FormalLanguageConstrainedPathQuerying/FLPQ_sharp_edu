@@ -4,6 +4,7 @@ open Argu
 
 module AlgorithmTypes =
 
+    /// All supported parsing and path-query algorithms selectable via -a.
     type Algorithm =
         | CYK
         | Valiant
@@ -28,6 +29,7 @@ module AlgorithmTypes =
         | SimplePath
         | AllPaths
 
+    /// Human-readable name for use in log messages and output files.
     let displayName (algo: Algorithm) : string =
         match algo with
         | CYK -> "CYK"
@@ -44,6 +46,7 @@ module AlgorithmTypes =
         | AzimovCFPQ -> "Azimov CFPQ"
         | KroneckerCFPQ -> "Kronecker CFPQ"
 
+    /// Argu command-line argument definitions for the flpq CLI.
     type Arguments =
         | [<AltCommandLine("-a")>] Algorithm of Algorithm
         | [<AltCommandLine("-q")>] Query of string

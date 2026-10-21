@@ -7,6 +7,7 @@ open FLPQ.Languages.BasicSppf
 /// Book reference: def:basicSPPF.
 module BasicSppfDot =
 
+    /// Escapes double quotes in a DOT label string.
     let escapeLabel (s: string) = s.Replace("\"", "\\\"")
 
     /// Render a basic SPPF as a Graphviz DOT digraph.

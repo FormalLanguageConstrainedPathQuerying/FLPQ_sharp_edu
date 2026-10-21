@@ -7,6 +7,7 @@ module Cyk =
 
     /// Data for a single CYK algorithm trace step.
     [<Struct>]
+    /// Data for a single CYK algorithm trace step (table + highlighted cells).
     type CykTraceStep<'nt when 'nt: comparison> =
         { Table: ParsingTable<'nt>
           Highlights: Matrix.Highlight list }

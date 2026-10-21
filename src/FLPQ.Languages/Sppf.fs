@@ -296,6 +296,7 @@ module Sppf =
             (Some(flatExt.BlockStart |> Seq.map (fun kv -> kv.Key, kv.Value) |> Map.ofSeq))
             (Some(RSM.blockFinalsMap flatExt))
 
+    /// Number of nonterminal nodes in the SPPF.
     let countNonterminals (sppf: SPPF<'t, 'nt>) : int =
         let vc = Graph.vertexCount sppf.Graph
         let mutable count = 0
@@ -307,6 +308,7 @@ module Sppf =
 
         count
 
+    /// Number of terminal nodes in the SPPF.
     let countTerminals (sppf: SPPF<'t, 'nt>) : int =
         let vc = Graph.vertexCount sppf.Graph
         let mutable count = 0
@@ -318,6 +320,7 @@ module Sppf =
 
         count
 
+    /// Number of epsilon nodes in the SPPF.
     let countEpsilons (sppf: SPPF<'t, 'nt>) : int =
         let vc = Graph.vertexCount sppf.Graph
         let mutable count = 0
@@ -329,6 +332,7 @@ module Sppf =
 
         count
 
+    /// Number of intermediate nodes in the SPPF.
     let countIntermediates (sppf: SPPF<'t, 'nt>) : int =
         let vc = Graph.vertexCount sppf.Graph
         let mutable count = 0
@@ -340,6 +344,7 @@ module Sppf =
 
         count
 
+    /// Number of non-trivial strongly connected components in the SPPF graph.
     let countNonTrivialScc (sppf: SPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0
@@ -434,6 +439,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Validates that every range node has at least one child.
     let validateRangeNodesHaveChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []
@@ -463,6 +469,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Validates that every intermediate node's children are well-formed.
     let validateIntermediateChildren (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []
@@ -489,6 +496,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Validates that every nonterminal node's children match the production's RHS.
     let validateNonterminalChildren (ntPrinter: 'nt -> string) (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []
@@ -534,6 +542,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Validates that range node start/end positions are consistent with their children.
     let validateRangePositions (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []
@@ -547,6 +556,7 @@ module Sppf =
 
         if errors.IsEmpty then Ok() else Error(List.rev errors)
 
+    /// Validates that intermediate nodes are properly connected in the SPPF DAG.
     let validateIntermediateConnectedness (sppf: SPPF<'t, 'nt>) : Result<unit, string list> =
         let vc = Graph.vertexCount sppf.Graph
         let mutable errors = []

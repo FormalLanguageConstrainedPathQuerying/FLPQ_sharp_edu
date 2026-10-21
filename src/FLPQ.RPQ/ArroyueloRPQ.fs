@@ -41,6 +41,7 @@ module ArroyueloRPQ =
     /// tree node. NodeIndex is the post-order position (the last step is the root); Children
     /// holds the post-order indices of the node's children (empty for leaves). Operands are
     /// the child results ([] for Base, [left; right] for Alt/Seq, [child] for Star).
+    /// One boolean Arroyuelo RPQ trace step (node, expression, frontier/visited matrices).
     [<Struct>]
     type ArroyueloBooleanTraceStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         { NodeIndex: int
@@ -208,6 +209,7 @@ module ArroyueloRPQ =
     /// NodeIndex is the post-order position (the last step is the root); Children holds the
     /// post-order indices of the node's children (empty for leaves). Operands are the child
     /// results ([] for Base, [left; right] for Alt/Seq, [child] for Star).
+    /// One full Arroyuelo RPQ trace step (node, expression, frontier/visited matrices, automaton/graph figures).
     [<Struct>]
     type ArroyueloTraceStep<'t, 'nt when 't: comparison and 'nt: comparison> =
         { NodeIndex: int

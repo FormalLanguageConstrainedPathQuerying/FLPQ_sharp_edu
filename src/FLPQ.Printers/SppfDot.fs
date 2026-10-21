@@ -6,6 +6,7 @@ open FLPQ.Languages
 /// Book reference: sec:CFPQ_GLL (06_GLL_Based.tex).
 module SppfDot =
 
+    /// Escapes double quotes in a DOT label string.
     let escapeLabel (s: string) = s.Replace("\"", "\\\"")
 
     [<Struct>]

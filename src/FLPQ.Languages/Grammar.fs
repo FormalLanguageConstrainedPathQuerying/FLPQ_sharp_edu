@@ -31,21 +31,25 @@ type Rhs<'t, 'nt> =
 
 module Rhs =
 
+    /// Expands an Rhs to a symbol list, representing epsilon as a single Epsilon symbol.
     let toListWithEpsilon (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
         | Symbols nel -> NonEmptyList.toList nel
         | EpsilonRhs -> [ Symbol.Epsilon ]
 
+    /// Expands an Rhs to a symbol list, dropping epsilon (returns empty list for EpsilonRhs).
     let toNonEpsilonList (rhs: Rhs<'t, 'nt>) : Symbol<'t, 'nt> list =
         match rhs with
         | Symbols nel -> NonEmptyList.toList nel
         | EpsilonRhs -> []
 
+    /// True if the Rhs is the empty (epsilon) production.
     let isEpsilon (rhs: Rhs<'t, 'nt>) : bool =
         match rhs with
         | EpsilonRhs -> true
         | _ -> false
 
+    /// Number of symbols in the Rhs (0 for epsilon).
     let length (rhs: Rhs<'t, 'nt>) : int =
         match rhs with
         | Symbols nel -> NonEmptyList.length nel
@@ -117,6 +121,7 @@ module Grammar =
     /// Parse a grammar from a .bnf file.
     let parseGrammarFromFile (path: string) : Grammar<string, string> = File.ReadAllText(path) |> parseGrammar
 
+    /// All nonterminals appearing in the grammar (left-hand side or right-hand side).
     let nonterminalsOf (g: Grammar<'t, 'nt>) : Set<Nonterminal<'nt>> =
         g.Rules
         |> List.collect (fun r ->
@@ -129,6 +134,7 @@ module Grammar =
             r.Lhs :: rhsNts)
         |> Set.ofList
 
+    /// All terminals appearing in the grammar's right-hand sides.
     let terminalsOf (g: Grammar<'t, 'nt>) : Set<Terminal<'t>> =
         g.Rules
         |> List.collect (fun r ->
@@ -500,6 +506,7 @@ module Grammar =
 
         { g with Rules = newRules }
 
+    /// True if every nonterminal in the grammar is reachable from the start symbol.
     let allNonterminalsReachable (g: Grammar<'t, 'nt>) : bool =
         let rec collectReachable (current: Set<Nonterminal<'nt>>) : Set<Nonterminal<'nt>> =
             let newReachable =
@@ -523,6 +530,7 @@ module Grammar =
         let allNts = nonterminalsOf g
         Set.isSubset allNts reachable
 
+    /// True if every nonterminal in the grammar can derive a string of terminals.
     let allNonterminalsGenerating (g: Grammar<'t, 'nt>) : bool =
         let generating = computeGenerating g.Rules
         let allNts = nonterminalsOf g

@@ -13,6 +13,7 @@ module BasicSppf =
     /// Node information in a basic SPPF.
     /// Each variant represents a distinct parse forest element with position tracking.
     [<RequireQualifiedAccess>]
+    /// Node info for a basic SPPF (packed derivation DAG).
     type BasicSppfNodeInfo<'t, 'nt when 't: comparison and 'nt: comparison> =
         /// Terminal leaf node: matched terminal at span [leftPos, rightPos).
         | Terminal of Terminal<'t> * leftPos: int * rightPos: int
@@ -178,6 +179,7 @@ module BasicSppf =
 
         extractLoop nodeIdx
 
+    /// Extracts a single derivation tree from a basic SPPF (picks one production per packed node).
     let extractDerivationTree (sppf: BasicSPPF<'t, 'nt>) : DerivationTree<'t, 'nt> =
         let info = Graph.getVertex sppf.RootIndex sppf.Graph
 
@@ -195,6 +197,7 @@ module BasicSppf =
             let children = extractSingle sppf.Graph sppf.RootIndex
             List.head children
 
+    /// Enumerates all derivation trees represented by the basic SPPF (lazy sequence).
     let enumerateTrees (sppf: BasicSPPF<'t, 'nt>) : seq<DerivationTree<'t, 'nt>> =
         let graph = sppf.Graph
 
@@ -258,6 +261,7 @@ module BasicSppf =
                     | _ -> List.head children
             }
 
+    /// Validates that every production child in the basic SPPF matches a valid CNF production.
     let validateProductionChildren (sppf: BasicSPPF<'t, 'nt>) (cnf: Grammar<'t, 'nt>) : Result<unit, string list> =
         let n = Graph.vertexCount sppf.Graph
         let errors = ResizeArray<string>()
@@ -292,6 +296,7 @@ module BasicSppf =
 
         if errors.Count = 0 then Ok() else Error(List.ofSeq errors)
 
+    /// Total number of strongly connected components in the basic SPPF graph.
     let countScc (sppf: BasicSPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0
@@ -332,6 +337,7 @@ module BasicSppf =
 
         sccCount
 
+    /// Number of non-trivial strongly connected components (size > 1) in the basic SPPF graph.
     let countNonTrivialScc (sppf: BasicSPPF<'t, 'nt>) : int =
         let n = Graph.vertexCount sppf.Graph
         let mutable sccIndex = 0
@@ -376,6 +382,7 @@ module BasicSppf =
 
         sccCount
 
+    /// Structural equality check between two basic SPPFs (vertex-by-vertex traversal).
     let traverseAndCompare (a: BasicSPPF<'t, 'nt>) (b: BasicSPPF<'t, 'nt>) : bool =
         let n = Graph.vertexCount a.Graph
 
@@ -435,6 +442,7 @@ module BasicSppf =
         | BasicSppfNodeInfo.Epsilon p -> p
         | BasicSppfNodeInfo.Production _ -> failwith "Production in rightPos"
 
+    /// Validates that production split nodes are consistent (same production, compatible children).
     let validateProductionSplitConsistency (sppf: BasicSPPF<'t, 'nt>) : Result<unit, string list> =
         let n = Graph.vertexCount sppf.Graph
         let errors = ResizeArray<string>()
@@ -473,6 +481,7 @@ module BasicSppf =
 
         if errors.Count = 0 then Ok() else Error(List.ofSeq errors)
 
+    /// Validates that the basic SPPF has exactly one root node.
     let validateSingleRoot
         (sppf: BasicSPPF<'t, 'nt>)
         (startNt: Nonterminal<'nt>)

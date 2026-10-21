@@ -8,6 +8,7 @@ open FLPQ.Printers
 
 module RnglrRunner =
 
+    /// Runs RNGLR parsing on the given EBNF grammar and input, writing step visualizations to the output directory.
     let runRnglr (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText

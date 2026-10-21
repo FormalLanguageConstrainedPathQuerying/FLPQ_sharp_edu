@@ -5,6 +5,7 @@ open FLPQ.Languages
 /// Graphviz dot visualization for derivation trees.
 module DerivationTreeDot =
 
+    /// Escapes double quotes in a DOT label string.
     let escapeLabel (s: string) = s.Replace("\"", "\\\"")
 
     /// Render a derivation tree as a Graphviz dot graph.

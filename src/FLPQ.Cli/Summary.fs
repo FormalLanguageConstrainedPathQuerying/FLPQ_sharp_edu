@@ -7,6 +7,7 @@ open FLPQ.Printers
 
 module Summary =
 
+    /// Maps an algorithm to the summary template kind (table-per-step vs steps-per-table vs RPQ).
     let algorithmToKind (algo: AlgorithmTypes.Algorithm) : SummaryTeX.SummaryKind =
         match algo with
         | AlgorithmTypes.CYK
@@ -23,6 +24,7 @@ module Summary =
         | AlgorithmTypes.AzimovCFPQ -> SummaryTeX.SummaryKind.AzimovCFPQ
         | AlgorithmTypes.KroneckerCFPQ -> SummaryTeX.SummaryKind.KroneckerCFPQ
 
+    /// Lowercase algorithm name for use in output file names.
     let algorithmLower (algo: AlgorithmTypes.Algorithm) : string = (algo.ToString()).ToLower()
 
     let private compileDotArtifacts (vizDir: string) (dotPdfDir: string) : bool * (string * string) list =
@@ -80,6 +82,7 @@ module Summary =
         [ if File.Exists(Path.Combine(vizDir, "ext_rsm.dot")) then
               ("Extended RSM", "dot_pdfs/ext_rsm.pdf") ]
 
+    /// Builds the merged summary document from the template, filling in step references and compiled figures.
     let buildSummary
         (templatePath: string)
         (algo: AlgorithmTypes.Algorithm)

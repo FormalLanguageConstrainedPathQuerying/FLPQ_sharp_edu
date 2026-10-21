@@ -6,6 +6,7 @@ open FLPQ.Printers
 
 module LRRunner =
 
+    /// Runs LR parsing (SLR, LALR, or full LR) on the given grammar and input, writing parse table and tree to the output directory.
     let runLR
         (grammarFile: string)
         (inputFile: string)

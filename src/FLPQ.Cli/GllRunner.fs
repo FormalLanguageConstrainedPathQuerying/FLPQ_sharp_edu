@@ -7,6 +7,7 @@ open FLPQ.Printers
 
 module GllRunner =
 
+    /// Runs GLL parsing on the given EBNF grammar and input, writing step visualizations to the output directory.
     let runGll (grammarFile: string) (inputFile: string) (outputDir: string) (useDot: bool) =
         let ebnfText = Helpers.readFile grammarFile
         let rsm = RsmBuilder.buildRSMFromText ebnfText
