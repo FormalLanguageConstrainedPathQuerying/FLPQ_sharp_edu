@@ -283,6 +283,8 @@ let ``RpqGraphViz: renderGraph delegates to the RPQ renderers`` () =
             Set.empty
             (Set.singleton (0, 1))
             Set.empty
+            Set.empty
+            Map.empty
 
     Assert.Contains("fillcolor=lightyellow", dot)
     Assert.Contains("color=red, penwidth=2.0", dot)

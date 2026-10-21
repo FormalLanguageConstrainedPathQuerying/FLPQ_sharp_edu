@@ -171,7 +171,16 @@ module Helpers =
         // The input graph's sources render green (matching the automaton's initial state
         // fill) — shared with the Belyanin step figures.
         let graphDot, graphTikz =
-            RpqGraphViz.renderGraph id graph Set.empty graph.StartStates Set.empty Set.empty Set.empty
+            RpqGraphViz.renderGraph
+                id
+                graph
+                Set.empty
+                graph.StartStates
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                Map.empty
 
         if useDot then
             writeOutputFile
@@ -191,7 +200,16 @@ module Helpers =
     /// Azimov and Kronecker root-artifact writers.
     let private writeCfpqGraphArtifact (outputDir: string) (useDot: bool) (graph: CfpqInput.CfpqGraph<string>) : unit =
         let graphDot, graphTikz =
-            RpqGraphViz.renderGraph id (CfpqInput.toNfa graph) Set.empty Set.empty Set.empty Set.empty Set.empty
+            RpqGraphViz.renderGraph
+                id
+                (CfpqInput.toNfa graph)
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                Set.empty
+                Map.empty
 
         if useDot then
             writeOutputFile (Path.Combine(outputDir, "graph.dot")) graphDot
@@ -292,15 +310,17 @@ module Helpers =
         : unit =
         let n = graph.VertexCount
 
-        let sourcePairs =
-            [ for a in RSM.nonterminals rsm do
-                  for v in 0 .. n - 1 -> (a, v) ]
-
         for step in steps do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
 
+            // The newly derived nonterminal edges: (u, v) vertex pairs labeled by the
+            // nonterminal, drawn red bold on top of the input graph.
             let newNtEdges =
-                Set.ofList (step.ChangedCells |> List.map (fun c -> (c.Row, c.Col)))
+                step.ChangedCells
+                |> List.map (fun c -> ((c.Row, c.Col), ntName c.Nt))
+                |> Map.ofList
+
+            let newNtEdgeSet = newNtEdges |> Map.toList |> List.map fst |> Set.ofList
 
             let graphDot, graphTikz =
                 RpqGraphViz.renderGraph
@@ -309,11 +329,12 @@ module Helpers =
                     Set.empty
                     Set.empty
                     Set.empty
-                    newNtEdges
+                    newNtEdgeSet
                     Set.empty
+                    newNtEdgeSet
+                    newNtEdges
 
-            let rendered =
-                KroneckerStepViz.renderStep terminal ntName n sourcePairs step graphDot graphTikz
+            let rendered = KroneckerStepViz.renderStep terminal ntName n step graphDot graphTikz
 
             writeOutputFile (Path.Combine(stepDir, "kron.tex")) rendered.Kron
             writeOutputFile (Path.Combine(stepDir, "fronts.tex")) rendered.Fronts

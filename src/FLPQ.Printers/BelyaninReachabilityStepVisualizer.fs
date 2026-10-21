@@ -95,6 +95,8 @@ module BelyaninReachabilityStepVisualizer =
             (frontierVertices m)
             Set.empty
             Set.empty
+            Set.empty
+            Map.empty
 
     /// One label's propagation row: the two formulas and the automaton figure with the
     /// current frontier states lightblue, the target states (selected into F^a) lightyellow,
@@ -125,7 +127,16 @@ module BelyaninReachabilityStepVisualizer =
         let targets = frontierVertices ls.Extend
 
         let graphDot, graphTikz =
-            RpqGraphViz.renderGraph terminalPrinter graph targets graph.StartStates currentVertices followed Set.empty
+            RpqGraphViz.renderGraph
+                terminalPrinter
+                graph
+                targets
+                graph.StartStates
+                currentVertices
+                followed
+                Set.empty
+                Set.empty
+                Map.empty
 
         { SelectFormula = selectFormula terminalPrinter step.M ls
           ExtendFormula = extendFormula terminalPrinter ls

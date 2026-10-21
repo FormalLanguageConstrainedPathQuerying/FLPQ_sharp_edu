@@ -10,10 +10,11 @@
 > **Abstract:** TeX rendering of one productive Kronecker CFPQ fixed-point iteration as two
 > stacked lines. Line 1 is the full Kronecker product `$ M_1 \otimes M_2 = K $` (the RSM
 > transition matrix and the current edge-label matrix with set-of-symbols cells, and the Boolean
-> product mask); line 2 is the MS-BFS initial (seed) and final (visited) fronts, decoded with
-> `(A, v)` rows and `(s, v)` columns, the final front with its accept columns highlighted. The
-> renderer is pure — it only formats the step's stored matrices and passes the graph figure
-> through (built by the caller via `RpqGraphViz`).
+> product mask, the step's newly derived cells highlighted); line 2 is the MS-BFS initial (seed)
+> and final (visited) fronts, decoded with `(q_i, u_j)` rows and `(q_i, u_j)` columns
+> (product-state pairs, the row's nonterminal replaced by its start state), the final front with
+> its accept columns highlighted. The renderer is pure — it only formats the step's stored
+> matrices and passes the graph figure through (built by the caller via `RpqGraphViz`).
 
 ## Contents
 
@@ -41,22 +42,26 @@ One edge-label-matrix cell as a set of symbols: `None` → `\varnothing`; `Some 
 comma-joined symbols, terminals via the terminal printer and nonterminals in `\text{...}`
 (`\varepsilon` for `AEpsilon`).
 
-### `kronBody: ('t -> string) -> (Nonterminal<'nt> -> string) -> CfpqKronStep<'nt,'t> -> string`
+### `kronBody: ('t -> string) -> (Nonterminal<'nt> -> string) -> CfpqCell<'nt> list -> Matrix<Option<...>> -> Matrix<Option<...>> -> Matrix<bool> -> string`
 
 The line-1 body: `$ M_1 \otimes M_2 = K $`. `M_1` (RSM transitions, `q_i` labels) and `M_2`
 (edge-label matrix, `v_i` labels) use `symbolSetCellToTeX`; `K` is the Boolean product mask
-(`\bullet`/`\cdot`). The whole row is wrapped in `StepTeX.wrapFormula`.
+(`\bullet`/`\cdot`) with the step's `changedCells` highlighted yellow. Row/column labels are
+`q_i`/`v_i` with multi-digit subscripts braced (`q_{15}`, not `q_15`). The whole row is wrapped
+in `StepTeX.wrapFormula`.
 
-### `frontsBody: CfpqKronStep<'nt,'t> -> (Nonterminal<'nt> * int) list -> (Nonterminal<'nt> -> string) -> int -> string`
+### `frontsBody: CfpqKronStep<'nt,'t> -> int -> string`
 
-The line-2 body: the initial (seed) front above the final (visited) front. Rows are decoded as
-`(A, v)` source pairs (`\text{A}, v_<v>`); columns as `(s, v)` product states (`q_<s>, v_<v>`);
-the final front highlights its `FinalStateCols` columns yellow.
+The line-2 body: the initial (seed) front above the final (visited) front. Rows and columns are
+product-state pairs `(q_i, u_j)` (`q_<s>, v_<v>`); a row is the BFS from source pair
+`(start(A), v)`, labeled with the nonterminal `A` replaced by its start state `q_i` (consistent
+with the column's `(q_i, u_j)` labels). The final front highlights its `FinalStateCols` columns
+yellow.
 
-### `renderStep: ('t -> string) -> (Nonterminal<'nt> -> string) -> int -> (Nonterminal<'nt> * int) list -> CfpqKronStep<'nt,'t> -> string -> string -> KroneckerVisualizationStep`
+### `renderStep: ('t -> string) -> (Nonterminal<'nt> -> string) -> int -> CfpqKronStep<'nt,'t> -> string -> string -> KroneckerVisualizationStep`
 
-`renderStep terminal ntName n sourcePairs step graphDot graphTikz` builds the two line bodies
-(`kronBody`, `frontsBody`) and pairs them with the caller-supplied graph figure.
+`renderStep terminal ntName n step graphDot graphTikz` builds the two line bodies (`kronBody`,
+`frontsBody`) and pairs them with the caller-supplied graph figure.
 
 ## Design Decisions
 
@@ -65,8 +70,10 @@ the final front highlights its `FinalStateCols` columns yellow.
 | Pure renderer (no I/O, no algorithm recomputation) | Mirrors the Belyanin/Arroyuelo seam: the step already carries every matrix; the renderer only formats. The graph figure is passed in so the renderer stays decoupled from `CfpqInput`/`RpqGraphViz` |
 | Reuse `MatrixTeX.toTeXStyled`, `PathSemiringTeX`, `StepTeX` | No new matrix primitive: labeled matrices with column highlights via `MatrixTeX`, the Boolean mask via `PathSemiringTeX.boolMatrixToTeXBody`, and shrink-to-fit wrapping via `StepTeX` |
 | `M_1`/`M_2` set cells are "for visualization only" | The book shows the product operands with their symbol-set cells; `M_1` is constant and `M_2` is the per-iteration snapshot, so the operands are self-contained in the step |
-| Decoded `(A, v)` / `(s, v)` front labels | The raw product indices are opaque; decoding makes the MS-BFS fronts readable (row = which block and vertex the BFS is for, column = which RSM state and vertex) |
+| Decoded `(q_i, u_j)` front labels (rows and columns) | The raw product indices are opaque; decoding makes the MS-BFS fronts readable. Rows are the BFS source pairs `(start(A), v)` labeled `(q_i, u_j)` (the nonterminal replaced by its start state, consistent with the columns), so a row is directly readable as the product state the BFS starts from |
 | Final front highlights `FinalStateCols` | The MS-BFS accept-reading is "reachable iff some final-state column is visited"; highlighting those columns makes the reading visible |
+| `K` highlights the step's changed cells | The newly derived product edges (this iteration's nonterminal derivations) are highlighted in the product mask so the reader can see which cells the iteration added |
+| Multi-digit subscripts braced (`q_{15}`) | Unbraced `q_15` renders as `q` with subscript `1` followed by a `5`; bracing renders the full index as the subscript |
 
 ## See Also
 

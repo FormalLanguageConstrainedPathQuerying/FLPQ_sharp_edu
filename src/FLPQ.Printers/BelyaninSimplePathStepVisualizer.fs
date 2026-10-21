@@ -91,6 +91,8 @@ module BelyaninSimplePathStepVisualizer =
             (RpqGraphViz.frontierVertices m)
             Set.empty
             (RpqGraphViz.pathEdges m)
+            Set.empty
+            Map.empty
 
     /// One label's propagation row: the two formulas and the automaton figure with the used
     /// a-transitions red bold and the step's target states (the states selected into F^a)
@@ -127,6 +129,8 @@ module BelyaninSimplePathStepVisualizer =
                 currentVertices
                 followed
                 (RpqGraphViz.pathEdges step.M)
+                Set.empty
+                Map.empty
 
         { SelectFormula = selectFormula terminalPrinter step.M ls
           ExtendFormula = extendFormula terminalPrinter ls

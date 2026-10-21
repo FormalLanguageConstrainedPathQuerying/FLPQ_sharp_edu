@@ -53,7 +53,16 @@ module ArroyueloSimplePathStepVisualizer =
 
             // Arroyuelo step graphs keep the pre-285 look: no green sources, no frontier
             // tier (only the shared root Input Graph carries the green source fill).
-            RpqGraphViz.renderGraph terminalPrinter graph pathVerts Set.empty Set.empty pathEdgeHl Set.empty
+            RpqGraphViz.renderGraph
+                terminalPrinter
+                graph
+                pathVerts
+                Set.empty
+                Set.empty
+                pathEdgeHl
+                Set.empty
+                Set.empty
+                Map.empty
 
         ArroyueloStepCommon.renderSteps
             terminalPrinter

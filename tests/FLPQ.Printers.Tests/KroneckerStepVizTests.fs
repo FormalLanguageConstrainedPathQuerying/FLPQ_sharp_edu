@@ -49,13 +49,9 @@ let private ntName (nt: Nonterminal<string>) : string =
 
 let private result = KroneckerCfpq.evaluate bookRsm bookGraph
 
-let private sourcePairs: (Nonterminal<string> * int) list =
-    [ for _ in RSM.nonterminals bookRsm do
-          for v in 0 .. bookGraph.VertexCount - 1 -> (Nonterminal "S", v) ]
-
 let private rendered =
     result.Steps
-    |> List.map (fun step -> KroneckerStepViz.renderStep id ntName bookGraph.VertexCount sourcePairs step "" "")
+    |> List.map (fun step -> KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step "" "")
 
 let private count (needle: string) (haystack: string) : int = countOccurrences haystack needle
 
@@ -72,6 +68,12 @@ module KroneckerStepVizStructural =
             Assert.Contains("v_0", step.Kron)
 
     [<Fact>]
+    let ``kron product result highlights the step's newly derived cells`` () =
+        for step in rendered do
+            // Every productive iteration derives cells, so the result mask carries highlights.
+            Assert.True(count @"\cellcolor{yellow}" step.Kron >= 1, "no highlighted cell in the product result")
+
+    [<Fact>]
     let ``kron operands show set-of-symbols cells`` () =
         let step = rendered.[0]
 
@@ -80,12 +82,13 @@ module KroneckerStepVizStructural =
         Assert.Contains("a", step.Kron)
 
     [<Fact>]
-    let ``fronts body has two pNiceMatrix blocks with decoded labels`` () =
+    let ``fronts body has two pNiceMatrix blocks with product-state pair labels`` () =
         for step in rendered do
             Assert.Equal(2, count @"\begin{pNiceMatrix}" step.Fronts)
-            // Rows are decoded (A, v); columns are decoded (s, v).
-            Assert.Contains(@"\text{S}, v_0", step.Fronts)
+            // Rows and columns are product-state pairs (q_i, u_j); the row's nonterminal is
+            // replaced by its start state q_0 (the book example has one block, S, start state 0).
             Assert.Contains("q_0, v_0", step.Fronts)
+            Assert.DoesNotContain(@"\text{S}, v_", step.Fronts)
 
     [<Fact>]
     let ``final front highlights exactly the final-state columns`` () =
@@ -97,20 +100,33 @@ module KroneckerStepVizStructural =
     [<Fact>]
     let ``graph figure passes through`` () =
         let step =
-            KroneckerStepViz.renderStep id ntName 4 sourcePairs result.Steps.[0] "DOTSRC" "TIKZSRC"
+            KroneckerStepViz.renderStep id ntName 4 result.Steps.[0] "DOTSRC" "TIKZSRC"
 
         Assert.Equal("DOTSRC", step.GraphDot)
         Assert.Equal("TIKZSRC", step.GraphTikz)
 
 module KroneckerStepVizCompile =
 
-    /// Build the graph figure for a step (full input graph, new NT edges highlighted red).
+    /// Build the graph figure for a step (full input graph, new NT edges drawn and highlighted red).
     let private graphFor (step: KroneckerCfpq.CfpqKronStep<string, string>) : string =
         let newNtEdges =
-            Set.ofList (step.ChangedCells |> List.map (fun c -> (c.Row, c.Col)))
+            step.ChangedCells
+            |> List.map (fun c -> ((c.Row, c.Col), ntName c.Nt))
+            |> Map.ofList
+
+        let newNtEdgeSet = newNtEdges |> Map.toList |> List.map fst |> Set.ofList
 
         let _, tikz =
-            RpqGraphViz.renderGraph id (CfpqInput.toNfa bookGraph) Set.empty Set.empty Set.empty newNtEdges Set.empty
+            RpqGraphViz.renderGraph
+                id
+                (CfpqInput.toNfa bookGraph)
+                Set.empty
+                Set.empty
+                Set.empty
+                newNtEdgeSet
+                Set.empty
+                newNtEdgeSet
+                newNtEdges
 
         tikz
 
@@ -148,7 +164,7 @@ module KroneckerStepVizCompile =
             let step = result.Steps.[i]
 
             let renderedStep =
-                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount sourcePairs step "" (graphFor step)
+                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step "" (graphFor step)
 
             let filled = fill template renderedStep
 

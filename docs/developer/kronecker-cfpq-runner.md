@@ -31,11 +31,13 @@
 4. Writes the step directories via `Helpers.writeKroneckerStepsVisualization`: one
    `step_<iteration>/` per productive iteration with the two-line step visualization —
    `kron.tex` (line 1: the full Kronecker product `M_1 ⊗ M_2 = K`, the operands with set-of-symbols
-   cells and the Boolean result mask), `fronts.tex` (line 2: the MS-BFS initial (seed) and final
-   (visited) fronts, decoded `(A, v)` rows / `(s, v)` columns, the final front with its accept
-   columns highlighted), and the input graph with this iteration's newly added nonterminal edges
-   highlighted red bold (`graph.tikz.tex` default, `graph.dot` with `--use-dot`) — rendered by
-   `KroneckerStepViz` over `RpqGraphViz.renderGraph`.
+   cells and the Boolean result mask with this iteration's newly derived cells highlighted),
+   `fronts.tex` (line 2: the MS-BFS initial (seed) and final (visited) fronts, decoded `(q_i, u_j)`
+   rows / `(q_i, u_j)` columns, the final front with its accept columns highlighted), and the input
+   graph with this iteration's newly added nonterminal edges drawn and highlighted red bold
+   (`graph.tikz.tex` default, `graph.dot` with `--use-dot`) — rendered by `KroneckerStepViz` over
+   `RpqGraphViz.renderGraph` (the new nonterminal edges are passed as `extraEdges`, so they appear
+   on the graph even when they are not input edges).
 5. Writes `result.tex` via `Helpers.renderResult`: the start block's answer matrix
    (`KroneckerCfpq.answer result rsm`) as a Boolean matrix plus `Reachable pairs: N` and the pair
    list in row-major order.

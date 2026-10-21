@@ -19,24 +19,35 @@ module RpqGraphViz =
                       if t.[i, j].IsSome then
                           (i, j) ]
 
-    let private graphEdgeLabel (graph: NFA<'t, int>) (terminalPrinter: 't -> string) (e: int * int) : string =
+    let private graphEdgeLabel
+        (graph: NFA<'t, int>)
+        (terminalPrinter: 't -> string)
+        (extraLabels: Map<int * int, string>)
+        (e: int * int)
+        : string =
         let i, j = e
 
-        match graph.Transitions.[i, j] with
-        | Some symbols ->
-            let terms =
+        // The input-edge label (the terminal labels, or "ε" for an epsilon-only edge).
+        let inputLabel =
+            match graph.Transitions.[i, j] with
+            | Some symbols ->
                 symbols
                 |> NonEmptySet.toSeq
                 |> Seq.choose (function
                     | ATerm t -> Some t
                     | AEpsilon -> None)
                 |> List.ofSeq
+                |> (fun terms ->
+                    if List.isEmpty terms then
+                        "ε"
+                    else
+                        terms |> List.map terminalPrinter |> String.concat ", ")
+            | None -> ""
 
-            if List.isEmpty terms then
-                "ε"
-            else
-                terms |> List.map terminalPrinter |> String.concat ", "
-        | None -> ""
+        // Merge in the derived label (a nonterminal edge added on top of the input graph).
+        match Map.tryFind e extraLabels with
+        | Some lbl -> if inputLabel = "" then lbl else inputLabel + ", " + lbl
+        | None -> inputLabel
 
     /// Vertices used by the paths stored in a path semiring matrix.
     let pathVertices (result: Matrix<Set<int list>>) : Set<int> =
@@ -92,7 +103,10 @@ module RpqGraphViz =
     /// Render the graph with the given highlights (pass empty sets for the plain input
     /// graph): highlightedVertices get the yellow vertex fill, startVertices the green source
     /// fill, frontierVertices light blue, currentEdges render red and bold, pathEdges light
-    /// red. Delegates to the RPQ-dedicated RpqGraphDot / RpqGraphTikz renderers (independent
+    /// red. `extraEdges` are vertex pairs drawn as edges even when not input edges (derived
+    /// nonterminal edges, e.g. the Kronecker CFPQ per-step graph), each labeled from
+    /// `extraEdgeLabels` (merged into the input-edge label when the pair is also an input
+    /// edge). Delegates to the RPQ-dedicated RpqGraphDot / RpqGraphTikz renderers (independent
     /// of the GSS renderers). Returns (dot, tikz).
     let renderGraph
         (terminalPrinter: 't -> string)
@@ -102,6 +116,8 @@ module RpqGraphViz =
         (frontierVertices: Set<int>)
         (currentEdges: Set<int * int>)
         (pathEdges: Set<int * int>)
+        (extraEdges: Set<int * int>)
+        (extraEdgeLabels: Map<int * int, string>)
         : string * string =
         let n = Nfa.stateCount graph
 
@@ -110,8 +126,8 @@ module RpqGraphViz =
                 [ for i in 0 .. n - 1 do
                       i ]
 
-        let gEdges = graphEdgeSet graph
-        let edgeLabel = graphEdgeLabel graph terminalPrinter
+        let gEdges = Set.union (graphEdgeSet graph) extraEdges
+        let edgeLabel = graphEdgeLabel graph terminalPrinter extraEdgeLabels
 
         let dot =
             RpqGraphDot.toDot
@@ -165,7 +181,7 @@ module RpqGraphViz =
                       i ]
 
         let gEdges = graphEdgeSet graph
-        let edgeLabel = graphEdgeLabel graph terminalPrinter
+        let edgeLabel = graphEdgeLabel graph terminalPrinter Map.empty
         let allEdges = Set.union gEdges derivedEdges
 
         // Join the input-edge label and the derived label, dropping exact repeated components

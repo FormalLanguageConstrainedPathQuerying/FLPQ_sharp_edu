@@ -47,15 +47,18 @@ last vertex; trivial single-vertex paths mark their vertex as a frontier positio
 
 `(pathVertices, pathEdges)` — vertices and edges used by the stored paths.
 
-### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> string * string`
+### `renderGraph: ('t -> string) -> NFA<'t, int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int * int> -> Map<int * int, string> -> string * string`
 
 Render the graph with the given highlights (pass empty sets for the plain input
 graph): highlightedVertices get the yellow target fill, startVertices the green source
 fill, frontierVertices the light blue current fill, currentEdges render red and bold,
-pathEdges light red (an edge in both sets renders as current). Vertex fill precedence is
-target > current > start, so a target that is also current or start renders yellow and a
-source that is also current renders lightblue. Delegates emission to `RpqGraphDot.toDot` /
-`RpqGraphTikz.toTikz`. Returns `(dot, tikz)`.
+pathEdges light red (an edge in both sets renders as current). `extraEdges` are vertex
+pairs drawn as edges even when not input edges (derived nonterminal edges, e.g. the
+Kronecker CFPQ per-step graph), each labeled from `extraEdgeLabels` (merged into the
+input-edge label when the pair is also an input edge, e.g. `"a, S"`). Vertex fill
+precedence is target > current > start, so a target that is also current or start renders
+yellow and a source that is also current renders lightblue. Delegates emission to
+`RpqGraphDot.toDot` / `RpqGraphTikz.toTikz`. Returns `(dot, tikz)`.
 Vertex labels are `v_i` (TikZ: `$v_i$`), edge labels are the comma-joined terminal
 labels of the pair (epsilon-only edges label as "ε").
 

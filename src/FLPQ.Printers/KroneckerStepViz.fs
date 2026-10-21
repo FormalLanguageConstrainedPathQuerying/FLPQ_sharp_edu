@@ -42,23 +42,33 @@ module KroneckerStepViz =
             |> Seq.toList
             |> String.concat @"\;"
 
-    /// A labeled matrix (row/column label printers supplied) with the given column highlights,
-    /// wrapped in a shrink-to-fit adjustbox.
+    /// A labeled matrix (row/column label printers supplied) with per-cell highlights, wrapped
+    /// in a shrink-to-fit adjustbox.
     let private labeledMatrix
         (cellPrinter: 'a -> string)
         (m: Matrix<'a>)
         (rowLabel: int -> string)
         (colLabel: int -> string)
-        (highlightCols: Set<int>)
+        (highlights: Matrix.Highlight list)
         : string =
-        let highlights =
-            [ for c in Set.toList highlightCols do
-                  for r in 0 .. Matrix.rows m - 1 ->
-                      { Matrix.Row = r
-                        Matrix.Col = c
-                        Matrix.Label = Matrix.CurrentCell } ]
-
         MatrixTeX.toTeXStyled false false cellPrinter m highlights [] (Some rowLabel) (Some colLabel) false true
+
+    /// Highlight the given (row, col) pairs in yellow (out-of-bounds pairs are dropped).
+    let private cellHighlights (cells: Set<int * int>) (rows: int) (cols: int) : Matrix.Highlight list =
+        cells
+        |> Set.toList
+        |> List.filter (fun (r, c) -> r >= 0 && r < rows && c >= 0 && c < cols)
+        |> List.map (fun (r, c) ->
+            { Matrix.Row = r
+              Matrix.Col = c
+              Matrix.Label = Matrix.CurrentCell })
+
+    /// A subscript that braces multi-digit indices so `q_15` renders as `q_{15}`.
+    let private bracedIndex (prefix: string) (i: int) : string =
+        if i < 10 then
+            sprintf "%s_%d" prefix i
+        else
+            sprintf "%s_{%d}" prefix i
 
     /// Line 1 body: the Kronecker product as one math row `$ M_1 \otimes M_2 = K $`, the
     /// operands with set-of-symbols cells and `K` as a Boolean mask, the whole row wrapped in a
@@ -66,52 +76,73 @@ module KroneckerStepViz =
     let kronBody
         (terminal: 't -> string)
         (ntName: Nonterminal<'nt> -> string)
-        (step: KroneckerCfpq.CfpqKronStep<'nt, 't>)
+        (changedCells: AzimovCfpq.CfpqCell<'nt> list)
+        (m1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>)
+        (m2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>)
+        (k: Matrix<bool>)
         : string =
-        let m1 =
+        let m1Body =
             labeledMatrix
                 (symbolSetCellToTeX terminal ntName)
-                step.M1
-                (fun i -> sprintf "q_%d" i)
-                (fun j -> sprintf "q_%d" j)
-                Set.empty
+                m1
+                (fun i -> bracedIndex "q" i)
+                (fun j -> bracedIndex "q" j)
+                []
 
-        let m2 =
+        let m2Body =
             labeledMatrix
                 (symbolSetCellToTeX terminal ntName)
-                step.M2
-                (fun i -> sprintf "v_%d" i)
-                (fun j -> sprintf "v_%d" j)
-                Set.empty
+                m2
+                (fun i -> bracedIndex "v" i)
+                (fun j -> bracedIndex "v" j)
+                []
 
-        let k =
-            PathSemiringTeX.boolMatrixToTeXBody (fun i -> sprintf "q_%d" i) (fun j -> sprintf "v_%d" j) step.K
+        // The product mask's newly derived cells are the (RSM state, vertex) product-state
+        // pairs of the step's changed cells.
+        let kCells = changedCells |> List.map (fun c -> (c.Row, c.Col)) |> Set.ofList
 
-        let expr = "$" + m1 + @"\quad\otimes\quad" + m2 + @"\quad=\quad" + k + "$"
+        let kBody =
+            labeledMatrix
+                (fun b -> if b then @"\bullet" else @"\cdot")
+                k
+                (fun i -> bracedIndex "q" i)
+                (fun j -> bracedIndex "v" j)
+                (cellHighlights kCells (Matrix.rows k) (Matrix.cols k))
+
+        let expr =
+            "$" + m1Body + @"\quad\otimes\quad" + m2Body + @"\quad=\quad" + kBody + "$"
+
         StepTeX.wrapFormula expr
 
+    /// Highlight the given columns of an `rows`-row matrix (every cell in those columns).
+    let private columnHighlights (cols: Set<int>) (rows: int) : Matrix.Highlight list =
+        cols
+        |> Set.toList
+        |> List.collect (fun c ->
+            [ for r in 0 .. rows - 1 ->
+                  { Matrix.Row = r
+                    Matrix.Col = c
+                    Matrix.Label = Matrix.CurrentCell } ])
+
     /// Line 2 body: the two MS-BFS fronts stacked vertically — the initial (seed) front above the
-    /// final (visited) front, the latter with its `FinalStateCols` columns highlighted. Rows are
-    /// decoded as `(A, v)` source pairs; columns as `(s, v)` product states.
-    let frontsBody
-        (step: KroneckerCfpq.CfpqKronStep<'nt, 't>)
-        (sourcePairs: (Nonterminal<'nt> * int) list)
-        (ntName: Nonterminal<'nt> -> string)
-        (n: int)
-        : string =
-        let rowLabel (i: int) =
-            match List.tryItem i sourcePairs with
-            | Some(a, v) -> @"\text{" + ntName a + "}, v_" + (string v)
-            | None -> sprintf "s_%d" i
-
-        let colLabel (c: int) =
-            let s = c / n
-            let v = c % n
-            sprintf "q_%d, v_%d" s v
-
+    /// final (visited) front, the latter with its `FinalStateCols` columns highlighted. Rows and
+    /// columns are product-state pairs `(q_i, u_j)`: a row is the BFS from source pair
+    /// `(start(A), v)`, labeled with the nonterminal `A` replaced by its start state `q_i`
+    /// (consistent with the column's `(q_i, u_j)` labels).
+    let frontsBody (step: KroneckerCfpq.CfpqKronStep<'nt, 't>) (n: int) : string =
+        let pairLabel (c: int) = sprintf "q_%d, v_%d" (c / n) (c % n)
         let cell b = if b then @"\bullet" else @"\cdot"
-        let initial = labeledMatrix cell step.InitialFront rowLabel colLabel Set.empty
-        let final = labeledMatrix cell step.FinalFront rowLabel colLabel step.FinalStateCols
+
+        let initial = labeledMatrix cell step.InitialFront pairLabel pairLabel []
+
+        let final =
+            labeledMatrix
+                cell
+                step.FinalFront
+                pairLabel
+                pairLabel
+                (columnHighlights step.FinalStateCols (Matrix.rows step.FinalFront))
+
         initial + "\n\n" + final
 
     /// Render one Kronecker step into its two line bodies and the pass-through graph figure.
@@ -119,12 +150,11 @@ module KroneckerStepViz =
         (terminal: 't -> string)
         (ntName: Nonterminal<'nt> -> string)
         (n: int)
-        (sourcePairs: (Nonterminal<'nt> * int) list)
         (step: KroneckerCfpq.CfpqKronStep<'nt, 't>)
         (graphDot: string)
         (graphTikz: string)
         : KroneckerVisualizationStep =
-        { Kron = kronBody terminal ntName step
-          Fronts = frontsBody step sourcePairs ntName n
+        { Kron = kronBody terminal ntName step.ChangedCells step.M1 step.M2 step.K
+          Fronts = frontsBody step n
           GraphDot = graphDot
           GraphTikz = graphTikz }
