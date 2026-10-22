@@ -77,6 +77,82 @@ let ``runKronecker reachability writes the two-line step artifacts per productiv
     cleanup outDir
 
 [<Fact>]
+let ``runKronecker per-step graph preserves earlier nonterminal edges (black) and highlights only the current one (red)``
+    ()
+    =
+    let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker false
+
+    let stepDirs =
+        Directory.GetDirectories(outDir, "step_*")
+        |> Array.map Path.GetFileName
+        |> Array.toList
+        |> List.filter (fun d -> d.StartsWith "step_")
+        |> List.map (fun d -> Path.Combine(outDir, d))
+        |> List.sortBy (fun d ->
+            let digits =
+                Path.GetFileName d
+                |> Seq.filter (fun c -> c >= '0' && c <= '9')
+                |> Seq.map string
+                |> String.concat ""
+
+            if digits.Length > 0 then int digits else 0)
+
+    Assert.True(stepDirs.Length >= 2, "Expected at least two productive iterations to compare")
+
+    // A TikZ edge line is `v<i> ->[<label>] v<j>;`. The red ones carry "red, thick".
+    let redEdges (g: string) : string list =
+        g.Split('\n')
+        |> Array.filter (fun line ->
+            let t = line.Trim()
+            t.StartsWith "v" && t.Contains "red, thick" && t.Contains "->")
+        |> Array.map (fun line ->
+            let t = line.Trim()
+            let from = t.Substring(0, t.IndexOf(' '))
+            let to_ = t.Substring(t.LastIndexOf("v") + 1).TrimEnd(';', ',')
+            from + "->" + to_)
+        |> List.ofArray
+
+    let graphOf (dir: string) =
+        File.ReadAllText(Path.Combine(dir, "graph.tikz.tex"))
+
+    let firstRed = redEdges (graphOf stepDirs.[0])
+    Assert.Equal(1, List.length firstRed)
+
+    // The first step's red edge (e.g. "v1->3") is preserved in step 2 as a black edge: the
+    // endpoints still form an edge, but it no longer carries "red, thick".
+    let firstEdge = List.head firstRed
+    let fromV = firstEdge.Substring(0, firstEdge.IndexOf "->")
+    let toV = firstEdge.Substring(firstEdge.IndexOf "->" + 2)
+
+    let secondGraph = graphOf stepDirs.[1]
+    // The black preserved edge: a line like `v1 ->["S"] v3;` (no "red, thick").
+    let blackEdgeLine =
+        secondGraph.Split('\n')
+        |> Array.filter (fun l ->
+            let t = l.Trim()
+
+            t.StartsWith fromV
+            && t.Contains toV
+            && t.Contains "->"
+            && not (t.Contains "red, thick"))
+
+    Assert.True(
+        Array.length blackEdgeLine >= 1,
+        sprintf
+            "Expected black edge %s->%s in step 2, graph=[%s]"
+            fromV
+            toV
+            (secondGraph.Substring(0, min 400 (String.length secondGraph)))
+    )
+
+    // Step 2's own red edge is present and is not the first edge.
+    let secondRed = redEdges secondGraph
+    Assert.Equal(1, List.length secondRed)
+    Assert.DoesNotContain(firstEdge, secondRed)
+
+    cleanup outDir
+
+[<Fact>]
 let ``runKronecker dot mode writes graph.dot per step`` () =
     let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker true
 

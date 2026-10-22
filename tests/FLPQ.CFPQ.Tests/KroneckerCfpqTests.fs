@@ -4,6 +4,7 @@ open Xunit
 open FLPQ.CFPQ
 open FLPQ.Languages
 open FLPQ.LinearAlgebra
+open FLPQ.TestUtilities
 
 // The book's per-iteration edge additions (TensorProduct.tex example): one new S-cell per
 // productive iteration, in the order the book lists them.
@@ -148,3 +149,66 @@ let ``each step carries a well-formed product and MS-BFS fronts`` () =
 
     for k in 0 .. result.Steps.Length - 1 do
         Assert.Equal<Set<int * int>>(cumulative.[k], m2Cells result.Steps.[k])
+
+[<Fact>]
+let ``K changed cells equal the product states derived by each changed cell`` () =
+    let rsm = CfpqTestHelpers.tensorBookRsm
+    let graph = CfpqTestHelpers.tensorBookGraph
+    let result = KroneckerCfpq.evaluate rsm graph
+
+    // The invariant (independent of the algorithm's internals): for each changed cell
+    // (A, i, j), the K product state (p, j) is derived iff M1 has a non-empty transition
+    // p --A--> start(A). The book RSM has no such transition (nothing reaches block start 0),
+    // so every step's K highlight set is empty.
+    for step in result.Steps do
+        let m1 = step.M1
+
+        let expected =
+            step.ChangedCells
+            |> List.collect (fun c ->
+                let sA = rsm.BlockStart.[c.Nt]
+
+                [ for p in 0 .. (Matrix.rows m1 - 1) do
+                      if Option.isSome m1.[p, sA] then
+                          (p, c.Col) ])
+            |> Set.ofList
+
+        Assert.Equal<Set<int * int>>(expected, step.KChangedCells)
+
+    for step in result.Steps do
+        Assert.Empty(step.KChangedCells)
+
+    // A non-empty case: an RSM with a transition into a block start. T -> S (2 --T--> 3) and
+    // 3 --S--> 0 (into block S's start 0). S -> a (0 --a--> 1, final 1). Over a 2-vertex a-cycle
+    // the a-edges 0->1 and 1->0 make S productive, so changed cells (S, R, 1) and (S, 0, 0) are
+    // derived and the S transition 3 --S--> 0 turns on the K product states (3, 1) and (3, 0).
+    let s = Nonterminal "S"
+    let t = Nonterminal "T"
+
+    let rsm2 =
+        RsmFixtures.mkRsm
+            [| for i in 0..3 ->
+                   { BlockNonterminal = if i <= 1 then s else t
+                     LocalState = i
+                     IsFinal = (i = 1) } |]
+            [ { From = 0
+                Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal "a"))
+                To = 1 }
+              { From = 2
+                Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm t)
+                To = 3 }
+              { From = 3
+                Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm s)
+                To = 0 } ]
+            [ (s, 0); (t, 2) ]
+            [ 1 ]
+            s
+
+    let graph2: CfpqInput.CfpqGraph<string> =
+        { VertexCount = 2
+          Labels = Map.ofList [ "a", Matrix.create 2 2 (fun i j -> (i, j) = (0, 1) || (i, j) = (1, 0)) ] }
+
+    let result2 = KroneckerCfpq.evaluate rsm2 graph2
+    let kCells2 = result2.Steps |> List.collect (fun s -> s.KChangedCells |> Set.toList)
+    Assert.Contains((3, 1), kCells2)
+    Assert.Contains((3, 0), kCells2)

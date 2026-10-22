@@ -76,7 +76,8 @@ module KroneckerStepViz =
     let kronBody
         (terminal: 't -> string)
         (ntName: Nonterminal<'nt> -> string)
-        (changedCells: AzimovCfpq.CfpqCell<'nt> list)
+        (n: int)
+        (kChanged: Set<int * int>)
         (m1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>)
         (m2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>)
         (k: Matrix<bool>)
@@ -97,17 +98,19 @@ module KroneckerStepViz =
                 (fun j -> bracedIndex "v" j)
                 []
 
-        // The product mask's newly derived cells are the (RSM state, vertex) product-state
-        // pairs of the step's changed cells.
-        let kCells = changedCells |> List.map (fun c -> (c.Row, c.Col)) |> Set.ofList
+        // The product mask is a (RSM state, vertex) product-state matrix, so its row/column
+        // labels are the pairs (q_i, v_j), consistent with the MS-BFS fronts; the step's newly
+        // derived product-state cells are highlighted.
+        let pairLabel c =
+            sprintf "%s, %s" (bracedIndex "q" (c / n)) (bracedIndex "v" (c % n))
 
         let kBody =
             labeledMatrix
                 (fun b -> if b then @"\bullet" else @"\cdot")
                 k
-                (fun i -> bracedIndex "q" i)
-                (fun j -> bracedIndex "v" j)
-                (cellHighlights kCells (Matrix.rows k) (Matrix.cols k))
+                pairLabel
+                pairLabel
+                (cellHighlights kChanged (Matrix.rows k) (Matrix.cols k))
 
         let expr =
             "$" + m1Body + @"\quad\otimes\quad" + m2Body + @"\quad=\quad" + kBody + "$"
@@ -154,7 +157,7 @@ module KroneckerStepViz =
         (graphDot: string)
         (graphTikz: string)
         : KroneckerVisualizationStep =
-        { Kron = kronBody terminal ntName step.ChangedCells step.M1 step.M2 step.K
+        { Kron = kronBody terminal ntName n step.KChangedCells step.M1 step.M2 step.K
           Fronts = frontsBody step n
           GraphDot = graphDot
           GraphTikz = graphTikz }

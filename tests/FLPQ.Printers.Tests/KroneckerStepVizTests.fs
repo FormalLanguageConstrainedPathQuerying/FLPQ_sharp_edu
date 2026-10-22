@@ -68,10 +68,15 @@ module KroneckerStepVizStructural =
             Assert.Contains("v_0", step.Kron)
 
     [<Fact>]
-    let ``kron product result highlights the step's newly derived cells`` () =
+    let ``kron product result has pair-based labels and highlights the step's derived cells`` () =
         for step in rendered do
-            // Every productive iteration derives cells, so the result mask carries highlights.
-            Assert.True(count @"\cellcolor{yellow}" step.Kron >= 1, "no highlighted cell in the product result")
+            // The result mask is a product-state matrix: row/column labels are the pairs
+            // (q_i, v_j), matching the fronts' product-state labeling.
+            Assert.Contains("q_0, v_0", step.Kron)
+            Assert.Contains("q_0, v_3", step.Kron)
+            // The book RSM has no transition into its block start state, so no changed cell
+            // derives a new K product state: the mask carries no highlights.
+            Assert.Equal(0, count @"\cellcolor{yellow}" step.Kron)
 
     [<Fact>]
     let ``kron operands show set-of-symbols cells`` () =
@@ -91,11 +96,24 @@ module KroneckerStepVizStructural =
             Assert.DoesNotContain(@"\text{S}, v_", step.Fronts)
 
     [<Fact>]
-    let ``final front highlights exactly the final-state columns`` () =
-        for step in rendered do
+    let ``final front highlights exactly the RSM final-state columns`` () =
+        let n = bookGraph.VertexCount
+        let finalStates = Set.toList (RSM.blockFinalStates (Nonterminal "S") bookRsm)
+
+        let finalCols =
+            [ for f in finalStates do
+                  for v in 0 .. n - 1 -> f * n + v ]
+            |> Set.ofList
+
+        for i, step in List.indexed rendered do
+            let rawStep = result.Steps.[i]
+            // The step's FinalStateCols are exactly the (final state, vertex) product-state
+            // columns of the RSM.
+            Assert.Equal<Set<int>>(finalCols, rawStep.FinalStateCols)
+
             let yellow = count @"\cellcolor{yellow}" step.Fronts
-            // 4 rows (one per source) x 4 final-state columns (final state 3, vertices 0..3).
-            Assert.Equal(4 * 4, yellow)
+            // 4 rows (one per source) x |FinalStateCols| final-state columns.
+            Assert.Equal(4 * (finalCols |> Set.toList |> List.length), yellow)
 
     [<Fact>]
     let ``graph figure passes through`` () =

@@ -42,13 +42,15 @@ One edge-label-matrix cell as a set of symbols: `None` → `\varnothing`; `Some 
 comma-joined symbols, terminals via the terminal printer and nonterminals in `\text{...}`
 (`\varepsilon` for `AEpsilon`).
 
-### `kronBody: ('t -> string) -> (Nonterminal<'nt> -> string) -> CfpqCell<'nt> list -> Matrix<Option<...>> -> Matrix<Option<...>> -> Matrix<bool> -> string`
+### `kronBody: ('t -> string) -> (Nonterminal<'nt> -> string) -> int -> Set<int * int> -> Matrix<Option<...>> -> Matrix<Option<...>> -> Matrix<bool> -> string`
 
 The line-1 body: `$ M_1 \otimes M_2 = K $`. `M_1` (RSM transitions, `q_i` labels) and `M_2`
 (edge-label matrix, `v_i` labels) use `symbolSetCellToTeX`; `K` is the Boolean product mask
-(`\bullet`/`\cdot`) with the step's `changedCells` highlighted yellow. Row/column labels are
-`q_i`/`v_i` with multi-digit subscripts braced (`q_{15}`, not `q_15`). The whole row is wrapped
-in `StepTeX.wrapFormula`.
+(`\bullet`/`\cdot`) with the step's `KChangedCells` highlighted yellow. `K` is a product-state
+matrix (RSM state × vertex), so its row/column labels are the product-state pairs
+`(q_i, v_j)` — the same pair labeling as the fronts, with multi-digit subscripts braced
+(`q_{15}, v_{15}`); `M_1`/`M_2` keep their per-space `q_i`/`v_i` labels (they live in a single
+index space). The whole row is wrapped in `StepTeX.wrapFormula`.
 
 ### `frontsBody: CfpqKronStep<'nt,'t> -> int -> string`
 
@@ -71,8 +73,8 @@ yellow.
 | Reuse `MatrixTeX.toTeXStyled`, `PathSemiringTeX`, `StepTeX` | No new matrix primitive: labeled matrices with column highlights via `MatrixTeX`, the Boolean mask via `PathSemiringTeX.boolMatrixToTeXBody`, and shrink-to-fit wrapping via `StepTeX` |
 | `M_1`/`M_2` set cells are "for visualization only" | The book shows the product operands with their symbol-set cells; `M_1` is constant and `M_2` is the per-iteration snapshot, so the operands are self-contained in the step |
 | Decoded `(q_i, u_j)` front labels (rows and columns) | The raw product indices are opaque; decoding makes the MS-BFS fronts readable. Rows are the BFS source pairs `(start(A), v)` labeled `(q_i, u_j)` (the nonterminal replaced by its start state, consistent with the columns), so a row is directly readable as the product state the BFS starts from |
-| Final front highlights `FinalStateCols` | The MS-BFS accept-reading is "reachable iff some final-state column is visited"; highlighting those columns makes the reading visible |
-| `K` highlights the step's changed cells | The newly derived product edges (this iteration's nonterminal derivations) are highlighted in the product mask so the reader can see which cells the iteration added |
+| Final front highlights `FinalStateCols` (the RSM final-state columns) | The MS-BFS accept-reading is "reachable iff some (RSM final state, vertex) column is visited"; `FinalStateCols` is exactly that set, so highlighting those columns in the final front shows which cells correspond to RSM final states |
+| `K` highlights the step's `KChangedCells` | The newly derived product edges (this iteration's nonterminal derivations) are highlighted in the product mask so the reader can see which cells the iteration added. `KChangedCells` (computed by `KroneckerCfpq.evaluate`) are the product states `(p, j)` turned on by each changed cell `(A, i, j)`: every RSM state `p` with a non-empty transition `M1.[p, start(A)]`, at vertex `j`. Highlighting the raw `ChangedCells` (graph vertex pairs) directly as `K` indices was wrong — `K` is a product-state matrix, so a graph pair `(i, j)` misread as a product index hit unrelated cells |
 | Multi-digit subscripts braced (`q_{15}`) | Unbraced `q_15` renders as `q` with subscript `1` followed by a `5`; bracing renders the full index as the subscript |
 
 ## See Also

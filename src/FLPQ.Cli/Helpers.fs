@@ -310,17 +310,29 @@ module Helpers =
         : unit =
         let n = graph.VertexCount
 
+        /// Nonterminal edges derived by every earlier iteration, preserved (black) in each
+        /// later step's graph so the reader can see how the derived graph grows; only the
+        /// current iteration's edges are highlighted red bold.
+        let mutable seenEdges: Map<int * int, string> = Map.empty
+
         for step in steps do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
 
-            // The newly derived nonterminal edges: (u, v) vertex pairs labeled by the
-            // nonterminal, drawn red bold on top of the input graph.
+            // The newly derived nonterminal edges of this iteration: (u, v) vertex pairs
+            // labeled by the nonterminal, drawn red bold on top of the input graph.
             let newNtEdges =
                 step.ChangedCells
                 |> List.map (fun c -> ((c.Row, c.Col), ntName c.Nt))
                 |> Map.ofList
 
             let newNtEdgeSet = newNtEdges |> Map.toList |> List.map fst |> Set.ofList
+
+            let allNtEdges =
+                Map.toList newNtEdges @ Map.toList seenEdges
+                |> List.distinctBy fst
+                |> Map.ofList
+
+            let allNtEdgeSet = Map.toList allNtEdges |> List.map fst |> Set.ofList
 
             let graphDot, graphTikz =
                 RpqGraphViz.renderGraph
@@ -331,8 +343,10 @@ module Helpers =
                     Set.empty
                     newNtEdgeSet
                     Set.empty
-                    newNtEdgeSet
-                    newNtEdges
+                    allNtEdgeSet
+                    allNtEdges
+
+            seenEdges <- allNtEdges
 
             let rendered = KroneckerStepViz.renderStep terminal ntName n step graphDot graphTikz
 

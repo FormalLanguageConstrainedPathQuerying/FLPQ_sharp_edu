@@ -32,6 +32,10 @@ module KroneckerCfpq =
             M2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>
             /// The Kronecker product result: the Boolean product-graph adjacency mask (qn × qn).
             K: Matrix<bool>
+            /// The product-state cells (RSM state, vertex) of `K` newly turned on by this
+            /// iteration's changed cells: for each changed cell `(A, i, j)`, every RSM state
+            /// `p` with a non-empty transition `M1.[p, start(A)]`, at vertex `j`.
+            KChangedCells: Set<int * int>
             /// The MS-BFS initial (seed) front: a 1 at each (block start, vertex) source pair.
             InitialFront: Matrix<bool>
             /// The MS-BFS final front: the visited matrix (reachability from every source).
@@ -57,6 +61,24 @@ module KroneckerCfpq =
         match cell with
         | Some nes -> NonEmptySet.contains label nes
         | None -> false
+
+    /// The product-state cells `(p, j)` newly turned on in the Kronecker mask `K` by a set of
+    /// changed edge-label cells: adding nonterminal `A` to the edge `j -> i` makes `K.[p, j]`
+    /// true for every RSM state `p` with a non-empty transition `M1.[p, start(A)]` (the product
+    /// state that consumes the `A` edge, then takes the vertex edge `j -> i`).
+    let private kChangedCells
+        (rsm: RSM<'t, 'nt>)
+        (m1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t, 'nt>>>>>)
+        (changed: AzimovCfpq.CfpqCell<'nt> list)
+        : Set<int * int> =
+        changed
+        |> List.collect (fun c ->
+            let sA = rsm.BlockStart.[c.Nt]
+
+            [ for p in 0 .. (Matrix.rows m1 - 1) do
+                  if Option.isSome m1.[p, sA] then
+                      (p, c.Col) ])
+        |> Set.ofList
 
     /// Add a label to a cell of the edge-label matrix.
     let private addLabel
@@ -193,6 +215,7 @@ module KroneckerCfpq =
                       M1 = rsm.Transitions
                       M2 = m2Snapshot
                       K = k
+                      KChangedCells = kChangedCells rsm rsm.Transitions sorted
                       InitialFront = initialFront
                       FinalFront = visited
                       FinalStateCols = finalStateCols }

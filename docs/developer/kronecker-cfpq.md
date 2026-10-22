@@ -69,8 +69,9 @@ per-iteration data for step-by-step visualization (see
   Matrices: Map<Nonterminal<'nt>, Matrix<bool option>>
   M1: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t,'nt>>>>>   // RSM transitions (constant)
   M2: Matrix<Option<NonEmptySet<AutomatonLabel<RsmSymbol<'t,'nt>>>>>   // edge-label matrix this iteration
-  K: Matrix<bool>                                                       // Kronecker result mask (qn x qn)
-  InitialFront: Matrix<bool>                                            // MS-BFS seed front (k x qn)
+   K: Matrix<bool>                                                       // Kronecker result mask (qn x qn)
+   KChangedCells: Set<int * int>                                         // product states (p, j) turned on by this iteration's changed cells
+   InitialFront: Matrix<bool>                                            // MS-BFS seed front (k x qn)
   FinalFront: Matrix<bool>                                              // MS-BFS visited (k x qn)
   FinalStateCols: Set<int> }                                            // (final f, vertex v) columns
 ```
@@ -113,6 +114,7 @@ The reachability answer: the start block's matrix (`Map.find rsm.StartBlock resu
 | The step is its own record, not an Azimov alias | Kronecker captures per-iteration data (Kronecker operands/result, MS-BFS fronts) that Azimov does not produce; a separate `CfpqKronStep<'nt,'t>` keeps the Azimov `CfpqStep`/`CfpqCell` types untouched and self-contains each step for rendering. |
 | `FinalFront`/`InitialFront` from `MsBfs.msBfsWithTrace` | The MS-BFS loop is factored into `msBfsWithTrace` so the initial (seed) front and the final visited front are both available for the step visualization; `msBfs` projects out the trace. |
 | `FinalStateCols` computed once | The accept-reading columns `(final f, vertex v)` are independent of the nonterminal and of the iteration, so they are built once outside the loop and stored (by value) on each step. |
+| `KChangedCells` = product states turned on by the step's changed cells | `K` is a product-state matrix (RSM state × vertex), while `ChangedCells` are graph vertex pairs. For each changed cell `(A, i, j)`, the product states `(p, j)` turned on are the RSM states `p` with a non-empty transition `M1.[p, start(A)]`. Stored per step so the renderer can highlight the cells the iteration actually added to the product mask. |
 
 ## Book Reference
 

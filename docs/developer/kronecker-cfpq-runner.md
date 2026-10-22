@@ -34,10 +34,13 @@
    cells and the Boolean result mask with this iteration's newly derived cells highlighted),
    `fronts.tex` (line 2: the MS-BFS initial (seed) and final (visited) fronts, decoded `(q_i, u_j)`
    rows / `(q_i, u_j)` columns, the final front with its accept columns highlighted), and the input
-   graph with this iteration's newly added nonterminal edges drawn and highlighted red bold
+   graph with this iteration's newly added nonterminal edges drawn and highlighted red bold, plus
+   every earlier iteration's nonterminal edges preserved in black (the derived graph grows over
+   iterations; only the current step's edges are highlighted)
    (`graph.tikz.tex` default, `graph.dot` with `--use-dot`) — rendered by `KroneckerStepViz` over
-   `RpqGraphViz.renderGraph` (the new nonterminal edges are passed as `extraEdges`, so they appear
-   on the graph even when they are not input edges).
+   `RpqGraphViz.renderGraph` (the current edges are passed as `currentEdges` (red bold); all
+   accumulated edges — current plus prior — as `extraEdges`/`extraEdgeLabels`, so prior edges
+   appear black and the current ones red bold).
 5. Writes `result.tex` via `Helpers.renderResult`: the start block's answer matrix
    (`KroneckerCfpq.answer result rsm`) as a Boolean matrix plus `Reachable pairs: N` and the pair
    list in row-major order.
