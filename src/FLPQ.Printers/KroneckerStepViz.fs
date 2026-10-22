@@ -11,9 +11,9 @@ open FLPQ.LinearAlgebra
 /// set-of-symbols cells, and the Boolean product mask with its Kronecker block rules and the
 /// newly filled cells highlighted); line 2 is the MS-BFS initial (seed) and final (visited)
 /// fronts, decoded with `(q_i, v_j)` product-state rows and columns, the final front with its
-/// newly filled cells (the diff against the previous iteration) highlighted. The renderer is
-/// pure: it only formats the step's stored matrices and passes the graph figure through (built
-/// by the caller via `RpqGraphViz`).
+/// RSM final-state cells highlighted (the accept-reading). The renderer is pure: it only
+/// formats the step's stored matrices and passes the graph figure through (built by the caller
+/// via `RpqGraphViz`).
 module KroneckerStepViz =
 
     /// One rendered Kronecker step: the two line bodies (each already wrapped in a shrink-to-fit
@@ -74,9 +74,11 @@ module KroneckerStepViz =
 
     /// The K product mask as a pNiceMatrix with the Kronecker product structure made visible:
     /// `K` is qn × qn (q RSM states × n vertices each), so it splits into a q × q grid of n × n
-    /// blocks. Thin rules (lines only, no fill) separate the blocks: a vertical rule after every
-    /// n-th data column and a horizontal rule after every n-th data row. The row/column labels are
-    /// the product-state pairs `(q_i, v_j)`; the cells in `highlights` are shaded.
+    /// blocks. Thin rules (lines only, no fill) separate the blocks: a vertical rule at the block
+    /// boundaries (after the last column of every block except the last) and a horizontal rule
+    /// after every n-th data row. The row/column labels are the product-state pairs `(q_i, v_j)`;
+    /// the cells in `highlights` are shaded. The header row carries an empty corner cell (the
+    /// pNiceMatrix top-left), matching `MatrixTeX.toTeXStyled`, so the column labels align.
     let private kMatrixWithRules
         (k: Matrix<bool>)
         (n: int)
@@ -96,17 +98,19 @@ module KroneckerStepViz =
 
         sb.Append(@"\begin{pNiceMatrix}[first-row,first-col]").AppendLine() |> ignore
 
-        // Header row: column labels, with a vertical rule after the last column of every block.
+        // Header row: an empty corner cell (the pNiceMatrix top-left), then the column labels,
+        // with a vertical rule at the right edge of the last column of every block except the
+        // last (i.e. the block boundaries, between columns n-1|n, 2n-1|2n, ...).
         let headerCells =
             [ for c in 0 .. size - 1 do
                   let lbl = colLabel c
 
-                  if c > 0 && c % n = 0 then
+                  if c % n = n - 1 && c < size - 1 then
                       lbl + @"\vrule width 0.4pt"
                   else
                       lbl ]
 
-        sb.Append((" " + String.concat " & " headerCells) + @" \\").AppendLine()
+        sb.Append(("  & " + String.concat " & " headerCells) + @" \\").AppendLine()
         |> ignore
 
         for r in 0 .. size - 1 do
@@ -174,13 +178,22 @@ module KroneckerStepViz =
 
         StepTeX.wrapFormula expr
 
+    /// The filled cells of a Boolean matrix whose column is in `cols` — the accept-reading cells:
+    /// a reached product state in one of the RSM final-state columns.
+    let private finalStateCells (m: Matrix<bool>) (cols: Set<int>) : Set<int * int> =
+        [ for r in 0 .. (Matrix.rows m - 1) do
+              for c in 0 .. (Matrix.cols m - 1) do
+                  if m.[r, c] && Set.contains c cols then
+                      (r, c) ]
+        |> Set.ofList
+
     /// Line 2 body: the two MS-BFS fronts stacked vertically — the initial (seed) front above the
-    /// final (visited) front, the latter with its newly filled cells (the diff against the
-    /// previous iteration's final front) highlighted. Rows and columns are product-state pairs
-    /// `(q_i, u_j)`: a row is the BFS from source pair `(start(A), v)`, labeled with the
-    /// nonterminal `A` replaced by its start state `q_i` (consistent with the column's
-    /// `(q_i, u_j)` labels).
-    let frontsBody (step: KroneckerCfpq.CfpqKronStep<'nt, 't>) (n: int) (frontNewCells: Set<int * int>) : string =
+    /// final (visited) front, the latter with its RSM final-state cells highlighted (the filled
+    /// cells in the `FinalStateCols` columns — the accept-reading of the MS-BFS result). Rows and
+    /// columns are product-state pairs `(q_i, u_j)`: a row is the BFS from source pair
+    /// `(start(A), v)`, labeled with the nonterminal `A` replaced by its start state `q_i`
+    /// (consistent with the column's `(q_i, u_j)` labels).
+    let frontsBody (step: KroneckerCfpq.CfpqKronStep<'nt, 't>) (n: int) : string =
         let pairLabel (c: int) =
             sprintf "%s, %s" (bracedIndex "q" (c / n)) (bracedIndex "v" (c % n))
 
@@ -194,25 +207,27 @@ module KroneckerStepViz =
                 step.FinalFront
                 pairLabel
                 pairLabel
-                (cellHighlights frontNewCells (Matrix.rows step.FinalFront) (Matrix.cols step.FinalFront))
+                (cellHighlights
+                    (finalStateCells step.FinalFront step.FinalStateCols)
+                    (Matrix.rows step.FinalFront)
+                    (Matrix.cols step.FinalFront))
 
         initial + "\n\n" + final
 
     /// Render one Kronecker step into its two line bodies and the pass-through graph figure.
-    /// `kNewCells` and `frontNewCells` are the cells that turned on for the first time this
-    /// iteration (the diff against the previous iteration's K and final front, respectively); the
-    /// caller computes them (it walks the steps in order).
+    /// `kNewCells` is the set of `K` cells that turned on for the first time this iteration (the
+    /// diff against the previous iteration's `K`); the caller computes it (it walks the steps in
+    /// order). The final front highlights its own `FinalStateCols` cells (no parameter needed).
     let renderStep
         (terminal: 't -> string)
         (ntName: Nonterminal<'nt> -> string)
         (n: int)
         (step: KroneckerCfpq.CfpqKronStep<'nt, 't>)
         (kNewCells: Set<int * int>)
-        (frontNewCells: Set<int * int>)
         (graphDot: string)
         (graphTikz: string)
         : KroneckerVisualizationStep =
         { Kron = kronBody terminal ntName n kNewCells step.M1 step.M2 step.K
-          Fronts = frontsBody step n frontNewCells
+          Fronts = frontsBody step n
           GraphDot = graphDot
           GraphTikz = graphTikz }

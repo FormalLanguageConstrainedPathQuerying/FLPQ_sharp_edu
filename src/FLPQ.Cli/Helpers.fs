@@ -315,11 +315,10 @@ module Helpers =
         /// current iteration's edges are highlighted red bold.
         let mutable seenEdges: Map<int * int, string> = Map.empty
 
-        /// The true cells of the previous iteration's K mask and final front, so each step can
-        /// highlight only the cells that turned on for the first time this iteration (the diff).
-        /// Both grow monotonically across iterations.
+        /// The true cells of the previous iteration's K mask, so each step can highlight only the
+        /// K cells that turned on for the first time this iteration (the diff). K grows
+        /// monotonically across iterations.
         let mutable prevK: Set<int * int> = Set.empty
-        let mutable prevFront: Set<int * int> = Set.empty
 
         /// The cells (row, col) of a Boolean matrix whose value is true.
         let trueCells (m: Matrix<bool>) : Set<int * int> =
@@ -332,10 +331,9 @@ module Helpers =
         for step in steps do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
 
-            // The cells that turned on for the first time this iteration (the diff against the
-            // previous iteration's K and final front).
+            // The K cells that turned on for the first time this iteration (the diff against the
+            // previous iteration's K).
             let kNewCells = Set.difference (trueCells step.K) prevK
-            let frontNewCells = Set.difference (trueCells step.FinalFront) prevFront
 
             // The newly derived nonterminal edges of this iteration: (u, v) vertex pairs
             // labeled by the nonterminal, drawn red bold on top of the input graph.
@@ -368,10 +366,9 @@ module Helpers =
             seenEdges <- allNtEdges
 
             let rendered =
-                KroneckerStepViz.renderStep terminal ntName n step kNewCells frontNewCells graphDot graphTikz
+                KroneckerStepViz.renderStep terminal ntName n step kNewCells graphDot graphTikz
 
             prevK <- trueCells step.K
-            prevFront <- trueCells step.FinalFront
 
             writeOutputFile (Path.Combine(stepDir, "kron.tex")) rendered.Kron
             writeOutputFile (Path.Combine(stepDir, "fronts.tex")) rendered.Fronts

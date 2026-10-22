@@ -56,22 +56,22 @@ so `kronBody` draws thin block-splitting rules (a vertical rule after every n-th
 a horizontal rule after every n-th data row) to make the block structure visible. The whole row
 is wrapped in `StepTeX.wrapFormula`.
 
-### `frontsBody: CfpqKronStep<'nt,'t> -> int -> Set<int * int> -> string`
+### `frontsBody: CfpqKronStep<'nt,'t> -> int -> string`
 
 The line-2 body: the initial (seed) front above the final (visited) front. Rows and columns are
 product-state pairs `(q_i, u_j)` (`q_<s>, v_<v>`); a row is the BFS from source pair
 `(start(A), v)`, labeled with the nonterminal `A` replaced by its start state `q_i` (consistent
-with the column's `(q_i, u_j)` labels). The final front highlights only the cells that turned on
-for the first time this iteration (`frontNewCells`, the diff against the previous iteration's
-final front) yellow.
+with the column's `(q_i, u_j)` labels). The final front highlights its RSM final-state cells
+(the filled cells in the `FinalStateCols` columns — the accept-reading of the MS-BFS result)
+yellow.
 
-### `renderStep: ('t -> string) -> (Nonterminal<'nt> -> string) -> int -> CfpqKronStep<'nt,'t> -> Set<int * int> -> Set<int * int> -> string -> string -> KroneckerVisualizationStep`
+### `renderStep: ('t -> string) -> (Nonterminal<'nt> -> string) -> int -> CfpqKronStep<'nt,'t> -> Set<int * int> -> string -> string -> KroneckerVisualizationStep`
 
-`renderStep terminal ntName n step kNewCells frontNewCells graphDot graphTikz` builds the two
-line bodies (`kronBody`, `frontsBody`) and pairs them with the caller-supplied graph figure.
-`kNewCells` / `frontNewCells` are the cells that turned on for the first time this iteration (the
-diff against the previous iteration's `K` / final front); the caller (the CLI writer) walks the
-steps in order to compute them.
+`renderStep terminal ntName n step kNewCells graphDot graphTikz` builds the two line bodies
+(`kronBody`, `frontsBody`) and pairs them with the caller-supplied graph figure. `kNewCells` is
+the set of `K` cells that turned on for the first time this iteration (the diff against the
+previous iteration's `K`); the caller (the CLI writer) walks the steps in order to compute it.
+The final front highlights its own `FinalStateCols` cells (no parameter needed).
 
 ## Design Decisions
 
@@ -81,10 +81,10 @@ steps in order to compute them.
 | Reuse `MatrixTeX.toTeXStyled`, `StepTeX` | No new matrix primitive for the operands/fronts: labeled matrices with per-cell highlights via `MatrixTeX`, shrink-to-fit wrapping via `StepTeX`. The K mask is built directly (via `kMatrixWithRules`) because `MatrixTeX.toTeXStyled` has no block-rule support |
 | `M_1`/`M_2` set cells are "for visualization only" | The book shows the product operands with their symbol-set cells; `M_1` is constant and `M_2` is the per-iteration snapshot, so the operands are self-contained in the step |
 | Decoded `(q_i, u_j)` front labels (rows and columns) | The raw product indices are opaque; decoding makes the MS-BFS fronts readable. Rows are the BFS source pairs `(start(A), v)` labeled `(q_i, u_j)` (the nonterminal replaced by its start state, consistent with the columns), so a row is directly readable as the product state the BFS starts from |
-| Final front highlights the newly filled cells (`frontNewCells`) | The reader wants to see what the iteration added to the reachability front, not the accumulated whole. `frontNewCells` = `trueCells(FinalFront) \ trueCells(prev FinalFront)` (per-cell diff); the final front and K both grow monotonically, so the diff is well-defined. The first step (no previous) highlights its whole final front. |
+| Final front highlights the RSM final-state cells | The MS-BFS accept-reading is "the path language is recognized iff some (RSM final state, vertex) product state is reached". `frontsBody` highlights the filled cells of the final front whose column is in `FinalStateCols` (the (final f, vertex v) product-state columns) — per-cell, so only the actually-reached final states are lit, not the whole columns. |
 | `K` highlights the newly filled cells (`kNewCells`) | The reader wants to see what the iteration added to the product mask. `kNewCells` = `trueCells(K) \ trueCells(prev K)`. (An earlier version highlighted "cells derived by the changed cells" via `M1.[p, start(A)]`; that set is structurally empty for block-structured RSMs — every nonterminal is its own block with no transitions into a block start — so the diff-vs-previous signal is the one that is actually visible.) |
 | Multi-digit subscripts braced (`q_{15}`) | Unbraced `q_15` renders as `q` with subscript `1` followed by a `5`; bracing renders the full index as the subscript |
-| `K` draws block-splitting rules (lines only) | `K` is qn × qn = a q × q grid of n × n blocks; the reader wants to see the Kronecker product structure. Thin rules (no fill) separate the blocks: a vertical `\vrule` after every n-th data column (in the header row) and a horizontal `\noalign{\hrule}` before the first row of every block except the first. The K body is built directly (not via `MatrixTeX.toTeXStyled`, which has no rule support). Verified by the step-template TeX compile test |
+| `K` draws block-splitting rules (lines only) | `K` is qn × qn = a q × q grid of n × n blocks; the reader wants to see the Kronecker product structure. Thin rules (no fill) separate the blocks: a vertical `\vrule` at the right edge of the last column of every block except the last (in the header row) and a horizontal `\noalign{\hrule}` before the first row of every block except the first. The K body is built directly (not via `MatrixTeX.toTeXStyled`, which has no rule support). The header row must carry an **empty corner cell** (the pNiceMatrix top-left, matching `MatrixTeX.toTeXStyled`) — without it the first column label is consumed as the corner and every label shifts right by one. Verified by the step-template TeX compile test |
 
 ## See Also
 
