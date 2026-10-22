@@ -27,6 +27,14 @@ module TestHelpers =
     let countOccurrences (haystack: string) (needle: string) : int =
         haystack.Split([| needle |], System.StringSplitOptions.None).Length - 1
 
+    /// The set of cells (row, col) of a Boolean matrix whose value is true.
+    let trueCells (m: Matrix<bool>) : Set<int * int> =
+        [ for i in 0 .. (Matrix.rows m - 1) do
+              for j in 0 .. (Matrix.cols m - 1) do
+                  if m.[i, j] then
+                      (i, j) ]
+        |> Set.ofList
+
     /// Asserts that code throws an exception whose message contains the given substring.
     let assertThrows (messagePart: string) (code: unit -> 'a) : unit =
         let exn =

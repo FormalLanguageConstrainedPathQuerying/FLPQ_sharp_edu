@@ -17,6 +17,8 @@ let stripQuotes (s: string) =
 /// Shared with the other test projects via FLPQ.TestUtilities.
 let countOccurrences = TestHelpers.countOccurrences
 
+let trueCells = TestHelpers.trueCells
+
 let vertexLabelRegex = Regex(@"^\d+: \(\d+,\d+\)$")
 
 let edgeLabelRegex = Regex(@"^\d+,\d+ → \d+,\d+$")

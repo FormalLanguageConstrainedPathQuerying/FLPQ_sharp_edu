@@ -151,64 +151,19 @@ let ``each step carries a well-formed product and MS-BFS fronts`` () =
         Assert.Equal<Set<int * int>>(cumulative.[k], m2Cells result.Steps.[k])
 
 [<Fact>]
-let ``K changed cells equal the product states derived by each changed cell`` () =
-    let rsm = CfpqTestHelpers.tensorBookRsm
-    let graph = CfpqTestHelpers.tensorBookGraph
-    let result = KroneckerCfpq.evaluate rsm graph
+let ``K masks and final fronts grow monotonically across iterations`` () =
+    let result =
+        KroneckerCfpq.evaluate CfpqTestHelpers.tensorBookRsm CfpqTestHelpers.tensorBookGraph
 
-    // The invariant (independent of the algorithm's internals): for each changed cell
-    // (A, i, j), the K product state (p, j) is derived iff M1 has a non-empty transition
-    // p --A--> start(A). The book RSM has no such transition (nothing reaches block start 0),
-    // so every step's K highlight set is empty.
-    for step in result.Steps do
-        let m1 = step.M1
+    // The K mask (the accumulated product) and the MS-BFS final front only grow across
+    // iterations (the algorithm accumulates into `prod` and the visited front is monotone).
+    // This is the precondition that makes the "newly filled cells" diff (current \ previous)
+    // well-defined for the step visualization.
+    for i in 1 .. result.Steps.Length - 1 do
+        let prevK = CfpqTestHelpers.trueCells result.Steps.[i - 1].K
+        let curK = CfpqTestHelpers.trueCells result.Steps.[i].K
+        Assert.True(Set.isSubset prevK curK, sprintf "K not monotone at step %d" i)
 
-        let expected =
-            step.ChangedCells
-            |> List.collect (fun c ->
-                let sA = rsm.BlockStart.[c.Nt]
-
-                [ for p in 0 .. (Matrix.rows m1 - 1) do
-                      if Option.isSome m1.[p, sA] then
-                          (p, c.Col) ])
-            |> Set.ofList
-
-        Assert.Equal<Set<int * int>>(expected, step.KChangedCells)
-
-    for step in result.Steps do
-        Assert.Empty(step.KChangedCells)
-
-    // A non-empty case: an RSM with a transition into a block start. T -> S (2 --T--> 3) and
-    // 3 --S--> 0 (into block S's start 0). S -> a (0 --a--> 1, final 1). Over a 2-vertex a-cycle
-    // the a-edges 0->1 and 1->0 make S productive, so changed cells (S, R, 1) and (S, 0, 0) are
-    // derived and the S transition 3 --S--> 0 turns on the K product states (3, 1) and (3, 0).
-    let s = Nonterminal "S"
-    let t = Nonterminal "T"
-
-    let rsm2 =
-        RsmFixtures.mkRsm
-            [| for i in 0..3 ->
-                   { BlockNonterminal = if i <= 1 then s else t
-                     LocalState = i
-                     IsFinal = (i = 1) } |]
-            [ { From = 0
-                Label = AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal "a"))
-                To = 1 }
-              { From = 2
-                Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm t)
-                To = 3 }
-              { From = 3
-                Label = AutomatonLabel.ATerm(RsmSymbol.RNonterm s)
-                To = 0 } ]
-            [ (s, 0); (t, 2) ]
-            [ 1 ]
-            s
-
-    let graph2: CfpqInput.CfpqGraph<string> =
-        { VertexCount = 2
-          Labels = Map.ofList [ "a", Matrix.create 2 2 (fun i j -> (i, j) = (0, 1) || (i, j) = (1, 0)) ] }
-
-    let result2 = KroneckerCfpq.evaluate rsm2 graph2
-    let kCells2 = result2.Steps |> List.collect (fun s -> s.KChangedCells |> Set.toList)
-    Assert.Contains((3, 1), kCells2)
-    Assert.Contains((3, 0), kCells2)
+        let prevF = CfpqTestHelpers.trueCells result.Steps.[i - 1].FinalFront
+        let curF = CfpqTestHelpers.trueCells result.Steps.[i].FinalFront
+        Assert.True(Set.isSubset prevF curF, sprintf "FinalFront not monotone at step %d" i)

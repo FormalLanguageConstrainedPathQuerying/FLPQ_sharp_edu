@@ -315,8 +315,27 @@ module Helpers =
         /// current iteration's edges are highlighted red bold.
         let mutable seenEdges: Map<int * int, string> = Map.empty
 
+        /// The true cells of the previous iteration's K mask and final front, so each step can
+        /// highlight only the cells that turned on for the first time this iteration (the diff).
+        /// Both grow monotonically across iterations.
+        let mutable prevK: Set<int * int> = Set.empty
+        let mutable prevFront: Set<int * int> = Set.empty
+
+        /// The cells (row, col) of a Boolean matrix whose value is true.
+        let trueCells (m: Matrix<bool>) : Set<int * int> =
+            [ for i in 0 .. (Matrix.rows m - 1) do
+                  for j in 0 .. (Matrix.cols m - 1) do
+                      if m.[i, j] then
+                          (i, j) ]
+            |> Set.ofList
+
         for step in steps do
             let stepDir = Path.Combine(outputDir, sprintf "step_%d" step.Iteration)
+
+            // The cells that turned on for the first time this iteration (the diff against the
+            // previous iteration's K and final front).
+            let kNewCells = Set.difference (trueCells step.K) prevK
+            let frontNewCells = Set.difference (trueCells step.FinalFront) prevFront
 
             // The newly derived nonterminal edges of this iteration: (u, v) vertex pairs
             // labeled by the nonterminal, drawn red bold on top of the input graph.
@@ -348,7 +367,11 @@ module Helpers =
 
             seenEdges <- allNtEdges
 
-            let rendered = KroneckerStepViz.renderStep terminal ntName n step graphDot graphTikz
+            let rendered =
+                KroneckerStepViz.renderStep terminal ntName n step kNewCells frontNewCells graphDot graphTikz
+
+            prevK <- trueCells step.K
+            prevFront <- trueCells step.FinalFront
 
             writeOutputFile (Path.Combine(stepDir, "kron.tex")) rendered.Kron
             writeOutputFile (Path.Combine(stepDir, "fronts.tex")) rendered.Fronts

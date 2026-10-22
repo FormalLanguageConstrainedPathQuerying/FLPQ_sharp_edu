@@ -49,9 +49,25 @@ let private ntName (nt: Nonterminal<string>) : string =
 
 let private result = KroneckerCfpq.evaluate bookRsm bookGraph
 
+/// The cells newly filled in `cur` versus `prev` (the true cells of `cur` not in `prev`).
+let private newCells (prev: Set<int * int>) (cur: Matrix<bool>) : Set<int * int> = Set.difference (trueCells cur) prev
+
+/// Render every step with the new-cell diffs (K and final front) computed against the previous
+/// step, exactly as the CLI writer does.
 let private rendered =
-    result.Steps
-    |> List.map (fun step -> KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step "" "")
+    let rec go prevK prevFront acc (steps: KroneckerCfpq.CfpqKronStep<string, string> list) =
+        match steps with
+        | [] -> List.rev acc
+        | step :: rest ->
+            let kNew = newCells prevK step.K
+            let frontNew = newCells prevFront step.FinalFront
+
+            let renderedStep =
+                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew frontNew "" ""
+
+            go (trueCells step.K) (trueCells step.FinalFront) (renderedStep :: acc) rest
+
+    go Set.empty Set.empty [] result.Steps
 
 let private count (needle: string) (haystack: string) : int = countOccurrences haystack needle
 
@@ -68,23 +84,50 @@ module KroneckerStepVizStructural =
             Assert.Contains("v_0", step.Kron)
 
     [<Fact>]
-    let ``kron product result has pair-based labels and highlights the step's derived cells`` () =
-        for step in rendered do
+    let ``kron product result has pair-based labels and highlights the newly filled cells`` () =
+        for i, step in List.indexed rendered do
             // The result mask is a product-state matrix: row/column labels are the pairs
             // (q_i, v_j), matching the fronts' product-state labeling.
             Assert.Contains("q_0, v_0", step.Kron)
             Assert.Contains("q_0, v_3", step.Kron)
-            // The book RSM has no transition into its block start state, so no changed cell
-            // derives a new K product state: the mask carries no highlights.
-            Assert.Equal(0, count @"\cellcolor{yellow}" step.Kron)
+            // The highlighted cells are exactly the K cells that turned on for the first time
+            // this iteration (the diff against the previous iteration's K). For the first step
+            // that is all of step 1's K true cells; for later steps only the new ones.
+            let k = result.Steps.[i].K
+
+            let expected =
+                if i = 0 then
+                    trueCells k
+                else
+                    newCells (trueCells result.Steps.[i - 1].K) k
+
+            Assert.Equal(expected |> Set.toList |> List.length, count @"\cellcolor{yellow}" step.Kron)
 
     [<Fact>]
-    let ``kron operands show set-of-symbols cells`` () =
+    let ``kron product result draws block-splitting rules for the Kronecker structure`` () =
+        let q = RSM.stateCount bookRsm
+        let step = rendered.[0]
+
+        // K is qn x qn = a q x q grid of n x n blocks. Thin rules separate the blocks: a
+        // vertical rule after every n-th data column and a horizontal rule after every n-th
+        // data row (q - 1 of each when q > 1; none for a single block).
+        let expectedRules = if q > 1 then q - 1 else 0
+
+        Assert.Equal(expectedRules, count @"\vrule width 0.4pt" step.Kron)
+        Assert.Equal(expectedRules, count @"\noalign{\hrule height 0.4pt}" step.Kron)
+
+    [<Fact>]
+    let ``kron operands show set-of-symbols cells with dots for empty sets`` () =
         let step = rendered.[0]
 
         // M1 carries the terminal 'a', the nonterminal S (as \text{S}), and the terminal 'b'.
         Assert.Contains(@"\text{S}", step.Kron)
         Assert.Contains("a", step.Kron)
+
+        // Empty set cells render as a dot (like empty cells in the other matrices), not
+        // \varnothing. The book RSM's M1 is sparse, so its empty cells carry \cdot.
+        Assert.DoesNotContain(@"\varnothing", step.Kron)
+        Assert.True(count @"\cdot" step.Kron > 0, "expected \cdot for empty operand cells")
 
     [<Fact>]
     let ``fronts body has two pNiceMatrix blocks with product-state pair labels`` () =
@@ -96,29 +139,33 @@ module KroneckerStepVizStructural =
             Assert.DoesNotContain(@"\text{S}, v_", step.Fronts)
 
     [<Fact>]
-    let ``final front highlights exactly the RSM final-state columns`` () =
-        let n = bookGraph.VertexCount
-        let finalStates = Set.toList (RSM.blockFinalStates (Nonterminal "S") bookRsm)
-
-        let finalCols =
-            [ for f in finalStates do
-                  for v in 0 .. n - 1 -> f * n + v ]
-            |> Set.ofList
-
+    let ``final front highlights exactly the newly filled cells`` () =
         for i, step in List.indexed rendered do
-            let rawStep = result.Steps.[i]
-            // The step's FinalStateCols are exactly the (final state, vertex) product-state
-            // columns of the RSM.
-            Assert.Equal<Set<int>>(finalCols, rawStep.FinalStateCols)
+            let front = result.Steps.[i].FinalFront
+
+            let expected =
+                if i = 0 then
+                    trueCells front
+                else
+                    newCells (trueCells result.Steps.[i - 1].FinalFront) front
 
             let yellow = count @"\cellcolor{yellow}" step.Fronts
-            // 4 rows (one per source) x |FinalStateCols| final-state columns.
-            Assert.Equal(4 * (finalCols |> Set.toList |> List.length), yellow)
+            Assert.Equal(expected |> Set.toList |> List.length, yellow)
 
     [<Fact>]
     let ``graph figure passes through`` () =
+        let step0 = result.Steps.[0]
+
         let step =
-            KroneckerStepViz.renderStep id ntName 4 result.Steps.[0] "DOTSRC" "TIKZSRC"
+            KroneckerStepViz.renderStep
+                id
+                ntName
+                4
+                step0
+                (trueCells step0.K)
+                (trueCells step0.FinalFront)
+                "DOTSRC"
+                "TIKZSRC"
 
         Assert.Equal("DOTSRC", step.GraphDot)
         Assert.Equal("TIKZSRC", step.GraphTikz)
@@ -181,8 +228,20 @@ module KroneckerStepVizCompile =
         for i in 0 .. result.Steps.Length - 1 do
             let step = result.Steps.[i]
 
+            let kNew =
+                if i = 0 then
+                    trueCells step.K
+                else
+                    newCells (trueCells result.Steps.[i - 1].K) step.K
+
+            let frontNew =
+                if i = 0 then
+                    trueCells step.FinalFront
+                else
+                    newCells (trueCells result.Steps.[i - 1].FinalFront) step.FinalFront
+
             let renderedStep =
-                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step "" (graphFor step)
+                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew frontNew "" (graphFor step)
 
             let filled = fill template renderedStep
 

@@ -31,6 +31,21 @@ matrix, not before the matrix.
 Reference implementation: `Matrix.fs` `toTeXStyled` function, which generates
 `\Block[draw=color]{rowCount-colCount}{styledCellContent}` at the appropriate cell.
 
+## pNiceMatrix Block-Splitting Rules (Lines Only)
+
+`nicematrix` has no first-class "draw a rule between blocks" option, and `\cmidrule` (booktabs)
+is not loaded by the project templates. To draw thin lines that split a `pNiceMatrix` into blocks
+(e.g. the Kronecker product's q × q grid of n × n blocks), use plain LaTeX:
+
+- **Vertical rule** after the last column of a block: append `\vrule width 0.4pt` to the cell at
+  the block's last column in the header (first) row.
+- **Horizontal rule** after the last row of a block: insert `\noalign{\hrule height 0.4pt}` on its
+  own line before the first row of the next block.
+
+Both work inside math-mode `pNiceMatrix` with no extra packages. Reference implementation:
+`KroneckerStepViz.kMatrixWithRules` (see [KroneckerStepViz](../../kronecker-step-viz.md)), which
+emits these for the K product mask. Verified by the Kronecker step-template TeX compile test.
+
 ## lualatex Error Detection
 
 **Problem**: `lualatex -interaction=nonstopmode` can exit with code 0 even when the TeX source contains undefined control sequences or errors. Relying solely on the exit code misses compilation failures.
