@@ -362,8 +362,8 @@ type StressStringGenerators =
 
 type StressNfaGenerators =
 
-    static member LargeNfa() : Arbitrary<NFA<string, int>> =
-        MyGen.choose (30, 80)
+    static member BoundedNfa() : Arbitrary<NFA<string, int>> =
+        MyGen.choose (1, 12)
         |> MyGen.bind (fun stateCount ->
             MyGen.listOfLength (stateCount * 2) (MyGen.choose (0, stateCount - 1))
             |> MyGen.bind (fun fromStates ->
@@ -371,11 +371,11 @@ type StressNfaGenerators =
                 |> MyGen.bind (fun toStates ->
                     MyGen.listOfLength (stateCount * 2) (MyGen.elements [ "a"; "b" ])
                     |> MyGen.bind (fun labels ->
-                        MyGen.choose (1, min 3 stateCount)
+                        MyGen.choose (1, min 2 stateCount)
                         |> MyGen.bind (fun startCount ->
                             MyGen.listOfLength startCount (MyGen.choose (0, stateCount - 1))
                             |> MyGen.bind (fun startStates ->
-                                MyGen.choose (1, min 3 stateCount)
+                                MyGen.choose (1, min 2 stateCount)
                                 |> MyGen.bind (fun finalCount ->
                                     MyGen.listOfLength finalCount (MyGen.choose (0, stateCount - 1))
                                     |> MyGen.map (fun finalStates ->

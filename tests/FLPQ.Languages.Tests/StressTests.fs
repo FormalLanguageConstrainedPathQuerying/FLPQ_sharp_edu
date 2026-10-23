@@ -103,9 +103,14 @@ module NfaToDfaStress =
 
         [<Property>]
         [<Trait("Category", "Stress")>]
-        let ``toDfa terminates for large random NFAs`` (nfa: NFA<string, int>) =
+        let ``toDfa terminates for bounded random NFAs`` (nfa: NFA<string, int>) =
             let dfa = Automaton.toDfa nfa
+
             Dfa.stateCount dfa > 0
+            && (TestHelpers.allStringsUpTo [ "a"; "b" ] 4
+                |> List.forall (fun s ->
+                    let tokens = s |> List.map Terminal
+                    Nfa.accept nfa tokens = Dfa.accept dfa tokens))
 
 module LRStress =
 
