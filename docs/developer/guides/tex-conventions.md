@@ -33,16 +33,19 @@ Reference implementation: `Matrix.fs` `toTeXStyled` function, which generates
 
 ## pNiceMatrix Block-Splitting Rules (Lines Only)
 
-`nicematrix` has no first-class "draw a rule between blocks" option, and `\cmidrule` (booktabs)
-is not loaded by the project templates. To draw thin lines that split a `pNiceMatrix` into blocks
-(e.g. the Kronecker product's q × q grid of n × n blocks), use plain LaTeX:
+To draw thin lines that split a `pNiceMatrix` into blocks (e.g. the Kronecker product's q × q grid
+of n × n blocks), use nicematrix's **`vlines`/`hlines`** environment options — these draw a full
+rule at each named column/row boundary. (An earlier recipe appended `\vrule width 0.4pt` to a cell
+and inserted `\noalign{\hrule height 0.4pt}` lines; the in-cell `\vrule` is clipped to the cell and
+does NOT render as a full-height column rule, so the `vlines`/`hlines` options are the correct
+mechanism. `\cmidrule` (booktabs) is also not available in the templates.)
 
-- **Vertical rule** after the last column of a block: append `\vrule width 0.4pt` to the cell at
-  the block's last column in the header (first) row.
-- **Horizontal rule** after the last row of a block: insert `\noalign{\hrule height 0.4pt}` on its
-  own line before the first row of the next block.
-
-Both work inside math-mode `pNiceMatrix` with no extra packages. Reference implementation:
+`vlines={p1,p2,...}` draws a vertical rule at the left boundary of each 1-indexed column `p`;
+`hlines={p1,p2,...}` draws a horizontal rule at the top boundary of each 1-indexed row `p`. For a
+`pNiceMatrix[first-row,first-col]`, 1-indexed position 1 is the first-col/first-row, so 0-indexed
+data position `d` is 1-indexed `d + 2`. To split a q × q grid of n × n blocks, the internal
+boundaries are `vlines = { k*n + 2 for k in 1..q-1 }` (likewise `hlines`). An empty list (`{}`)
+draws no rules. Reference implementation:
 `KroneckerStepViz.kMatrixWithRules` (see [KroneckerStepViz](../../kronecker-step-viz.md)), which
 emits these for the K product mask. Verified by the Kronecker step-template TeX compile test.
 

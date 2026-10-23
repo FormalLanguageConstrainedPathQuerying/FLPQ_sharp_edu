@@ -320,6 +320,11 @@ module Helpers =
         /// monotonically across iterations.
         let mutable prevK: Set<int * int> = Set.empty
 
+        /// The true cells of the previous iteration's final front, so each step can highlight only
+        /// the final-front cells that turned on for the first time this iteration (the diff). The
+        /// final front grows monotonically across iterations.
+        let mutable prevFront: Set<int * int> = Set.empty
+
         /// The cells (row, col) of a Boolean matrix whose value is true.
         let trueCells (m: Matrix<bool>) : Set<int * int> =
             [ for i in 0 .. (Matrix.rows m - 1) do
@@ -334,6 +339,11 @@ module Helpers =
             // The K cells that turned on for the first time this iteration (the diff against the
             // previous iteration's K).
             let kNewCells = Set.difference (trueCells step.K) prevK
+
+            // The final-front cells that turned on for the first time this iteration (the diff
+            // against the previous iteration's final front); the renderer intersects this with the
+            // step's FinalStateCols to highlight the newly-visited final-state cells.
+            let frontNewCells = Set.difference (trueCells step.FinalFront) prevFront
 
             // The newly derived nonterminal edges of this iteration: (u, v) vertex pairs
             // labeled by the nonterminal, drawn red bold on top of the input graph.
@@ -366,9 +376,10 @@ module Helpers =
             seenEdges <- allNtEdges
 
             let rendered =
-                KroneckerStepViz.renderStep terminal ntName n step kNewCells graphDot graphTikz
+                KroneckerStepViz.renderStep terminal ntName n step kNewCells frontNewCells graphDot graphTikz
 
             prevK <- trueCells step.K
+            prevFront <- trueCells step.FinalFront
 
             writeOutputFile (Path.Combine(stepDir, "kron.tex")) rendered.Kron
             writeOutputFile (Path.Combine(stepDir, "fronts.tex")) rendered.Fronts

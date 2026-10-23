@@ -32,6 +32,26 @@ let private cleanup (outDir: string) =
     with _ ->
         ()
 
+/// The highlighted final-front cells of a `fronts.tex` as `"rowLabel|colIndex"` strings. Each
+/// highlighted cell is a `\cellcolor{yellow}` in the final (second) matrix; the row label is the
+/// line's first cell (before the first `&`), the column index is the number of `&` before the
+/// `\cellcolor` (0 = the first data column, i.e. the corner cell is not counted).
+let private countYellow (fronts: string) : string list =
+    let needle = @"\cellcolor{yellow}"
+
+    [ for line in fronts.Split('\n') do
+          if line.Contains needle then
+              // Split into cells on '&'; the highlighted cell is the one containing the needle.
+              // cells[0] is the row label (the corner), cells[1..] are the data columns.
+              let cells = line.Split('&')
+
+              let colIdx =
+                  cells
+                  |> Array.tryFindIndex (fun c -> c.Contains needle)
+                  |> Option.defaultValue 0
+
+              sprintf "%s|%d" (cells.[0].Trim()) colIdx ]
+
 [<Fact>]
 let ``runKronecker reachability produces the root artifacts`` () =
     let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker false
@@ -73,6 +93,39 @@ let ``runKronecker reachability writes the two-line step artifacts per productiv
 
         // The old per-step table is no longer written.
         Assert.False(File.Exists(Path.Combine(stepDir, "table.tex")))
+
+    cleanup outDir
+
+let ``runKronecker K mask uses nicematrix vlines/hlines block options and the final front highlights the newly-visited final-state cells``
+    ()
+    =
+    let (outDir, _) = runRunner KroneckerCfpqRunner.runKronecker false
+
+    // The K product mask (the third pNiceMatrix in kron.tex) draws its block rules via the
+    // vlines/hlines options (the in-cell \vrule / \noalign hrecipe does not render), and no
+    // in-cell \vrule or \noalign hrule remains.
+    for stepDir in Directory.GetDirectories(outDir, "step_*") do
+        let kron = File.ReadAllText(Path.Combine(stepDir, "kron.tex"))
+        Assert.Contains("vlines={", kron)
+        Assert.Contains("hlines={", kron)
+        Assert.DoesNotContain(@"\vrule", kron)
+        Assert.DoesNotContain(@"\noalign", kron)
+
+    // The final front's highlighted cells are the newly-visited final-state cells: each step
+    // highlights the cells that turned on this iteration (the diff against the previous step's
+    // final front). The highlighted cells across steps are disjoint (a cell is highlighted the
+    // iteration it is first visited, not re-highlighted in later steps).
+    let highlightedPerStep =
+        Directory.GetDirectories(outDir, "step_*")
+        |> Array.map (fun stepDir -> File.ReadAllText(Path.Combine(stepDir, "fronts.tex")) |> countYellow)
+        |> List.ofArray
+
+    let allHighlighted = highlightedPerStep |> List.collect id
+
+    Assert.True(
+        List.distinct allHighlighted |> List.length = List.length allHighlighted,
+        "a final-state cell was highlighted in more than one step (the diff should be disjoint across steps)"
+    )
 
     cleanup outDir
 

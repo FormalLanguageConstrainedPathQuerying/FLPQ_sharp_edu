@@ -33,7 +33,9 @@
    `kron.tex` (line 1: the full Kronecker product `M_1 ⊗ M_2 = K`, the operands with set-of-symbols
    cells and the Boolean result mask with this iteration's newly derived cells highlighted),
    `fronts.tex` (line 2: the MS-BFS initial (seed) and final (visited) fronts, decoded `(q_i, u_j)`
-   rows / `(q_i, u_j)` columns, the final front with its accept columns highlighted), and the input
+   rows / `(q_i, u_j)` columns, the final front with its newly-visited accept (final-state) cells
+   highlighted — the cells in the `FinalStateCols` columns that turned on this iteration), and the
+   input
    graph with this iteration's newly added nonterminal edges drawn and highlighted red bold, plus
    every earlier iteration's nonterminal edges preserved in black (the derived graph grows over
    iterations; only the current step's edges are highlighted)

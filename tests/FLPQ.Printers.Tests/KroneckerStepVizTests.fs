@@ -52,22 +52,22 @@ let private result = KroneckerCfpq.evaluate bookRsm bookGraph
 /// The cells newly filled in `cur` versus `prev` (the true cells of `cur` not in `prev`).
 let private newCells (prev: Set<int * int>) (cur: Matrix<bool>) : Set<int * int> = Set.difference (trueCells cur) prev
 
-/// Render every step with the K new-cell diff computed against the previous step, exactly as the
-/// CLI writer does. (The final front highlights its own FinalStateCols cells, so no diff is
-/// passed for it.)
+/// Render every step with the K and final-front new-cell diffs computed against the previous
+/// step, exactly as the CLI writer does.
 let private rendered =
-    let rec go prevK acc (steps: KroneckerCfpq.CfpqKronStep<string, string> list) =
+    let rec go prevK prevFront acc (steps: KroneckerCfpq.CfpqKronStep<string, string> list) =
         match steps with
         | [] -> List.rev acc
         | step :: rest ->
             let kNew = newCells prevK step.K
+            let frontNew = newCells prevFront step.FinalFront
 
             let renderedStep =
-                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew "" ""
+                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew frontNew "" ""
 
-            go (trueCells step.K) (renderedStep :: acc) rest
+            go (trueCells step.K) (trueCells step.FinalFront) (renderedStep :: acc) rest
 
-    go Set.empty [] result.Steps
+    go Set.empty Set.empty [] result.Steps
 
 let private count (needle: string) (haystack: string) : int = countOccurrences haystack needle
 
@@ -105,17 +105,32 @@ module KroneckerStepVizStructural =
 
     [<Fact>]
     let ``kron product result draws block-splitting rules for the Kronecker structure`` () =
+        let n = bookGraph.VertexCount
         let q = RSM.stateCount bookRsm
         let step = rendered.[0]
 
-        // K is qn x qn = a q x q grid of n x n blocks. Thin rules separate the blocks: a
-        // vertical rule at the block boundaries (after the last column of every block except the
-        // last) and a horizontal rule after every n-th data row (q - 1 of each when q > 1; none
-        // for a single block).
-        let expectedRules = if q > 1 then q - 1 else 0
+        // K is qn x qn = a q x q grid of n x n blocks. Thin rules separate the blocks, drawn with
+        // nicematrix's vlines/hlines options: a rule at each internal block boundary (q - 1 of
+        // each when q > 1; none for a single block). The boundary before block k (0-indexed,
+        // k >= 1) sits at 1-indexed position k * n + 2 (position 1 is the first-col/first-row).
+        let expectedPositions =
+            [ for k in 1 .. q - 1 do
+                  k * n + 2 ]
 
-        Assert.Equal(expectedRules, count @"\vrule width 0.4pt" step.Kron)
-        Assert.Equal(expectedRules, count @"\noalign{\hrule height 0.4pt}" step.Kron)
+        let expectedOptions =
+            if q > 1 then
+                "vlines={"
+                + String.concat "," (List.map string expectedPositions)
+                + "}, hlines={"
+                + String.concat "," (List.map string expectedPositions)
+                + "}"
+            else
+                "vlines={}, hlines={}"
+
+        Assert.Contains(expectedOptions, step.Kron)
+        // No in-cell \vrule or \noalign hrule remains (the old, non-rendering mechanism).
+        Assert.DoesNotContain(@"\vrule", step.Kron)
+        Assert.DoesNotContain(@"\noalign", step.Kron)
 
     [<Fact>]
     let ``kron product result header has an empty corner and aligned column labels`` () =
@@ -168,15 +183,28 @@ module KroneckerStepVizStructural =
             Assert.DoesNotContain(@"\text{S}, v_", step.Fronts)
 
     [<Fact>]
-    let ``final front highlights exactly the RSM final-state cells`` () =
+    let ``final front highlights exactly the newly-visited RSM final-state cells`` () =
         for i, step in List.indexed rendered do
             let rawStep = result.Steps.[i]
-            // The highlighted cells are exactly the filled cells of the final front whose column
-            // is a final-state column (the accept-reading of the MS-BFS result).
+            // The highlighted cells are exactly the final-front cells that turned on this
+            // iteration (the diff against the previous step's final front) AND whose column is a
+            // final-state column (the accept-progress of the MS-BFS).
+            let prevFront =
+                if i = 0 then
+                    Set.empty
+                else
+                    trueCells result.Steps.[i - 1].FinalFront
+
+            let frontNew = newCells prevFront rawStep.FinalFront
+
             let expected =
                 [ for r in 0 .. (Matrix.rows rawStep.FinalFront - 1) do
                       for c in 0 .. (Matrix.cols rawStep.FinalFront - 1) do
-                          if rawStep.FinalFront.[r, c] && Set.contains c rawStep.FinalStateCols then
+                          if
+                              rawStep.FinalFront.[r, c]
+                              && Set.contains c rawStep.FinalStateCols
+                              && Set.contains (r, c) frontNew
+                          then
                               (r, c) ]
                 |> Set.ofList
 
@@ -192,7 +220,15 @@ module KroneckerStepVizStructural =
         let step0 = result.Steps.[0]
 
         let step =
-            KroneckerStepViz.renderStep id ntName 4 step0 (trueCells step0.K) "DOTSRC" "TIKZSRC"
+            KroneckerStepViz.renderStep
+                id
+                ntName
+                4
+                step0
+                (trueCells step0.K)
+                (trueCells step0.FinalFront)
+                "DOTSRC"
+                "TIKZSRC"
 
         Assert.Equal("DOTSRC", step.GraphDot)
         Assert.Equal("TIKZSRC", step.GraphTikz)
@@ -261,8 +297,14 @@ module KroneckerStepVizCompile =
                 else
                     newCells (trueCells result.Steps.[i - 1].K) step.K
 
+            let frontNew =
+                if i = 0 then
+                    trueCells step.FinalFront
+                else
+                    newCells (trueCells result.Steps.[i - 1].FinalFront) step.FinalFront
+
             let renderedStep =
-                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew "" (graphFor step)
+                KroneckerStepViz.renderStep id ntName bookGraph.VertexCount step kNew frontNew "" (graphFor step)
 
             let filled = fill template renderedStep
 
