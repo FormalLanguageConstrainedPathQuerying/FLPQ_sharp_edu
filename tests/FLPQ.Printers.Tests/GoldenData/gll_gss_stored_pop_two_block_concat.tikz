@@ -1,5 +1,5 @@
 \begin{tikzpicture}
-  \graph [layered layout, nodes={draw, rectangle, rounded corners}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+  \graph [dot layout, nodes={draw, rectangle, rounded corners}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
     v0 [as={0: (0,0)}, fill=orange!30];
     v4 [as={4: (2,0)}, fill=lightblue!20];
     v10 [as={10: (5,0)}];

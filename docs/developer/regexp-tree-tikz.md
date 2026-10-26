@@ -27,7 +27,7 @@ applied.
 
 | Format | Output |
 | --- | --- |
-| TikZ | `\begin{tikzpicture} \graph [layered layout, nodes={draw, rectangle}, grow'=down, ...] { ... }; \end{tikzpicture}` |
+| TikZ | `\begin{tikzpicture} \graph [dot layout, nodes={draw, rectangle}, grow'=down, ...] { ... }; \end{tikzpicture}` |
 
 ## Function Signatures
 
@@ -49,4 +49,4 @@ applied.
 
 - [Regexp tree DOT](regexp-tree-dot.md) — the DOT counterpart
 - [Arroyuelo step common](arroyuelo-step-common.md) — the caller
-- [Automaton TikZ](automaton-viz.md) — shared TikZ primitives (header/footer, layered layout options)
+- [Automaton TikZ](automaton-viz.md) — shared TikZ primitives (header/footer, graph options)

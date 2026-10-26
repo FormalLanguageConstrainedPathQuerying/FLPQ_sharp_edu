@@ -3,7 +3,7 @@ namespace FLPQ.Printers
 open System.Text
 open FLPQ.Languages
 
-/// Tikz visualization for LR automata using graphdrawing with layered layout.
+/// Tikz visualization for LR automata using graphdrawing with dot layout.
 /// Special style: rectangle nodes, aligned LR items with state numbers.
 module LRAutomatonTikz =
 

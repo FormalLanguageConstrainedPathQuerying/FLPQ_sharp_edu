@@ -1,0 +1,68 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{graphs, graphdrawing}
+\usegdlibrary{layered}
+% Test probe: wrap the flpqdot spline router's run() to record layout metrics in
+% globals after the layout. The wrap must be installed before \usegdlibrary{flpqdot}
+% so that the phase declaration captures the wrapped module (require returns the
+% cached table). The probe content reads the globals and \typeout's them.
+%
+% NOTE: this hook avoids the Lua `#` (length) operator, which is unreliable inside
+% \directlua blocks in this LuaTeX (it works in module functions but errors here);
+% counting is done with pairs/ipairs instead.
+%
+% Globals set by the hook:
+%   _G.flpqdot_curveto_total        total cubic Bezier segments across all edges
+%   _G.flpqdot_reciprocal_pairs     number of reciprocal (u->v / v->u) pairs
+%   _G.flpqdot_reciprocal_opposite  how many of those bow to opposite sides
+\directlua{
+  local r = require "pgf.gd.flpqdot.EdgeRoutingSpline"
+  local orig = r.run
+  r.run = function(self)
+    orig(self)
+    local curvetoTotal = 0
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        for _, op in ipairs(e.orig_m.path) do
+          if op == "curveto" then curvetoTotal = curvetoTotal + 1 end
+        end
+      end
+    end
+    _G.flpqdot_curveto_total = curvetoTotal
+
+    local pos = {}
+    for _, n in ipairs(self.graph.nodes) do pos[n.name] = { x = n.pos.x, y = n.pos.y } end
+    local c1 = {}
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        local c = e.orig_m.path[4]
+        if c then
+          local t, h = e:getTail().name, e:getHead().name
+          c1[t .. "->" .. h] = { t = t, h = h, c = c }
+        end
+      end
+    end
+    local pairsCount, opposite, seen = 0, 0, {}
+    for key, e1 in pairs(c1) do
+      if not seen[key] then
+        local revKey = e1.h .. "->" .. e1.t
+        local e2 = c1[revKey]
+        if e2 then
+          seen[key] = true
+          seen[revKey] = true
+          pairsCount = pairsCount + 1
+          local a, b = (e1.t < e1.h) and e1.t or e1.h, (e1.t < e1.h) and e1.h or e1.t
+          local pa, pb = pos[a], pos[b]
+          local function sd(cc) return (pb.x - pa.x) * (cc.y - pa.y) - (pb.y - pa.y) * (cc.x - pa.x) end
+          if sd(e1.c) * sd(e2.c) < 0 then opposite = opposite + 1 end
+        end
+      end
+    end
+    _G.flpqdot_reciprocal_pairs = pairsCount
+    _G.flpqdot_reciprocal_opposite = opposite
+  end
+}
+\usegdlibrary{flpqdot}
+\begin{document}
+__CONTENT__
+\end{document}

@@ -226,6 +226,30 @@ The `layered layout` algorithm works well with simple `string` state identifiers
 node names may cause parsing issues. Always use simple alphanumeric identifiers and put
 content in `as={...}`.
 
+### The `dot layout` Key (flpqdot Library)
+
+Generated graphs use the project-owned `dot layout` key (from the flpqdot library,
+loaded via `\usegdlibrary{flpqdot}`) rather than the stock `layered layout`. It reuses
+the same Sugiyama pipeline but swaps in a spline edge router for smooth, `dot`-like
+Bézier edges. See [the flpqdot library](../tikz-gd-library.md) for the design and the
+loading/staging mechanism.
+
+### Gotchas Writing Lua in `\directlua{...}`
+
+When TeX reads a `\directlua{...}` argument it **tokenizes** the content, so a few Lua
+idioms that are fine in a `.lua` module break inside the block:
+
+- `%` starts a **TeX comment** (it comments out the rest of the line and can leave the
+  group unclosed). Avoid `%` in the block — build strings by concatenation
+  (`"x=" .. tostring(n)`) instead of `string.format("x=%d", n)`.
+- `\X` (e.g. `"\1"`) is read as a **TeX control sequence** (`Undefined control sequence`). Use a non-backslash separator (e.g. `"->"`) for string keys.
+- The `#` (length) operator is **unreliable** in a `\directlua` block (errors with
+  `attempt to get length of a number value`) even though it works in module functions.
+  Count with `pairs`/`ipairs` instead.
+
+Lua loaded via `require` (a `.lua` module) is not TeX-tokenized, so none of these apply
+there — the flpqdot library modules use `#` and `"\1"` freely.
+
 ## See Also
 
 - [Testing](testing.md)

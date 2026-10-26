@@ -4,7 +4,7 @@
 **Kind:** visualization
 **Module:** InputGraphTikz
 **Source:** `src/FLPQ.Printers/InputGraphTikz.fs`
-**Depends on:** AutomatonTikz (header, footer, label escaping, reciprocal-bend helper)
+**Depends on:** AutomatonTikz (header, footer, label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer
 
 > **Abstract:** TikZ rendering for the GLL/RNGLR input graph. Converts a `Graph<int, Option<'t>>` (normally a linear path with one labeled edge per input position) to a `tikzpicture` using layered graphdrawing, with optional highlighting of the current input position.
@@ -23,9 +23,9 @@ The input graph represents a sequence of terminal tokens as a directed path: ver
 
 ## Supported Formats
 
-- **TikZ** — a single `\graph [layered layout, ...]` opened by `AutomatonTikz.tikzHeader`, with one node per vertex and one quoted edge label per edge.
+- **TikZ** — a single `\graph [dot layout, ...]` opened by `AutomatonTikz.tikzHeader`, with one node per vertex and one quoted edge label per edge.
 - **Highlighting** — when `currentVertex` is specified, the vertex is filled with `lightgreen!20`.
-- **Reciprocal edges** — because the renderer is generic over `Graph<int, Option<'t>>`, an edge whose reverse is also present is bent (`bend left=15`) so the pair does not draw as two overlapping straight lines; self-loops are never bent (shared rule `AutomatonTikz.reciprocalBendAttr`).
+- **Reciprocal edges** — because the renderer is generic over `Graph<int, Option<'t>>`, an edge whose reverse is also present is separated natively by the flpqdot spline router (via the `dot layout` key), so the pair does not draw as two overlapping lines; the renderer emits no `bend` option.
 
 ## Function Signatures
 
@@ -49,12 +49,12 @@ Renders the input graph as a TikZ `tikzpicture` string.
 
 | Decision | Rationale |
 | --- | --- |
-| Reuses `AutomatonTikz` header/footer and `escapeLatex` | Keeps the layered layout, node style, and label escaping identical to the automaton renderers |
+| Reuses `AutomatonTikz` header/footer and `escapeLatex` | Keeps the `dot layout`, node style, and label escaping identical to the automaton renderers |
 | `fill=lightgreen!20` for the current position | Matches the DOT renderer's current-position color and distinguishes it from the GSS/automaton fills |
-| Reciprocal pairs bent via the shared helper | The generic input type could carry both directions of a pair; the shared `reciprocalBendAttr` rule keeps the edge appearance consistent with the automaton, RSM, and GSS renderers (task 289) |
+| Reciprocal pairs separated by the layout engine | The generic input type could carry both directions of a pair; the flpqdot spline router (via `dot layout`) separates them natively, keeping the edge appearance consistent with the automaton, RSM, and GSS renderers (task 289) |
 
 ## See Also
 
 - [InputGraphDot](InputGraphDot.md) — the DOT counterpart
 - [GLL step visualization](gll-step-visualizer.md) — main consumer
-- [Automaton visualization](automaton-viz.md) — shared layered layout and reciprocal-bend helper
+- [Automaton visualization](automaton-viz.md) — shared dot layout and graph options

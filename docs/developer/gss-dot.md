@@ -67,6 +67,6 @@ positionOf.
 
 ## See Also
 
-- [GSS TikZ](gss-tikz.md) — the TikZ counterpart with layered layout
+- [GSS TikZ](gss-tikz.md) — the TikZ counterpart with dot layout
 - [GLL step visualization](gll-step-visualizer.md) / [RNGLR](rnglr.md) — main consumers
 - [RPQ graph visualization](rpq-graph-viz.md) — reuses `toDotFromSets` for input graphs

@@ -5,7 +5,7 @@ open FSharpPlus.Data
 open FLPQ.LinearAlgebra
 open FLPQ.Languages
 
-/// Tikz visualization for finite automata using graphdrawing with layered layout.
+/// Tikz visualization for finite automata using graphdrawing with dot layout.
 module AutomatonTikz =
 
     /// Escapes the LaTeX special characters of a plain-text label for use in node content.
@@ -21,17 +21,6 @@ module AutomatonTikz =
             .Replace("&", @"\&")
             .Replace("^", @"\^")
             .Replace("~", @"\~{}")
-
-    /// TikZ edge option that separates a reciprocal pair (u->v and v->u) into two symmetric
-    /// arcs instead of one straight line drawn on top of the other. Returns ", bend left=15"
-    /// (including the leading separator) when `enabled`, the edge is not a self-loop, and the
-    /// reverse edge is drawn; otherwise returns "". Shared by AutomatonTikz, RsmTikz,
-    /// InputGraphTikz, and GssTikz so the bend rule has a single source of truth.
-    let reciprocalBendAttr (enabled: bool) (reverseDrawn: bool) (fromIdx: int) (toIdx: int) : string =
-        if enabled && fromIdx <> toIdx && reverseDrawn then
-            ", bend left=15"
-        else
-            ""
 
     /// The TikZ node options for one automaton state: the `as={...}` content, the Start label,
     /// the final-state double border, and the fills in ascending precedence (start, final,
@@ -118,10 +107,6 @@ module AutomatonTikz =
                         let label = termLabels |> String.concat ", " |> escapeLatex
                         let loopAttr = if i = j then ",loop above" else ""
 
-                        // A reciprocal pair (i->j and j->i) would otherwise draw as two fully
-                        // overlapping straight lines; bend both into symmetric arcs (task 289).
-                        let bendAttr = reciprocalBendAttr true (Option.isSome transitions.[j, i]) i j
-
                         // Highlighted edges render red and bold (same style as GssTikz's
                         // highlighted tier); the label and loop attributes are preserved.
                         // Epsilon-only cells render no edge here, so they can never be
@@ -135,13 +120,10 @@ module AutomatonTikz =
                         if label = "" then
                             if i = j then
                                 sb.AppendLine(sprintf "    s%d ->[loop above] s%d;" i j) |> ignore
-                            elif bendAttr <> "" then
-                                sb.AppendLine(sprintf "    s%d ->[%s] s%d;" i (bendAttr.TrimStart(',', ' ')) j)
-                                |> ignore
                             else
                                 sb.AppendLine(sprintf "    s%d -> s%d;" i j) |> ignore
                         else
-                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s%s] s%d;" i label hlAttr bendAttr loopAttr j)
+                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i label hlAttr loopAttr j)
                             |> ignore
                 | None -> ()
 
@@ -151,11 +133,10 @@ module AutomatonTikz =
                 match transitions.[i, j] with
                 | Some symbols when NonEmptySet.contains AEpsilon symbols ->
                     let loopAttr = if i = j then ",loop above" else ""
-                    let bendAttr = reciprocalBendAttr true (Option.isSome transitions.[j, i]) i j
 
                     // Math-mode label: a bare \varepsilon in text mode renders as an empty
                     // box (math symbols require math mode), silently losing the label.
-                    sb.AppendLine(sprintf "    s%d ->[dotted, \"$\\varepsilon$\"%s%s] s%d;" i bendAttr loopAttr j)
+                    sb.AppendLine(sprintf "    s%d ->[dotted, \"$\\varepsilon$\"%s] s%d;" i loopAttr j)
                     |> ignore
                 | _ -> ()
 
@@ -167,9 +148,11 @@ module AutomatonTikz =
     /// reverses the orientation under the default grow direction; `grow=left` restores it.
     let gssLayeredGrowDirection = "grow=left"
 
-    /// Common options for a layered graph drawing with the given grow direction.
-    let layeredGraphOptions (shape: string) (growDirection: string) : string =
-        sprintf "layered layout, nodes={draw, %s}, %s, level sep=2cm, sibling sep=1.5cm" shape growDirection
+    /// Common options for a graph drawing with the given grow direction. Uses the project's
+    /// `dot layout` key (the flpqdot library): the stock layered pipeline plus a spline edge
+    /// router that smooths edges and separates reciprocal pairs natively.
+    let graphOptions (shape: string) (growDirection: string) : string =
+        sprintf "dot layout, nodes={draw, %s}, %s, level sep=2cm, sibling sep=1.5cm" shape growDirection
 
     /// Opens a tikzpicture with a single \graph using the given graph options.
     let tikzHeaderWithOptions (graphOptions: string) (sb: StringBuilder) : unit =
@@ -179,14 +162,14 @@ module AutomatonTikz =
 
     /// Opens a tikzpicture with a single left-to-right layered graph of the given node shape.
     let tikzHeader (shape: string) (sb: StringBuilder) : unit =
-        tikzHeaderWithOptions (layeredGraphOptions shape defaultGrowDirection) sb
+        tikzHeaderWithOptions (graphOptions shape defaultGrowDirection) sb
 
     /// Closes the graph environment and the tikzpicture opened by `tikzHeader`.
     let tikzFooter (sb: StringBuilder) : unit =
         sb.AppendLine("  };") |> ignore
         sb.AppendLine(@"\end{tikzpicture}") |> ignore
 
-    /// Render an NFA as a Tikz tikzpicture using layered layout.
+    /// Render an NFA as a Tikz tikzpicture using dot layout.
     /// The returned string contains only the \begin{tikzpicture}...\end{tikzpicture} block.
     let nfaToTikz
         (labelPrinter: 't -> string)
@@ -215,7 +198,7 @@ module AutomatonTikz =
         tikzFooter sb
         sb.ToString()
 
-    /// Render a DFA as a Tikz tikzpicture using layered layout, with the given states highlighted
+    /// Render a DFA as a Tikz tikzpicture using dot layout, with the given states highlighted
     /// (fill=lightblue!20, the current/frontier tier), the given target states filled lightyellow
     /// (highest precedence: over current, final, and start), and the given transitions rendered
     /// red and bold (`red, thick`, label and loop attributes preserved). A final state's double
@@ -249,7 +232,7 @@ module AutomatonTikz =
         tikzFooter sb
         sb.ToString()
 
-    /// Render a DFA as a Tikz tikzpicture using layered layout.
+    /// Render a DFA as a Tikz tikzpicture using dot layout.
     let dfaToTikz
         (labelPrinter: 't -> string)
         (stateVisualizer: int -> 's -> string)

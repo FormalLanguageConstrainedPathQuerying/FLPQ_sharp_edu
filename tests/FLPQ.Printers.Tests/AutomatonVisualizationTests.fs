@@ -157,7 +157,7 @@ let ``simple automaton tikz compiles`` () =
 
     Assert.Contains(@"\begin{tikzpicture}", tikz)
     Assert.Contains(@"\graph", tikz)
-    Assert.Contains("layered layout", tikz)
+    Assert.Contains("dot layout", tikz)
     Assert.Contains("grow'=right", tikz)
     Assert.Contains("fill=green!30", tikz)
     Assert.Contains("double", tikz)
@@ -445,9 +445,9 @@ let ``dfaToTikzWithHighlights highlighted loop keeps its label and loop attribut
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``reciprocal transitions are bent to separate overlapping edges`` () =
-    // 0 -[a]-> 1 and 0 -[b]-> 1 merge into "a, b"; the reverse 1 -[a]-> 0 would draw on top
-    // of that straight line, so both directions must be bent into symmetric arcs (task 289).
+let ``reciprocal transitions are not bent (layout-native separation)`` () =
+    // 0 -[a]-> 1 and 0 -[b]-> 1 merge into "a, b"; the reverse 1 -[a]-> 0 is drawn as a plain
+    // edge (separation is done natively by the flpqdot router, not the renderer).
     let aut =
         Nfa.fromTransitions
             [ "q0"; "q1" ]
@@ -460,10 +460,9 @@ let ``reciprocal transitions are bent to separate overlapping edges`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s0 ->[\"a, b\", bend left=15] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
-    Assert.DoesNotContain("s0 ->[\"a, b\"] s1;", tikz)
-    Assert.DoesNotContain("s1 ->[\"a\"] s0;", tikz)
+    Assert.Contains("s0 ->[\"a, b\"] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.DoesNotContain("bend", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
 [<Fact>]
@@ -498,18 +497,19 @@ let ``self-loops are never bent`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``reciprocal epsilon transitions are bent`` () =
+let ``reciprocal epsilon transitions are not bent`` () =
     let aut =
         Nfa.fromTransitions [ "q0"; "q1" ] [] (set [ (0, 1); (1, 0) ]) (set [ 0 ]) (set [ 1 ])
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s0 ->[dotted, \"$\\varepsilon$\", bend left=15] s1;", tikz)
-    Assert.Contains("s1 ->[dotted, \"$\\varepsilon$\", bend left=15] s0;", tikz)
+    Assert.Contains("s0 ->[dotted, \"$\\varepsilon$\"] s1;", tikz)
+    Assert.Contains("s1 ->[dotted, \"$\\varepsilon$\"] s0;", tikz)
+    Assert.DoesNotContain("bend", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
 [<Fact>]
-let ``dfaToTikzWithHighlights keeps the bend on a highlighted reciprocal edge`` () =
+let ``dfaToTikzWithHighlights renders a highlighted reciprocal edge without a bend`` () =
     let tikz =
         AutomatonTikz.dfaToTikzWithHighlights
             string
@@ -520,8 +520,9 @@ let ``dfaToTikzWithHighlights keeps the bend on a highlighted reciprocal edge`` 
             Set.empty
             (set [ (0, 1) ])
 
-    Assert.Contains("s0 ->[\"a, b\", red, thick, bend left=15] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
+    Assert.Contains("s0 ->[\"a, b\", red, thick] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
 let ``dfaToDotWithHighlights marks target states with lightyellow`` () =

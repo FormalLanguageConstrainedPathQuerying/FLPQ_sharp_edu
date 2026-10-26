@@ -82,7 +82,7 @@ let ``RpqGraphDot: current edges are red bold and path edges light red`` () =
 // --- TikZ ---
 
 [<Fact>]
-let ``RpqGraphTikz: plain graph renders the layered header and a bare edge`` () =
+let ``RpqGraphTikz: plain graph renders the dot-layout header and a bare edge`` () =
     let actual =
         RpqGraphTikz.toTikz
             (sprintf "$v_%d$")
@@ -96,7 +96,7 @@ let ``RpqGraphTikz: plain graph renders the layered header and a bare edge`` () 
             Set.empty
 
     let expected =
-        "\\begin{tikzpicture}\n  \\graph [layered layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {\n    v0 [as={$v_0$}];\n    v1 [as={$v_1$}];\n    v0 ->[\"a\"] v1;\n  };\n\\end{tikzpicture}\n"
+        "\\begin{tikzpicture}\n  \\graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {\n    v0 [as={$v_0$}];\n    v1 [as={$v_1$}];\n    v0 ->[\"a\"] v1;\n  };\n\\end{tikzpicture}\n"
 
     Assert.Equal(expected, actual)
 
@@ -148,7 +148,7 @@ let ``RpqGraphTikz: current edges are red bold and path edges light red`` () =
     Assert.Contains("v0 ->[\"a\", red!40] v1;", path)
 
 [<Fact>]
-let ``RpqGraphTikz: reciprocal edges are bent`` () =
+let ``RpqGraphTikz: reciprocal edges are not bent`` () =
     let graph: NFA<string, int> =
         Nfa.fromTransitions
             [ 0; 1 ]
@@ -175,8 +175,9 @@ let ``RpqGraphTikz: reciprocal edges are bent`` () =
             Set.empty
             Set.empty
 
-    Assert.Contains("v0 ->[\"a\", bend left=15] v1;", actual)
-    Assert.Contains("v1 ->[\"b\", bend left=15] v0;", actual)
+    Assert.Contains("v0 ->[\"a\"] v1;", actual)
+    Assert.Contains("v1 ->[\"b\"] v0;", actual)
+    Assert.DoesNotContain("bend", actual)
 
 [<Fact>]
 let ``RpqGraphDot: start vertex is green when not highlighted or frontier`` () =

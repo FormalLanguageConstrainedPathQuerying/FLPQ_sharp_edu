@@ -85,6 +85,29 @@ module ExternalTools =
           Stdout = out
           Stderr = err }
 
+    /// Stage the in-repo `tikz/` graph-drawing library (the flpqdot Lua
+    /// modules) into `destDir` so that kpathsea's `lua` file lookup finds
+    /// `pgf/gd/flpqdot/library.lua` in the compile working directory
+    /// (`\usegdlibrary{flpqdot}`). The contents of `tikz/` are copied directly
+    /// into `destDir` (so `tikz/pgf/...` lands at `destDir/pgf/...`), because
+    /// the `lua` file type searches the current directory for the bare module
+    /// path but not arbitrary `TEXINPUTS` roots. No-op if the library is not
+    /// present (e.g. a stripped deployment).
+    let private copyTikzLibTo (destDir: string) : unit =
+        let srcDir = Path.Combine(System.AppContext.BaseDirectory, "tikz")
+
+        if Directory.Exists srcDir then
+            let rec copyDirContents (src: string) (dest: string) : unit =
+                Directory.CreateDirectory dest |> ignore
+
+                for f in Directory.GetFiles src do
+                    File.Copy(f, Path.Combine(dest, Path.GetFileName f), true) |> ignore
+
+                for d in Directory.GetDirectories src do
+                    copyDirContents d (Path.Combine(dest, Path.GetFileName d))
+
+            copyDirContents srcDir destDir
+
     /// Parse Graphviz `-Tplain` output into structured information.
     /// Throws if `dot` returns a non-zero exit code.
     let compileDotStringToInfo (dot: string) : DotInfo =
@@ -137,8 +160,8 @@ module ExternalTools =
             File.Delete(tempFile)
 
     /// Parsed node positions from Graphviz `-Tjson` output: node name -> (x, y).
-    /// Throws if `dot` returns a non-zero exit code. Used to verify layered layouts
-    /// (e.g. that nodes constrained to the same rank share an x-coordinate).
+    /// Throws if `dot` returns a non-zero exit code. Used as the layout oracle to
+    /// verify rank structure (e.g. that nodes in the same rank share an x-coordinate).
     let compileDotStringToNodePositions (dot: string) : Map<string, float * float> =
         let tempFile = Path.GetTempFileName()
         File.WriteAllText(tempFile, dot)
@@ -234,6 +257,7 @@ module ExternalTools =
 
         try
             File.WriteAllText(texFile, fullDoc)
+            copyTikzLibTo tempDir
 
             let r =
                 runProcess
@@ -261,6 +285,8 @@ module ExternalTools =
         try
             if not (Directory.Exists outputDir) then
                 Directory.CreateDirectory outputDir |> ignore
+
+            copyTikzLibTo outputDir
 
             let r =
                 runProcess

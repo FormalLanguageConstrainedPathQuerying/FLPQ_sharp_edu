@@ -35,16 +35,16 @@ The extended RSM appends a fresh start block S′ with two states: start → fin
 A single `tikzpicture` with one flat `\graph`:
 
 ```
-\graph [layered layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm,
+\graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm,
         components go down left aligned, component sep=1.5cm] { ... };
 ```
 
-- **Inside each block** — the layered layout grows left-to-right (`grow'=right`), exactly as for a standalone DFA drawing.
+- **Inside each block** — the dot layout grows left-to-right (`grow'=right`), exactly as for a standalone DFA drawing.
 - **Between blocks** — pgf-gd connected-component packing (`components go down left aligned`, PGF manual §28.7) stacks the components top-to-bottom with left edges aligned and `component sep=1.5cm` vertical padding.
 - **Block order** — pgf-gd orders components by first specified node, so node declaration order controls stacking: the S′ block is declared first (on top), remaining blocks follow in global-state appearance order; within each block the start state is declared first.
 - **Labels** — state content is the bare global index. Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`) and `label=above:Start`. Every final state gets `double, double distance=1.5pt` — including a highlighted final state, which keeps the double circle. Fill priority: highlighted state `fill=lightblue!20`, else block start `fill=green!30`, else final state `fill=red!30`.
 - **Edge labels** — terminals as-is (escaped), nonterminal calls as the bare `Nt` name, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
-- **Edges** — one line per transition symbol within a direction (parallel same-direction labels are not merged). A reciprocal pair (`u→v` and `v→u`) gets `, bend left=15` on both directions so the two lines do not overlap; self-loops are never bent (shared rule `AutomatonTikz.reciprocalBendAttr`).
+- **Edges** — one line per transition symbol within a direction (parallel same-direction labels are not merged). A reciprocal pair (`u→v` and `v→u`) is separated natively by the flpqdot spline router (via the `dot layout` key), so the renderer emits no `bend` option.
 
 ## Function Signatures
 

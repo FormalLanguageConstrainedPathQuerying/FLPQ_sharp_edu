@@ -1,5 +1,5 @@
 \begin{tikzpicture}
-  \graph [layered layout, nodes={draw, rectangle}, grow'=down, level sep=2cm, sibling sep=1.5cm] {
+  \graph [dot layout, nodes={draw, rectangle}, grow'=down, level sep=2cm, sibling sep=1.5cm] {
     v0 [as={$a$}];
     v1 [as={$b$}];
     v2 [as={$a$}];

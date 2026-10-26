@@ -193,15 +193,16 @@ let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``RSM tikz bends reciprocal transitions`` () =
+let ``RSM tikz renders reciprocal transitions without a bend`` () =
     let rsm =
         singleBlockRsm [ { From = 0; Label = 'a'; To = 1 }; { From = 1; Label = 'a'; To = 0 } ] 2
 
     let ersm = ExtendedRSM.create (Nonterminal "S'") rsm
     let tikz = RsmTikz.extendedRsmToTikz string string ersm None
 
-    Assert.Contains("s0 ->[\"a\", bend left=15] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\", bend left=15] s0;", tikz)
+    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.DoesNotContain("bend", tikz)
 
     let tikzTemplatePath =
         System.IO.Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")

@@ -9,7 +9,7 @@ open FLPQ.Languages
 /// Renders all blocks in a single flat graph with global state numbering.
 /// Blocks are the graph's connected components (no inter-block edges exist):
 /// pgf-gd component packing (`components go down left aligned`) stacks them
-/// top-to-bottom with left edges aligned, while the layered layout inside each
+/// top-to-bottom with left edges aligned, while the dot layout inside each
 /// block grows left-to-right. The start block S' is declared first, so it is
 /// packed on top; remaining blocks follow in global-state appearance order.
 /// State content is the bare global index; each block's start state carries a
@@ -35,11 +35,11 @@ module RsmTikz =
         let sb = StringBuilder()
 
         // Blocks are the graph's connected components; pgf-gd packs them top-to-bottom
-        // (PGF manual §28.7) while the layered layout inside each block grows left-to-right.
+        // (PGF manual §28.7) while the dot layout inside each block grows left-to-right.
         AutomatonTikz.tikzHeaderWithOptions
             (sprintf
                 "%s, components go down left aligned, component sep=1.5cm"
-                (AutomatonTikz.layeredGraphOptions "circle" AutomatonTikz.defaultGrowDirection))
+                (AutomatonTikz.graphOptions "circle" AutomatonTikz.defaultGrowDirection))
             sb
 
         let stateInfo = rsm.StateInfo
@@ -98,11 +98,6 @@ module RsmTikz =
             for j in 0 .. stateCount - 1 do
                 match rsm.Transitions.[i, j] with
                 | Some symbols ->
-                    // Same-direction edges stay one line per symbol; only a reciprocal pair
-                    // (i->j and j->i) is split into two arcs (task 289).
-                    let bendAttr =
-                        AutomatonTikz.reciprocalBendAttr true (Option.isSome rsm.Transitions.[j, i]) i j
-
                     let loopAttr = if i = j then ",loop above" else ""
 
                     for symbol in NonEmptySet.toSeq symbols do
@@ -121,7 +116,7 @@ module RsmTikz =
                             | AutomatonLabel.AEpsilon -> ", dotted"
                             | _ -> ""
 
-                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s%s] s%d;" i edgeLabel style bendAttr loopAttr j)
+                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i edgeLabel style loopAttr j)
                         |> ignore
                 | None -> ()
 

@@ -32,7 +32,7 @@ module RnglrAutomatonTikz =
 
     /// Render the RNGLR LR automaton as a Tikz tikzpicture.
     /// States are rectangles with aligned item lists and state numbers.
-    /// Delegates to AutomatonTikz.dfaToTikz with shape "rectangle" (layered layout).
+    /// Delegates to AutomatonTikz.dfaToTikz with shape "rectangle" (dot layout).
     let rnglrAutomatonToTikz
         (labelPrinter: Symbol<'t, 'nt> -> string)
         (nonterminalPrinter: 'nt -> string)

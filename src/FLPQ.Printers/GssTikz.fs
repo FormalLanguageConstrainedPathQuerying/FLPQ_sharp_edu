@@ -4,7 +4,7 @@ open System.Text
 open FLPQ.LinearAlgebra
 
 /// TikZ visualization for the Graph-Structured Stack (GSS).
-/// Renders active vertices and edges using TikZ graphdrawing with layered layout.
+/// Renders active vertices and edges using TikZ graphdrawing with dot layout.
 /// Reuses AutomatonTikz primitives for consistent styling.
 module GssTikz =
 
@@ -24,10 +24,6 @@ module GssTikz =
     /// (one { [same layer] ... } collection per position). The graph then grows left (grow=left)
     /// so that input position 0 stays rightmost: pgf's same-layer cluster chaining reverses the
     /// orientation under the default grow direction.
-    /// When bendReciprocalEdges is true, every edge whose reverse is also drawn gets
-    /// `bend left=15`: a reciprocal pair (u->v and v->u) would otherwise be two straight
-    /// lines on top of each other, while the bend turns it into two symmetric arcs
-    /// (Graphviz DOT separates such pairs automatically, so this is a TikZ-only concern).
     let toTikzFromSets
         (vertexLabelPrinter: int -> string)
         (edgeLabelPrinter: int * int -> string)
@@ -43,7 +39,6 @@ module GssTikz =
         (shape: string)
         (skipEscaping: bool)
         (positionOf: (int -> int) option)
-        (bendReciprocalEdges: bool)
         : string =
         let sb = StringBuilder()
 
@@ -52,7 +47,7 @@ module GssTikz =
             | Some _ -> AutomatonTikz.gssLayeredGrowDirection
             | None -> AutomatonTikz.defaultGrowDirection
 
-        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.layeredGraphOptions shape growDirection) sb
+        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.graphOptions shape growDirection) sb
 
         let allVertices =
             let fromEdges =
@@ -129,32 +124,19 @@ module GssTikz =
 
             let loopAttr = if fromIdx = toIdx then ",loop above" else ""
 
-            // A reciprocal pair (u->v and v->u) draws as two overlapping straight lines;
-            // bending both edges of the pair separates them into symmetric arcs (shared rule,
-            // task 289). Self-loops are never bent.
-            let bendAttr =
-                AutomatonTikz.reciprocalBendAttr
-                    bendReciprocalEdges
-                    (Set.contains (toIdx, fromIdx) activeEdges)
-                    fromIdx
-                    toIdx
-
             if isHighlighted then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
             elif isPath then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
             elif label = "" then
                 if fromIdx = toIdx then
                     sb.AppendLine(sprintf "    v%d ->[loop above] v%d;" fromIdx fromIdx) |> ignore
-                elif bendAttr <> "" then
-                    sb.AppendLine(sprintf "    v%d ->[%s] v%d;" fromIdx (bendAttr.TrimStart(',', ' ')) toIdx)
-                    |> ignore
                 else
                     sb.AppendLine(sprintf "    v%d -> v%d;" fromIdx toIdx) |> ignore
             else
-                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
 
         // Constrain all vertices at the same input position to the same layer. The grouping covers

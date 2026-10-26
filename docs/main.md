@@ -72,7 +72,7 @@ What our standards and principles are, and why we chose them.
 - [Arroyuelo's RPQ Algorithm](developer/arroyuelo-rpq.md) — Implements Arroyuelo's matrix-based Regular Path Querying algorithm
 - [Arroyuelo Step Common](developer/arroyuelo-step-common.md) — Shared record type, regexp-tree model, and tree rendering for the two Arroyuelo RPQ step visualizers (simple-path and reachability)
 - [Arroyuelo Simple-Path Step Visualization](developer/arroyuelo-step-viz.md) — Renders the simple-path evaluation of Arroyuelo's RPQ algorithm
-- [Automaton Visualization](developer/automaton-viz.md) — Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`)
+- [Automaton Visualization](developer/automaton-viz.md) — Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with dot layout (`AutomatonTikz`)
 - [Automaton Module](developer/automaton.md) — Generic finite automaton types and operations: nondeterministic (NFA) and deterministic (DFA)
 - [Azimov CFPQ CLI Runners](developer/azimov-cfpq-runners.md) — The three CLI entry points for Azimov's matrix-based CFPQ algorithm, one per semiring
 - [AzimovCfpq Module](developer/azimov-cfpq.md) — Azimov's matrix-based CFPQ algorithm as one generic semiring-parametrized core: convert the grammar to CNF, initialize each nonterminal's matrix from its terminal and epsilon rules, then run the batch fixed point `T <- T union (T x T)` until an iteration changes nothing
@@ -98,7 +98,7 @@ What our standards and principles are, and why we chose them.
 - [Graph Reader Module](developer/graph-reader.md) — Provides graph file parsing for RPQ algorithms
 - [Graph Module](developer/graph.md) — Provides the generic `Graph<'v,'e>` type: vertices identified by integer indices stored in a map, edges in a square adjacency matrix
 - [GSS DOT Rendering](developer/gss-dot.md) — Graphviz DOT rendering of the graph-structured stack (GSS)
-- [GSS TikZ Rendering](developer/gss-tikz.md) — TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's layered layout
+- [GSS TikZ Rendering](developer/gss-tikz.md) — TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's dot layout
 - [InputGraphTikz](developer/input-graph-tikz.md) — TikZ rendering for the GLL/RNGLR input graph
 - [InputGraphDot](developer/InputGraphDot.md) — DOT rendering for the GLL input graph
 - [Kronecker CFPQ CLI Runner](developer/kronecker-cfpq-runner.md) — The CLI entry point for the Kronecker-product-based CFPQ algorithm
@@ -117,7 +117,7 @@ What our standards and principles are, and why we chose them.
 - [Regexp Tree TikZ](developer/regexp-tree-tikz.md) — TikZ graphdrawing rendering of the RPQ regexp AST tree for the Arroyuelo step visualizers
 - [RNGLR for RSM](developer/rnglr.md) — Implements Right-Nulled Generalized LR (RNGLR) parsing for Recursive State Machines — the LR-based counterpart to GLL
 - [RPQ Graph DOT](developer/rpq-graph-dot.md) — Graphviz DOT rendering of the RPQ input graph (a labeled NFA)
-- [RPQ Graph TikZ](developer/rpq-graph-tikz.md) — TikZ graphdrawing rendering of the RPQ input graph (a labeled NFA) with layered layout
+- [RPQ Graph TikZ](developer/rpq-graph-tikz.md) — TikZ graphdrawing rendering of the RPQ input graph (a labeled NFA) with dot layout
 - [RPQ Graph Visualization](developer/rpq-graph-viz.md) — Shared rendering of the RPQ input graph (a labeled NFA) with path highlights
 - [RpqInput Module](developer/rpq-input.md) — Parses RPQ query regular expressions from EBNF text or files
 - [RPQ Regexp Visualization](developer/rpq-regexp-viz.md) — TeX rendering of the RPQ query regexp as a math-mode formula
@@ -128,6 +128,7 @@ What our standards and principles are, and why we chose them.
 - [SPPF Module](developer/sppf.md) — Shared Packed Parse Forest — a graph-structured representation of all possible derivation trees produced by GLL/RNGLR parsing
 - [Step TeX](developer/step-tex.md) — Generic TeX helpers shared by the RPQ step visualizers
 - [SummaryTeX Module](developer/summary-tex.md) — Generates TeX content for merged summary documents produced by the CLI
+- [flpqdot Graph-Drawing Library](developer/tikz-gd-library.md) — A project-owned, additive graph-drawing library for PGF/TikZ that reuses the stock `layered` (Sugiyama) pipeline and swaps in improved phases to get GraphViz-`dot`-like output while staying fully inside TikZ
 - [Tokenizer Module](developer/tokenizer.md) — Common tokenizer used by all parsing algorithms
 - [Valiant Algorithm](developer/valiant.md) — Implements Valiant's parsing algorithm for context-free grammars in Chomsky Normal Form
 - [Visualization Types](developer/visualization-types.md) — Shared types for LL and LR parser step visualization, plus a shared TeX rendering module

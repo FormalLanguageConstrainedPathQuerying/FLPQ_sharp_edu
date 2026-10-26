@@ -362,7 +362,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("v3 [as={3}, fill=lightblue!20];", tikz)
 
@@ -384,7 +383,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("v0 [as={0}, fill=green!30];", tikz)
         Assert.DoesNotContain("fill=lightblue", tikz)
@@ -407,7 +405,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("v1 [as={1}, fill=lightblue!20];", tikz)
         Assert.DoesNotContain("fill=green", tikz)
@@ -431,7 +428,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("fill=yellow!20", tikz)
         Assert.DoesNotContain("fill=lightblue", tikz)
@@ -456,7 +452,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("fill=lightblue!20", tikz)
         Assert.DoesNotContain("fill=green", tikz)
@@ -480,7 +475,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("fill=yellow!20", tikz)
         Assert.DoesNotContain("fill=lightblue", tikz)
@@ -503,81 +497,9 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("v0 -> v1;", tikz)
         Assert.Contains("v0 ->[loop above] v0;", tikz)
-
-    [<Fact>]
-    let ``toTikzFromSets bends both edges of a reciprocal pair when requested`` () =
-        let tikz =
-            GssTikz.toTikzFromSets
-                (fun idx -> sprintf "%d" idx)
-                (fun _ -> "")
-                (set [ 0; 1 ])
-                (set [ (0, 1); (1, 0) ])
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                None
-                "circle"
-                false
-                None
-                true
-
-        Assert.Contains("v0 ->[bend left=15] v1;", tikz)
-        Assert.Contains("v1 ->[bend left=15] v0;", tikz)
-
-    [<Fact>]
-    let ``toTikzFromSets leaves reciprocal pairs straight when not requested`` () =
-        let tikz =
-            GssTikz.toTikzFromSets
-                (fun idx -> sprintf "%d" idx)
-                (fun _ -> "")
-                (set [ 0; 1 ])
-                (set [ (0, 1); (1, 0) ])
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                Set.empty
-                None
-                "circle"
-                false
-                None
-                false
-
-        Assert.Contains("v0 -> v1;", tikz)
-        Assert.Contains("v1 -> v0;", tikz)
-        Assert.DoesNotContain("bend", tikz)
-
-    [<Fact>]
-    let ``toTikzFromSets bends labeled and highlighted reciprocal edges but not one-way edges`` () =
-        let tikz =
-            GssTikz.toTikzFromSets
-                (fun idx -> sprintf "%d" idx)
-                (fun _ -> "e")
-                (set [ 0; 1; 2 ])
-                (set [ (0, 1); (1, 0); (0, 2) ])
-                Set.empty
-                Set.empty
-                Set.empty
-                (set [ (1, 0) ])
-                Set.empty
-                Set.empty
-                None
-                "circle"
-                false
-                None
-                true
-
-        Assert.Contains("v0 ->[\"e\", bend left=15] v1;", tikz)
-        Assert.Contains("v1 ->[\"e\", red, thick, bend left=15] v0;", tikz)
-        Assert.Contains("v0 ->[\"e\"] v2;", tikz)
 
     [<Fact>]
     let ``toTikzFromSets renders path edges light red and highlighted edges red bold`` () =
@@ -597,7 +519,6 @@ module GssTikzTests =
                 "circle"
                 false
                 None
-                false
 
         Assert.Contains("v0 ->[\"e\", red!40] v1;", tikz)
         Assert.Contains("v1 ->[\"e\", red, thick] v2;", tikz)

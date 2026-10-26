@@ -9,7 +9,7 @@ open System.Text
 /// both sets renders as highlighted. Reciprocal pairs are bent apart.
 module RpqGraphTikz =
 
-    /// Render the RPQ input graph as a TikZ `tikzpicture` with layered layout. Labels are
+    /// Render the RPQ input graph as a TikZ `tikzpicture` with dot layout. Labels are
     /// taken as already-rendered TeX (the caller escapes/formats them); the RPQ callers pass
     /// `$v_i$` vertices and escaped edge labels. `activeVertices`/`activeEdges` are the full
     /// graph; the highlight sets select fills and edge styles.
@@ -26,9 +26,7 @@ module RpqGraphTikz =
         : string =
         let sb = StringBuilder()
 
-        AutomatonTikz.tikzHeaderWithOptions
-            (AutomatonTikz.layeredGraphOptions "circle" AutomatonTikz.defaultGrowDirection)
-            sb
+        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.graphOptions "circle" AutomatonTikz.defaultGrowDirection) sb
 
         let allVertices =
             let fromEdges =
@@ -65,27 +63,19 @@ module RpqGraphTikz =
 
             let loopAttr = if fromIdx = toIdx then ",loop above" else ""
 
-            // A reciprocal pair (u->v and v->u) would otherwise draw as two overlapping
-            // straight lines; bend both edges into symmetric arcs. Self-loops are never bent.
-            let bendAttr =
-                AutomatonTikz.reciprocalBendAttr true (Set.contains (toIdx, fromIdx) activeEdges) fromIdx toIdx
-
             if isHighlighted then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
             elif isPath then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
             elif label = "" then
                 if fromIdx = toIdx then
                     sb.AppendLine(sprintf "    v%d ->[loop above] v%d;" fromIdx fromIdx) |> ignore
-                elif bendAttr <> "" then
-                    sb.AppendLine(sprintf "    v%d ->[%s] v%d;" fromIdx (bendAttr.TrimStart(',', ' ')) toIdx)
-                    |> ignore
                 else
                     sb.AppendLine(sprintf "    v%d -> v%d;" fromIdx toIdx) |> ignore
             else
-                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s%s] v%d;" fromIdx label bendAttr loopAttr toIdx)
+                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" fromIdx label loopAttr toIdx)
                 |> ignore
 
         AutomatonTikz.tikzFooter sb

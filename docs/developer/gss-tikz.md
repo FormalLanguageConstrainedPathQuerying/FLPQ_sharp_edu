@@ -4,10 +4,10 @@
 **Kind:** visualization
 **Module:** GssTikz
 **Source:** `src/FLPQ.Printers/GssTikz.fs`
-**Depends on:** AutomatonTikz (header, layered layout options, label escaping)
+**Depends on:** AutomatonTikz (header, graph options, label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer
 
-> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's layered layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs can be bent into symmetric arcs so they do not draw on top of each other.
+> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's dot layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs are separated natively by the flpqdot router so they do not draw on top of each other.
 
 ## Contents
 
@@ -25,17 +25,17 @@ visualizers reuse the same set-based rendering for the input graph.
 
 ## Supported Formats
 
-- TikZ `tikzpicture` with `\graph [layered layout, ...]`, compiled by lualatex via
+- TikZ `tikzpicture` with `\graph [dot layout, ...]`, compiled by lualatex via
   `ExternalTools`.
 
 ## Function Signatures
 
-### `toTikzFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> string -> bool -> (int -> int) option -> bool -> string`
+### `toTikzFromSets: (int -> string) -> (int * int -> string) -> Set<int> -> Set<int * int> -> Set<int> -> Set<int> -> Set<int> -> Set<int * int> -> Set<int * int> -> Set<int> -> int option -> string -> bool -> (int -> int) option -> string`
 
 Renders directly from vertex/edge sets. Parameters in order: vertex label printer,
 edge label printer, activeVertices, activeEdges, highlightedVertices, startVertices,
 frontierVertices, highlightedEdges, pathEdges, storedPopVertices, currentVertex,
-shape, skipEscaping, positionOf, bendReciprocalEdges.
+shape, skipEscaping, positionOf.
 
 - Vertex fills (highest precedence first): current = lightblue!20, stored-pop = orange!30,
   highlighted = yellow!20, frontier = lightblue!20, start = green!30, else plain.
@@ -47,18 +47,16 @@ shape, skipEscaping, positionOf, bendReciprocalEdges.
 - `positionOf`: when `Some`, one `{ [same layer] ... }` collection per position and the
   grow direction switches to `grow=left` (pgf's same-layer chaining reverses the
   orientation under the default grow direction).
-- `bendReciprocalEdges`: when true, every edge whose reverse is also drawn gets
-  `bend left=15`, turning a reciprocal pair into two symmetric arcs. The rule (bend constant and
-  self-loop guard) is provided by the shared `AutomatonTikz.reciprocalBendAttr` helper, also used
-  by the automaton, RSM, and input-graph renderers.
+- The graph uses the `dot layout` key (flpqdot library), so reciprocal pairs are separated
+  natively by the spline edge router — the renderer emits no `bend` option.
 
 ## Design Decisions
 
 | Decision | Rationale |
 | --- | --- |
 | Two edge highlight tiers (highlighted / path) | Step figures need to distinguish the elements added on the current step (red, bold — the book draws the current walk `thick`) from the accumulated structure they extend (light red); one tier cannot express both |
-| Reuses `AutomatonTikz` primitives | Header, layered layout options, and label escaping stay consistent with the automaton renderers |
-| Reciprocal pairs bent by default in RPQ graphs | The input graph may carry both directions of a pair; TikZ would draw the two straight edges fully on top of each other (DOT needs no equivalent — Graphviz separates them) |
+| Reuses `AutomatonTikz` primitives | Header, `dot layout` options, and label escaping stay consistent with the automaton renderers |
+| Reciprocal pairs separated by the layout engine | The input graph may carry both directions of a pair; the flpqdot spline router bows them to opposite sides natively (no renderer-side `bend` option) |
 
 ## See Also
 

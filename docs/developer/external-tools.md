@@ -61,6 +61,17 @@ val compileTexFileTwice : texPath:string -> outputDir:string -> bool
 `compileTexStringWithTemplateLog` additionally returns the lualatex stdout log, which contains
 `\typeout` lines — used by layout tests to extract node coordinates from Tikz pictures.
 
+### Staging the flpqdot graph-drawing library
+
+Both file-based and string-based TeX compiles stage the in-repo `tikz/` graph-drawing
+library (the flpqdot Lua modules) into the compile working directory before invoking
+lualatex. This is what makes `\usegdlibrary{flpqdot}` (used by the TikZ templates) resolve:
+kpathsea's `lua` file lookup searches the current directory for the bare module path
+(`pgf/gd/flpqdot/library.lua`) but not arbitrary `TEXINPUTS` roots, so the library contents
+are copied directly into the working directory (`tikz/pgf/...` → `<workdir>/pgf/...`). The
+staging is a no-op when the library is absent (e.g. a stripped deployment). See
+[tikz-gd-library](tikz-gd-library.md) for the library itself.
+
 ## Strict Error Detection
 
 A lualatex run succeeds only when ALL of:
@@ -79,6 +90,7 @@ Relying on exit code alone is insufficient — lualatex may exit 0 even when err
 | Split API: string-based + file-based | Tests use string-based (in-memory); CLI uses file-based (preserves PDFs) |
 | Bool returns + stderr messages | CLI can continue processing other algorithms and report aggregate exit code |
 | Shared `runProcess` helper | Consistent process invocation: no shell, redirected output, 30s timeout |
+| Stage `tikz/` lib into the working dir | kpathsea's `lua` lookup searches the cwd but not `TEXINPUTS` roots; staging is the reliable way to make `\usegdlibrary{flpqdot}` resolve without clobbering the default search path (which would break font/package lookup) |
 
 ## See Also
 

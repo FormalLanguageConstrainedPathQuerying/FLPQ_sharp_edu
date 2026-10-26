@@ -182,17 +182,19 @@ let ``renderGraph: path edges render light red and current edges red bold in bot
     Assert.Contains("v1 ->[\"b\", red, thick] v2;", tikz)
 
 [<Fact>]
-let ``renderGraph: reciprocal edges are bent in TikZ but not in DOT`` () =
+let ``renderGraph: reciprocal edges are not bent in TikZ or DOT`` () =
     let dot, tikz =
         RpqGraphViz.renderGraph id exampleGraph Set.empty Set.empty Set.empty Set.empty Set.empty Set.empty Map.empty
 
-    // The example graph carries both 2->3 ("c") and 3->2 ("b").
-    Assert.Contains("v2 ->[\"c\", bend left=15] v3;", tikz)
-    Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)
+    // The example graph carries both 2->3 ("c") and 3->2 ("b"); the renderer no
+    // longer emits a bend (separation is done natively by the flpqdot router).
+    Assert.Contains("v2 ->[\"c\"] v3;", tikz)
+    Assert.Contains("v3 ->[\"b\"] v2;", tikz)
     // One-way edges stay straight.
     Assert.Contains("v0 ->[\"a\"] v1;", tikz)
-    // Graphviz separates reciprocal pairs on its own; no bend attribute in DOT.
+    // No bend attribute in either output.
     Assert.DoesNotContain("bend", dot)
+    Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
 let ``renderGraph: extra edges are drawn with their labels even when not input edges`` () =
@@ -209,8 +211,8 @@ let ``renderGraph: extra edges are drawn with their labels even when not input e
             (Set.ofList [ (1, 0) ])
             (Map.ofList [ (1, 0), "S" ])
 
-    // (1, 0) is reciprocal with (0, 1), so it gets a bend attr.
-    Assert.Contains("v1 ->[\"S\", red, thick, bend left=15] v0;", tikz)
+    // (1, 0) is reciprocal with (0, 1); it renders highlighted, without a bend.
+    Assert.Contains("v1 ->[\"S\", red, thick] v0;", tikz)
 
     // A highlighted extra edge that coincides with an input edge merges its labels.
     let _, merged =
@@ -228,7 +230,7 @@ let ``renderGraph: extra edges are drawn with their labels even when not input e
     Assert.Contains("v0 ->[\"a, S\", red, thick] v1;", merged)
 
 [<Fact>]
-let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
+let ``renderGraph: a highlighted reciprocal edge renders without a bend`` () =
     let _, tikz =
         RpqGraphViz.renderGraph
             id
@@ -241,8 +243,9 @@ let ``renderGraph: a highlighted reciprocal edge keeps its bend`` () =
             Set.empty
             Map.empty
 
-    Assert.Contains("v2 ->[\"c\", red, thick, bend left=15] v3;", tikz)
-    Assert.Contains("v3 ->[\"b\", bend left=15] v2;", tikz)
+    Assert.Contains("v2 ->[\"c\", red, thick] v3;", tikz)
+    Assert.Contains("v3 ->[\"b\"] v2;", tikz)
+    Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
 let ``renderGraphWithDerived: an input label equal to the derived label is shown once`` () =

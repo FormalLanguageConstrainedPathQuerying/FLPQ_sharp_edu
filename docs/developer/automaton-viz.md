@@ -7,7 +7,7 @@
 **Depends on:** Automaton, LR parser types, RnglrItem (FLPQ.Languages)
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with layered layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, frontier-state and target-state fills, epsilon transitions (dotted), and loop edges.
+> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with dot layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, frontier-state and target-state fills, epsilon transitions (dotted), and loop edges.
 
 ## Contents
 
@@ -47,7 +47,7 @@
 ### Visual Style
 
 - Default shape: `circle` (parametrizable — `rectangle` for LR automata)
-- Layout: `layered layout, <grow direction>, level sep=2cm, sibling sep=1.5cm`. The grow direction is parameterized by `AutomatonTikz.layeredGraphOptions shape growDirection`: the default is `defaultGrowDirection = "grow'=right"` (used by NFA/DFA/RSM/input-graph renderers); the GSS renderer selects `gssLayeredGrowDirection = "grow=left"` when it constrains input positions to layers, because pgf's same-layer cluster chaining reverses the orientation under the default grow direction.
+- Layout: `dot layout, <grow direction>, level sep=2cm, sibling sep=1.5cm`. The grow direction is parameterized by `AutomatonTikz.layeredGraphOptions shape growDirection`: the default is `defaultGrowDirection = "grow'=right"` (used by NFA/DFA/RSM/input-graph renderers); the GSS renderer selects `gssLayeredGrowDirection = "grow=left"` when it constrains input positions to layers, because pgf's same-layer cluster chaining reverses the orientation under the default grow direction.
 - Start states: `fill=green!30, label=above:Start`
 - Final states: `double, double distance=1.5pt, fill=red!30`
 - Highlighted states (`dfaToTikzWithHighlights`): `fill=lightblue!20`, the current/frontier fill
@@ -55,7 +55,7 @@
 - Fill precedence (`dfaToTikzWithHighlights`, highest first): target > current/frontier > final > start (TikZ's last fill wins, so the fills are appended in the reverse order). The Start label and final double ring are always kept
 - Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->["label", red, thick(,loop above)] s%d` — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
 - Loop edges: `s%d ->["label",loop above] s%d`
-- Reciprocal edges (`u→v` and `v→u`): both get `, bend left=15`, so the two directions render as symmetric arcs instead of one straight line drawn on top of the other; self-loops are never bent. Applies to terminal and epsilon edges; a highlighted terminal edge keeps `red, thick` before the bend (attribute order `label, red/thick, bend, loop`).
+- Reciprocal edges (`u→v` and `v→u`): separated natively by the flpqdot spline router (via the `dot layout` key), which bows the two directions to opposite sides of their chord; the renderer emits no `bend` option. Self-loops are never bowed.
 - Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
@@ -111,7 +111,7 @@ A : 0 \\
 | Fill precedence target > current > final > start | Unified with the graph figures (user guidance): the current/frontier state must be recognizable over the start state, and a newly reached target must be recognizable over the current state; final states keep their double ring so their property stays visible |
 | Edge highlight is a separate parameter, not derived from state highlights | Step figures highlight exactly the transitions used on the current step (Belyanin's per-label propagation), which is unrelated to which states are in the frontier; DOT and TikZ share the GssDot/GssTikz red-bold style so the two formats stay consistent |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
-| Reciprocal pairs bent (`bend left=15`) | A pair `u→v`/`v→u` is drawn by TikZ as two fully overlapping straight lines; bending both directions separates them into symmetric arcs, matching the rule already used by `GssTikz`/`RpqGraphViz` (Graphviz DOT separates such pairs automatically). The shared helper is `AutomatonTikz.reciprocalBendAttr`; self-loops are excluded by construction |
+| Reciprocal pairs separated by the layout engine | A pair `u→v`/`v→u` would otherwise draw as two fully overlapping edges; the flpqdot spline router (via the `dot layout` key) bows them to opposite sides natively, so the renderer emits no `bend` option (Graphviz DOT separates such pairs automatically) |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |
 | Enhanced arrow heads | `Latex[width=3mm,length=3mm]` for visibility |
 

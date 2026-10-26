@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="GoldenHelpers.fs" />
     <Compile Include="ExternalToolsTests.fs" />
+    <Compile Include="FlpqdotLibraryTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="RpqGraphVizTests.fs" />
     <Compile Include="RpqGraphRendererTests.fs" />
@@ -54,6 +55,14 @@
   <ItemGroup>
     <Content Include="..\..\data\tex_tikz_template.tex">
       <Link>tex_tikz_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\data\tex_flpqdot_probe_template.tex">
+      <Link>tex_flpqdot_probe_template.tex</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\tikz\**\*">
+      <Link>tikz\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\data\tex_template.tex">

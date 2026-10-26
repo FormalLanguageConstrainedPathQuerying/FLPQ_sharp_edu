@@ -13,6 +13,9 @@ FLPQ.slnx
 │   ├── detect_changes.py            # Detect projects with modified .fs files
 │   ├── quality_check.py             # Commit gate: format + build
 │   └── hard_gate.py                 # Full gate: format + build + tests + coverage + lint
+├── tikz/                        # Project-owned graph-drawing library (flpqdot) for PGF/TikZ
+│   └── pgf/gd/flpqdot/
+│       └── library.lua              # Entry: declares the `dot layout` key (Sugiyama pipeline + flpqdot phases)
 ├── src/
 │   ├── FLPQ.LinearAlgebra/     # Linear algebra library
 │   │   ├── Matrix.fs               # Generic matrix type and operations
@@ -66,7 +69,7 @@ FLPQ.slnx
 │   │   ├── InputGraphTikz.fs       # TikZ rendering for the input graph (terminal path)
 │   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
 │   │   ├── SppfTikz.fs             # TikZ rendering for SPPF
-│   │   ├── AutomatonTikz.fs        # TikZ rendering for finite automata (graphdrawing, layered layout)
+│   │   ├── AutomatonTikz.fs        # TikZ rendering for finite automata (graphdrawing, dot layout)
 │   │   ├── RegexpTreeTikz.fs       # TikZ rendering of the RPQ regexp AST tree (vertical)
 │   │   ├── RpqGraphTikz.fs         # RPQ-dedicated TikZ rendering of the input graph
 │   │   ├── RpqGraphViz.fs          # Shared RPQ input-graph rendering with path highlights
