@@ -60,10 +60,12 @@
        Assert.Empty(failures)
    ```
 
-5. **For property-based tests**, refer to the language's generator type in `Generators.fs` (the `Arbitrary` types correspond to the `Gen<string>` values in the registry, e.g. `lang.GenString`):
+5. **For property-based tests**, refer to the language's `Arbitrary` wrapper in
+   `LanguageRegistry.fs` (the `GenToArbitrary` types correspond to the `Gen<string>` values in the
+   registry, e.g. `lang.GenString`):
 
    ```fsharp
-   [<Properties(Arbitrary = [| typeof<AbStringGenerators> |])>]
+   [<Properties(Arbitrary = [| typeof<GenToArbitrary.AbString> |])>]
    module Dyck1Properties =
        [<Property>]
        let ``MyParser and CYK agree`` (s: string) = ...
@@ -85,7 +87,7 @@
 - Hardcode grammar definitions inline — use `LanguageRegistry.<Language>.Grammars[n]`
 - Call `TestHelpers.grammarToRsm` or `RsmBuilder.buildRSMFromText` in tests — use `g.Rsm`
 - Hardcode accept/reject strings — use `LanguageRegistry.<Language>.AcceptStrings` / `RejectStrings`
-- Define duplicate string generators — use the `Arbitrary` types registered in `Generators.fs`, which correspond to the `Gen<string>` values in the language registry
+- Define duplicate string generators — use the `GenToArbitrary` wrapper types in `LanguageRegistry.fs`, which correspond to the `Gen<string>` values in the language registry
 
 ## Language Entries
 
@@ -99,9 +101,11 @@
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `grammar1` | S → a S b S \| ε | no | no | yes | yes | no | ambiguous Dyck-1; LL(1)-compatible |
-| `grammar2` | S → a S b \| S S \| ε | yes | yes | yes | yes | no | S→SS creates direct left-recursion; not LL, not LR |
-| `grammarSaSb_eps` | S → S a S b \| ε | yes | yes | yes | yes | no | left-recursive Dyck-1; S→S a S b has direct left-recursion |
+| `ambiguousEps` | S → a S b S \| ε | no | no | yes | yes | no | ambiguous Dyck-1; LL(1)-compatible |
+| `ambiguousWithConcat` | S → a S b \| ε \| S S | yes | yes | yes | yes | no | S→SS creates direct left-recursion; not LL, not LR |
+| `leftRecursiveEps` | S → S a S b \| ε | yes | yes | yes | yes | no | left-recursive Dyck-1; S→S a S b has direct left-recursion |
+| `ebnfStar` | S → (a S b)\* | no | no | yes | yes | no | EBNF regex generating Dyck-1; RSM-based tests |
+| `singleRuleNoEps` | S → a S b S | no | no | no | no | no | single-rule Dyck-like grammar (no epsilon); subset of Dyck-1 |
 
 **Accept strings**:
 
@@ -112,6 +116,8 @@
 | (empty) |
 | `a a b b` |
 | `a a b a b b` |
+| `a a b a b b a b` |
+| `a a a b a b b a b b` |
 
 **Reject strings**:
 
@@ -121,6 +127,7 @@
 | `b b` |
 | `a b b` |
 | `a b b a` |
+| `a a b` |
 | `b` |
 | `a` |
 | `a b a b a` |
@@ -139,16 +146,18 @@
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `grammar3` | S → a S \| a | no | no | no | no | no | right-recursive; LL(1), SLR(1)-compatible |
-| `grammar4` | S → S a \| a | yes | yes | no | no | no | left-recursive |
-| `grammar5` | S → S S \| S S S \| a | yes | yes | yes | no | no | ambiguous left-recursive |
-| `grammar11` | S → a a A \| a A; A → a A \| ε | no | no | yes | no | no | ambiguous via nullable A |
-| `grammar12` | S → a \| a a \| a a A \| a a a A; A → a A \| ε | no | no | yes | no | no | ambiguous with explicit short-string productions |
-| `grammar14` | S → a \| S S \| S S S | yes | yes | yes | no | no | ambiguous left-recursive |
+| `rightRecursive` | S → a S \| a | no | no | no | no | no | right-recursive; LL(1), SLR(1)-compatible |
+| `leftRecursive` | S → S a \| a | yes | yes | no | no | no | left-recursive |
+| `ambiguousBinaryTernary` | S → S S \| S S S \| a | yes | yes | yes | no | no | ambiguous left-recursive |
+| `viaNullableA` | S → a a A \| a A; A → a A \| ε | no | no | yes | no | no | ambiguous via nullable A |
+| `explicitVariants` | S → a \| a a \| a a A \| a a a A; A → a A \| ε | no | no | yes | no | no | ambiguous with explicit short-string productions |
+| `ambiguousWithSingleRule` | S → a \| S S \| S S S | yes | yes | yes | no | no | ambiguous left-recursive |
+| `ebnfNaStar` | S → N a\*; N → (a a) \| a | no | no | yes | no | no | EBNF; RSM-based tests |
+| `ebnfAStarN` | S → a\* N; N → a \| (a a) | no | no | yes | no | no | EBNF; RSM-based tests |
 
-**Accept strings**: `a`, `a a`, `a a a a`, `a a a a a`
+**Accept strings**: `a`, `a a`, `a a a`, `a a a a`, `a a a a a`
 
-**Reject strings**: (empty), `b`
+**Reject strings**: (empty), `b`, `a b`, `a a b`, `a a a b`, `a b a a`
 
 **Generator**: `aStringGen`
 
@@ -164,13 +173,19 @@
 
 | Name | Definition | LR | DLR | Amb | ε | CNF | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `grammar13` | S → ε \| a a S \| a S | no | no | yes | yes | no | ambiguous a\*; multiple derivations for a^n |
+| `ambiguous` | S → ε \| a a S \| a S | no | no | yes | yes | no | ambiguous a\*; multiple derivations for a^n |
+| `palindromeLike` | S → a S a \| a \| ε | no | no | yes | yes | no | a\* via palindrome-like construction; ambiguous |
+| `ebnfNStar` | S → N\*; N → a \| (a a) | no | no | yes | yes | no | EBNF; RSM-based tests |
+| `rightRecursiveWithEps` | S → a S \| ε | no | no | no | yes | no | right-recursive grammar with epsilon; used in toCnf tests |
+| `aSSWithEps` | S → a S \| S S \| ε | yes | yes | yes | yes | no | common GLL/RNGLR trigger example; both orange highlights visible on input `a a` |
+| `ssAEps` | S → S S \| a \| ε | yes | yes | yes | yes | no | minimal RNGLR passing-reduction trigger; orange highlight visible on input `a` |
+| `twoBlockConcat` | S → C C; C → a \| ε | no | no | no | yes | no | subset of a\* ({ε, a, aa}); minimal GLL stored-pop trigger; orange highlight visible on input `a` |
 
-**Accept strings**: (empty), `a`, `a a`, `a a a`, `a a a a`
+**Accept strings**: (empty), `a`, `a a`, `a a a`, `a a a a`, `a a a a a`
 
 **Reject strings**: `b`, `a b`, `a a b`, `a a a b`, `a b a a`
 
-**Generator**: `aStringGen`
+**Generator**: `aStarStringGen`
 
 ---
 
@@ -362,16 +377,22 @@
 | Generator name | Language | What it produces | FsCheck type |
 | --- | --- | --- | --- |
 | `abStringGen` | Dyck1, ANB, ANBN, ASTAR_BSTAR | Random sequences of `a` and `b` | `Gen<string>` |
-| `aStringGen` | APlus, AStar | Sequences of `a` tokens, space-separated | `Gen<string>` |
+| `aStringGen` | APlus | Contiguous sequences of `a` tokens, length 0..15 | `Gen<string>` |
+| `aStarStringGen` | AStar | Contiguous sequences of `a` tokens, length 0..8 | `Gen<string>` |
 | `exprStringGen` | ArithExpr | Recursively-generated arithmetic expressions | `Gen<string>` |
 | `abcdxyStringGen` | TwoTrackDyck | Random sequences from {a,b,c,d,x,y} | `Gen<string>` |
 | `constantGen "a"` | SingleA | Always produces `"a"` | `Gen<string>` |
 | `constantGen "a b"` | SingleAB | Always produces `"a b"` | `Gen<string>` |
 | `constantGen ""` | EpsilonOnly | Always produces `""` | `Gen<string>` |
 
-All generators produce space-separated strings. Use `TestHelpers.stringToTerminals` to tokenize them.
+Generators produce strings over the language alphabet. Use the tokenizer that matches the
+test: `TestHelpers.singleCharTokenize` for single-character alphabets, `TestHelpers.multiCharTokenize`
+for whitespace-separated multi-character tokens, or `TestHelpers.stringToTerminals` when every
+character is already a terminal.
 
-The FsCheck `Arbitrary` wrapper types (e.g., `AbStringGenerators`) in `Generators.fs` mirror these generators for `[<Property>]` attribute-based tests.
+The FsCheck `Arbitrary` wrapper types in `LanguageRegistry.fs` (`GenToArbitrary.AbString`,
+`GenToArbitrary.AString`, `GenToArbitrary.AStarString`, ...) mirror these generators for
+`[<Property>]` attribute-based tests and for `TestHelpers.checkLanguages`.
 
 ## See Also
 

@@ -37,15 +37,11 @@ type private RnglrRun =
 
 /// Runs RNGLR with step collection on a registry RSM and a terminal list.
 let private runWithSteps (rsm: RSM<string, string>) (input: Terminal<string> list) : RnglrRun =
-    let startNt = (RSM.startBlock rsm).Nonterminal
-    let rsmFixed = { rsm with StartBlock = startNt }
-    let freshStart = Nonterminal "S'"
-    let graph = TestHelpers.terminalsToGraph input
-    let ersm = ExtendedRSM.create freshStart rsmFixed
+    let ctx = TestHelpers.prepareRsmStepRun rsm input
 
-    { Result = Rnglr.buildPathIndexWithSteps freshStart ersm graph
-      Ers = ersm
-      Graph = graph }
+    { Result = Rnglr.buildPathIndexWithSteps ctx.FreshStart ctx.Ers ctx.Graph
+      Ers = ctx.Ers
+      Graph = ctx.Graph }
 
 module RnglrSharedAcceptance =
     let private rnglrCases = ParsingTestCases.AcceptanceCases.allCases
@@ -261,6 +257,32 @@ module RnglrPassingReductions =
     let ``passing-reduction vertices empty at initial step`` () =
         let steps = stepsOf dyck1.Grammars[1].Rsm [ Terminal "a"; Terminal "b" ]
         Assert.True(Set.isEmpty steps.[0].PassingReductionVertices)
+
+    [<Fact>]
+    let ``passing-reduction vertices tracked for S -> a S | S S | eps on a a`` () =
+        let rsm = (LanguageRegistry.findGrammar astar "aSSWithEps").Rsm
+        let input = [ Terminal "a"; Terminal "a" ]
+        let steps = stepsOf rsm input
+
+        Assert.True(accepts rsm input, "common GLL/RNGLR trigger example must be accepted")
+
+        Assert.True(
+            steps |> List.exists (fun s -> not (Set.isEmpty s.PassingReductionVertices)),
+            "Expected at least one step with non-empty PassingReductionVertices"
+        )
+
+    [<Fact>]
+    let ``passing-reduction vertices tracked for S -> S S | a | eps on a`` () =
+        let rsm = (LanguageRegistry.findGrammar astar "ssAEps").Rsm
+        let input = [ Terminal "a" ]
+        let steps = stepsOf rsm input
+
+        Assert.True(accepts rsm input, "minimal RNGLR trigger example must be accepted")
+
+        Assert.True(
+            steps |> List.exists (fun s -> not (Set.isEmpty s.PassingReductionVertices)),
+            "Expected at least one step with non-empty PassingReductionVertices"
+        )
 
     [<Fact>]
     let ``shift consumes stored states on self-loop input graph`` () =

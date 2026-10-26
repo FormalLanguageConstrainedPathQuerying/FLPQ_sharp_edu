@@ -99,10 +99,18 @@ module GllVsRnglr =
             checkGllVsRnglr
 
     [<Fact>]
-    let ``GLL and RNGLR agree on A-string languages (APlus, AStar)`` () =
+    let ``GLL and RNGLR agree on APlus`` () =
         TestHelpers.checkLanguages
-            [ LanguageRegistry.APlus; LanguageRegistry.AStar ]
+            [ LanguageRegistry.APlus ]
             typeof<GenToArbitrary.AString>
+            TestHelpers.singleCharTokenize
+            checkGllVsRnglr
+
+    [<Fact>]
+    let ``GLL and RNGLR agree on AStar (bounded input)`` () =
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.AStar ]
+            typeof<GenToArbitrary.AStarString>
             TestHelpers.singleCharTokenize
             checkGllVsRnglr
 
@@ -233,10 +241,18 @@ module CykVsValiantVsModifiedValiant =
             checkCykValiant
 
     [<Fact>]
-    let ``CYK, Valiant, and Modified Valiant agree on A-string languages`` () =
+    let ``CYK, Valiant, and Modified Valiant agree on APlus`` () =
         TestHelpers.checkLanguages
-            [ LanguageRegistry.APlus; LanguageRegistry.AStar ]
+            [ LanguageRegistry.APlus ]
             typeof<GenToArbitrary.AString>
+            TestHelpers.singleCharTokenize
+            checkCykValiant
+
+    [<Fact>]
+    let ``CYK, Valiant, and Modified Valiant agree on AStar (bounded input)`` () =
+        TestHelpers.checkLanguages
+            [ LanguageRegistry.AStar ]
+            typeof<GenToArbitrary.AStarString>
             TestHelpers.singleCharTokenize
             checkCykValiant
 

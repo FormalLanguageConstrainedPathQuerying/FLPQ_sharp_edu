@@ -1,0 +1,9 @@
+digraph GSS {
+  rankdir=LR;
+  compound=true;
+  v0 [label="0: (0,0)", shape=ellipse, style=filled, fillcolor=orange];
+  v4 [label="4: (2,0)", shape=ellipse, style=filled, fillcolor=lightblue];
+  v10 [label="10: (5,0)", shape=ellipse];
+  v0 -> v4 [label="0,0 → 2,0"];
+  v4 -> v10 [label="2,0 → 5,0"];
+}

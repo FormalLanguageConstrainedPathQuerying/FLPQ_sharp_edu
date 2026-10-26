@@ -138,6 +138,50 @@ module GllReductionCascade =
         let g = LanguageRegistry.findGrammar epsilonOnly "viaCascade"
         Assert.True(accepts g.Rsm [])
 
+module GllStoredPops =
+
+    let private stepsAndAccepted
+        (rsm: RSM<string, string>)
+        (input: Terminal<string> list)
+        : bool * GLLParsingStep<string, string> list =
+        let ctx = TestHelpers.prepareRsmStepRun rsm input
+        let (pi, steps) = GLL.buildPathIndexWithSteps ctx.FreshStart ctx.Ers ctx.Graph
+        let accepted = PathIndex.isAccepted pi ctx.Ers (Graph.vertexCount ctx.Graph)
+        (accepted, steps)
+
+    let private hasStoredPop (steps: GLLParsingStep<string, string> list) : bool =
+        steps |> List.exists (fun s -> not (Set.isEmpty s.StoredPopVertices))
+
+    let private hasVisibleStoredPop (steps: GLLParsingStep<string, string> list) : bool =
+        TestHelpers.gllVisibleStoredPopIndex steps >= 0
+
+    [<Fact>]
+    let ``stored-pop vertices are visible for S -> a S | S S | eps on a a`` () =
+        let rsm = (LanguageRegistry.findGrammar astar "aSSWithEps").Rsm
+        let input = [ Terminal "a"; Terminal "a" ]
+        let (accepted, steps) = stepsAndAccepted rsm input
+
+        Assert.True(accepted, "common GLL/RNGLR trigger example must be accepted")
+        Assert.True(hasStoredPop steps, "Expected at least one step with non-empty StoredPopVertices")
+        Assert.True(hasVisibleStoredPop steps, "Expected a stored-pop vertex distinct from the current GSS vertex")
+
+    [<Fact>]
+    let ``stored-pop vertices are visible for S -> C C, C -> a | eps on a`` () =
+        let rsm = (LanguageRegistry.findGrammar astar "twoBlockConcat").Rsm
+        let input = [ Terminal "a" ]
+        let (accepted, steps) = stepsAndAccepted rsm input
+
+        Assert.True(accepted, "minimal GLL trigger example must be accepted")
+        Assert.True(hasStoredPop steps, "Expected at least one step with non-empty StoredPopVertices")
+        Assert.True(hasVisibleStoredPop steps, "Expected a stored-pop vertex distinct from the current GSS vertex")
+
+    [<Fact>]
+    let ``stored-pop vertices empty at initial step`` () =
+        let rsm = (LanguageRegistry.findGrammar astar "aSSWithEps").Rsm
+        let input = [ Terminal "a"; Terminal "a" ]
+        let (_, steps) = stepsAndAccepted rsm input
+        Assert.True(Set.isEmpty steps.[0].StoredPopVertices)
+
 module GllEpsilonGrammars =
     [<Fact>]
     let ``all epsilon grammars accept empty and reject non-empty`` () =

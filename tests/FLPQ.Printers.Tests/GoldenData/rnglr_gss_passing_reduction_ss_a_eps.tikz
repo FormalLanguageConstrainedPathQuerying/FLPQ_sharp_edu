@@ -1,0 +1,23 @@
+\begin{tikzpicture}
+  \graph [layered layout, nodes={draw, circle}, grow=left, level sep=2cm, sibling sep=1.5cm] {
+    v0 [as={0: (0,0)}];
+    v1 [as={1: (2,0)}];
+    v2 [as={2: (3,0)}];
+    v3 [as={3: (1,1)}];
+    v4 [as={4: (3,1)}, fill=orange!30];
+    v5 [as={5: (2,1)}];
+    v1 ->["S"] v0;
+    v2 ->["S"] v1;
+    v2 ->["S",loop above] v2;
+    v3 ->["a"] v0;
+    v3 ->["a"] v1;
+    v3 ->["a"] v2;
+    v4 ->["S"] v1;
+    v4 ->["S"] v2;
+    v4 ->["S",loop above] v4;
+    v4 ->["S", red, thick] v5;
+    v5 ->["S"] v0;
+    { [same layer] v0, v1, v2 };
+    { [same layer] v3, v4, v5 };
+  };
+\end{tikzpicture}

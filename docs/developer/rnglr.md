@@ -93,6 +93,10 @@ type RnglrParsingStep<'t, 'nt> =
 
 A substep snapshot for visualization. One snapshot after exactly one action — one reduce or one shift, i.e. one new GSS edge (plus the initial state with `Action = None`). `Action` names the visualized action; the LR table rendering highlights exactly its cell(s) (see `RnglrTableTeX.tableToTeXWithActionHighlight`). `NewGssVertices` / `NewGssEdges` are the difference against the previous substep's active sets. `PassingReductionVertices` is the set of GSS vertices at which passing-reduction handling triggered during this substep: a new GSS edge was added from the vertex while its stored states were non-empty (the book's AddEdge trigger, sec:CFPQ_GLR). It accumulates over the substep only; the initial snapshot is always empty.
 
+Minimal visible examples (registry `LanguageRegistry.AStar`; tests `RnglrPassingReductions` and
+`RnglrStepVisualizationTests`): `aSSWithEps` (`S -> a S | S S | eps`) on `a a`, and
+`ssAEps` (`S -> S S | a | eps`) on `a`.
+
 ### RnglrTable
 
 ```fsharp

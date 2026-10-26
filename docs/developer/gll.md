@@ -94,6 +94,12 @@ The set of GSS vertex indices at which stored-pops handling triggered during thi
 "Nonterminal transitions" bullet above). Rendered in the GSS visualization with an orange fill so
 the reader can see where a new caller re-entered an already-completed callee.
 
+Minimal visible examples (registry `LanguageRegistry.AStar`; tests `GllStoredPops` and
+`GllStepVisualizationTests`): `aSSWithEps` (`S -> a S | S S | eps`) on `a a`, and
+`twoBlockConcat` (`S -> C C; C -> a | eps`) on `a`. The orange is hidden when the stored-pop
+vertex is also the current vertex, as happens for a plain `S S` self-loop; a non-self-loop
+re-entry is required.
+
 ### SPPF and PathIndex Types
 
 SPPF types (`SppfNodeInfo`, `SppfEdgeLabel`, `SPPF`) and PathIndex types (`RangeKey`, `RangeDescriptor`, `PathIndexEntry`, `PathIndex`) are defined in separate modules:

@@ -1,0 +1,23 @@
+digraph GSS {
+  rankdir=LR;
+  compound=true;
+  v1 [label="1: (2,0)", shape=ellipse];
+  v2 [label="2: (3,0)", shape=ellipse];
+  v3 [label="3: (1,1)", shape=ellipse];
+  v4 [label="4: (3,1)", shape=ellipse, style=filled, fillcolor=orange];
+  v5 [label="5: (2,1)", shape=ellipse];
+  v0 [label="0: (0,0)", shape=ellipse];
+  v1 -> v0 [label="S"];
+  v2 -> v1 [label="S"];
+  v2 -> v2 [label="S"];
+  v3 -> v0 [label="\"a\""];
+  v3 -> v1 [label="\"a\""];
+  v3 -> v2 [label="\"a\""];
+  v4 -> v1 [label="S"];
+  v4 -> v2 [label="S"];
+  v4 -> v4 [label="S"];
+  v4 -> v5 [label="S", color=red, penwidth=2.0];
+  v5 -> v0 [label="S"];
+  {rank=same; v0; v1; v2;}
+  {rank=same; v3; v4; v5;}
+}

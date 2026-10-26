@@ -17,6 +17,7 @@ type private RnglrVizData =
       Inputs: string list
       LrTables: string list
       Actions: RnglrAction<string, string> option list
+      PassingReductionVertices: Set<int> list
       PositionOf: int -> int }
 
 [<Struct>]
@@ -46,6 +47,7 @@ let private renderRnglr (rsm: RSM<string, string>) (input: string list) : RnglrV
       Inputs = viz |> List.map (fun s -> s.Input)
       LrTables = viz |> List.map (fun s -> s.LrTable)
       Actions = rnglrResult.Steps |> List.map (fun s -> s.Action)
+      PassingReductionVertices = rnglrResult.Steps |> List.map (fun s -> s.PassingReductionVertices)
       PositionOf = positionOf }
 
 let private renderViz (input: string list) : RnglrVizData =
@@ -398,3 +400,60 @@ let ``renderStep labels epsilon edges and leaves missing edge symbols empty`` ()
 
     // Edge (1,2) has no entry in ActiveGssEdgeSymbols -> empty label.
     Assert.Contains("v1 -> v2 [label=\"\"];", viz.GssDot)
+
+let private passingReductionIndex (data: RnglrVizData) : int =
+    data.PassingReductionVertices |> List.findIndex (fun s -> not (Set.isEmpty s))
+
+[<Fact>]
+let ``RNGLR golden for S -> a S | S S | eps passing-reduction step — gss dot`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "aSSWithEps").Rsm [ "a"; "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    GoldenHelpers.verifyGolden "rnglr_gss_passing_reduction_a_s_ss_eps.dot" data.GssDots.[idx]
+
+[<Fact>]
+let ``RNGLR golden for S -> a S | S S | eps passing-reduction step — gss tikz`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "aSSWithEps").Rsm [ "a"; "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    GoldenHelpers.verifyGolden "rnglr_gss_passing_reduction_a_s_ss_eps.tikz" data.GssTikzs.[idx]
+
+[<Fact>]
+let ``RNGLR golden for S -> S S | a | eps passing-reduction step — gss dot`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "ssAEps").Rsm [ "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    GoldenHelpers.verifyGolden "rnglr_gss_passing_reduction_ss_a_eps.dot" data.GssDots.[idx]
+
+[<Fact>]
+let ``RNGLR golden for S -> S S | a | eps passing-reduction step — gss tikz`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "ssAEps").Rsm [ "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    GoldenHelpers.verifyGolden "rnglr_gss_passing_reduction_ss_a_eps.tikz" data.GssTikzs.[idx]
+
+[<Fact>]
+let ``RNGLR passing-reduction step renders orange fill for S -> a S | S S | eps`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "aSSWithEps").Rsm [ "a"; "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    Assert.Contains("fillcolor=orange", data.GssDots.[idx])
+
+[<Fact>]
+let ``RNGLR passing-reduction step renders orange fill for S -> S S | a | eps`` () =
+    let data =
+        renderRnglr (LanguageRegistry.findGrammar LanguageRegistry.AStar "ssAEps").Rsm [ "a" ]
+
+    let idx = passingReductionIndex data
+    Assert.True(idx >= 0, "Expected a step with non-empty PassingReductionVertices")
+    Assert.Contains("fillcolor=orange", data.GssDots.[idx])

@@ -146,6 +146,35 @@ module TestHelpers =
     let terminalsToGraph (terminals: Terminal<string> list) : Graph<int, Option<string>> =
         GLL.stringToGraph (terminals |> List.map (fun (Terminal s) -> s))
 
+    /// The extended RSM and input graph prepared for a GLL/RNGLR step-collection run.
+    [<Struct>]
+    type RsmStepRunContext =
+        { FreshStart: Nonterminal<string>
+          Ers: ExtendedRSM<string, string>
+          Graph: Graph<int, Option<string>> }
+
+    /// Fixes the RSM start block and creates the extended RSM and input graph used by the GLL and
+    /// RNGLR step-collection tests.
+    let prepareRsmStepRun (rsm: RSM<string, string>) (input: Terminal<string> list) : RsmStepRunContext =
+        let startNt = (RSM.startBlock rsm).Nonterminal
+        let rsmFixed = { rsm with StartBlock = startNt }
+        let freshStart = Nonterminal "S'"
+        let graph = terminalsToGraph input
+        let ersm = ExtendedRSM.create freshStart rsmFixed
+
+        { FreshStart = freshStart
+          Ers = ersm
+          Graph = graph }
+
+    /// The index of the first GLL step whose stored-pop highlight is visible, i.e. a step with a
+    /// stored-pop vertex distinct from the current GSS vertex.
+    let gllVisibleStoredPopIndex (steps: GLLParsingStep<'t, 'nt> list) : int =
+        steps
+        |> List.findIndex (fun s ->
+            match s.CurrentGssIdx with
+            | Some current -> s.StoredPopVertices |> Set.exists (fun v -> v <> current)
+            | None -> false)
+
     /// Nonterminals that label at least one transition in the RSM (call edges).
     let callLabeledNonterminals (rsm: RSM<'t, 'nt>) : Nonterminal<'nt> list =
         let result = ResizeArray<Nonterminal<'nt>>()

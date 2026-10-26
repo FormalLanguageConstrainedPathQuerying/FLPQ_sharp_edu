@@ -143,13 +143,17 @@ module LanguageRegistry =
             |> MyGen.listOfLength len
             |> MyGen.map (fun bits -> bits |> List.map (fun b -> if b = 0 then "a" else "b") |> String.concat " "))
 
-    let private aStringGen: Gen<string> =
-        MyGen.choose (0, 15)
+    let private aStringGenWithMax (maxLen: int) : Gen<string> =
+        MyGen.choose (0, maxLen)
         |> MyGen.map (fun len ->
             if len = 0 then
                 ""
             else
                 System.String.Concat(Array.replicate len "a": string array).Trim())
+
+    let private aStringGen: Gen<string> = aStringGenWithMax 15
+
+    let private aStarStringGen: Gen<string> = aStringGenWithMax 8
 
     let private exprStringGen: Gen<string> =
         let terminals = [| "x" |]
@@ -492,9 +496,55 @@ module LanguageRegistry =
                   DoesNotCoverFullLanguage = false }
                 "right-recursive grammar with epsilon; used in toCnf tests"
 
+        let aSSWithEps =
+            mkEntry
+                "aSSWithEps"
+                "S -> a S\nS -> S S\nS -> eps"
+                { HasLeftRecursion = true
+                  HasDirectLeftRecursion = true
+                  IsAmbiguous = true
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false
+                  DoesNotCoverFullLanguage = false }
+                "ambiguous a*; common GLL/RNGLR trigger example — both stored-pop and passing-reduction orange highlights are visible on input a a"
+
+        let ssAEps =
+            mkEntry
+                "ssAEps"
+                "S -> S S\nS -> a\nS -> eps"
+                { HasLeftRecursion = true
+                  HasDirectLeftRecursion = true
+                  IsAmbiguous = true
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false
+                  DoesNotCoverFullLanguage = false }
+                "ambiguous a*; minimal RNGLR passing-reduction trigger example — orange highlight visible on input a"
+
+        let twoBlockConcat =
+            mkEntry
+                "twoBlockConcat"
+                "S -> C C\nC -> a\nC -> eps"
+                { HasLeftRecursion = false
+                  HasDirectLeftRecursion = false
+                  IsAmbiguous = false
+                  HasEpsilon = true
+                  IsInCnf = false
+                  IsRsmDerived = false
+                  DoesNotCoverFullLanguage = true }
+                "subset of a* ({eps, a, aa}); minimal GLL stored-pop trigger example — orange highlight visible on input a"
+
         { Name = "a* (zero or more a's)"
           Description = "L = {a^n | n >= 0}"
-          Grammars = [ ambiguous; palindromeLike; ebnfNStar; rightRecursiveWithEps ]
+          Grammars =
+            [ ambiguous
+              palindromeLike
+              ebnfNStar
+              rightRecursiveWithEps
+              aSSWithEps
+              ssAEps
+              twoBlockConcat ]
           AcceptStrings =
             [ []
               [ Terminal "a" ]
@@ -508,7 +558,7 @@ module LanguageRegistry =
               [ Terminal "a"; Terminal "a"; Terminal "b" ]
               [ Terminal "a"; Terminal "a"; Terminal "a"; Terminal "b" ]
               [ Terminal "a"; Terminal "b"; Terminal "a"; Terminal "a" ] ]
-          GenString = aStringGen }
+          GenString = aStarStringGen }
 
     // ============================================================
     // ArithExpr: arithmetic expressions with x, +, *, ()
@@ -1543,6 +1593,10 @@ module GenToArbitrary =
     type AString() =
         static member AString() : Arbitrary<string> =
             LanguageRegistry.APlus.GenString |> MyArb.fromGen
+
+    type AStarString() =
+        static member AStarString() : Arbitrary<string> =
+            LanguageRegistry.AStar.GenString |> MyArb.fromGen
 
     type ExprString() =
         static member ExprString() : Arbitrary<string> =
