@@ -87,13 +87,13 @@ module ExternalTools =
 
     /// Stage the in-repo `tikz/` graph-drawing library (the flpqdot Lua
     /// modules) into `destDir` so that kpathsea's `lua` file lookup finds
-    /// `pgf/gd/flpqdot/library.lua` in the compile working directory
+    /// `pgf/gd/flpqdot/library.lua` in the directory lualatex runs from
     /// (`\usegdlibrary{flpqdot}`). The contents of `tikz/` are copied directly
     /// into `destDir` (so `tikz/pgf/...` lands at `destDir/pgf/...`), because
     /// the `lua` file type searches the current directory for the bare module
     /// path but not arbitrary `TEXINPUTS` roots. No-op if the library is not
     /// present (e.g. a stripped deployment).
-    let private copyTikzLibTo (destDir: string) : unit =
+    let stageFlpqdotLibrary (destDir: string) : unit =
         let srcDir = Path.Combine(System.AppContext.BaseDirectory, "tikz")
 
         if Directory.Exists srcDir then
@@ -257,7 +257,7 @@ module ExternalTools =
 
         try
             File.WriteAllText(texFile, fullDoc)
-            copyTikzLibTo tempDir
+            stageFlpqdotLibrary tempDir
 
             let r =
                 runProcess
@@ -286,7 +286,7 @@ module ExternalTools =
             if not (Directory.Exists outputDir) then
                 Directory.CreateDirectory outputDir |> ignore
 
-            copyTikzLibTo outputDir
+            stageFlpqdotLibrary outputDir
 
             let r =
                 runProcess

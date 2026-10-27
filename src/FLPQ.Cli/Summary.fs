@@ -96,6 +96,8 @@ module Summary =
         if not (Directory.Exists algoDir) then
             Directory.CreateDirectory algoDir |> ignore
 
+        ExternalTools.stageFlpqdotLibrary algoDir
+
         let dotPdfDir = Path.Combine(algoDir, "dot_pdfs")
 
         let (dotOk, _) = compileDotArtifacts vizDir dotPdfDir

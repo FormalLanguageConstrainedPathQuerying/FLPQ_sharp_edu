@@ -110,7 +110,9 @@ therefore stages the `tikz/` library contents into the compile working directory
 before invoking lualatex (see [ExternalTools](external-tools.md)). The `tikz/` tree
 is copied to the application and test output directories at build time, and
 `ExternalTools` copies its contents into each compile's working directory at run
-time.
+time. The CLI likewise stages the library into the summary output directory
+(`Summary.buildSummary` calls `ExternalTools.stageFlpqdotLibrary`), so a generated
+merged summary is self-contained and compiles in-place.
 
 ## Design Decisions
 

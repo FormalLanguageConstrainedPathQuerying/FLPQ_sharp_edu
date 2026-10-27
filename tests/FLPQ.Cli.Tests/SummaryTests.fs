@@ -233,3 +233,14 @@ let ``buildSummary for BelyaninRPQ in tikz mode embeds the step automaton TikZ``
         let merged = Path.Combine(resultDir, "belyaninrpq", "belyaninrpq_merged.tex")
         let text = File.ReadAllText merged
         Assert.Contains("AUTOMATONTIKZMARKER", text))
+
+[<Fact>]
+let ``buildSummary stages the flpqdot library beside the merged TeX`` () =
+    withTempDirs (fun (vizDir, resultDir) ->
+        let ok =
+            Summary.buildSummary (Helpers.findSummaryTemplate ()) SLR1 vizDir resultDir false
+
+        Assert.True(ok)
+
+        let libPath = Path.Combine(resultDir, "slr1", "pgf", "gd", "flpqdot", "library.lua")
+        Assert.True(File.Exists libPath, sprintf "expected staged flpqdot library at %s" libPath))
