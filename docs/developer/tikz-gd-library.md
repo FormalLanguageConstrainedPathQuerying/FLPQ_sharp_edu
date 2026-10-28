@@ -17,7 +17,8 @@
 
 - [Overview](#overview)
 - [The `dot layout` Key](#the-dot-layout-key)
-- [Spline Edge Router](#spline-edge-router)
+- [Channel-Based Label-Aware Router](#channel-based-label-aware-router)
+- [Label Measurement](#label-measurement)
 - [Dot-Parity Guarantees](#dot-parity-guarantees)
 - [Loading Mechanism](#loading-mechanism)
 - [Design Decisions](#design-decisions)
@@ -41,40 +42,129 @@ the library is safe to upgrade alongside PGF and is upstream-ready.
 `dot layout` is a composite key declared with a `use` field. When set, it first
 selects the stock `layered layout` algorithm and then applies the flpqdot phase
 overrides listed in its `use` array. The one phase overridden so far is **layer
-edge routing**, replaced by the flpqdot spline router (below). The remaining
+edge routing**, replaced by the flpqdot channel router (below). The remaining
 phases (cycle removal, node ranking, crossing minimization, node positioning) keep
 their stock defaults — in particular, node ranking already uses the
 network-simplex method by default — so node coordinates are identical to the stock
 `layered layout`; only the edge geometry changes.
 
-## Spline Edge Router
+## Channel-Based Label-Aware Router
 
 The stock `layered` pipeline leaves the `layer edge routing` phase as an empty
 stub, so edges are drawn as straight polylines between node/dummy centers. The
-flpqdot spline router (`EdgeRoutingSpline.lua`) fills that phase: for each edge it
-collects the point sequence `[tail center, bend points…, head center]` and fits a
-smooth curve through it using the Catmull-Rom → cubic-Bézier conversion
-(central-difference tangents `T_i = (P_{i+1} − P_{i−1})/2` with duplicated
-endpoints; per-segment controls `C1 = P_i + T_i/3`, `C2 = P_{i+1} − T_{i+1}/3`).
+flpqdot router (`EdgeRoutingSpline.lua`; the module and `spline layer edge routing`
+phase key retain their historical names) fills that phase: for each edge it collects
+the point sequence `[tail center, bend points…, head center]` and fits a smooth,
+**non-overshooting** curve through it.
+
+**Monotone Bézier fit.** The per-segment control points come from a clamped-Hermite
+(monotone) fit rather than the old Catmull-Rom spline. The tangent at a point is the
+central difference `T_i = (P_{i+1} − P_{i−1})/2` (end point duplicated at the ends);
+the raw controls are `C1 = P_i + T_i/3` and `C2 = P_{i+1} − T_{i+1}/3`, and each is
+**clamped into its segment's bounding slab**. Because a cubic Bézier lies in the
+convex hull of its four points, clamping the controls to the slab guarantees the curve
+stays within the slab and cannot loop or overshoot at sharp turns (the failure mode of
+the old Catmull-Rom fit).
 
 The router writes the resulting `Path` (`moveto` + one `curveto` per segment) to
 `edge.orig_m.path` and clears `edge.bend_points`, so the downstream
 `compatibility_graph_to_digraph` step skips the edge (it would otherwise rebuild a
 polyline from the bend points) and `cutEdges` trims the Bézier at the node borders
 and places the arrowheads. An edge with no bend points (adjacent layers) yields a
-single, near-straight Bézier; an edge spanning *k* layers yields *k* segments.
+single Bézier; an edge spanning *k* layers yields *k* segments.
 
 Node sizes are already TeX-measured by the stock pipeline before layout, so the
 router works with final node dimensions in a single pass (no separate
 measurement round trip).
 
-**Reciprocal-pair separation.** A pair `u→v` / `v→u` would otherwise trace the same
-chord and overlap. The router detects reciprocal pairs (by node name) and offsets
-every Bézier control point of each edge to one side of its chord — a fraction of the
-chord length, clamped to a maximum. Because the reverse edge's chord is negated, the
-same perpendicular sign bows the two edges to opposite sides, reproducing the visual
-intent of the old renderer-side `bend left=15` hack natively in the layout engine.
-Non-reciprocal edges are untouched.
+**Distinct-channel reciprocal separation.** A pair `u→v` / `v→u` would otherwise
+trace the same chord and overlap. The router detects reciprocal pairs (by node name)
+and displaces each edge's interior points (and, for a direct edge with no interior
+points, its control points) **perpendicular to the chord** — the reverse edge's chord
+is negated, so the same perpendicular sign sends it to the opposite side. The two
+edges thus occupy **distinct channels** instead of sharing one chord. The displacement
+`sep` is a fraction of the chord length, clamped to `[min, max]`, and **at least the
+sum of the two edges' label half-heights** (read from the `_G.flpqdot_edge_label_sizes`
+channel, [Label Measurement](#label-measurement); a default when absent), so the two
+labels do not collide. The endpoints (tail/head centers) are never displaced — the edge
+must still connect to the nodes, and `cutEdges` trims at the borders. Non-reciprocal
+edges are routed with the monotone fit and no displacement.
+
+**Label-aware collision sweep.** Reciprocal separation handles only `u→v`/`v→u` pairs;
+two *non*-reciprocal edges can still land in the same channel with overlapping labels
+(e.g. the two diagonals of a K₂,₂, whose labels both sit at the crossing). After the
+reciprocal displacement, the router runs a collision sweep over every edge. Each edge's
+**reserved box** is its measured label width by (label height + depth + a path-stroke
+margin), centred on its **channel point** — the arc-length midpoint of the routed path,
+where the label sits. Two edges are in the **same channel** when their reserved boxes
+overlap in `x`; if they also overlap in `y`, the sweep pushes the later edge (lower
+priority) away in `y` by the overlap plus a small gap. It repeats until no reserved
+boxes overlap (bounded iterations). The displacement is applied to the edge's channel
+points *before* the Bézier fit — the interior (bend) points for a multi-layer edge, the
+control points for a direct edge — so the final path (and hence its label) reflects it.
+The router stores each edge's final label anchor and reserved box on
+`edge.orig_m` (`labelAnchor`, `labelBox`) for the downstream label placement and the
+probe harness.
+
+**Collision-free label placement.** The sweep keeps labels from overlapping *each
+other*, but a label sitting on its edge's path can still cover a node or cross another
+edge. After the paths are final, the router places each label: it takes the arc-length
+midpoint of the edge's *sampled* path (so a direct edge's Bézier bulge is honoured) and
+its tangent, offsets the label **perpendicular to the tangent** by (label half-height +
+a small gap), and evaluates the two candidate sides (either side of the path). It picks
+the side whose label box intersects fewer obstacles — node bounding boxes and the other
+edges' sampled paths — so the label sits off the path and clears nodes and edges. The
+chosen position is stored in the `_G.flpqdot_label_placement` channel, keyed by the
+edge's `tail->head`.
+
+The position is consumed on the TeX side: `EdgeLabel.sty` (loaded by `library.lua`)
+**wraps** the stock TikZ edge callback (`\pgfgdtikzedgecallback`) so that, after each
+edge is drawn, the label is placed at the router's computed position (reading the label
+text from the `_G.flpqdot_edge_labels` channel, populated by
+`\flpqdotmeasureedgelabel`). Wrapping — rather than a one-time
+`\pgfgdsetedgecallback` — is deliberate: the graphdrawing request callback reinstalls
+`\pgfgdtikzedgecallback` at the start of every graph scope, so only a wrapper survives.
+The placement is **backward-compatible**: a label is placed only when it is registered
+in the channel (the renderer emitted a measurement and no default quote); otherwise the
+wrapper draws the edge exactly as the stock callback does and lets the stock quote place
+the label. Because the layered layout reverses back-edges during cycle removal, both the
+size lookup (`LabelMeasure.channelSizeEither`) and the callback's placement/label lookup
+tolerate a direction reversal (they try the key and its reverse).
+
+## Label Measurement
+
+The router needs each edge label's rendered size to reserve space for it and avoid
+label/edge/node collisions. The stock pipeline measures **node** boxes in TeX (and
+keeps the results for layout) but never measures **edge** labels — and, critically,
+the graphdrawing Lua router **cannot see edge labels at all**: a label (`["S"]`), its
+styling, and any edge-specific TikZ option live on the TeX side and are never exposed
+to a routing phase. So the size must be measured in TeX and handed to the router
+through a channel.
+
+**Primary path — TeX measures, Lua routes.** The renderer emits a pre-pass of
+`\flpqdotmeasureedgelabel{<key>}{<label>}` commands (defined in `LabelMeasure.sty`,
+loaded by `library.lua`) **before** the `\graph`. Each command `\setbox`es the label
+exactly as TeX renders it (any math/text/accent) and stores the size in the Lua global
+`_G.flpqdot_edge_label_sizes[<key>] = { w, h, d }` (pt). The key is the syntactic edge
+direction, `tail .. "->" .. head`, as written in the source. Because the measurement is
+a real TeX box, it is exact for arbitrary complex labels (e.g. `$a+b$` measures ~21.8 pt,
+not the sum of its letters). (The layered layout may reverse a back-edge during cycle
+removal, so the model's direction can differ from this source key; the reader tolerates
+that via `channelSizeEither`, below.)
+
+**Fallback — Lua estimator.** `LabelMeasure.measure(content, isMath)` (in
+`LabelMeasure.lua`) measures a label in pure Lua by summing per-glyph metrics in the
+current font. It is exact for single-character labels and a safe (slight) over-estimate
+for longer ones (kerning is not applied). It is used only when no measured size is
+present for an edge.
+
+**Reading the channel.** `LabelMeasure.channelSize(key)` returns the stored
+`{ w, h, d }` for an edge key, or a fixed default single-character size when absent.
+`LabelMeasure.channelSizeEither(key)` additionally tolerates a direction reversal — it
+tries the key, then its reverse (`LabelMeasure.reverseKey`), then the default — because
+the layered layout reverses back-edges during cycle removal, so the model's `tail->head`
+can differ from the source direction the measurement pre-pass used. The router calls
+`channelSizeEither` to obtain each label's size.
 
 ## Dot-Parity Guarantees
 
@@ -121,7 +211,10 @@ merged summary is self-contained and compiles in-place.
 | Additive library (no PGF files modified) | Safe to upgrade with PGF; upstream-ready; no fork maintenance |
 | Pure Lua (no C bridge) | LuaTeX cannot load C modules (`package.loadlib` is a no-op); keeps the library portable |
 | Reuse the stock Sugiyama pipeline, swap phases | Each phase is independently configurable; only the weak phases need replacing |
-| Catmull-Rom → Bézier edge fit | Matches `dot`'s smooth edge tracing; a standard, well-documented curve through the ranked/dummy points, with border clipping left to `cutEdges` |
+| Monotone (clamped-Hermite) Bézier edge fit | Matches `dot`'s smooth edge tracing without Catmull-Rom overshoot; controls clamped to each segment's bounding slab so the curve cannot loop at sharp turns, with border clipping left to `cutEdges` |
+| Label-aware distinct-channel reciprocal separation | A `u→v`/`v→u` pair is displaced to opposite sides of its chord by at least the sum of the two label half-heights (from the measurement channel), so the edges and their labels do not overlap |
+| Label-aware collision sweep | Any two non-reciprocal edges whose reserved label boxes (label width × (height + depth + path stroke), centred on the path midpoint) overlap in the same channel are pushed apart in `y` before the Bézier fit, so no two edge labels overlap regardless of graph shape |
+| Collision-free label placement (wrapped edge callback) | Each label is offset perpendicular to its path's tangent, to the side whose box intersects fewer node boxes / other edges' paths, and placed by a TeX-side wrapper around the stock edge callback (a one-time `\pgfgdsetedgecallback` would be clobbered by the per-scope request callback); placement and size lookups tolerate the cycle-removal direction reversal |
 | Composite `dot layout` key | Single user-facing entry point; the phase selection lives in one place (the Lua library), not scattered across F# option strings |
 | Stage `tikz/` into the working dir | kpathsea's `lua` lookup searches the cwd but not `TEXINPUTS` roots; staging is the reliable mechanism that does not clobber the default search path |
 | Implement from published papers, `dot` as reference only | GraphViz is EPL-2.0 and the project is MIT; no GraphViz code is copied |

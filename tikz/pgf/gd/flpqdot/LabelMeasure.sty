@@ -1,0 +1,33 @@
+% flpqdot label measurement command (TeX side).
+%
+% Primary path for feeding edge labels to the channel router. The router (Lua)
+% cannot see edge labels -- they live on the TeX side -- so this command
+% measures a label exactly as TeX renders it (any math/text/accent) and stores
+% both its size and its text in Lua globals, keyed by the syntactic edge key
+% (tail .. "->" .. head):
+%   _G.flpqdot_edge_label_sizes[key] = { w, h, d }   (the router's reserved box)
+%   _G.flpqdot_edge_labels[key]      = { w, h, d, text }
+% The router reads the sizes to route label-aware; the edge callback reads the
+% text to place the label at the router's computed position (S4).
+%
+% Usage (a pre-pass, before the \graph):
+%   \flpqdotmeasureedgelabel{v0->v2}{$S$}
+%
+% License: MIT (see the repository LICENSE).
+
+\makeatletter
+\newbox\flpqdot@measure@box
+\newcommand*\flpqdotmeasureedgelabel[2]{%
+  \setbox\flpqdot@measure@box=\hbox{#2}%
+  \directlua{
+    local key = "#1"
+    local text = "\pgfutil@luaescapestring{#2}"
+    local box = tex.box[\the\flpqdot@measure@box]
+    local size = { w = box.width/65536, h = box.height/65536, d = box.depth/65536 }
+    _G.flpqdot_edge_label_sizes = _G.flpqdot_edge_label_sizes or {}
+    _G.flpqdot_edge_label_sizes[key] = size
+    _G.flpqdot_edge_labels = _G.flpqdot_edge_labels or {}
+    _G.flpqdot_edge_labels[key] = { w = size.w, h = size.h, d = size.d, text = text }
+  }%
+}
+\makeatother

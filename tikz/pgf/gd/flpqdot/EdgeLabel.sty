@@ -1,0 +1,71 @@
+% flpqdot edge-label placement (TeX side).
+%
+% Wraps the stock TikZ graphdrawing edge callback (\pgfgdtikzedgecallback) so
+% that, after drawing each edge, the edge label is placed at the position the
+% channel router computed (S4, stored in the _G.flpqdot_label_placement Lua
+% global). The label text is read from the _G.flpqdot_edge_labels channel
+% (populated by \flpqdotmeasureedgelabel, S1b).
+%
+% Wrapping (rather than replacing) the callback is deliberate: the graphdrawing
+% request callback reinstalls \pgfgdtikzedgecallback at the start of every
+% graph scope, so a one-time \pgfgdsetedgecallback in the preamble would be
+% clobbered. Wrapping the macro itself means every reinstall picks up the
+% wrapper.
+%
+% The placement is backward-compatible: a label is placed only when it is
+% registered in the channel (i.e. the renderer emitted a measurement command
+% and no default quote). When the label is not registered, the wrapper draws
+% the edge exactly as the stock callback does and lets the stock quote (if
+% any) place the label, so graphs that still emit default quotes are
+% unaffected.
+%
+% License: MIT (see the repository LICENSE).
+
+\makeatletter
+% Place the label for the edge #1 -> #2 at the router's computed position, if
+% the label is registered in the channel. #1/#2 may carry a ".anchor" suffix,
+% which is stripped to recover the node name.
+\newcommand*\flpqdotplacelabel[2]{%
+  \directlua{%
+    local function stripAnchor (name)
+      local last = nil
+      local i = 1
+      while true do
+        local j = name:find(".", i, true)
+        if not j then break end
+        last = j
+        i = j + 1
+      end
+      if last then
+        return name:sub(1, last - 1)
+      end
+      return name
+    end
+    local tail = stripAnchor("\pgfutil@luaescapestring{#1}")
+    local head = stripAnchor("\pgfutil@luaescapestring{#2}")
+    local placement = _G.flpqdot_label_placement
+    local labels = _G.flpqdot_edge_labels
+    if placement and labels then
+      local key1, key2 = tail .. "->" .. head, head .. "->" .. tail
+      local pos = placement[key1] or placement[key2]
+      local lab = labels[key1] or labels[key2]
+      if pos and lab then
+        tex.sprint("\\node[inner sep=0pt] at (" .. pos.x .. "pt," .. pos.y .. "pt) {" .. lab.text .. "};")
+      end
+    end
+  }%
+}
+
+% Wrap the stock TikZ edge callback: draw the edge exactly as the stock
+% callback does, then place the label at the router's computed position. The
+% guard keeps the library loadable when the TikZ graphdrawing front-end is not
+% present (the wrapper is a no-op then; the stock callback is untouched).
+\ifx\pgfgdtikzedgecallback\relax
+\else
+  \let\flpqdot@stock@edge@callback\pgfgdtikzedgecallback
+  \def\pgfgdtikzedgecallback#1#2#3#4#5#6#7#8{%
+    \flpqdot@stock@edge@callback{#1}{#2}{#3}{#4}{#5}{#6}{#7}{#8}%
+    \flpqdotplacelabel{#1}{#2}%
+  }
+\fi
+\makeatother

@@ -8,7 +8,9 @@
   <ItemGroup>
     <Compile Include="GoldenHelpers.fs" />
     <Compile Include="ExternalToolsTests.fs" />
+    <Compile Include="FlpqdotProbeHelpers.fs" />
     <Compile Include="FlpqdotLibraryTests.fs" />
+    <Compile Include="FlpqdotKronRegressionTests.fs" />
     <Compile Include="MatrixTeXTests.fs" />
     <Compile Include="RpqGraphVizTests.fs" />
     <Compile Include="RpqGraphRendererTests.fs" />

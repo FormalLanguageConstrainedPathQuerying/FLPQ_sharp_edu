@@ -149,8 +149,8 @@ module AutomatonTikz =
     let gssLayeredGrowDirection = "grow=left"
 
     /// Common options for a graph drawing with the given grow direction. Uses the project's
-    /// `dot layout` key (the flpqdot library): the stock layered pipeline plus a spline edge
-    /// router that smooths edges and separates reciprocal pairs natively.
+    /// `dot layout` key (the flpqdot library): the stock layered pipeline plus a channel edge
+    /// router that smooths edges and separates reciprocal pairs into distinct channels.
     let graphOptions (shape: string) (growDirection: string) : string =
         sprintf "dot layout, nodes={draw, %s}, %s, level sep=2cm, sibling sep=1.5cm" shape growDirection
 

@@ -1,65 +1,352 @@
 \documentclass{standalone}
 \usepackage{tikz}
-\usetikzlibrary{graphs, graphdrawing}
+\usetikzlibrary{graphs, graphdrawing, quotes}
 \usegdlibrary{layered}
-% Test probe: wrap the flpqdot spline router's run() to record layout metrics in
-% globals after the layout. The wrap must be installed before \usegdlibrary{flpqdot}
-% so that the phase declaration captures the wrapped module (require returns the
-% cached table). The probe content reads the globals and \typeout's them.
+% Test probe: wrap the flpqdot channel router's run() to record layout metrics in
+% globals and \typeout lines after the layout. The wrap must be installed before
+% \usegdlibrary{flpqdot} so that the phase declaration captures the wrapped module
+% (require returns the cached table). The probe content reads the globals and
+% \typeout's them.
 %
-% NOTE: this hook avoids the Lua `#` (length) operator, which is unreliable inside
-% \directlua blocks in this LuaTeX (it works in module functions but errors here);
-% counting is done with pairs/ipairs instead.
+% NOTE: this hook avoids two Lua constructs that TeX mangles inside \directlua
+% blocks in this LuaTeX (both work in module files but break here):
+%   1. The `#` (length) operator -- TeX treats `#` as a parameter character.
+%      Counting is done with explicit counters and `~= nil` / ipairs loops.
+%   2. `--` line comments -- TeX processes the `--` and the following text as
+%      tokens, corrupting the Lua chunk ('end' expected near <eof>). All
+%      explanatory comments therefore live in this % section, outside the block.
 %
 % Globals set by the hook:
 %   _G.flpqdot_curveto_total        total cubic Bezier segments across all edges
 %   _G.flpqdot_reciprocal_pairs     number of reciprocal (u->v / v->u) pairs
-%   _G.flpqdot_reciprocal_opposite  how many of those bow to opposite sides
+%   _G.flpqdot_reciprocal_opposite  how many of those occupy opposite channels
+%
+% \typeout lines emitted by the hook:
+%   EDGEBOX <key> pymin=.. pymax=.. oymin=.. oymax=..
+%     per edge: the sampled path y-extent (pymin/pymax) and the on-path points'
+%     y-range (oymin/oymax); no-overshoot means the former stays within the latter.
+%   LABELBOX <key> x=.. y=.. w=.. th=..
+%     per edge: the router's stored label anchor (x,y, the channel point after
+%     the S3 collision sweep) and reserved box (w = label width, th = label
+%     height + depth + path stroke).
+%   LOVERLAP <keyA> <-> <keyB>
+%     one line per pair of reserved label boxes that overlap (should be none
+%     after the S3 sweep).
+%   LABEL_OVERLAP_COUNT=<value>
+%     the number of overlapping reserved label-box pairs (0 = collision-free).
+%   RECIPROCAL_MIN_DIST=<value>
+%     the minimum distance (pt) between the interior sampled points of any
+%     reciprocal pair's two edges (endpoints excluded, since they are shared).
+%   LNODCOLL <key> vs <node> / LEDGECOLL <key> vs <key2>
+%     one line per placed label box (S4) that intersects a node bounding box
+%     or another edge's sampled path.
+%   LABEL_PLACED_COUNT=<value>
+%     the number of edges the router assigned a label position to (S4).
+%   LABEL_NODE_COLLISIONS=<value> / LABEL_EDGE_COLLISIONS=<value>
+%     the counts of the above (0 = every placed label clears all nodes and
+%     all other edges' paths).
+%   SELFINT <key> / SELF_INTERSECTION_COUNT=<value>
+%     one line per edge whose sampled path self-intersects (a degenerate
+%     curve / loop); the count of such edges (0 = every edge path is simple).
 \directlua{
   local r = require "pgf.gd.flpqdot.EdgeRoutingSpline"
   local orig = r.run
   r.run = function(self)
     orig(self)
+
+    local function samplePath(path)
+      local pts = {}
+      local cnt = 0
+      local cur = nil
+      local i = 1
+      while path[i] ~= nil do
+        local op = path[i]
+        if op == "moveto" then
+          cur = path[i+1]
+          cnt = cnt + 1
+          pts[cnt] = { x = cur.x, y = cur.y }
+          i = i + 2
+        elseif op == "curveto" then
+          local c1, c2, to = path[i+1], path[i+2], path[i+3]
+          local p0 = cur
+          for k = 0, 4 do
+            local t = k / 4
+            local mt = 1 - t
+            local x = mt*mt*mt*p0.x + 3*mt*mt*t*c1.x + 3*mt*t*t*c2.x + t*t*t*to.x
+            local y = mt*mt*mt*p0.y + 3*mt*mt*t*c1.y + 3*mt*t*t*c2.y + t*t*t*to.y
+            cnt = cnt + 1
+            pts[cnt] = { x = x, y = y }
+          end
+          cur = to
+          i = i + 4
+        else
+          i = i + 1
+        end
+      end
+      return pts
+    end
+
+    local function onPathPoints(path)
+      local pts = {}
+      local cnt = 0
+      local i = 1
+      while path[i] ~= nil do
+        local op = path[i]
+        if op == "moveto" then
+          cnt = cnt + 1
+          pts[cnt] = path[i+1]
+          i = i + 2
+        elseif op == "curveto" then
+          cnt = cnt + 1
+          pts[cnt] = path[i+3]
+          i = i + 4
+        else
+          i = i + 1
+        end
+      end
+      return pts
+    end
+
     local curvetoTotal = 0
     for _, e in ipairs(self.graph.edges) do
       if e.orig_m and e.orig_m.path then
-        for _, op in ipairs(e.orig_m.path) do
-          if op == "curveto" then curvetoTotal = curvetoTotal + 1 end
+        local i = 1
+        while e.orig_m.path[i] ~= nil do
+          if e.orig_m.path[i] == "curveto" then curvetoTotal = curvetoTotal + 1 end
+          i = i + 1
         end
       end
     end
     _G.flpqdot_curveto_total = curvetoTotal
 
-    local pos = {}
-    for _, n in ipairs(self.graph.nodes) do pos[n.name] = { x = n.pos.x, y = n.pos.y } end
-    local c1 = {}
+    local edges = {}
     for _, e in ipairs(self.graph.edges) do
       if e.orig_m and e.orig_m.path then
-        local c = e.orig_m.path[4]
-        if c then
-          local t, h = e:getTail().name, e:getHead().name
-          c1[t .. "->" .. h] = { t = t, h = h, c = c }
+        local t, h = e:getTail().name, e:getHead().name
+        local key = t .. "->" .. h
+        local sampled = samplePath(e.orig_m.path)
+        local onpath = onPathPoints(e.orig_m.path)
+        edges[key] = { t = t, h = h, sampled = sampled, onpath = onpath }
+        local smin, smax = math.huge, -math.huge
+        for _, p in ipairs(sampled) do
+          if p.y < smin then smin = p.y end
+          if p.y > smax then smax = p.y end
+        end
+        local omin, omax = math.huge, -math.huge
+        for _, p in ipairs(onpath) do
+          if p.y < omin then omin = p.y end
+          if p.y > omax then omax = p.y end
+        end
+        tex.sprint("\\typeout{EDGEBOX " .. key .. " pymin=" .. tostring(smin) .. " pymax=" .. tostring(smax) .. " oymin=" .. tostring(omin) .. " oymax=" .. tostring(omax) .. "}")
+      end
+    end
+
+    local lboxes = {}
+    local lcnt = 0
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.labelAnchor and e.orig_m.labelBox then
+        local t, h = e:getTail().name, e:getHead().name
+        local key = t .. "->" .. h
+        lcnt = lcnt + 1
+        lboxes[lcnt] = { key = key, x = e.orig_m.labelAnchor.x, y = e.orig_m.labelAnchor.y, w = e.orig_m.labelBox.w, th = e.orig_m.labelBox.th }
+        tex.sprint("\\typeout{LABELBOX " .. key .. " x=" .. tostring(e.orig_m.labelAnchor.x) .. " y=" .. tostring(e.orig_m.labelAnchor.y) .. " w=" .. tostring(e.orig_m.labelBox.w) .. " th=" .. tostring(e.orig_m.labelBox.th) .. "}")
+      end
+    end
+    local loverlaps = 0
+    for i = 1, lcnt do
+      for j = i + 1, lcnt do
+        local bi, bj = lboxes[i], lboxes[j]
+        local dx = math.abs(bi.x - bj.x)
+        local dy = math.abs(bi.y - bj.y)
+        local ox = (bi.w + bj.w) / 2 - dx
+        local oy = (bi.th + bj.th) / 2 - dy
+        if ox > 0 and oy > 0 then
+          loverlaps = loverlaps + 1
+          tex.sprint("\\typeout{LOVERLAP " .. bi.key .. " <-> " .. bj.key .. "}")
         end
       end
     end
-    local pairsCount, opposite, seen = 0, 0, {}
-    for key, e1 in pairs(c1) do
+    tex.sprint("\\typeout{LABEL_OVERLAP_COUNT=" .. tostring(loverlaps) .. "}")
+
+    local pos = {}
+    for _, n in ipairs(self.graph.nodes) do pos[n.name] = { x = n.pos.x, y = n.pos.y } end
+
+    local function sideClass(sampled, pa, pb)
+      local hasPos, hasNeg = false, false
+      local i = 2
+      while sampled[i] ~= nil and sampled[i+1] ~= nil do
+        local p = sampled[i]
+        local s = (pb.x - pa.x) * (p.y - pa.y) - (pb.y - pa.y) * (p.x - pa.x)
+        if s > 1e-6 then hasPos = true end
+        if s < -1e-6 then hasNeg = true end
+        i = i + 1
+      end
+      if hasPos and not hasNeg then return 1 end
+      if hasNeg and not hasPos then return -1 end
+      return 0
+    end
+
+    local pairsCount, opposite, minDist = 0, 0, math.huge
+    local seen = {}
+    for key, e1 in pairs(edges) do
       if not seen[key] then
         local revKey = e1.h .. "->" .. e1.t
-        local e2 = c1[revKey]
+        local e2 = edges[revKey]
         if e2 then
           seen[key] = true
           seen[revKey] = true
           pairsCount = pairsCount + 1
-          local a, b = (e1.t < e1.h) and e1.t or e1.h, (e1.t < e1.h) and e1.h or e1.t
-          local pa, pb = pos[a], pos[b]
-          local function sd(cc) return (pb.x - pa.x) * (cc.y - pa.y) - (pb.y - pa.y) * (cc.x - pa.x) end
-          if sd(e1.c) * sd(e2.c) < 0 then opposite = opposite + 1 end
+          local pa, pb = pos[e1.t], pos[e1.h]
+          local s1 = sideClass(e1.sampled, pa, pb)
+          local s2 = sideClass(e2.sampled, pa, pb)
+          if s1 * s2 == -1 then opposite = opposite + 1 end
+          local i = 2
+          while e1.sampled[i] ~= nil and e1.sampled[i+1] ~= nil do
+            local p = e1.sampled[i]
+            local j = 2
+            while e2.sampled[j] ~= nil and e2.sampled[j+1] ~= nil do
+              local q = e2.sampled[j]
+              local d = math.sqrt((p.x-q.x)*(p.x-q.x) + (p.y-q.y)*(p.y-q.y))
+              if d < minDist then minDist = d end
+              j = j + 1
+            end
+            i = i + 1
+          end
         end
       end
     end
     _G.flpqdot_reciprocal_pairs = pairsCount
     _G.flpqdot_reciprocal_opposite = opposite
+    tex.sprint("\\typeout{RECIPROCAL_MIN_DIST=" .. tostring(minDist) .. "}")
+
+    local placement = _G.flpqdot_label_placement
+    local LM = require "pgf.gd.flpqdot.LabelMeasure"
+    local function tblLen (t)
+      local n = 0
+      while t[n + 1] ~= nil do
+        n = n + 1
+      end
+      return n
+    end
+    local nodeBoxes = {}
+    local nbCnt = 0
+    for _, n in ipairs(self.graph.nodes) do
+      if n.path then
+        local min_x, min_y, max_x, max_y = n.path:boundingBox()
+        nbCnt = nbCnt + 1
+        nodeBoxes[nbCnt] = { name = n.name, min_x = min_x, min_y = min_y, max_x = max_x, max_y = max_y }
+      end
+    end
+    local edgeSampled = {}
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        local t, h = e:getTail().name, e:getHead().name
+        edgeSampled[t .. "->" .. h] = samplePath(e.orig_m.path)
+      end
+    end
+    local nodeColl = 0
+    local edgeColl = 0
+    local placedCount = 0
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        local t, h = e:getTail().name, e:getHead().name
+        local key = t .. "->" .. h
+        local ppos = placement and (placement[key] or placement[LM.reverseKey(key) or ""])
+        if ppos then
+          placedCount = placedCount + 1
+          local sz = LM.channelSizeEither(key)
+          local w = sz.w
+          local th = sz.h + sz.d
+          local x0, x1 = ppos.x - w / 2, ppos.x + w / 2
+          local y0, y1 = ppos.y - th / 2, ppos.y + th / 2
+          for _, nb in ipairs(nodeBoxes) do
+            if x0 < nb.max_x and x1 > nb.min_x and y0 < nb.max_y and y1 > nb.min_y then
+              nodeColl = nodeColl + 1
+              tex.sprint("\\typeout{LNODCOLL " .. key .. " vs " .. nb.name .. "}")
+            end
+          end
+          for k2, sp in pairs(edgeSampled) do
+            if k2 ~= key then
+              for _, pp in ipairs(sp) do
+                if pp.x >= x0 and pp.x <= x1 and pp.y >= y0 and pp.y <= y1 then
+                  edgeColl = edgeColl + 1
+                  tex.sprint("\\typeout{LEDGECOLL " .. key .. " vs " .. k2 .. "}")
+                  break
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    tex.sprint("\\typeout{LABEL_PLACED_COUNT=" .. tostring(placedCount) .. "}")
+    tex.sprint("\\typeout{LABEL_NODE_COLLISIONS=" .. tostring(nodeColl) .. "}")
+    tex.sprint("\\typeout{LABEL_EDGE_COLLISIONS=" .. tostring(edgeColl) .. "}")
+
+    local function orient(ax, ay, bx, by, cx, cy)
+      local v = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+      if v > 1e-9 then return 1 end
+      if v < -1e-9 then return -1 end
+      return 0
+    end
+    local function onSeg(ax, ay, bx, by, cx, cy)
+      return math.min(ax, bx) <= cx and cx <= math.max(ax, bx)
+        and math.min(ay, by) <= cy and cy <= math.max(ay, by)
+    end
+    local function segCross(p1, p2, p3, p4)
+      local o1 = orient(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+      local o2 = orient(p1.x, p1.y, p2.x, p2.y, p4.x, p4.y)
+      local o3 = orient(p3.x, p3.y, p4.x, p4.y, p1.x, p1.y)
+      local o4 = orient(p3.x, p3.y, p4.x, p4.y, p2.x, p2.y)
+      if o1 ~= o2 and o3 ~= o4 then return true end
+      if o1 == 0 and onSeg(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y) then return true end
+      if o2 == 0 and onSeg(p1.x, p1.y, p2.x, p2.y, p4.x, p4.y) then return true end
+      if o3 == 0 and onSeg(p3.x, p3.y, p4.x, p4.y, p1.x, p1.y) then return true end
+      if o4 == 0 and onSeg(p3.x, p3.y, p4.x, p4.y, p2.x, p2.y) then return true end
+      return false
+    end
+    local function dedupe (pts)
+      local out = {}
+      local cnt = 0
+      local k = 0
+      while pts[k + 1] ~= nil do
+        k = k + 1
+        if cnt == 0 then
+          cnt = 1
+          out[1] = pts[k]
+        else
+          local last = out[cnt]
+          if math.abs(last.x - pts[k].x) > 1e-6 or math.abs(last.y - pts[k].y) > 1e-6 then
+            cnt = cnt + 1
+            out[cnt] = pts[k]
+          end
+        end
+      end
+      return out
+    end
+    local function selfIntersects (sampled)
+      local pts = dedupe(sampled)
+      local nseg = tblLen(pts) - 1
+      for i = 1, nseg do
+        for j = i + 2, nseg do
+          if segCross(pts[i], pts[i+1], pts[j], pts[j+1]) then
+            return true
+          end
+        end
+      end
+      return false
+    end
+    local selfInt = 0
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        if selfIntersects(samplePath(e.orig_m.path)) then
+          selfInt = selfInt + 1
+          local t, h = e:getTail().name, e:getHead().name
+          tex.sprint("\\typeout{SELFINT " .. t .. "->" .. h .. "}")
+        end
+      end
+    end
+    tex.sprint("\\typeout{SELF_INTERSECTION_COUNT=" .. tostring(selfInt) .. "}")
   end
 }
 \usegdlibrary{flpqdot}

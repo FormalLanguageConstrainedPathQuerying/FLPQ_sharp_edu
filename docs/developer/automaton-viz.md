@@ -55,7 +55,7 @@
 - Fill precedence (`dfaToTikzWithHighlights`, highest first): target > current/frontier > final > start (TikZ's last fill wins, so the fills are appended in the reverse order). The Start label and final double ring are always kept
 - Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->["label", red, thick(,loop above)] s%d` — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
 - Loop edges: `s%d ->["label",loop above] s%d`
-- Reciprocal edges (`u→v` and `v→u`): separated natively by the flpqdot spline router (via the `dot layout` key), which bows the two directions to opposite sides of their chord; the renderer emits no `bend` option. Self-loops are never bowed.
+- Reciprocal edges (`u→v` and `v→u`): separated natively by the flpqdot channel router (via the `dot layout` key), which displaces the two directions to opposite sides of their chord (distinct channels); the renderer emits no `bend` option. Self-loops are never displaced.
 - Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
@@ -111,7 +111,7 @@ A : 0 \\
 | Fill precedence target > current > final > start | Unified with the graph figures (user guidance): the current/frontier state must be recognizable over the start state, and a newly reached target must be recognizable over the current state; final states keep their double ring so their property stays visible |
 | Edge highlight is a separate parameter, not derived from state highlights | Step figures highlight exactly the transitions used on the current step (Belyanin's per-label propagation), which is unrelated to which states are in the frontier; DOT and TikZ share the GssDot/GssTikz red-bold style so the two formats stay consistent |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
-| Reciprocal pairs separated by the layout engine | A pair `u→v`/`v→u` would otherwise draw as two fully overlapping edges; the flpqdot spline router (via the `dot layout` key) bows them to opposite sides natively, so the renderer emits no `bend` option (Graphviz DOT separates such pairs automatically) |
+| Reciprocal pairs separated by the layout engine | A pair `u→v`/`v→u` would otherwise draw as two fully overlapping edges; the flpqdot channel router (via the `dot layout` key) separates them into distinct channels (opposite sides) natively, so the renderer emits no `bend` option (Graphviz DOT separates such pairs automatically) |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |
 | Enhanced arrow heads | `Latex[width=3mm,length=3mm]` for visibility |
 

@@ -129,6 +129,7 @@ Project templates live in `data/`. Each serves a specific purpose:
 | `tex_color_template.tex` | `xcolor`, `nicematrix`, `graphicx` | `\[ ... \]` | Color-dependent TeX tests (`\colorbox`, `\cellcolor`) |
 | `tex_tabular_template.tex` | `amsmath` | none | Non-matrix TeX (tabular, LL tables) |
 | `tex_tikz_template.tex` | `standalone`, `tikz`, `graphdrawing` | none (standalone) | Tikz graphics compilation |
+| `tex_flpqdot_probe_template.tex` | `standalone`, `tikz`, `graphs, graphdrawing, quotes`, flpqdot router hook | none (standalone) | flpqdot router probe tests (layout metrics via `\typeout` lines) |
 | `tex_summary_template.tex` | `xcolor[table]`, `nicematrix`, `tikz`, `amsmath`, `amssymb`, `babel`, `graphicx` | none (full document) | Merged summary generation |
 
 When adding color-dependent TeX output, create a dedicated template rather than
@@ -230,8 +231,8 @@ content in `as={...}`.
 
 Generated graphs use the project-owned `dot layout` key (from the flpqdot library,
 loaded via `\usegdlibrary{flpqdot}`) rather than the stock `layered layout`. It reuses
-the same Sugiyama pipeline but swaps in a spline edge router for smooth, `dot`-like
-Bézier edges. See [the flpqdot library](../tikz-gd-library.md) for the design and the
+the same Sugiyama pipeline but swaps in a channel edge router for smooth, non-overshooting,
+`dot`-like Bézier edges. See [the flpqdot library](../tikz-gd-library.md) for the design and the
 loading/staging mechanism.
 
 ### Gotchas Writing Lua in `\directlua{...}`
@@ -246,9 +247,12 @@ idioms that are fine in a `.lua` module break inside the block:
 - The `#` (length) operator is **unreliable** in a `\directlua` block (errors with
   `attempt to get length of a number value`) even though it works in module functions.
   Count with `pairs`/`ipairs` instead.
+- `--` **line comments break the chunk** (TeX tokenizes the `--` and the following text,
+  corrupting the Lua so it fails with `'end' expected near <eof>`). Keep explanatory
+  comments in a `%` TeX comment *outside* the block, not inside it.
 
 Lua loaded via `require` (a `.lua` module) is not TeX-tokenized, so none of these apply
-there — the flpqdot library modules use `#` and `"\1"` freely.
+there — the flpqdot library modules use `#`, `--`, and `"\1"` freely.
 
 ## See Also
 

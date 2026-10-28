@@ -4,70 +4,141 @@ open System.IO
 open System.Text.RegularExpressions
 open Xunit
 open FLPQ.Printers
+open FlpqdotProbeHelpers
 
 /// Tests for the project-owned flpqdot graph-drawing library (the `dot layout`
-/// key). At the S1 stage `dot layout` is an alias of the stock `layered
-/// layout`; these tests pin the loading/wiring and the coordinate-extraction
-/// harness that later subtasks (spline router, parity suite) build on.
+/// key): loading/wiring and the coordinate-extraction harness, the channel
+/// router (Bezier emission, reciprocal-channel separation, no-overshoot), the
+/// label-aware collision sweep, exact TeX label measurement, collision-free
+/// label placement, and the dot-parity suite against the Graphviz `dot` oracle.
 
 let private tikzTemplatePath =
     Path.Combine(System.AppContext.BaseDirectory, "tex_tikz_template.tex")
 
-/// Probe template that installs a hook around the spline router's `run` in the
-/// preamble (before `\usegdlibrary{flpqdot}`) and records layout metrics in
-/// globals: `_G.flpqdot_curveto_total` (total cubic Bezier segments),
-/// `_G.flpqdot_reciprocal_pairs`, and `_G.flpqdot_reciprocal_opposite`.
-let private probeTemplatePath =
-    Path.Combine(System.AppContext.BaseDirectory, "tex_flpqdot_probe_template.tex")
-
-/// Compile a probe document (the spline-router hook lives in the probe
-/// template's preamble) and return the lualatex log.
-let private compileProbeLog (content: string) : string =
-    let ok, log =
-        ExternalTools.compileTexStringWithTemplateLog probeTemplatePath content
-
-    if not ok then
-        failwithf "probe lualatex failed:\n%s" log
-
-    log
-
 /// Return the total number of cubic Bezier segments emitted across all edge
 /// paths after the layout.
 let private countCurvetoSegments (content: string) : int =
-    let log = compileProbeLog content
+    probeInt "CURVETO_TOTAL=" (compileProbeLog content)
 
+/// Return the reciprocal-pair stats from a probe log: the number of reciprocal
+/// (u->v / v->u) pairs, and how many of them occupy opposite channels.
+let private reciprocalStats (log: string) : int * int =
+    (probeInt "RECIPROCAL_PAIRS=" log, probeInt "RECIPROCAL_OPPOSITE=" log)
+
+/// Return the minimum interior distance (pt) between any reciprocal pair's two
+/// edges, as emitted by the probe's RECIPROCAL_MIN_DIST line (endpoints are
+/// excluded, since a pair shares its endpoints).
+let private reciprocalMinDist (log: string) : float = probeFloat "RECIPROCAL_MIN_DIST=" log
+
+/// A measured label size in pt (width, height, depth).
+type private LabelSize = { W: float; H: float; D: float }
+
+/// The sampled path y-extent (PyMin/PyMax) and the on-path points' y-range
+/// (OyMin/OyMax) for one edge; no-overshoot means the former stays within the
+/// latter.
+type private EdgeBox =
+    { PyMin: float
+      PyMax: float
+      OyMin: float
+      OyMax: float }
+
+/// The router's stored label anchor (X, Y, the channel point after the S3
+/// collision sweep) and reserved box (W = label width, Th = label height +
+/// depth + path stroke).
+type private LabelBox =
+    { X: float
+      Y: float
+      W: float
+      Th: float }
+
+/// Parse the `EDGEBOX <key> pymin=.. pymax=.. oymin=.. oymax=..` lines (emitted
+/// by the probe) from a lualatex log into a map of edge-key -> EdgeBox.
+let private parseEdgeBoxes (log: string) : Map<string, EdgeBox> =
     log.Split('\n')
-    |> Array.tryFind (fun l -> l.StartsWith("CURVETO_TOTAL="))
-    |> function
-        | Some l -> int (l.Substring("CURVETO_TOTAL=".Length))
-        | None -> failwithf "CURVETO_TOTAL not found in log:\n%s" log
+    |> Array.filter (fun l -> l.StartsWith("EDGEBOX "))
+    |> Array.map (fun l ->
+        let m =
+            Regex.Match(l, @"^EDGEBOX (\S+) pymin=([-\d.]+) pymax=([-\d.]+) oymin=([-\d.]+) oymax=([-\d.]+)")
 
-/// Return the reciprocal-pair stats: the number of reciprocal (u->v / v->u)
-/// pairs, and how many of them bow to opposite sides of their chord.
-let private reciprocalStats (content: string) : int * int =
-    let log = compileProbeLog content
+        if not m.Success then
+            failwithf "unparseable edgebox line: %s" l
 
-    let find (prefix: string) =
-        log.Split('\n')
-        |> Array.tryFind (fun l -> l.StartsWith(prefix))
-        |> function
-            | Some l -> int (l.Substring(prefix.Length))
-            | None -> failwithf "%s not found in log:\n%s" prefix log
+        (m.Groups.[1].Value,
+         { PyMin = float m.Groups.[2].Value
+           PyMax = float m.Groups.[3].Value
+           OyMin = float m.Groups.[4].Value
+           OyMax = float m.Groups.[5].Value }))
+    |> Map.ofArray
 
-    (find "RECIPROCAL_PAIRS=", find "RECIPROCAL_OPPOSITE=")
+/// Parse the `LABEL <tag> w=.. h=.. d=..` lines (emitted by the LabelMeasure
+/// probe) from a lualatex log into a map of tag -> LabelSize (pt).
+let private parseLabelMeasurements (log: string) : Map<string, LabelSize> =
+    log.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith("LABEL "))
+    |> Array.map (fun l ->
+        let m = Regex.Match(l, @"^LABEL (\S+) w=([-\d.]+) h=([-\d.]+) d=([-\d.]+)")
 
-/// Wrap a graph body in a `tikzpicture` with the given layout key and the
-/// standard circle-node options. The graph drawing library names each TikZ node
-/// by its label, so the labels double as the coordinate-extraction names.
-let private tikzGraphWithLayout (layoutOpt: string) (body: string) : string =
-    sprintf
-        """\begin{tikzpicture}
-  \graph [%s, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
-    %s
-  };
-\end{tikzpicture}"""
-        layoutOpt
-        body
+        if not m.Success then
+            failwithf "unparseable label line: %s" l
+
+        (m.Groups.[1].Value,
+         { W = float m.Groups.[2].Value
+           H = float m.Groups.[3].Value
+           D = float m.Groups.[4].Value }))
+    |> Map.ofArray
+
+/// Parse the `MEASURED <key> w=.. h=.. d=..` lines (emitted by the S1b probe,
+/// which reads the _G.flpqdot_edge_label_sizes channel populated by
+/// \flpqdotmeasureedgelabel) from a lualatex log into a map of edge-key ->
+/// LabelSize (pt).
+let private parseMeasuredSizes (log: string) : Map<string, LabelSize> =
+    log.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith("MEASURED "))
+    |> Array.map (fun l ->
+        let m = Regex.Match(l, @"^MEASURED (\S+) w=([-\d.]+) h=([-\d.]+) d=([-\d.]+)")
+
+        if not m.Success then
+            failwithf "unparseable measured line: %s" l
+
+        (m.Groups.[1].Value,
+         { W = float m.Groups.[2].Value
+           H = float m.Groups.[3].Value
+           D = float m.Groups.[4].Value }))
+    |> Map.ofArray
+
+/// Parse the `LABELBOX <key> x=.. y=.. w=.. th=..` lines (emitted by the probe)
+/// from a lualatex log into a map of edge-key -> LabelBox.
+let private parseLabelBoxes (log: string) : Map<string, LabelBox> =
+    log.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith("LABELBOX "))
+    |> Array.map (fun l ->
+        let m =
+            Regex.Match(l, @"^LABELBOX (\S+) x=([-\d.]+) y=([-\d.]+) w=([-\d.]+) th=([-\d.]+)")
+
+        if not m.Success then
+            failwithf "unparseable labelbox line: %s" l
+
+        (m.Groups.[1].Value,
+         { X = float m.Groups.[2].Value
+           Y = float m.Groups.[3].Value
+           W = float m.Groups.[4].Value
+           Th = float m.Groups.[5].Value }))
+    |> Map.ofArray
+
+/// Return the number of overlapping reserved label-box pairs from a probe log
+/// (0 = collision-free after the S3 collision sweep).
+let private labelOverlapCount (log: string) : int = probeInt "LABEL_OVERLAP_COUNT=" log
+
+/// The number of edges the router assigned a label position to (S4).
+let private labelPlacedCount (log: string) : int = probeInt "LABEL_PLACED_COUNT=" log
+
+/// The number of placed label boxes that intersect a node bounding box (S4;
+/// 0 = every label clears all nodes).
+let private labelNodeCollisions (log: string) : int = probeInt "LABEL_NODE_COLLISIONS=" log
+
+/// The number of placed label boxes that intersect another edge's sampled path
+/// (S4; 0 = no label crosses another edge).
+let private labelEdgeCollisions (log: string) : int = probeInt "LABEL_EDGE_COLLISIONS=" log
 
 /// A diamond graph (a at layer 0; b,c at layer 1; d at layer 2). `layoutOpt`
 /// selects the layout key under test (`dot layout` or `layered layout`).
@@ -154,7 +225,7 @@ let private smoothProbeContent =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``spline router emits Beziers and smooths multi-layer edges`` () =
+let ``channel router emits Beziers and smooths multi-layer edges`` () =
     let total = countCurvetoSegments smoothProbeContent
     // Beziers are present at all (a pure polyline would yield 0).
     Assert.True(total > 0, sprintf "expected Beziers, got curveto_total=%d" total)
@@ -164,7 +235,7 @@ let ``spline router emits Beziers and smooths multi-layer edges`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``spline router routes a simple two-node edge`` () =
+let ``channel router routes a simple two-node edge`` () =
     let content =
         """\begin{tikzpicture}
   \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
@@ -180,24 +251,236 @@ let ``spline router routes a simple two-node edge`` () =
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
-let ``spline router bows a reciprocal pair to opposite sides`` () =
+let ``reciprocal pairs occupy distinct channels and do not overlap`` () =
     let content =
         """\begin{tikzpicture}
-  \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
-    a; b;
-    a -> b; b -> a;
-  };
+   \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+     a; b;
+     a -> b; b -> a;
+   };
 \end{tikzpicture}
 \directlua{
   tex.sprint("\\typeout{RECIPROCAL_PAIRS=" .. tostring(_G.flpqdot_reciprocal_pairs) .. "}")
   tex.sprint("\\typeout{RECIPROCAL_OPPOSITE=" .. tostring(_G.flpqdot_reciprocal_opposite) .. "}")
 }"""
 
-    let pairs, opposite = reciprocalStats content
+    let log = compileProbeLog content
+    let pairs, opposite = reciprocalStats log
+    let minDist = reciprocalMinDist log
     // The graph has exactly one reciprocal pair (a->b and b->a).
     Assert.True(pairs >= 1, sprintf "expected a reciprocal pair, got %d" pairs)
-    // Every reciprocal pair must bow to opposite sides (no overlap).
+    // Every reciprocal pair must occupy opposite channels (one edge each side).
     Assert.Equal(pairs, opposite)
+    // The two edges' interior points are well separated (they do not coincide).
+    Assert.True(minDist > 2.0, sprintf "reciprocal edges overlap: min_dist=%f" minDist)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``multi-layer edge does not overshoot its bounding slab`` () =
+    // A 5-node chain plus a long edge a->e spanning four layers (three dummy
+    // nodes). The monotone fit must keep the sampled path within the on-path
+    // points' y-range (plus a small margin) -- no Catmull-Rom loops.
+    let content =
+        """\begin{tikzpicture}
+   \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+     a; b; c; d; e;
+     a -> b; b -> c; c -> d; d -> e; a -> e;
+   };
+\end{tikzpicture}"""
+
+    let log = compileProbeLog content
+    let boxes = parseEdgeBoxes log
+    Assert.True(Map.containsKey "a->e" boxes, "edge a->e not found in EDGEBOX lines")
+
+    let box = boxes.["a->e"]
+    let margin = 1.0
+    Assert.True(box.PyMax <= box.OyMax + margin, sprintf "a->e overshoots above: pymax=%f oymax=%f" box.PyMax box.OyMax)
+    Assert.True(box.PyMin >= box.OyMin - margin, sprintf "a->e overshoots below: pymin=%f oymin=%f" box.PyMin box.OyMin)
+
+/// A K2,2 graph: a,b in one layer and c,d in the next, with all four edges.
+/// The two diagonal edges (a->d and b->c) cross, so their labels (placed at the
+/// path midpoints) coincide in the same channel and their reserved boxes
+/// overlap. The S3 collision sweep must push one label apart so no reserved
+/// boxes overlap. (Without the sweep the two diagonal labels coincide and the
+/// overlap count is 1.)
+let private crossingGraphContent =
+    """\begin{tikzpicture}
+  \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+    a; b; c; d;
+    a ->["a"] c;
+    a ->["S"] d;
+    b ->["b"] c;
+    b ->["a"] d;
+  };
+\end{tikzpicture}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``collision sweep separates overlapping labels in the same channel`` () =
+    let log = compileProbeLog crossingGraphContent
+    let boxes = parseLabelBoxes log
+
+    // All four edges are routed and carry a reserved label box.
+    Assert.Equal(4, Map.count boxes)
+
+    // The crossing pair (a->d and b->c) share a channel (their anchors are
+    // close in x, the rank axis being vertical here).
+    let ad = boxes.["a->d"]
+    let bc = boxes.["b->c"]
+
+    Assert.True(
+        abs (ad.X - bc.X) < 10.0,
+        sprintf "crossing labels not in the same channel: a->d x=%f b->c x=%f" ad.X bc.X
+    )
+
+    // The sweep separated the two labels in y (they no longer coincide).
+    Assert.True(abs (ad.Y - bc.Y) > 5.0, sprintf "crossing labels not separated in y: a->d y=%f b->c y=%f" ad.Y bc.Y)
+
+    // No reserved label boxes overlap after the sweep.
+    Assert.Equal(0, labelOverlapCount log)
+
+/// Probe content for the S4 label-placement test: the Kronecker-CFPQ step_1
+/// graph (the task's repro), with a `\flpqdotmeasureedgelabel` pre-pass for
+/// every edge and no default quotes (the wrapper places the labels). It
+/// exercises both a back-edge (`v2 -> v0`, reversed by the layered layout's
+/// cycle removal) and a reciprocal pair (`v2 <-> v3`).
+let private labelPlacementProbeContent =
+    """\flpqdotmeasureedgelabel{v0->v1}{$a$}
+\flpqdotmeasureedgelabel{v1->v2}{$a$}
+\flpqdotmeasureedgelabel{v1->v3}{$S$}
+\flpqdotmeasureedgelabel{v2->v0}{$a$}
+\flpqdotmeasureedgelabel{v2->v3}{$b$}
+\flpqdotmeasureedgelabel{v3->v2}{$b$}
+\begin{tikzpicture}
+  \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
+    v0; v1; v2; v3;
+    v0 -> v1;
+    v1 -> v2;
+    v1 -> v3;
+    v2 -> v0;
+    v2 -> v3;
+    v3 -> v2;
+  };
+\end{tikzpicture}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``label placement is collision-free (no node or edge overlap)`` () =
+    let log = compileProbeLog labelPlacementProbeContent
+
+    // Every edge is assigned a label position (the graph has 6 edges).
+    Assert.Equal(6, labelPlacedCount log)
+
+    // No placed label box intersects a node bounding box.
+    Assert.Equal(0, labelNodeCollisions log)
+
+    // No placed label box intersects another edge's sampled path.
+    Assert.Equal(0, labelEdgeCollisions log)
+
+/// Probe content that measures a set of known label snippets via the flpqdot
+/// LabelMeasure module and dumps each as `LABEL <tag> w=.. h=.. d=..` (pt). The
+/// leading `x` keeps the standalone document non-empty; the `\directlua` runs in
+/// the body where the default font is current.
+let private labelMeasureProbeContent =
+    """x
+\directlua{
+  local LM = require "pgf.gd.flpqdot.LabelMeasure"
+  local function dump(tag, content, isMath)
+    local r = LM.measure(content, isMath)
+    tex.sprint("\\typeout{LABEL " .. tag .. " w=" .. tostring(r.w) .. " h=" .. tostring(r.h) .. " d=" .. tostring(r.d) .. "}")
+  end
+  dump("a", "a", false)
+  dump("b", "b", false)
+  dump("S", "S", false)
+  dump("ab", "ab", false)
+  dump("Smath", "$S$", true)
+}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``LabelMeasure measures text and math labels`` () =
+    let m = parseLabelMeasurements (compileProbeLog labelMeasureProbeContent)
+
+    for tag in [ "a"; "b"; "S"; "ab"; "Smath" ] do
+        Assert.True(Map.containsKey tag m, sprintf "missing label measurement for %s" tag)
+
+    let ma = m.["a"]
+    let mb = m.["b"]
+    let mS = m.["S"]
+    let mAb = m.["ab"]
+    let mSm = m.["Smath"]
+
+    // A lowercase letter has a positive, sane size at the default ~10pt font.
+    Assert.True(ma.W > 3.0 && ma.W < 8.0, sprintf "a width out of range: %f" ma.W)
+    Assert.True(ma.H > 3.0 && ma.H < 8.0, sprintf "a height out of range: %f" ma.H)
+    Assert.True(ma.D >= 0.0, sprintf "negative depth for a: %f" ma.D)
+    // Two characters are wider than one.
+    Assert.True(mAb.W > ma.W, sprintf "ab (%f) not wider than a (%f)" mAb.W ma.W)
+    // The measurement is additive (no kerning applied): ab ~= a + b.
+    Assert.True(abs (mAb.W - (ma.W + mb.W)) < 0.05, sprintf "ab (%f) != a+b (%f)" mAb.W (ma.W + mb.W))
+    // A capital and an ascender are taller than a lowercase x-height.
+    Assert.True(mS.H > ma.H, sprintf "S height (%f) not > a height (%f)" mS.H ma.H)
+    Assert.True(mb.H > ma.H, sprintf "b height (%f) not > a height (%f)" mb.H ma.H)
+    // A math label $S$ measures the same as its inner text S.
+    Assert.True(
+        abs (mSm.W - mS.W) < 1e-6 && abs (mSm.H - mS.H) < 1e-6,
+        sprintf "$S$ (%f,%f) != S (%f,%f)" mSm.W mSm.H mS.W mS.H
+    )
+
+/// Probe content for the TeX-side measurement command (S1b). It emits
+/// \flpqdotmeasureedgelabel for three edge keys (a single math symbol, a
+/// multi-symbol math expression, and another single symbol), then reads the
+/// _G.flpqdot_edge_label_sizes channel back out as `MEASURED <key> w=.. h=..
+/// d=..` lines and dumps the `channelSize` fallback for an absent key.
+let private measureCommandProbeContent =
+    """\flpqdotmeasureedgelabel{v0->v2}{$S$}
+\flpqdotmeasureedgelabel{v0->v1}{$a+b$}
+\flpqdotmeasureedgelabel{v1->v0}{$b$}
+\directlua{
+  local LM = require "pgf.gd.flpqdot.LabelMeasure"
+  local t = _G.flpqdot_edge_label_sizes
+  for k, v in pairs(t) do
+    tex.sprint("\\typeout{MEASURED " .. k .. " w=" .. tostring(v.w) .. " h=" .. tostring(v.h) .. " d=" .. tostring(v.d) .. "}")
+  end
+  local fb = LM.channelSize("nope->nope")
+  tex.sprint("\\typeout{FALLBACK w=" .. tostring(fb.w) .. " h=" .. tostring(fb.h) .. " d=" .. tostring(fb.d) .. "}")
+}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``flpqdotmeasureedgelabel measures complex TeX labels into the channel`` () =
+    let log = compileProbeLog measureCommandProbeContent
+    let m = parseMeasuredSizes log
+
+    // All three measured keys are present in the channel.
+    for key in [ "v0->v2"; "v0->v1"; "v1->v0" ] do
+        Assert.True(Map.containsKey key m, sprintf "missing measured size for %s" key)
+
+    let mS = m.["v0->v2"] // $S$
+    let mAb = m.["v0->v1"] // $a+b$
+    let mB = m.["v1->v0"] // $b$
+
+    // Single math symbols have a sane size at the default ~10pt font.
+    Assert.True(mS.W > 4.0 && mS.W < 10.0, sprintf "$S$ width out of range: %f" mS.W)
+    Assert.True(mB.W > 4.0 && mB.W < 10.0, sprintf "$b$ width out of range: %f" mB.W)
+    // A multi-symbol expression is clearly wider than a single symbol.
+    Assert.True(mAb.W > 2.0 * mS.W, sprintf "$a+b$ (%f) not clearly wider than $S$ (%f)" mAb.W mS.W)
+
+    // The channel holds exactly the three measured keys (no leakage).
+    Assert.Equal(3, Map.count m)
+
+    // channelSize falls back to the fixed default for an absent key.
+    let fbLine = log.Split('\n') |> Array.tryFind (fun l -> l.StartsWith("FALLBACK "))
+
+    Assert.True(Option.isSome fbLine, "FALLBACK line not found in log")
+
+    let fbm =
+        Regex.Match(fbLine.Value, @"^FALLBACK w=([-\d.]+) h=([-\d.]+) d=([-\d.]+)")
+
+    Assert.True(fbm.Success, sprintf "unparseable fallback line: %s" fbLine.Value)
+    Assert.Equal(6.0, float fbm.Groups.[1].Value)
+    Assert.Equal(7.0, float fbm.Groups.[2].Value)
+    Assert.Equal(0.2, float fbm.Groups.[3].Value)
 
 // ---------------------------------------------------------------------------
 // S4: dot-parity suite
@@ -400,7 +683,7 @@ let private rankParityMismatches
     List.ofSeq mismatches
 
 /// Append the curveto-total dump to a TikZ graph and return the total number
-/// of cubic Bezier segments the spline router emitted for it.
+/// of cubic Bezier segments the channel router emitted for it.
 let private graphCurvetoTotal (tikz: string) : int =
     let dump =
         """\directlua{ tex.sprint("\\typeout{CURVETO_TOTAL=" .. tostring(_G.flpqdot_curveto_total) .. "}") }"""

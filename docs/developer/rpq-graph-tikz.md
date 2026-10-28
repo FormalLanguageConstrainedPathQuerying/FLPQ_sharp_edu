@@ -38,7 +38,7 @@ not change.
 Labels are taken as already-rendered TeX (the RPQ caller passes `$v_i$` vertices and escaped
 edge labels), so no second escaping is applied. Highlighted edges render `red, thick`, path
 edges `red!40`. A reciprocal pair (`u -> v` and `v -> u`) is separated natively by the flpqdot
-spline router (via the `dot layout` key); the renderer emits no `bend` option.
+channel router (via the `dot layout` key); the renderer emits no `bend` option.
 
 ## Design Decisions
 
@@ -46,7 +46,7 @@ spline router (via the `dot layout` key); the renderer emits no `bend` option.
 | --- | --- |
 | Dedicated RPQ module instead of reusing `GssTikz` | The RPQ input graph is an NFA, not a graph-structured stack; GSS is a GLL/RNGLR artifact and must not be a dependency of RPQ (task 291) |
 | Byte-identical to the previous RPQ output | Keeps the Belyanin step goldens unchanged while removing the GSS dependency |
-| Reciprocal pairs separated by the flpqdot router | The `dot layout` spline router bows reciprocal pairs to opposite sides natively; the renderer emits no `bend` option (task 282, S2) |
+| Reciprocal pairs separated by the flpqdot router | The `dot layout` channel router separates reciprocal pairs into distinct channels (opposite sides) natively; the renderer emits no `bend` option (task 282, S2) |
 | Labels accepted as already-rendered TeX | The RPQ caller escapes edge labels once and formats vertex labels as `$v_i$`; a second escape would corrupt them |
 
 ## See Also

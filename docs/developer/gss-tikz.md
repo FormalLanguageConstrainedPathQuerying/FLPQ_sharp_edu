@@ -48,7 +48,7 @@ shape, skipEscaping, positionOf.
   grow direction switches to `grow=left` (pgf's same-layer chaining reverses the
   orientation under the default grow direction).
 - The graph uses the `dot layout` key (flpqdot library), so reciprocal pairs are separated
-  natively by the spline edge router — the renderer emits no `bend` option.
+  natively by the channel router — the renderer emits no `bend` option.
 
 ## Design Decisions
 
@@ -56,7 +56,7 @@ shape, skipEscaping, positionOf.
 | --- | --- |
 | Two edge highlight tiers (highlighted / path) | Step figures need to distinguish the elements added on the current step (red, bold — the book draws the current walk `thick`) from the accumulated structure they extend (light red); one tier cannot express both |
 | Reuses `AutomatonTikz` primitives | Header, `dot layout` options, and label escaping stay consistent with the automaton renderers |
-| Reciprocal pairs separated by the layout engine | The input graph may carry both directions of a pair; the flpqdot spline router bows them to opposite sides natively (no renderer-side `bend` option) |
+| Reciprocal pairs separated by the layout engine | The input graph may carry both directions of a pair; the flpqdot channel router separates them into distinct channels (opposite sides) natively (no renderer-side `bend` option) |
 
 ## See Also
 

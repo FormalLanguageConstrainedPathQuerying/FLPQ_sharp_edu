@@ -25,7 +25,7 @@ The input graph represents a sequence of terminal tokens as a directed path: ver
 
 - **TikZ** — a single `\graph [dot layout, ...]` opened by `AutomatonTikz.tikzHeader`, with one node per vertex and one quoted edge label per edge.
 - **Highlighting** — when `currentVertex` is specified, the vertex is filled with `lightgreen!20`.
-- **Reciprocal edges** — because the renderer is generic over `Graph<int, Option<'t>>`, an edge whose reverse is also present is separated natively by the flpqdot spline router (via the `dot layout` key), so the pair does not draw as two overlapping lines; the renderer emits no `bend` option.
+- **Reciprocal edges** — because the renderer is generic over `Graph<int, Option<'t>>`, an edge whose reverse is also present is separated natively by the flpqdot channel router (via the `dot layout` key), so the pair does not draw as two overlapping lines; the renderer emits no `bend` option.
 
 ## Function Signatures
 
@@ -51,7 +51,7 @@ Renders the input graph as a TikZ `tikzpicture` string.
 | --- | --- |
 | Reuses `AutomatonTikz` header/footer and `escapeLatex` | Keeps the `dot layout`, node style, and label escaping identical to the automaton renderers |
 | `fill=lightgreen!20` for the current position | Matches the DOT renderer's current-position color and distinguishes it from the GSS/automaton fills |
-| Reciprocal pairs separated by the layout engine | The generic input type could carry both directions of a pair; the flpqdot spline router (via `dot layout`) separates them natively, keeping the edge appearance consistent with the automaton, RSM, and GSS renderers (task 289) |
+| Reciprocal pairs separated by the layout engine | The generic input type could carry both directions of a pair; the flpqdot channel router (via `dot layout`) separates them into distinct channels natively, keeping the edge appearance consistent with the automaton, RSM, and GSS renderers (task 289) |
 
 ## See Also
 
