@@ -178,8 +178,8 @@ let ``renderGraph: path edges render light red and current edges red bold in bot
     // The hex color is quoted: an unquoted # would start a DOT comment.
     Assert.Contains("v0 -> v1 [label=\"a\", color=\"#FF9999\"];", dot)
     Assert.Contains("v1 -> v2 [label=\"b\", color=red, penwidth=2.0];", dot)
-    Assert.Contains("v0 ->[\"a\", red!40] v1;", tikz)
-    Assert.Contains("v1 ->[\"b\", red, thick] v2;", tikz)
+    Assert.Contains("v0 ->[red!40] v1;", tikz)
+    Assert.Contains("v1 ->[red, thick] v2;", tikz)
 
 [<Fact>]
 let ``renderGraph: reciprocal edges are not bent in TikZ or DOT`` () =
@@ -188,10 +188,10 @@ let ``renderGraph: reciprocal edges are not bent in TikZ or DOT`` () =
 
     // The example graph carries both 2->3 ("c") and 3->2 ("b"); the renderer no
     // longer emits a bend (separation is done natively by the flpqdot router).
-    Assert.Contains("v2 ->[\"c\"] v3;", tikz)
-    Assert.Contains("v3 ->[\"b\"] v2;", tikz)
+    Assert.Contains("v2 -> v3;", tikz)
+    Assert.Contains("v3 -> v2;", tikz)
     // One-way edges stay straight.
-    Assert.Contains("v0 ->[\"a\"] v1;", tikz)
+    Assert.Contains("v0 -> v1;", tikz)
     // No bend attribute in either output.
     Assert.DoesNotContain("bend", dot)
     Assert.DoesNotContain("bend", tikz)
@@ -212,7 +212,7 @@ let ``renderGraph: extra edges are drawn with their labels even when not input e
             (Map.ofList [ (1, 0), "S" ])
 
     // (1, 0) is reciprocal with (0, 1); it renders highlighted, without a bend.
-    Assert.Contains("v1 ->[\"S\", red, thick] v0;", tikz)
+    Assert.Contains("v1 ->[red, thick] v0;", tikz)
 
     // A highlighted extra edge that coincides with an input edge merges its labels.
     let _, merged =
@@ -227,7 +227,7 @@ let ``renderGraph: extra edges are drawn with their labels even when not input e
             (Set.ofList [ (0, 1) ])
             (Map.ofList [ (0, 1), "S" ])
 
-    Assert.Contains("v0 ->[\"a, S\", red, thick] v1;", merged)
+    Assert.Contains("v0 ->[red, thick] v1;", merged)
 
 [<Fact>]
 let ``renderGraph: a highlighted reciprocal edge renders without a bend`` () =
@@ -243,8 +243,8 @@ let ``renderGraph: a highlighted reciprocal edge renders without a bend`` () =
             Set.empty
             Map.empty
 
-    Assert.Contains("v2 ->[\"c\", red, thick] v3;", tikz)
-    Assert.Contains("v3 ->[\"b\"] v2;", tikz)
+    Assert.Contains("v2 ->[red, thick] v3;", tikz)
+    Assert.Contains("v3 -> v2;", tikz)
     Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
@@ -255,7 +255,7 @@ let ``renderGraphWithDerived: an input label equal to the derived label is shown
 
     Assert.Contains("v0 -> v1 [label=\"a\", color=red, penwidth=2.0];", dot)
     Assert.DoesNotContain("a, a", dot)
-    Assert.Contains("v0 ->[\"a\", red, thick] v1;", tikz)
+    Assert.Contains("v0 ->[red, thick] v1;", tikz)
     Assert.DoesNotContain("a, a", tikz)
 
 [<Fact>]
@@ -274,5 +274,5 @@ let ``renderGraphWithDerived: a derived component already in the input label is 
 
     Assert.Contains("label=\"a, b\"", dot)
     Assert.DoesNotContain("a, b, a", dot)
-    Assert.Contains("[\"a, b\", red, thick]", tikz)
+    Assert.Contains("[red, thick]", tikz)
     Assert.DoesNotContain("a, b, a", tikz)

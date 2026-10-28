@@ -1,8 +1,10 @@
 \begin{tikzpicture}
+  \flpqdotmeasureedgelabel{s0->s1}{a, b}
+  \flpqdotmeasureedgelabel{s1->s0}{a}
   \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
     s0 [as={q0}, label=above:Start, fill=green!30];
     s1 [as={q1}, double, double distance=1.5pt, fill=red!30];
-    s0 ->["a, b"] s1;
-    s1 ->["a"] s0;
+    s0 -> s1;
+    s1 -> s0;
   };
 \end{tikzpicture}

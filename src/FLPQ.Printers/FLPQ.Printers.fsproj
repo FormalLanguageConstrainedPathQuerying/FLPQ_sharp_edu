@@ -19,6 +19,7 @@
     <Compile Include="GssDot.fs" />
     <Compile Include="InputGraphDot.fs" />
     <Compile Include="AutomatonDot.fs" />
+    <Compile Include="FlpqdotTikz.fs" />
     <Compile Include="AutomatonTikz.fs" />
     <Compile Include="RegexpTreeDot.fs" />
     <Compile Include="RegexpTreeTikz.fs" />

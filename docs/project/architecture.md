@@ -69,6 +69,7 @@ FLPQ.slnx
 │   │   ├── InputGraphTikz.fs       # TikZ rendering for the input graph (terminal path)
 │   │   ├── BasicSppfTikz.fs        # TikZ rendering for basic (Rekers-style) SPPF
 │   │   ├── SppfTikz.fs             # TikZ rendering for SPPF
+│   │   ├── FlpqdotTikz.fs          # Shared flpqdot emission helpers for the dot-layout TikZ renderers (measurement pre-pass, label adoption)
 │   │   ├── AutomatonTikz.fs        # TikZ rendering for finite automata (graphdrawing, dot layout)
 │   │   ├── RegexpTreeTikz.fs       # TikZ rendering of the RPQ regexp AST tree (vertical)
 │   │   ├── RpqGraphTikz.fs         # RPQ-dedicated TikZ rendering of the input graph
@@ -113,6 +114,7 @@ FLPQ.slnx
  │       ├── Program.fs              # Entry point and algorithm dispatch
  │       ├── AlgorithmTypes.fs       # Algorithm DU and Argu argument type
  │       ├── Helpers.fs              # Output file writing and template lookup
+ │       ├── Errors.fs               # User-facing CLI error type (typed exception)
  │       ├── CykRunner.fs            # CYK CLI runner
  │       ├── ValiantRunner.fs        # Valiant (standard/modified) CLI runner
  │       ├── LLRunner.fs             # LL(k) CLI runner
@@ -187,6 +189,9 @@ FLPQ.slnx
         ├── RpqGraphRendererTests.fs            # Tests for the RPQ-dedicated DOT/TikZ input-graph renderers
         ├── AutomatonVisualizationTests.fs      # Tests for automata dot rendering
         ├── RnglrAutomatonTikzTests.fs          # Tests for the RNGLR LR-automaton TikZ rendering
+        ├── FlpqdotLibraryTests.fs              # Tests for the flpqdot graph-drawing library (router, probes, dot parity)
+        ├── FlpqdotKronRegressionTests.fs       # Kronecker-CFPQ step-graph label/curve regression (flpqdot)
+        ├── FlpqdotProbeHelpers.fs              # Shared lualatex probe-compile helpers for the flpqdot tests
         ├── DerivationTreeVisualizationTests.fs # Tests for tree dot rendering
         ├── DerivationTreeTikzTests.fs          # Tests for derivation-tree TikZ rendering
         ├── LLVisualizerTests.fs                # Tests for LL step visualization
@@ -210,7 +215,9 @@ FLPQ.slnx
         ├── InputGraphTikzTests.fs              # Tests for input-graph TikZ rendering
         ├── RsmTikzTests.fs                     # Tests for RSM TikZ rendering
         ├── RsmDotTests.fs                      # Tests for RSM DOT rendering
+        ├── GllStepVisualizationTests.fs        # Golden tests for GLL step visualization
         ├── RnglrStepVisualizationTests.fs      # Golden tests for RNGLR step visualization
+        ├── KroneckerStepVizTests.fs            # Tests for the Kronecker CFPQ step TeX rendering
         ├── BasicSppfDotTests.fs                # Tests for basic (Rekers-style) SPPF DOT rendering
         ├── SppfTikzTests.fs                    # Tests for SPPF TikZ rendering
         ├── PathSemiringTexTests.fs             # Tests for path-semiring matrix TeX rendering

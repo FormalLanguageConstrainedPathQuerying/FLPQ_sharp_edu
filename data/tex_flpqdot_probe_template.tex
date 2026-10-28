@@ -48,6 +48,16 @@
 %   SELFINT <key> / SELF_INTERSECTION_COUNT=<value>
 %     one line per edge whose sampled path self-intersects (a degenerate
 %     curve / loop); the count of such edges (0 = every edge path is simple).
+%   EDGE_NODE_CROSSINGS=<value>
+%     the number of sampled edge-path points that fall inside a node bounding
+%     box (the edge's own tail/head boxes excluded; each sampled point counted
+%     once), summed over all edges (0 = no edge path crosses a node).
+%   POS <name> x=.. y=.. minx=.. maxx=..
+%     per node: its layout position (x, y) and its absolute box x-range
+%     (minx/maxx = pos.x + the TeX-measured box's x extents).
+%   BEND <key> (x1,y1) (x2,y2) ...
+%     per multi-layer edge: the interior (bend) anchor points of its routed
+%     path (endpoints excluded); absent for a direct edge.
 \directlua{
   local r = require "pgf.gd.flpqdot.EdgeRoutingSpline"
   local orig = r.run
@@ -231,10 +241,15 @@
     local nodeBoxes = {}
     local nbCnt = 0
     for _, n in ipairs(self.graph.nodes) do
-      if n.path then
-        local min_x, min_y, max_x, max_y = n.path:boundingBox()
+      if n.tex and n.tex.minX ~= nil then
         nbCnt = nbCnt + 1
-        nodeBoxes[nbCnt] = { name = n.name, min_x = min_x, min_y = min_y, max_x = max_x, max_y = max_y }
+        nodeBoxes[nbCnt] = {
+          name = n.name,
+          min_x = n.pos.x + n.tex.minX,
+          min_y = n.pos.y + n.tex.minY,
+          max_x = n.pos.x + n.tex.maxX,
+          max_y = n.pos.y + n.tex.maxY,
+        }
       end
     end
     local edgeSampled = {}
@@ -242,6 +257,30 @@
       if e.orig_m and e.orig_m.path then
         local t, h = e:getTail().name, e:getHead().name
         edgeSampled[t .. "->" .. h] = samplePath(e.orig_m.path)
+      end
+    end
+    local function r3 (v) return math.floor(v * 1000 + 0.5) / 1000 end
+    for _, n in ipairs(self.graph.nodes) do
+      local t = n.tex
+      local minx = n.pos.x + (t and t.minX or 0)
+      local maxx = n.pos.x + (t and t.maxX or 0)
+      tex.sprint("\\typeout{POS " .. n.name .. " x=" .. tostring(r3(n.pos.x)) .. " y=" .. tostring(r3(n.pos.y)) .. " minx=" .. tostring(r3(minx)) .. " maxx=" .. tostring(r3(maxx)) .. "}")
+    end
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        local t, h = e:getTail().name, e:getHead().name
+        local op = onPathPoints(e.orig_m.path)
+        local s = t .. "->" .. h
+        local i = 2
+        local hasBend = false
+        while op[i] ~= nil and op[i + 1] ~= nil do
+          s = s .. " (" .. tostring(r3(op[i].x)) .. "," .. tostring(r3(op[i].y)) .. ")"
+          hasBend = true
+          i = i + 1
+        end
+        if hasBend then
+          tex.sprint("\\typeout{BEND " .. s .. "}")
+        end
       end
     end
     local nodeColl = 0
@@ -347,6 +386,25 @@
       end
     end
     tex.sprint("\\typeout{SELF_INTERSECTION_COUNT=" .. tostring(selfInt) .. "}")
+
+    local nodeCross = 0
+    for _, e in ipairs(self.graph.edges) do
+      if e.orig_m and e.orig_m.path then
+        local t, h = e:getTail().name, e:getHead().name
+        local sp = edgeSampled[t .. "->" .. h]
+        for _, p in ipairs(sp) do
+          for _, nb in ipairs(nodeBoxes) do
+            if nb.name ~= t and nb.name ~= h
+              and p.x >= nb.min_x and p.x <= nb.max_x
+              and p.y >= nb.min_y and p.y <= nb.max_y then
+              nodeCross = nodeCross + 1
+              break
+            end
+          end
+        end
+      end
+    end
+    tex.sprint("\\typeout{EDGE_NODE_CROSSINGS=" .. tostring(nodeCross) .. "}")
   end
 }
 \usegdlibrary{flpqdot}

@@ -1,9 +1,11 @@
 \begin{tikzpicture}
+  \flpqdotmeasureedgelabel{v0->v4}{$R^{0,0}_{2,0}$}
+  \flpqdotmeasureedgelabel{v4->v10}{$R^{2,0}_{5,0}$}
   \graph [dot layout, nodes={draw, rectangle, rounded corners}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
     v0 [as={0: (0,0)}, fill=orange!30];
     v4 [as={4: (2,0)}, fill=lightblue!20];
     v10 [as={10: (5,0)}];
-    v0 ->["$R^{0,0}_{2,0}$"] v4;
-    v4 ->["$R^{2,0}_{5,0}$"] v10;
+    v0 -> v4;
+    v4 -> v10;
   };
 \end{tikzpicture}

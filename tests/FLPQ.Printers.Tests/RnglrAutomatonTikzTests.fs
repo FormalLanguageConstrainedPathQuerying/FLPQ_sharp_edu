@@ -54,10 +54,12 @@ let ``rnglrAutomatonToTikz renders rectangle states with aligned items and symbo
     // Start state styling and final-state double border.
     Assert.Contains("fill=green!30", tikz)
     Assert.Contains("double", tikz)
-    // Edge labels for the terminal and nonterminal symbols of the grammar.
-    Assert.Contains("s0 ->[", tikz)
-    Assert.Contains(@"""a""", tikz)
-    Assert.Contains(@"""S""", tikz)
+    // Edge labels for the terminal and nonterminal symbols of the grammar are registered
+    // in the measurement pre-pass (non-loop edges drop the stock quote; the router places
+    // the label).
+    Assert.Contains(@"\flpqdotmeasureedgelabel{s0->", tikz)
+    Assert.Contains(@"{a}", tikz)
+    Assert.Contains(@"{S}", tikz)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]

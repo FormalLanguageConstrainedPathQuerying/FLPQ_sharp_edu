@@ -7,7 +7,7 @@
 **Depends on:** RSM (FLPQ.Languages), AutomatonTikz, DerivationTreeDot (label escaping)
 **Used by:** GllRunner, RnglrRunner, GllStepVisualizer, KroneckerCfpqRunner
 
-> **Abstract:** Renders Recursive State Machines (RSM) and extended RSMs (augmented with the fresh start block S′). `RsmDot` emits Graphviz DOT; `RsmTikz` emits a TikZ `tikzpicture` in which each block is one connected component stacked top-to-bottom (S′ on top) while the layout inside every block grows left-to-right. Book reference: sec:CFPQ_GLL, sec:CFPQ_RNGLR.
+> **Abstract:** Renders Recursive State Machines (RSM) and extended RSMs (augmented with the fresh start block S′). `RsmDot` emits Graphviz DOT; `RsmTikz` emits a TikZ `tikzpicture` in which each block is one connected component stacked top-to-bottom (S′ on top) while the layout inside every block grows left-to-right. Non-loop edge labels of single-symbol transition cells are registered in the flpqdot measurement pre-pass and placed by the router (the stock quote is dropped); multi-symbol cells (parallel edges) and loops keep their stock quote. Book reference: sec:CFPQ_GLL, sec:CFPQ_RNGLR.
 
 ## Contents
 
@@ -45,6 +45,7 @@ A single `tikzpicture` with one flat `\graph`:
 - **Labels** — state content is the bare global index. Every block's start state additionally carries a plain nonterminal label to its left (`label=left:Nt`) and `label=above:Start`. Every final state gets `double, double distance=1.5pt` — including a highlighted final state, which keeps the double circle. Fill priority: highlighted state `fill=lightblue!20`, else block start `fill=green!30`, else final state `fill=red!30`.
 - **Edge labels** — terminals as-is (escaped), nonterminal calls as the bare `Nt` name, epsilon transitions as dotted edges with a `$\varepsilon$` label (math mode).
 - **Edges** — one line per transition symbol within a direction (parallel same-direction labels are not merged). A reciprocal pair (`u→v` and `v→u`) is separated natively by the flpqdot channel router (via the `dot layout` key), so the renderer emits no `bend` option.
+- **Label placement** — a non-loop edge whose cell holds exactly one symbol (a unique `tail->head` key) is registered in the flpqdot measurement pre-pass and rendered without a stock quote (the router places the label; the `dotted` style survives the quote drop). Multi-symbol cells render parallel edges that share a key, so they keep the stock quote, as do loops (the one-edge-per-pair rule, [FlpqdotTikz](flpqdot-tikz.md)).
 
 ## Function Signatures
 
@@ -69,6 +70,7 @@ GLL/RNGLR visualizations.
 | `double` on every final state regardless of highlight/start status | A highlighted final state (the current GLL descriptor's state when it is final) must still read as final; fill priority lightblue > green > red keeps exactly one fill per node |
 | `component sep=1.5cm` | Matches `sibling sep=1.5cm` for visual consistency; the pgf-gd default (1.5em) is tighter than the intra-block spacing |
 | lightblue highlight fill | Shared with the current GSS node color so step figures read consistently in the summary legend |
+| Single-symbol cells registered in the measurement pre-pass | Multi-symbol cells render parallel edges with the same `tail->head` key, which the router's edge callback (node names only) could not distinguish; registering them would place the same label on every edge of the pair, so only unique-key edges adopt the router-placed label (task 30, S1b) |
 
 ## See Also
 

@@ -1,15 +1,19 @@
 \begin{tikzpicture}
+  \flpqdotmeasureedgelabel{v0->v9}{$R^{0,0}_{3,0}$}
+  \flpqdotmeasureedgelabel{v1->v0}{$R^{0,1}_{0,0}$}
+  \flpqdotmeasureedgelabel{v2->v0}{$R^{0,2}_{0,0}$}
+  \flpqdotmeasureedgelabel{v2->v1}{$R^{0,2}_{0,1}$}
   \graph [dot layout, nodes={draw, rectangle, rounded corners}, grow'=right, level sep=2cm, sibling sep=1.5cm] {
     v0 [as={0: (0,0)}, fill=lightblue!20];
     v1 [as={1: (0,1)}];
     v2 [as={2: (0,2)}, fill=orange!30];
     v9 [as={9: (3,0)}];
-    v0 ->["$R^{0,0}_{0,0}$",loop above] v0;
-    v0 ->["$R^{0,0}_{3,0}$"] v9;
-    v1 ->["$R^{0,1}_{0,0}$"] v0;
-    v1 ->["$R^{0,1}_{0,1}$",loop above] v1;
-    v2 ->["$R^{0,2}_{0,0}$", red, thick] v0;
-    v2 ->["$R^{0,2}_{0,1}$"] v1;
-    v2 ->["$R^{0,2}_{0,2}$",loop above] v2;
+    v0 ->["$R^{0,0}_{0,0}$", loop above] v0;
+    v0 -> v9;
+    v1 -> v0;
+    v1 ->["$R^{0,1}_{0,1}$", loop above] v1;
+    v2 ->[red, thick] v0;
+    v2 -> v1;
+    v2 ->["$R^{0,2}_{0,2}$", loop above] v2;
   };
 \end{tikzpicture}

@@ -7,7 +7,7 @@
 **Depends on:** AutomatonTikz (header, graph options, label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer
 
-> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's dot layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs are separated natively by the flpqdot router so they do not draw on top of each other.
+> **Abstract:** TikZ rendering of the graph-structured stack (GSS) from vertex/edge sets using graphdrawing's dot layout. Vertices get fill colors for the start, current, frontier, stored-pop, and highlighted states; edges have two highlight tiers — highlighted edges are red and bold (`thick`), path edges are light red (`red!40`). Reciprocal edge pairs are separated natively by the flpqdot router so they do not draw on top of each other. Non-loop edge labels are registered in the flpqdot measurement pre-pass and placed by the router (the stock quote is dropped); loop edges keep their stock quote.
 
 ## Contents
 
@@ -43,7 +43,11 @@ shape, skipEscaping, positionOf.
   highlighted and current as frontier, so an RPQ graph renders target > current > start;
   GLL/RNGLR pass no start/frontier and keep current > stored-pop > highlighted.
 - Edge tiers: highlighted = `red, thick`; path = `red!40` (an edge in both sets
-  renders as highlighted); else plain.
+  renders as highlighted); else plain. Non-loop edges with a non-empty label are
+  registered in the flpqdot measurement pre-pass and rendered without a stock quote
+  (the router places the label; the style survives the quote drop); loop edges keep
+  their stock quote. The GSS has one edge per pair, so every non-loop labeled edge is
+  registered.
 - `positionOf`: when `Some`, one `{ [same layer] ... }` collection per position and the
   grow direction switches to `grow=left` (pgf's same-layer chaining reverses the
   orientation under the default grow direction).
@@ -57,6 +61,7 @@ shape, skipEscaping, positionOf.
 | Two edge highlight tiers (highlighted / path) | Step figures need to distinguish the elements added on the current step (red, bold — the book draws the current walk `thick`) from the accumulated structure they extend (light red); one tier cannot express both |
 | Reuses `AutomatonTikz` primitives | Header, `dot layout` options, and label escaping stay consistent with the automaton renderers |
 | Reciprocal pairs separated by the layout engine | The input graph may carry both directions of a pair; the flpqdot channel router separates them into distinct channels (opposite sides) natively (no renderer-side `bend` option) |
+| Labels registered in the measurement pre-pass | The router (Lua) cannot see edge labels; registering each non-loop label via `\flpqdotmeasureedgelabel` (and dropping the stock quote) lets the router place it at a collision-free position (task 30, S1b). The GSS has one edge per pair, so the one-edge-per-pair rule ([FlpqdotTikz](flpqdot-tikz.md)) never excludes an edge |
 
 ## See Also
 

@@ -14,7 +14,7 @@ module RegexpTreeTikz =
     let toTikz (label: int -> string) (nodes: Set<int>) (edges: Set<int * int>) (current: int) : string =
         let sb = StringBuilder()
 
-        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.graphOptions "rectangle" "grow'=down") sb
+        AutomatonTikz.tikzHeaderWithOptions "" (AutomatonTikz.graphOptions "rectangle" "grow'=down") sb
 
         for vidx in nodes do
             let text = label vidx

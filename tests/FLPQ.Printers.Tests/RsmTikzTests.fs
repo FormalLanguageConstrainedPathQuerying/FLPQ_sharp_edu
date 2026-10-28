@@ -40,6 +40,15 @@ let private declPositions (tikz: string) (states: int list) : int list =
 
     all |> List.filter (fun (i, _) -> List.contains i states) |> List.map snd
 
+/// True when the given label text is registered in the measurement pre-pass or carried by
+/// a (loop) edge quote: the two places an edge label can appear after pre-pass adoption.
+let private labelPresent (tikz: string) (label: string) : bool =
+    let prePass =
+        tikz.Split('\n')
+        |> Array.exists (fun l -> l.Contains(@"\flpqdotmeasureedgelabel") && l.EndsWith(sprintf "{%s}" label))
+
+    prePass || tikz.Contains(sprintf "->[\"%s\"" label)
+
 let private transitionSymbolCount (rsm: RSM<string, string>) : int =
     [ for i in 0 .. rsm.StateCount - 1 do
           for j in 0 .. rsm.StateCount - 1 do
@@ -182,8 +191,10 @@ let ``RSM tikz epsilon edge label is math mode and compiles with lualatex`` () =
     let ersm = ExtendedRSM.create freshStart rsm
     let tikz = RsmTikz.extendedRsmToTikz string string ersm None
 
-    // The epsilon label must be math-mode TeX, not escaped literal source.
-    Assert.Contains(@"""$\varepsilon$"", dotted", tikz)
+    // The epsilon label is registered in the measurement pre-pass as math-mode TeX (the
+    // edge itself carries only the dotted style; the router places the label).
+    Assert.Contains(@"\flpqdotmeasureedgelabel{s0->s1}{$\varepsilon$}", tikz)
+    Assert.Contains("s0 ->[dotted] s1;", tikz)
     Assert.DoesNotContain(@"\textbackslash varepsilon", tikz)
 
     let tikzTemplatePath =
@@ -200,8 +211,8 @@ let ``RSM tikz renders reciprocal transitions without a bend`` () =
     let ersm = ExtendedRSM.create (Nonterminal "S'") rsm
     let tikz = RsmTikz.extendedRsmToTikz string string ersm None
 
-    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
+    Assert.Contains("s1 -> s0;", tikz)
     Assert.DoesNotContain("bend", tikz)
 
     let tikzTemplatePath =
@@ -217,7 +228,7 @@ let ``RSM tikz keeps one-way edges straight and never bends self-loops`` () =
     let ersm = ExtendedRSM.create (Nonterminal "S'") rsm
     let tikz = RsmTikz.extendedRsmToTikz string string ersm None
 
-    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
 
     let loopLine = tikz.Split('\n') |> Array.find (fun l -> l.Contains("loop above"))
 
@@ -257,10 +268,11 @@ let ``RSM tikz nonterminal edges carry the bare nonterminal name`` () =
 
         Assert.DoesNotContain("call ", tikz)
 
-        // Every nonterminal that labels a transition appears as a bare edge label.
+        // Every nonterminal that labels a transition appears as a bare edge label
+        // (pre-pass registration for non-loop edges, stock quote for loops).
         for nt in TestHelpers.callLabeledNonterminals rsm do
             let (Nonterminal ntName) = nt
-            Assert.Contains(sprintf "->[\"%s\"" ntName, tikz)
+            Assert.True(labelPresent tikz ntName, sprintf "nonterminal %s not found as an edge label" ntName)
 
 [<Fact>]
 let ``RSM tikz highlighted final state stays double circled with lightblue fill`` () =

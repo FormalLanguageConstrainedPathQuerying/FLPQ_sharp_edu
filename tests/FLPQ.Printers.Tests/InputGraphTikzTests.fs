@@ -14,8 +14,10 @@ let ``input graph tikz renders the linear path without bends`` () =
     let graph = GLL.stringToGraph [ "a"; "b" ]
     let tikz = InputGraphTikz.toTikz string graph None
 
-    Assert.Contains("v0 ->[\"a\"] v1;", tikz)
-    Assert.Contains("v1 ->[\"b\"] v2;", tikz)
+    // The labels are registered in the measurement pre-pass; the edges carry no stock quote.
+    Assert.Contains("v0 -> v1;", tikz)
+    Assert.Contains("v1 -> v2;", tikz)
+    Assert.Contains(@"\flpqdotmeasureedgelabel{v0->v1}{a}", tikz)
     Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
@@ -30,7 +32,7 @@ let ``input graph tikz renders reciprocal edges without a bend`` () =
 
     let tikz = InputGraphTikz.toTikz string graph None
 
-    Assert.Contains("v0 ->[\"a\"] v1;", tikz)
-    Assert.Contains("v1 ->[\"a\"] v0;", tikz)
+    Assert.Contains("v0 -> v1;", tikz)
+    Assert.Contains("v1 -> v0;", tikz)
     Assert.DoesNotContain("bend", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)

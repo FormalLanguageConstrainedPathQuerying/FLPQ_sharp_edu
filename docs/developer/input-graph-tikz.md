@@ -7,7 +7,7 @@
 **Depends on:** AutomatonTikz (header, footer, label escaping)
 **Used by:** GllStepVisualizer, RnglrStepVisualizer
 
-> **Abstract:** TikZ rendering for the GLL/RNGLR input graph. Converts a `Graph<int, Option<'t>>` (normally a linear path with one labeled edge per input position) to a `tikzpicture` using layered graphdrawing, with optional highlighting of the current input position.
+> **Abstract:** TikZ rendering for the GLL/RNGLR input graph. Converts a `Graph<int, Option<'t>>` (normally a linear path with one labeled edge per input position) to a `tikzpicture` using layered graphdrawing, with optional highlighting of the current input position. Non-loop edge labels are registered in the flpqdot measurement pre-pass and placed by the router (the stock quote is dropped).
 
 ## Contents
 
@@ -23,7 +23,7 @@ The input graph represents a sequence of terminal tokens as a directed path: ver
 
 ## Supported Formats
 
-- **TikZ** — a single `\graph [dot layout, ...]` opened by `AutomatonTikz.tikzHeader`, with one node per vertex and one quoted edge label per edge.
+- **TikZ** — a single `\graph [dot layout, ...]` opened by `AutomatonTikz.tikzHeader`, with one node per vertex and one edge per labeled pair. Every non-loop edge with a non-empty label is registered in the flpqdot measurement pre-pass and rendered without a stock quote (the router places the label); the input graph has one edge per pair, so the one-edge-per-pair rule ([FlpqdotTikz](flpqdot-tikz.md)) never excludes an edge.
 - **Highlighting** — when `currentVertex` is specified, the vertex is filled with `lightgreen!20`.
 - **Reciprocal edges** — because the renderer is generic over `Graph<int, Option<'t>>`, an edge whose reverse is also present is separated natively by the flpqdot channel router (via the `dot layout` key), so the pair does not draw as two overlapping lines; the renderer emits no `bend` option.
 
@@ -52,6 +52,7 @@ Renders the input graph as a TikZ `tikzpicture` string.
 | Reuses `AutomatonTikz` header/footer and `escapeLatex` | Keeps the `dot layout`, node style, and label escaping identical to the automaton renderers |
 | `fill=lightgreen!20` for the current position | Matches the DOT renderer's current-position color and distinguishes it from the GSS/automaton fills |
 | Reciprocal pairs separated by the layout engine | The generic input type could carry both directions of a pair; the flpqdot channel router (via `dot layout`) separates them into distinct channels natively, keeping the edge appearance consistent with the automaton, RSM, and GSS renderers (task 289) |
+| Labels registered in the measurement pre-pass | The router (Lua) cannot see edge labels; registering each non-loop label via `\flpqdotmeasureedgelabel` (and dropping the stock quote) lets the router place it at a collision-free position (task 30, S1b) |
 
 ## See Also
 

@@ -47,7 +47,24 @@ module GssTikz =
             | Some _ -> AutomatonTikz.gssLayeredGrowDirection
             | None -> AutomatonTikz.defaultGrowDirection
 
-        AutomatonTikz.tikzHeaderWithOptions (AutomatonTikz.graphOptions shape growDirection) sb
+        let edgeLabel (from: int) (to_: int) : string =
+            let raw = edgeLabelPrinter (from, to_)
+
+            if skipEscaping then raw else AutomatonTikz.escapeLatex raw
+
+        // Non-loop edges with a non-empty label: registered in the measurement pre-pass,
+        // their stock quote dropped (the router's edge-callback wrapper places the label).
+        let labeledEdges =
+            activeEdges
+            |> Set.toList
+            |> List.filter (fun (from, to_) -> from <> to_ && edgeLabel from to_ <> "")
+            |> List.map (fun (from, to_) ->
+                (FlpqdotTikz.edgeKey (sprintf "v%d" from) (sprintf "v%d" to_), edgeLabel from to_))
+
+        AutomatonTikz.tikzHeaderWithOptions
+            (FlpqdotTikz.prePass labeledEdges)
+            (AutomatonTikz.graphOptions shape growDirection)
+            sb
 
         let allVertices =
             let fromEdges =
@@ -111,33 +128,19 @@ module GssTikz =
         | _ -> ()
 
         for fromIdx, toIdx in activeEdges do
-            let rawLabel = edgeLabelPrinter (fromIdx, toIdx)
+            let label = edgeLabel fromIdx toIdx
 
-            let label =
-                if skipEscaping then
-                    rawLabel
+            // Highlighted edges win over path edges (an edge in both sets renders as
+            // highlighted).
+            let style =
+                if Set.contains (fromIdx, toIdx) highlightedEdges then
+                    "red, thick"
+                elif Set.contains (fromIdx, toIdx) pathEdges then
+                    "red!40"
                 else
-                    AutomatonTikz.escapeLatex rawLabel
+                    ""
 
-            let isHighlighted = Set.contains (fromIdx, toIdx) highlightedEdges
-            let isPath = not isHighlighted && Set.contains (fromIdx, toIdx) pathEdges
-
-            let loopAttr = if fromIdx = toIdx then ",loop above" else ""
-
-            if isHighlighted then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red, thick%s] v%d;" fromIdx label loopAttr toIdx)
-                |> ignore
-            elif isPath then
-                sb.AppendLine(sprintf "    v%d ->[\"%s\", red!40%s] v%d;" fromIdx label loopAttr toIdx)
-                |> ignore
-            elif label = "" then
-                if fromIdx = toIdx then
-                    sb.AppendLine(sprintf "    v%d ->[loop above] v%d;" fromIdx fromIdx) |> ignore
-                else
-                    sb.AppendLine(sprintf "    v%d -> v%d;" fromIdx toIdx) |> ignore
-            else
-                sb.AppendLine(sprintf "    v%d ->[\"%s\"%s] v%d;" fromIdx label loopAttr toIdx)
-                |> ignore
+            FlpqdotTikz.emitEdge sb (sprintf "v%d" fromIdx) (sprintf "v%d" toIdx) label style
 
         // Constrain all vertices at the same input position to the same layer. The grouping covers
         // every drawn vertex (allVertices plus the current vertex when it is not already among

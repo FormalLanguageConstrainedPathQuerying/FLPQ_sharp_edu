@@ -19,7 +19,25 @@ module InputGraphTikz =
         let sb = StringBuilder()
         let n = Graph.vertexCount inputGraph
 
-        AutomatonTikz.tikzHeader "circle" sb
+        let edgeLabel (i: int) (j: int) : string =
+            match inputGraph.Edges.[i, j] with
+            | Some tok -> terminalPrinter tok |> AutomatonTikz.escapeLatex
+            | None -> ""
+
+        // Non-loop edges with a non-empty label: registered in the measurement pre-pass,
+        // their stock quote dropped (the router's edge-callback wrapper places the label).
+        let labeledEdges =
+            [ for i in 0 .. n - 1 do
+                  for j in 0 .. n - 1 do
+                      let label = edgeLabel i j
+
+                      if i <> j && label <> "" then
+                          [ (FlpqdotTikz.edgeKey (sprintf "v%d" i) (sprintf "v%d" j), label) ]
+                      else
+                          [] ]
+            |> List.collect id
+
+        AutomatonTikz.tikzHeader (FlpqdotTikz.prePass labeledEdges) "circle" sb
 
         for i in 0 .. n - 1 do
             let label = string i
@@ -40,10 +58,7 @@ module InputGraphTikz =
         for i in 0 .. n - 1 do
             for j in 0 .. n - 1 do
                 match inputGraph.Edges.[i, j] with
-                | Some tok ->
-                    let edgeLabel = terminalPrinter tok |> AutomatonTikz.escapeLatex
-
-                    sb.AppendLine(sprintf "    v%d ->[\"%s\"] v%d;" i edgeLabel j) |> ignore
+                | Some _ -> FlpqdotTikz.emitEdge sb (sprintf "v%d" i) (sprintf "v%d" j) (edgeLabel i j) ""
                 | None -> ()
 
         AutomatonTikz.tikzFooter sb

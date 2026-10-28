@@ -133,7 +133,8 @@ let ``automaton with epsilon loop tikz compiles`` () =
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
     // Epsilon labels are math mode (task 269): a bare \varepsilon in text mode renders as empty.
-    Assert.Contains(@"dotted, ""$\varepsilon$""", tikz)
+    // Loop edges keep their stock quote (the router skips loops); the label leads the option list.
+    Assert.Contains(@"""$\varepsilon$"", dotted", tikz)
     Assert.DoesNotContain(@"\textbackslash", tikz)
     Assert.Contains("loop above", tikz)
     Assert.Contains("fill=green!30", tikz)
@@ -423,10 +424,11 @@ let ``dfaToTikzWithHighlights renders exactly the given edges red thick`` () =
             Set.empty
             (set [ (1, 2) ])
 
-    Assert.Contains("s1 ->[\"b\", red, thick] s2;", tikz)
-    // The non-highlighted edge keeps the plain style.
-    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
-    Assert.DoesNotContain("s0 ->[\"a\", red", tikz)
+    Assert.Contains("s1 ->[red, thick] s2;", tikz)
+    // The non-highlighted edge keeps the plain style (its label is registered in the
+    // measurement pre-pass, the stock quote is dropped).
+    Assert.Contains("s0 -> s1;", tikz)
+    Assert.DoesNotContain("s0 ->[red", tikz)
 
 [<Fact>]
 let ``dfaToTikzWithHighlights highlighted loop keeps its label and loop attribute`` () =
@@ -440,8 +442,9 @@ let ``dfaToTikzWithHighlights highlighted loop keeps its label and loop attribut
             Set.empty
             (set [ (1, 1) ])
 
-    Assert.Contains("s1 ->[\"b\", red, thick,loop above] s1;", tikz)
-    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+    // The loop keeps its stock quote (the router skips loops); the label leads the option list.
+    Assert.Contains("s1 ->[\"b\", red, thick, loop above] s1;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
 
 [<Fact>]
 [<Trait("Category", "TeX")>]
@@ -460,8 +463,8 @@ let ``reciprocal transitions are not bent (layout-native separation)`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s0 ->[\"a, b\"] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
+    Assert.Contains("s1 -> s0;", tikz)
     Assert.DoesNotContain("bend", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
@@ -472,7 +475,7 @@ let ``one-way transitions are not bent`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s0 ->[\"a\"] s1;", tikz)
+    Assert.Contains("s0 -> s1;", tikz)
     Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]
@@ -489,7 +492,8 @@ let ``self-loops are never bent`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s1 ->[\"b\",loop above] s1;", tikz)
+    // The loop keeps its stock quote (the router skips loops); the label leads the option list.
+    Assert.Contains("s1 ->[\"b\", loop above] s1;", tikz)
 
     let loopLine = tikz.Split('\n') |> Array.find (fun l -> l.Contains("loop above"))
 
@@ -503,8 +507,11 @@ let ``reciprocal epsilon transitions are not bent`` () =
 
     let tikz = AutomatonTikz.nfaToTikz string (fun _i s -> s) "circle" aut
 
-    Assert.Contains("s0 ->[dotted, \"$\\varepsilon$\"] s1;", tikz)
-    Assert.Contains("s1 ->[dotted, \"$\\varepsilon$\"] s0;", tikz)
+    // The epsilon labels are registered in the measurement pre-pass; the edges carry only
+    // the dotted style (the router places the label).
+    Assert.Contains("s0 ->[dotted] s1;", tikz)
+    Assert.Contains("s1 ->[dotted] s0;", tikz)
+    Assert.Contains(@"\flpqdotmeasureedgelabel{s0->s1}{$\varepsilon$}", tikz)
     Assert.DoesNotContain("bend", tikz)
     Assert.True(ExternalTools.compileTexStringWithTemplate tikzTemplatePath tikz)
 
@@ -520,8 +527,8 @@ let ``dfaToTikzWithHighlights renders a highlighted reciprocal edge without a be
             Set.empty
             (set [ (0, 1) ])
 
-    Assert.Contains("s0 ->[\"a, b\", red, thick] s1;", tikz)
-    Assert.Contains("s1 ->[\"a\"] s0;", tikz)
+    Assert.Contains("s0 ->[red, thick] s1;", tikz)
+    Assert.Contains("s1 -> s0;", tikz)
     Assert.DoesNotContain("bend", tikz)
 
 [<Fact>]

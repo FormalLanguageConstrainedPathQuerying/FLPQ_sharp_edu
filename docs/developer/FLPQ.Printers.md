@@ -45,6 +45,7 @@
 | [StepTeX](step-tex.md) | Generic RPQ step TeX helpers: shrink-only adjustbox and one-line formula wrapping |
 | [RegexpTeX](rpq-regexp-viz.md) | TeX rendering of the RPQ query regexp as a math-mode formula |
 | [RpqGraphDot](rpq-graph-dot.md) / [RpqGraphTikz](rpq-graph-tikz.md) | RPQ-dedicated DOT/TikZ rendering of the input graph with highlight tiers (independent of GSS) |
+| [FlpqdotTikz](flpqdot-tikz.md) | Shared flpqdot emission helpers for the `dot layout` renderers: the `\flpqdotmeasureedgelabel` measurement pre-pass and the label-adoption edge line |
 | [RpqGraphViz](rpq-graph-viz.md) | Shared rendering of the RPQ input graph with path highlights (DOT + TikZ) |
 | [RegexpTreeDot / RegexpTreeTikz](regexp-tree-dot.md) | DOT/TikZ rendering of the RPQ regexp AST tree (vertical, rectangle nodes) |
 | [ArroyueloStepCommon](arroyuelo-step-common.md) | Shared Arroyuelo step record, tree model, and rendering pipeline |
@@ -55,6 +56,7 @@
 | [BelyaninReachabilityStepVisualizer](belyanin-reachability-step-viz.md) | Step-by-step visualization of Belyanin's Boolean reachability RPQ evaluation (Boolean matrices, no path edges) |
 | [LLTableTeX](ll-table-tex.md) | TeX rendering for LL parsing tables |
 | [LRTableTeX](lr-table-tex.md) | TeX rendering for LR parsing tables |
+| [VisualizationTypes](visualization-types.md) | Shared types for LL and LR parser step visualization (`VisualizationStep`, `LLParsingStep`/`LRParsingStep`, stack frames) |
 | [LLStepVisualizer](ll-step-visualizer.md) | LL parser step-by-step visualization |
 | [LRStepVisualizer](lr-step-visualizer.md) | LR parser step-by-step visualization |
 | [GllStepVisualizer](gll-step-visualizer.md) | GLL parser step-by-step visualization (descriptors, GSS, path index, input, extended RSM) |

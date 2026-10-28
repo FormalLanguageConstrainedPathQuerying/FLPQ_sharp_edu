@@ -7,7 +7,7 @@
 **Depends on:** Automaton, LR parser types, RnglrItem (FLPQ.Languages)
 **Used by:** FLPQ.Cli (summary generation)
 
-> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with dot layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, frontier-state and target-state fills, epsilon transitions (dotted), and loop edges.
+> **Abstract:** Visualizes NFA and DFA automata in two output formats: Graphviz DOT (`AutomatonDot`) and Tikz with dot layout (`AutomatonTikz`). Provides specialized Tikz renderers for LR automata (`LRAutomatonTikz`, grammar-based) and the RNGLR LR automaton (`RnglrAutomatonTikz`, RSM-item based) using rectangle shapes and aligned state content. All renderers accept parameterized label and state visualizer callbacks. Supports start state highlighting, final state double-borders, frontier-state and target-state fills, epsilon transitions (dotted), and loop edges. Non-loop edge labels that are their `tail->head` key's only edge are registered in the flpqdot measurement pre-pass and placed by the router (the stock quote is dropped); loops and parallel edges keep their stock quote.
 
 ## Contents
 
@@ -43,6 +43,7 @@
 - `nfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> NFA<'t,'s> -> string`
 - `dfaToTikz: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> string`
 - `dfaToTikzWithHighlights: (labelPrinter: 't -> string) -> (stateVisualizer: int -> 's -> string) -> (shape: string) -> DFA<'t,'s> -> Set<int> -> Set<int> -> Set<int * int> -> string` — renders DFA with the given frontier states highlighted (`fill=lightblue!20`, the current tier), the given target states filled `fill=yellow!20` (highest precedence: over current, final, and start), and the given transitions red and bold (`red, thick`, label and loop attributes preserved); the Start label and final double ring are always kept; `dfaToTikz` delegates with `Set.empty` for all three sets
+- `tikzHeaderWithOptions: string -> string -> StringBuilder -> unit` / `tikzHeader: string -> string -> StringBuilder -> unit` — the shared header used by the `dot layout` renderers; the leading `prePass` string (the flpqdot measurement pre-pass, see [FlpqdotTikz](flpqdot-tikz.md)) is emitted between `\begin{tikzpicture}` and `\graph` (`""` when there is none). The NFA/DFA renderers pass the pre-pass built from their non-loop transition and epsilon edges that are their key's only edge
 
 ### Visual Style
 
@@ -53,10 +54,10 @@
 - Highlighted states (`dfaToTikzWithHighlights`): `fill=lightblue!20`, the current/frontier fill
 - Target states (`dfaToTikzWithHighlights`): `fill=yellow!20`, appended last so it wins over the current/final/start fills
 - Fill precedence (`dfaToTikzWithHighlights`, highest first): target > current/frontier > final > start (TikZ's last fill wins, so the fills are appended in the reverse order). The Start label and final double ring are always kept
-- Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->["label", red, thick(,loop above)] s%d` — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
-- Loop edges: `s%d ->["label",loop above] s%d`
+- Highlighted edges (`dfaToTikzWithHighlights`): `s%d ->[red, thick] s%d` (non-loop; the label is registered in the pre-pass) or `s%d ->["label", red, thick, loop above] s%d` (loop) — same style as GssTikz's highlighted tier; independent of state fills (both can apply to an edge's endpoints); epsilon-only cells render no edge and can never be highlighted
+- Loop edges: `s%d ->["label", loop above] s%d` (the stock quote is kept — the router skips loops)
 - Reciprocal edges (`u→v` and `v→u`): separated natively by the flpqdot channel router (via the `dot layout` key), which displaces the two directions to opposite sides of their chord (distinct channels); the renderer emits no `bend` option. Self-loops are never displaced.
-- Epsilon transitions: `dotted` edges with `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label)
+- Epsilon transitions: `dotted` edges with a `$\varepsilon$` label (math mode — a bare `\varepsilon` in a text-mode edge quote renders as an empty box, silently losing the label). A non-loop epsilon edge that is its key's only edge renders `s%d ->[dotted] s%d` with the label registered in the pre-pass; a loop or a cell with a parallel terminal edge keeps the stock quote `s%d ->[dotted, "$\varepsilon$"(, loop above)] s%d`
 - Arrow heads: `Latex[width=3mm,length=3mm]`
 
 ### Template
@@ -112,6 +113,7 @@ A : 0 \\
 | Edge highlight is a separate parameter, not derived from state highlights | Step figures highlight exactly the transitions used on the current step (Belyanin's per-label propagation), which is unrelated to which states are in the frontier; DOT and TikZ share the GssDot/GssTikz red-bold style so the two formats stay consistent |
 | Tikz as default for LR automata | Richer rendering with aligned items; DOT as fallback via `--use-dot` CLI flag |
 | Reciprocal pairs separated by the layout engine | A pair `u→v`/`v→u` would otherwise draw as two fully overlapping edges; the flpqdot channel router (via the `dot layout` key) separates them into distinct channels (opposite sides) natively, so the renderer emits no `bend` option (Graphviz DOT separates such pairs automatically) |
+| Pre-pass registration only for a key's unique edge | A transition cell holding both terminal and epsilon labels renders two parallel edges with the same `tail->head` key; the router's edge callback sees only node names and would place the same label on both, so such cells keep the stock quote on both edges (the one-edge-per-pair rule, [FlpqdotTikz](flpqdot-tikz.md)) |
 | `babel` library for edge label quotes | Required for proper handling of quote syntax in Tikz graph edges |
 | Enhanced arrow heads | `Latex[width=3mm,length=3mm]` for visibility |
 

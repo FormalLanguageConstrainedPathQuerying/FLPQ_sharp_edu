@@ -19,6 +19,10 @@
 % any) place the label, so graphs that still emit default quotes are
 % unaffected.
 %
+% A placed label is drawn with a white background (inner sep=1pt, fill=white)
+% so it masks any edge that runs under it (dot's readability fallback); the
+% 1pt margin matches the router's reserved-box margin (PATH_STROKE_HALF).
+%
 % License: MIT (see the repository LICENSE).
 
 \makeatletter
@@ -50,7 +54,7 @@
       local pos = placement[key1] or placement[key2]
       local lab = labels[key1] or labels[key2]
       if pos and lab then
-        tex.sprint("\\node[inner sep=0pt] at (" .. pos.x .. "pt," .. pos.y .. "pt) {" .. lab.text .. "};")
+        tex.sprint("\\node[inner sep=1pt, fill=white] at (" .. pos.x .. "pt," .. pos.y .. "pt) {" .. lab.text .. "};")
       end
     end
   }%

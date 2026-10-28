@@ -32,6 +32,13 @@
 -- placement lookups tolerate a direction reversal (the layered layout reverses
 -- back-edges during cycle removal).
 --
+-- Independently of the label handling, a node-clearance pass pushes each
+-- edge's interior (bend) points out of the node bounding boxes they fall
+-- inside (the edge's own tail/head boxes excluded), in x only (the
+-- rank-perpendicular axis of the layout model), so the routed path does not
+-- cross an intermediate node; this mirrors dot's iterative spline re-aiming
+-- to clear node boxes.
+--
 -- The path is emitted center-to-center; the stock pipeline's cutEdges step then
 -- trims it at the node borders (and places the arrowhead). After setting the
 -- path the edge's bend_points are cleared so the stock polyline builder
@@ -72,6 +79,16 @@ local MAX_SWEEP_ITERS = 10
 -- the path and does not cover a node or cross another edge.
 local LABEL_OFFSET_GAP = 1
 local PATH_SAMPLE_STEPS = 20
+
+-- Node clearance. An interior (bend) point that falls inside a node's
+-- bounding box is pushed in x (the rank-perpendicular axis of the layout
+-- model; the rank axis is y) to the nearer side of the box, plus a margin, so
+-- the routed path does not cross an intermediate node (mirrors dot's
+-- iterative spline re-aiming to clear node boxes). The edge's own tail/head
+-- boxes are excluded (the path legitimately starts and ends at them). Bounded
+-- iterations; a point that cannot be cleared is left as-is.
+local NODE_CLEAR_MARGIN = 2
+local MAX_NODE_CLEAR_ITERS = 10
 
 local function clamp (v, lo, hi)
   if v < lo then return lo end
@@ -240,6 +257,43 @@ local function countLabelCollisions (cx, cy, w, th, nodeBoxes, otherPaths, selfI
 end
 
 ---
+-- Node clearance: push the interior points of |pts| (indices 2 .. #pts-1)
+-- out of the node bounding boxes in |nodeBoxes| (tables with name, min_x,
+-- min_y, max_x, max_y), in x only (the rank-perpendicular / sibling axis of
+-- the layout model; the rank axis is y), to the nearer side of any box the
+-- point is inside, plus NODE_CLEAR_MARGIN. Pushing along the rank axis would
+-- not clear the box for an edge travelling along it, so the path detours
+-- beside the node instead (dot's corridor routing). The tail (pts[1]) and
+-- head (pts[#pts]) are fixed, and the boxes named |tailName| / |headName| are
+-- excluded from the obstacle set (the path legitimately starts and ends at
+-- them). Mutates |pts| in place and returns it. Bounded by
+-- MAX_NODE_CLEAR_ITERS; a point that cannot be cleared (e.g. trapped between
+-- two boxes) is left as-is.
+--
+function EdgeRoutingSpline.clearNodeObstacles (pts, nodeBoxes, tailName, headName)
+  for _ = 1, MAX_NODE_CLEAR_ITERS do
+    local moved = false
+    for i = 2, #pts - 1 do
+      local p = pts[i]
+      for _, nb in ipairs(nodeBoxes) do
+        if nb.name ~= tailName and nb.name ~= headName
+          and p.x >= nb.min_x and p.x <= nb.max_x
+          and p.y >= nb.min_y and p.y <= nb.max_y then
+          local dLeft = p.x - (nb.min_x - NODE_CLEAR_MARGIN)
+          local dRight = (nb.max_x + NODE_CLEAR_MARGIN) - p.x
+          local nx = dLeft <= dRight and (nb.min_x - NODE_CLEAR_MARGIN) or (nb.max_x + NODE_CLEAR_MARGIN)
+          pts[i] = Coordinate.new(nx, p.y)
+          moved = true
+          break
+        end
+      end
+    end
+    if not moved then break end
+  end
+  return pts
+end
+
+---
 -- Route every edge of the graph as a smooth, non-overshooting Bezier. Runs
 -- after dummy nodes are removed (so edge.bend_points hold the intermediate
 -- positions) in the layered pipeline.
@@ -305,6 +359,8 @@ function EdgeRoutingSpline:run()
         offY = offY,
         displaceControls = displaceControls,
         key = tail.name .. "->" .. head.name,
+        tailName = tail.name,
+        headName = head.name,
       }
     end
   end
@@ -357,7 +413,26 @@ function EdgeRoutingSpline:run()
     if not moved then break end
   end
 
-  -- Phase 3: apply the sweep displacement and emit the Bezier path.
+  -- Node bounding boxes (named), for the node-clearance pass and the
+  -- label-placement collision check (S4). The node's TeX-measured box
+  -- (n.tex, relative to the node position) is the size source: the node's
+  -- own path is not set yet at routing time (the compatibility step builds
+  -- it afterwards).
+  local nodeBoxes = {}
+  for _, n in ipairs(self.graph.nodes) do
+    if n.tex and n.tex.minX ~= nil then
+      nodeBoxes[#nodeBoxes + 1] = {
+        name = n.name,
+        min_x = n.pos.x + n.tex.minX,
+        min_y = n.pos.y + n.tex.minY,
+        max_x = n.pos.x + n.tex.maxX,
+        max_y = n.pos.y + n.tex.maxY,
+      }
+    end
+  end
+
+  -- Phase 3: apply the sweep displacement, clear the interior points of node
+  -- boxes (node clearance), and emit the Bezier path.
   for _, d in ipairs(edgeData) do
     local pts = d.pts
     local dy = d.dy
@@ -369,6 +444,13 @@ function EdgeRoutingSpline:run()
         for i = 2, #pts - 1 do
           pts[i] = Coordinate.new(pts[i].x, pts[i].y + dy)
         end
+      end
+
+      -- Node clearance: push the interior (bend) points out of any node box
+      -- they fall inside (the edge's own tail/head excluded), so the routed
+      -- path does not cross an intermediate node.
+      if #pts >= 3 then
+        EdgeRoutingSpline.clearNodeObstacles(pts, nodeBoxes, d.tailName, d.headName)
       end
 
       local p = Path.new()
@@ -388,10 +470,20 @@ function EdgeRoutingSpline:run()
       d.e.orig_m.path = p
       -- Clear so the stock polyline builder skips this edge.
       d.e.bend_points = {}
-      -- Store the final label anchor (channel point after the sweep) and the
-      -- reserved box for the downstream label placement (S4) and the probe
-      -- harness.
-      d.e.orig_m.labelAnchor = { x = d.chanX, y = d.chanY + dy }
+      -- Store the final label anchor (channel point after the sweep and node
+      -- clearance) and the reserved box for the downstream label placement
+      -- (S4) and the probe harness. For a multi-point edge the clearance may
+      -- have moved the interior points, so recompute the arc midpoint from the
+      -- cleared polyline; a direct edge has no interior points, so its anchor
+      -- is the chord midpoint plus the sweep displacement.
+      local ax, ay
+      if #pts >= 3 then
+        local cp = polylineArcMid(pts)
+        ax, ay = cp.x, cp.y
+      else
+        ax, ay = d.chanX, d.chanY + dy
+      end
+      d.e.orig_m.labelAnchor = { x = ax, y = ay }
       d.e.orig_m.labelBox = { w = d.resW, th = d.resH }
     end
   end
@@ -401,13 +493,6 @@ function EdgeRoutingSpline:run()
   -- other edges' sampled paths), so the label sits off the path and does not
   -- cover a node or cross another edge. The position is stored in the
   -- _G.flpqdot_label_placement channel for the edge callback to place the label.
-  local nodeBoxes = {}
-  for _, n in ipairs(self.graph.nodes) do
-    if n.path then
-      local min_x, min_y, max_x, max_y = n.path:boundingBox()
-      nodeBoxes[#nodeBoxes + 1] = { min_x = min_x, min_y = min_y, max_x = max_x, max_y = max_y }
-    end
-  end
   local otherPaths = {}
   for idx, d in ipairs(edgeData) do
     otherPaths[idx] = d.e.orig_m.path and samplePath(d.e.orig_m.path) or {}

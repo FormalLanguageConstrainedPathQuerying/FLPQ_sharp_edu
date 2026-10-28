@@ -17,6 +17,24 @@ open FLPQ.Languages
 /// Book reference: sec:CFPQ_GLL (06_GLL_Based.tex).
 module RsmTikz =
 
+    /// The rendered label of one RSM transition symbol: the printer-produced names escaped,
+    /// the epsilon as math-mode TeX (a bare \varepsilon in text mode renders as an empty box).
+    let private edgeLabelOf
+        (terminalPrinter: 't -> string)
+        (nonterminalPrinter: 'nt -> string)
+        (symbol: AutomatonLabel<RsmSymbol<'t, 'nt>>)
+        : string =
+        match symbol with
+        | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) -> AutomatonTikz.escapeLatex (terminalPrinter t)
+        | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) -> AutomatonTikz.escapeLatex (nonterminalPrinter nt)
+        | AutomatonLabel.AEpsilon -> "$\\varepsilon$"
+
+    /// The style fragment of one RSM transition symbol (epsilon edges are dotted).
+    let private edgeStyleOf (symbol: AutomatonLabel<RsmSymbol<'t, 'nt>>) : string =
+        match symbol with
+        | AutomatonLabel.AEpsilon -> "dotted"
+        | _ -> ""
+
     /// Shared body: render a flat RSM graph (global state numbering) for the given block order
     /// and optional highlighted state. State content is the bare global index; nonterminal edges
     /// are labeled with the bare nonterminal name (no "call" prefix). Blocks are stacked
@@ -34,16 +52,38 @@ module RsmTikz =
         : string =
         let sb = StringBuilder()
 
+        let stateInfo = rsm.StateInfo
+        let stateCount = rsm.StateCount
+
+        // The router's label channel is keyed by tail->head, so only edges with a unique
+        // key can be registered: the single-symbol cells. Multi-symbol cells render
+        // parallel edges that would collide (the edge callback cannot tell them apart),
+        // so they keep the stock quote.
+        let labeledEdges =
+            [ for i in 0 .. stateCount - 1 do
+                  for j in 0 .. stateCount - 1 do
+                      match rsm.Transitions.[i, j] with
+                      | Some symbols when i <> j ->
+                          match NonEmptySet.toSeq symbols |> List.ofSeq with
+                          | [ symbol ] ->
+                              let label = edgeLabelOf terminalPrinter nonterminalPrinter symbol
+
+                              if label <> "" then
+                                  [ (FlpqdotTikz.edgeKey (sprintf "s%d" i) (sprintf "s%d" j), label) ]
+                              else
+                                  []
+                          | _ -> []
+                      | _ -> [] ]
+            |> List.collect id
+
         // Blocks are the graph's connected components; pgf-gd packs them top-to-bottom
         // (PGF manual §28.7) while the dot layout inside each block grows left-to-right.
         AutomatonTikz.tikzHeaderWithOptions
+            (FlpqdotTikz.prePass labeledEdges)
             (sprintf
                 "%s, components go down left aligned, component sep=1.5cm"
                 (AutomatonTikz.graphOptions "circle" AutomatonTikz.defaultGrowDirection))
             sb
-
-        let stateInfo = rsm.StateInfo
-        let stateCount = rsm.StateCount
 
         // Global state indices of a block: start state first, then the rest in local-index order.
         let blockStates (nt: Nonterminal<'nt>) : int list =
@@ -98,26 +138,25 @@ module RsmTikz =
             for j in 0 .. stateCount - 1 do
                 match rsm.Transitions.[i, j] with
                 | Some symbols ->
-                    let loopAttr = if i = j then ",loop above" else ""
+                    let symbolsList = NonEmptySet.toSeq symbols |> List.ofSeq
 
-                    for symbol in NonEmptySet.toSeq symbols do
-                        // Escape only the printer-produced names; the epsilon label
-                        // is math-mode TeX and must not be escaped.
-                        let edgeLabel =
-                            match symbol with
-                            | AutomatonLabel.ATerm(RsmSymbol.RTerm(Terminal t)) ->
-                                AutomatonTikz.escapeLatex (terminalPrinter t)
-                            | AutomatonLabel.ATerm(RsmSymbol.RNonterm(Nonterminal nt)) ->
-                                AutomatonTikz.escapeLatex (nonterminalPrinter nt)
-                            | AutomatonLabel.AEpsilon -> "$\\varepsilon$"
+                    // A single-symbol cell has a unique edge key: registered in the
+                    // measurement pre-pass, its stock quote dropped. Multi-symbol cells
+                    // (parallel edges) and loops keep the stock quote.
+                    let unique = List.length symbolsList = 1
 
-                        let style =
-                            match symbol with
-                            | AutomatonLabel.AEpsilon -> ", dotted"
-                            | _ -> ""
+                    for symbol in symbolsList do
+                        let edgeLabel = edgeLabelOf terminalPrinter nonterminalPrinter symbol
+                        let style = edgeStyleOf symbol
 
-                        sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i edgeLabel style loopAttr j)
-                        |> ignore
+                        if unique && i <> j && edgeLabel <> "" then
+                            FlpqdotTikz.emitEdge sb (sprintf "s%d" i) (sprintf "s%d" j) edgeLabel style
+                        else
+                            let loopAttr = if i = j then ",loop above" else ""
+                            let styleAttr = if style <> "" then ", " + style else ""
+
+                            sb.AppendLine(sprintf "    s%d ->[\"%s\"%s%s] s%d;" i edgeLabel styleAttr loopAttr j)
+                            |> ignore
                 | None -> ()
 
         AutomatonTikz.tikzFooter sb

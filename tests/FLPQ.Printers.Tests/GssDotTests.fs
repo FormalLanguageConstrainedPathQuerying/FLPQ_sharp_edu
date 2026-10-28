@@ -520,7 +520,8 @@ module GssTikzTests =
                 false
                 None
 
-        Assert.Contains("v0 ->[\"e\", red!40] v1;", tikz)
-        Assert.Contains("v1 ->[\"e\", red, thick] v2;", tikz)
+        // The labels are registered in the measurement pre-pass; the edges carry only the style.
+        Assert.Contains("v0 ->[red!40] v1;", tikz)
+        Assert.Contains("v1 ->[red, thick] v2;", tikz)
         // An edge in both sets renders as highlighted.
-        Assert.Contains("v0 ->[\"e\", red, thick] v2;", tikz)
+        Assert.Contains("v0 ->[red, thick] v2;", tikz)

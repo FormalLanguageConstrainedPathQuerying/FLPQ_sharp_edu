@@ -377,6 +377,144 @@ let ``label placement is collision-free (no node or edge overlap)`` () =
     // No placed label box intersects another edge's sampled path.
     Assert.Equal(0, labelEdgeCollisions log)
 
+/// A node's layout position (X, Y) and its absolute box x-range (MinX, MaxX),
+/// in pt.
+type private NodePos =
+    { X: float
+      Y: float
+      MinX: float
+      MaxX: float }
+
+/// Parse the `POS <name> x=.. y=.. minx=.. maxx=..` lines (emitted by the
+/// probe) into a map of node-name -> NodePos.
+let private parseNodePositions (log: string) : Map<string, NodePos> =
+    log.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith("POS "))
+    |> Array.map (fun l ->
+        let m =
+            Regex.Match(l, @"^POS (\S+) x=([-\d.]+) y=([-\d.]+) minx=([-\d.]+) maxx=([-\d.]+)")
+
+        if not m.Success then
+            failwithf "unparseable pos line: %s" l
+
+        (m.Groups.[1].Value,
+         { X = float m.Groups.[2].Value
+           Y = float m.Groups.[3].Value
+           MinX = float m.Groups.[4].Value
+           MaxX = float m.Groups.[5].Value }))
+    |> Map.ofArray
+
+/// Parse the `BEND <key> (x1,y1) (x2,y2) ...` lines (emitted by the probe) into
+/// a map of edge-key -> list of interior bend points (x, y); absent for a
+/// direct edge.
+let private parseBends (log: string) : Map<string, (float * float) list> =
+    log.Split('\n')
+    |> Array.filter (fun l -> l.StartsWith("BEND "))
+    |> Array.map (fun l ->
+        let key = l.Substring(5).Split(' ').[0]
+
+        let pts =
+            [ for m in Regex.Matches(l, @"\(([-\d.]+),([-\d.]+)\)") do
+                  (float m.Groups.[1].Value, float m.Groups.[2].Value) ]
+
+        (key, pts))
+    |> Map.ofArray
+
+/// The number of sampled edge-path points inside a node bounding box (the
+/// edge's own tail/head boxes excluded), summed over all edges (0 = no edge
+/// path crosses a node).
+let private edgeNodeCrossings (log: string) : int = probeInt "EDGE_NODE_CROSSINGS=" log
+
+/// Probe content for the direct node-clearance test: constructs a point
+/// sequence whose interior point sits inside a node box (scenario 1) and one
+/// whose interior point sits inside the edge's own tail box (scenario 2, which
+/// must be excluded from the obstacle set), calls
+/// `EdgeRoutingSpline.clearNodeObstacles` on each, and dumps the resulting
+/// coordinates.
+let private nodeClearProbeContent =
+    """x
+\directlua{
+  local CRS = require "pgf.gd.flpqdot.EdgeRoutingSpline"
+  local Coord = require "pgf.gd.model.Coordinate"
+  local pts1 = { Coord.new(0, 0), Coord.new(12, 5), Coord.new(20, 0) }
+  local box1 = { { name = "n", min_x = 5, min_y = -5, max_x = 15, max_y = 5 } }
+  CRS.clearNodeObstacles(pts1, box1, "t", "h")
+  local pts2 = { Coord.new(0, 0), Coord.new(12, 5), Coord.new(20, 0) }
+  local box2 = { { name = "t", min_x = 5, min_y = -5, max_x = 15, max_y = 5 } }
+  CRS.clearNodeObstacles(pts2, box2, "t", "h")
+  tex.sprint("\\typeout{CLEAR_MID_X=" .. tostring(pts1[2].x) .. "}")
+  tex.sprint("\\typeout{CLEAR_MID_Y=" .. tostring(pts1[2].y) .. "}")
+  tex.sprint("\\typeout{CLEAR_EXCL_X=" .. tostring(pts2[2].x) .. "}")
+  tex.sprint("\\typeout{CLEAR_FIRST_X=" .. tostring(pts1[1].x) .. "}")
+  tex.sprint("\\typeout{CLEAR_LAST_X=" .. tostring(pts1[3].x) .. "}")
+}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``clearNodeObstacles pushes interior points out of node boxes`` () =
+    let log = compileProbeLog nodeClearProbeContent
+
+    // Scenario 1: the interior point (12, 5) sits inside the box (x in
+    // [5, 15]); it is pushed in x (the rank-perpendicular axis) to the nearer
+    // side plus the margin (max_x + 2 = 17), with y unchanged.
+    Assert.Equal(17, probeInt "CLEAR_MID_X=" log)
+    Assert.Equal(5, probeInt "CLEAR_MID_Y=" log)
+
+    // Scenario 2: the box is named after the edge's tail, so it is excluded
+    // from the obstacle set and the point is left as-is.
+    Assert.Equal(12, probeInt "CLEAR_EXCL_X=" log)
+
+    // The tail and head are never moved.
+    Assert.Equal(0, probeInt "CLEAR_FIRST_X=" log)
+    Assert.Equal(20, probeInt "CLEAR_LAST_X=" log)
+
+/// Probe content for the node-clearance end-to-end test: a reciprocal pair
+/// `a <-> c` spanning two layers past the intermediate node `b`, with a tight
+/// sibling sep. The reciprocal channel separation displaces the `a -> c` bend
+/// point (the removed dummy's position) into `b`'s box; the node-clearance pass
+/// must push it back out, leaving no sampled path point inside any node box.
+let private nodeClearGraphContent =
+    """\begin{tikzpicture}
+  \graph [dot layout, nodes={draw, circle}, grow'=right, level sep=3cm, sibling sep=0.1cm] {
+    a; b [as={bbbb}]; c;
+    a -> b; b -> c;
+    a -> c; c -> a;
+  };
+\end{tikzpicture}"""
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``node clearance keeps edge paths out of node boxes`` () =
+    let log = compileProbeLog nodeClearGraphContent
+
+    // No sampled edge-path point falls inside a node box (the edge's own
+    // tail/head boxes excluded).
+    Assert.Equal(0, edgeNodeCrossings log)
+
+    // Self-guard: the configuration is genuinely crossing-prone, so the
+    // assertion above is not vacuous. The a->c bend point sits right next to
+    // b's box (within the reciprocal channel-separation reach) yet OUTSIDE it
+    // (the clearance pushed it out). Without the clearance pass the bend would
+    // land inside b's box and EDGE_NODE_CROSSINGS would be > 0.
+    let b = parseNodePositions log |> Map.find "b"
+    let acBends = parseBends log |> Map.find "a->c"
+    Assert.True(acBends.Length >= 1, "a->c has no bend point (graph changed?)")
+    let bx, _ = acBends.[0]
+
+    // Crossing-prone: the bend is within the channel-separation reach (25pt)
+    // of b's box x-range. If the layout ever moves the bend far from b, this
+    // fires so the test is updated rather than passing vacuously.
+    Assert.True(
+        bx >= b.MinX - 25.0 && bx <= b.MaxX + 25.0,
+        sprintf "a->c bend x=%f not near b's box x=[%f, %f] (test vacuous?)" bx b.MinX b.MaxX
+    )
+
+    // Cleared: the bend is outside b's box x-range (pushed to the nearer side).
+    Assert.True(
+        bx < b.MinX || bx > b.MaxX,
+        sprintf "a->c bend x=%f inside b's box x=[%f, %f] (clearance failed?)" bx b.MinX b.MaxX
+    )
+
 /// Probe content that measures a set of known label snippets via the flpqdot
 /// LabelMeasure module and dumps each as `LABEL <tag> w=.. h=.. d=..` (pt). The
 /// leading `x` keeps the standalone document non-empty; the `\directlua` runs in

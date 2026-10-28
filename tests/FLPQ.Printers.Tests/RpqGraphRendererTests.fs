@@ -3,6 +3,7 @@ module RpqGraphRendererTests
 open Xunit
 open FLPQ.Languages
 open FLPQ.Printers
+open FlpqdotProbeHelpers
 
 /// A two-vertex graph with one edge: 0 --a--> 1.
 let private smallGraph: NFA<string, int> =
@@ -96,7 +97,7 @@ let ``RpqGraphTikz: plain graph renders the dot-layout header and a bare edge`` 
             Set.empty
 
     let expected =
-        "\\begin{tikzpicture}\n  \\graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {\n    v0 [as={$v_0$}];\n    v1 [as={$v_1$}];\n    v0 ->[\"a\"] v1;\n  };\n\\end{tikzpicture}\n"
+        "\\begin{tikzpicture}\n  \\flpqdotmeasureedgelabel{v0->v1}{a}\n  \\graph [dot layout, nodes={draw, circle}, grow'=right, level sep=2cm, sibling sep=1.5cm] {\n    v0 [as={$v_0$}];\n    v1 [as={$v_1$}];\n    v0 -> v1;\n  };\n\\end{tikzpicture}\n"
 
     Assert.Equal(expected, actual)
 
@@ -131,7 +132,7 @@ let ``RpqGraphTikz: current edges are red bold and path edges light red`` () =
             (Set.singleton (0, 1))
             Set.empty
 
-    Assert.Contains("v0 ->[\"a\", red, thick] v1;", current)
+    Assert.Contains("v0 ->[red, thick] v1;", current)
 
     let path =
         RpqGraphTikz.toTikz
@@ -145,7 +146,7 @@ let ``RpqGraphTikz: current edges are red bold and path edges light red`` () =
             Set.empty
             (Set.singleton (0, 1))
 
-    Assert.Contains("v0 ->[\"a\", red!40] v1;", path)
+    Assert.Contains("v0 ->[red!40] v1;", path)
 
 [<Fact>]
 let ``RpqGraphTikz: reciprocal edges are not bent`` () =
@@ -175,8 +176,8 @@ let ``RpqGraphTikz: reciprocal edges are not bent`` () =
             Set.empty
             Set.empty
 
-    Assert.Contains("v0 ->[\"a\"] v1;", actual)
-    Assert.Contains("v1 ->[\"b\"] v0;", actual)
+    Assert.Contains("v0 -> v1;", actual)
+    Assert.Contains("v1 -> v0;", actual)
     Assert.DoesNotContain("bend", actual)
 
 [<Fact>]
@@ -271,7 +272,7 @@ let ``RpqGraphTikz: a highlighted edge also in the path set renders highlighted`
             (Set.singleton (0, 1))
             (Set.singleton (0, 1))
 
-    Assert.Contains("v0 ->[\"a\", red, thick] v1;", actual)
+    Assert.Contains("v0 ->[red, thick] v1;", actual)
 
 [<Fact>]
 let ``RpqGraphViz: renderGraph delegates to the RPQ renderers`` () =
@@ -291,3 +292,51 @@ let ``RpqGraphViz: renderGraph delegates to the RPQ renderers`` () =
     Assert.Contains("color=red, penwidth=2.0", dot)
     Assert.Contains("fill=yellow!20", tikz)
     Assert.Contains("red, thick", tikz)
+
+[<Fact>]
+[<Trait("Category", "TeX")>]
+let ``RpqGraphTikz: the Kronecker step-5 graph is label-clean`` () =
+    // The real Kronecker-CFPQ summary step-5 graph (4 nodes, 8 edges, the v0->v3
+    // edge highlighted): the reported overlap repro, now rendered through the
+    // adopted measurement pre-pass.
+    let edgeLabel =
+        function
+        | (0, 1) -> "a"
+        | (0, 2) -> "S"
+        | (0, 3) -> "S"
+        | (1, 2) -> "a, S"
+        | (1, 3) -> "S"
+        | (2, 0) -> "a"
+        | (2, 3) -> "b, S"
+        | (3, 2) -> "b"
+        | _ -> ""
+
+    let step5 =
+        RpqGraphTikz.toTikz
+            (sprintf "$v_%d$")
+            edgeLabel
+            (Set.ofList [ 0; 1; 2; 3 ])
+            (Set.ofList [ (0, 1); (0, 2); (0, 3); (1, 2); (1, 3); (2, 0); (2, 3); (3, 2) ])
+            Set.empty
+            Set.empty
+            Set.empty
+            (Set.singleton (0, 3))
+            Set.empty
+
+    let log = compileProbeLog step5
+
+    // Every non-loop edge (all 8) is assigned a label position.
+    let placed = probeInt "LABEL_PLACED_COUNT=" log
+    Assert.Equal(8, placed)
+
+    // No label overlaps another label, a node, or another edge's path.
+    let labelOverlaps = probeInt "LABEL_OVERLAP_COUNT=" log
+    let nodeColl = probeInt "LABEL_NODE_COLLISIONS=" log
+    let edgeColl = probeInt "LABEL_EDGE_COLLISIONS=" log
+    Assert.Equal(0, labelOverlaps)
+    Assert.Equal(0, nodeColl)
+    Assert.Equal(0, edgeColl)
+
+    // No edge path is degenerate (self-intersecting).
+    let selfInt = probeInt "SELF_INTERSECTION_COUNT=" log
+    Assert.Equal(0, selfInt)
